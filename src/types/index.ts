@@ -24,6 +24,14 @@ export interface Issue {
   closedAt: string | null;
 }
 
+export interface CommitActivity {
+  byDate: Record<string, number>; // "YYYY-MM-DD" → commit count
+  today: number;
+  thisWeek: number;
+  thisMonth: number;
+  total84d: number;
+}
+
 export interface ProjectData {
   repo: string;
   client: string;
@@ -46,6 +54,8 @@ export interface ProjectData {
   velocity14d: number; // issues/день за 14 дней
   etaDays: number | null; // дней до закрытия всех открытых
   etaDate: string | null; // прогноз даты завершения
+  cycleTimeDays: number | null; // медиана дней issue open→close (последние 28 дней)
+  commitActivity: CommitActivity; // активность коммитов за 84 дня
 }
 
 export interface SummaryMetrics {

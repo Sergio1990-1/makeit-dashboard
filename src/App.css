@@ -1059,3 +1059,90 @@ body {
   .project-row-top { flex-direction: column; align-items: flex-start; gap: 4px; }
   .project-row-priorities { flex-wrap: wrap; gap: 10px; }
 }
+
+/* ── Risk Score Badge ── */
+.risk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.risk-badge--low      { color: #3fb950; background: #3fb95018; }
+.risk-badge--medium   { color: #d29922; background: #d2992218; }
+.risk-badge--high     { color: #db6d28; background: #db6d2818; }
+.risk-badge--critical { color: #f85149; background: #f8514918; }
+
+/* ── Cycle Time ── */
+.cycle-time {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+/* ── Commit Heatmap ── */
+.commit-heatmap {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.heatmap-grid {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 2px;
+  width: fit-content;
+}
+.heatmap-cell {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  cursor: default;
+  transition: opacity 0.1s;
+}
+.heatmap-cell:hover { opacity: 0.75; }
+.heatmap-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.heatmap-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.heatmap-stat__value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+.heatmap-stat__label {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+.heatmap-stat-sep {
+  width: 1px;
+  height: 12px;
+  background: var(--color-border);
+}
+
+/* Heatmap colors — also used as CSS vars for theming */
+:root {
+  --heatmap-0: #161b22;
+  --heatmap-1: #0e4429;
+  --heatmap-2: #006d32;
+  --heatmap-3: #26a641;
+  --heatmap-4: #39d353;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --heatmap-0: #ebedf0;
+    --heatmap-1: #9be9a8;
+    --heatmap-2: #40c463;
+    --heatmap-3: #30a14e;
+    --heatmap-4: #216e39;
+  }
+}

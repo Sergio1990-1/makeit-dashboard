@@ -1,5 +1,54 @@
-import type { Issue, IssueStatus, Priority, Phase, ProjectData, Milestone } from "../types";
+import type { Issue, IssueStatus, Priority, Phase, ProjectData, Milestone, CommitActivity } from "../types";
 import { getProjects, GITHUB_OWNER, GITHUB_PROJECT_NUMBER } from "./config";
+
+const GITHUB_REST = "https://api.github.com";
+
+async function restGet<T>(token: string, path: string): Promise<T | null> {
+  try {
+    const res = await fetch(`${GITHUB_REST}${path}`, {
+      headers: { Authorization: `bearer ${token}`, Accept: "application/vnd.github.v3+json" },
+    });
+    if (!res.ok) return null;
+    return res.json() as Promise<T>;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchCommitActivity(token: string, owner: string, repo: string): Promise<CommitActivity> {
+  const since = new Date(Date.now() - 84 * 86400000).toISOString();
+  const byDate: Record<string, number> = {};
+  let page = 1;
+
+  while (page <= 3) {
+    const commits = await restGet<Array<{ commit: { committer?: { date?: string }; author?: { date?: string } } }>>(
+      token,
+      `/repos/${owner}/${repo}/commits?since=${since}&per_page=100&page=${page}`
+    );
+    if (!Array.isArray(commits) || commits.length === 0) break;
+
+    for (const c of commits) {
+      const dateStr = c.commit?.committer?.date ?? c.commit?.author?.date ?? "";
+      const date = dateStr.split("T")[0];
+      if (date) byDate[date] = (byDate[date] ?? 0) + 1;
+    }
+
+    if (commits.length < 100) break;
+    page++;
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0];
+  const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+
+  return {
+    byDate,
+    today: byDate[today] ?? 0,
+    thisWeek: Object.entries(byDate).filter(([d]) => d >= weekAgo).reduce((s, [, v]) => s + v, 0),
+    thisMonth: Object.entries(byDate).filter(([d]) => d >= monthAgo).reduce((s, [, v]) => s + v, 0),
+    total84d: Object.values(byDate).reduce((s, v) => s + v, 0),
+  };
+}
 
 const GITHUB_GRAPHQL = "https://api.github.com/graphql";
 
@@ -298,39 +347,45 @@ interface RepoInfo {
   lastCommitDate: string | null;
   description: string;
   milestones: Milestone[];
+  commitActivity: CommitActivity;
 }
 
 async function fetchRepoInfo(token: string, owner: string, repo: string): Promise<RepoInfo> {
-  try {
-    const data = await graphql<RepoInfoResponse>(token, REPO_INFO_QUERY, { owner, repo });
-    const allMs = [
-      ...data.repository.openMilestones.nodes,
-      ...data.repository.closedMilestones.nodes,
-    ];
-    return {
-      lastCommitDate: data.repository.defaultBranchRef?.target.committedDate ?? null,
-      description: data.repository.description ?? "",
-      milestones: allMs.map((m) => ({
-        title: m.title,
-        description: m.description ?? "",
-        dueOn: m.dueOn,
-        url: m.url,
-        state: m.state,
-        openIssues: m.openIssues.totalCount,
-        closedIssues: m.closedIssues.totalCount,
-        repo,
-        issues: m.allIssues.nodes.map((i) => ({
-          number: i.number,
-          title: i.title,
-          state: i.state,
-          labels: i.labels.nodes.map((l) => l.name),
-          url: i.url,
-        })),
-      })),
-    };
-  } catch {
-    return { lastCommitDate: null, description: "", milestones: [] };
+  const [graphqlResult, commitActivity] = await Promise.all([
+    graphql<RepoInfoResponse>(token, REPO_INFO_QUERY, { owner, repo }).catch(() => null),
+    fetchCommitActivity(token, owner, repo),
+  ]);
+
+  if (!graphqlResult) {
+    return { lastCommitDate: null, description: "", milestones: [], commitActivity };
   }
+
+  const allMs = [
+    ...graphqlResult.repository.openMilestones.nodes,
+    ...graphqlResult.repository.closedMilestones.nodes,
+  ];
+  return {
+    lastCommitDate: graphqlResult.repository.defaultBranchRef?.target.committedDate ?? null,
+    description: graphqlResult.repository.description ?? "",
+    milestones: allMs.map((m) => ({
+      title: m.title,
+      description: m.description ?? "",
+      dueOn: m.dueOn,
+      url: m.url,
+      state: m.state,
+      openIssues: m.openIssues.totalCount,
+      closedIssues: m.closedIssues.totalCount,
+      repo,
+      issues: m.allIssues.nodes.map((i) => ({
+        number: i.number,
+        title: i.title,
+        state: i.state,
+        labels: i.labels.nodes.map((l) => l.name),
+        url: i.url,
+      })),
+    })),
+    commitActivity,
+  };
 }
 
 const CACHE_KEY = "makeit_dashboard_cache";
@@ -404,6 +459,20 @@ export async function fetchDashboardData(token: string, forceRefresh = false): P
       ? new Date(now + etaDays * 86400000).toISOString()
       : null;
 
+    // Cycle time: median days issue open→close (last 28 days)
+    const cutoff28d = now - 28 * 86400000;
+    const recentlyClosed = repoIssues.filter(
+      (i) => i.closedAt && new Date(i.closedAt).getTime() > cutoff28d
+    );
+    let cycleTimeDays: number | null = null;
+    if (recentlyClosed.length > 0) {
+      const times = recentlyClosed
+        .map((i) => (new Date(i.closedAt!).getTime() - new Date(i.createdAt).getTime()) / 86400000)
+        .sort((a, b) => a - b);
+      const mid = Math.floor(times.length / 2);
+      cycleTimeDays = times.length % 2 === 0 ? (times[mid - 1] + times[mid]) / 2 : times[mid];
+    }
+
     return {
       repo: project.repo,
       client: project.client,
@@ -426,6 +495,8 @@ export async function fetchDashboardData(token: string, forceRefresh = false): P
       velocity14d,
       etaDays,
       etaDate,
+      cycleTimeDays,
+      commitActivity: repoInfo.commitActivity,
     };
   });
 

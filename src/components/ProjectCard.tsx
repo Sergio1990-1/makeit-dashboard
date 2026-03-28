@@ -1,4 +1,6 @@
 import type { ProjectData, Priority, Monitor, MonitorStatus } from "../types";
+import { calcRiskScore } from "../utils/riskScore";
+import { CommitHeatmap } from "./CommitHeatmap";
 
 interface Props {
   project: ProjectData;
@@ -33,6 +35,7 @@ export function ProjectCard({ project, monitor }: Props) {
   const hasFinances = project.budget > 0;
   const paymentProgress = hasFinances ? Math.round((project.paid / project.budget) * 100) : 0;
   const isStale = project.daysSinceActivity !== null && project.daysSinceActivity >= 2 && project.openCount > 0;
+  const risk = calcRiskScore(project, monitor);
 
   return (
     <div className={`project-card ${isStale ? "project-stale" : ""}`}>
@@ -50,6 +53,9 @@ export function ProjectCard({ project, monitor }: Props) {
               {STATUS_LABEL[monitor.status]}
             </span>
           )}
+          <span className={`risk-badge risk-badge--${risk.level}`} title={`Риск: ${risk.score}/100`}>
+            {risk.label} {risk.score}
+          </span>
           <span className="project-client">клиент: {project.client}</span>
           {project.daysSinceActivity !== null && project.daysSinceActivity > 0 && (
             <span className={`activity-badge ${isStale ? "stale" : ""}`}>
@@ -116,6 +122,13 @@ export function ProjectCard({ project, monitor }: Props) {
           <span className="velocity-label">
             Скорость: {project.velocity7d > 0 ? `${project.velocity7d.toFixed(1)}/день` : "нет данных"}
           </span>
+          {project.cycleTimeDays !== null && (
+            <span className="cycle-time" title="Медиана времени закрытия issue (последние 28 дней)">
+              ⏱ цикл: {project.cycleTimeDays < 1
+                ? `${Math.round(project.cycleTimeDays * 24)}ч`
+                : `${Math.round(project.cycleTimeDays)}д`}
+            </span>
+          )}
           {project.etaDate && (
             <span className={`velocity-eta ${project.etaDays && project.etaDays > 60 ? "eta-danger" : project.etaDays && project.etaDays > 30 ? "eta-warning" : "eta-ok"}`}>
               Прогноз: {new Date(project.etaDate).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
@@ -124,6 +137,8 @@ export function ProjectCard({ project, monitor }: Props) {
           )}
         </div>
       )}
+
+      <CommitHeatmap activity={project.commitActivity} />
 
       {project.description && (
         <p className="project-focus">{project.description}</p>
