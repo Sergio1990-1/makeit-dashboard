@@ -82,17 +82,17 @@ export function clearClaudeKey(): void {
   localStorage.removeItem("claude_api_key");
 }
 
-// Better Stack token
-export function getBetterStackToken(): string | null {
-  return localStorage.getItem("betterstack_token");
+// Cloudflare Worker URL (proxies Better Stack API to avoid CORS)
+export function getWorkerUrl(): string | null {
+  return localStorage.getItem("betterstack_worker_url");
 }
 
-export function setBetterStackToken(token: string): void {
-  localStorage.setItem("betterstack_token", token);
+export function setWorkerUrl(url: string): void {
+  localStorage.setItem("betterstack_worker_url", url);
 }
 
-export function clearBetterStackToken(): void {
-  localStorage.removeItem("betterstack_token");
+export function clearWorkerUrl(): void {
+  localStorage.removeItem("betterstack_worker_url");
 }
 
 // Map repo name → keywords to match against monitor name/url

@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import type { Monitor } from "../types";
 import { fetchMonitors } from "../utils/betterstack";
-import { getBetterStackToken } from "../utils/config";
+import { getWorkerUrl } from "../utils/config";
 
 interface UseMonitorsResult {
   monitors: Monitor[];
@@ -16,9 +16,9 @@ export function useMonitors(): UseMonitorsResult {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    const token = getBetterStackToken();
-    if (!token) {
-      setError("Better Stack token not set");
+    const url = getWorkerUrl();
+    if (!url) {
+      setError("Worker URL not set");
       return;
     }
 
@@ -26,7 +26,7 @@ export function useMonitors(): UseMonitorsResult {
     setError(null);
 
     try {
-      const data = await fetchMonitors(token);
+      const data = await fetchMonitors(url);
       setMonitors(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");

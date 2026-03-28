@@ -22,13 +22,11 @@ function mapStatus(raw: string): MonitorStatus {
   return "pending";
 }
 
-export async function fetchMonitors(token: string): Promise<Monitor[]> {
-  const res = await fetch("https://uptime.betterstack.com/api/v2/monitors", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function fetchMonitors(workerUrl: string): Promise<Monitor[]> {
+  const res = await fetch(workerUrl);
 
   if (!res.ok) {
-    throw new Error(`Better Stack API error: ${res.status}`);
+    throw new Error(`Proxy error: ${res.status}`);
   }
 
   const json: BetterStackResponse = await res.json();

@@ -1,5 +1,5 @@
 import type { Monitor, MonitorStatus } from "../types";
-import { getBetterStackToken, setBetterStackToken } from "../utils/config";
+import { getWorkerUrl, setWorkerUrl } from "../utils/config";
 import { useMonitors } from "../hooks/useMonitors";
 import { useEffect, useState } from "react";
 
@@ -38,37 +38,48 @@ function MonitorRow({ monitor }: { monitor: Monitor }) {
 
 export function UptimeBar() {
   const { monitors, loading, error, refresh } = useMonitors();
-  const [tokenInput, setTokenInput] = useState("");
-  const [hasToken, setHasToken] = useState(!!getBetterStackToken());
+  const [urlInput, setUrlInput] = useState("");
+  const [hasUrl, setHasUrl] = useState(!!getWorkerUrl());
 
   useEffect(() => {
-    if (hasToken) {
+    if (hasUrl) {
       refresh();
     }
-  }, [hasToken, refresh]);
+  }, [hasUrl, refresh]);
 
-  function handleSaveToken() {
-    if (tokenInput.trim()) {
-      setBetterStackToken(tokenInput.trim());
-      setHasToken(true);
-      setTokenInput("");
+  function handleSaveUrl() {
+    const trimmed = urlInput.trim();
+    if (trimmed) {
+      setWorkerUrl(trimmed);
+      setHasUrl(true);
+      setUrlInput("");
     }
   }
 
-  if (!hasToken) {
+  if (!hasUrl) {
     return (
       <div className="uptime-setup">
         <h3>Мониторинг Better Stack</h3>
-        <p>Введите API токен Better Stack для отображения статуса мониторов.</p>
+        <p>
+          Для работы нужен Cloudflare Worker, который проксирует запросы к Better Stack API.
+          <br />
+          <a
+            href="https://github.com/Sergio1990-1/makeit-dashboard/blob/main/cloudflare-worker/betterstack-proxy.js"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Инструкция по настройке →
+          </a>
+        </p>
         <div className="uptime-token-form">
           <input
-            type="password"
-            placeholder="Better Stack API token"
-            value={tokenInput}
-            onChange={(e) => setTokenInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSaveToken()}
+            type="url"
+            placeholder="https://betterstack-proxy.YOUR-NAME.workers.dev"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSaveUrl()}
           />
-          <button onClick={handleSaveToken}>Сохранить</button>
+          <button onClick={handleSaveUrl}>Сохранить</button>
         </div>
       </div>
     );
