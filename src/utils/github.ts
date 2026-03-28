@@ -24,6 +24,9 @@ interface CommitWeekStat {
 }
 
 async function fetchCommitActivity(token: string, owner: string, repo: string): Promise<CommitActivity> {
+  // Primary: stats/commit_activity — 1 request, covers 52 weeks, no pagination cap.
+  // GitHub computes these asynchronously and may return 202 on first call.
+  // Retry up to 3 times, then fall back to commits pagination.
   let weeks: CommitWeekStat[] | null = null;
 
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -35,31 +38,51 @@ async function fetchCommitActivity(token: string, owner: string, repo: string): 
       weeks = result;
       break;
     }
-    // 202 Accepted = GitHub is computing stats, wait and retry
-    if (attempt < 2) await new Promise((r) => setTimeout(r, 1500));
+    if (attempt < 2) await new Promise((r) => setTimeout(r, 2000));
   }
 
-  if (!weeks) return { byDate: {}, today: 0, thisWeek: 0, thisMonth: 0, total84d: 0 };
-
-  // Convert weekly stats to byDate map
-  // week.week is Unix epoch seconds for the Sunday of that week (UTC 00:00)
-  // days[0]=Sun … days[6]=Sat
-  const byDate: Record<string, number> = {};
-  for (const week of weeks) {
-    for (let d = 0; d < 7; d++) {
-      const count = week.days[d];
-      if (count === 0) continue;
-      const date = new Date((week.week + d * 86400) * 1000).toISOString().split("T")[0];
-      byDate[date] = count;
+  if (weeks) {
+    // Convert weekly stats to byDate map
+    // week.week = Unix seconds for the Sunday that starts this week (UTC 00:00)
+    // days[0]=Sun … days[6]=Sat
+    const byDate: Record<string, number> = {};
+    for (const week of weeks) {
+      for (let d = 0; d < 7; d++) {
+        const count = week.days[d];
+        if (count === 0) continue;
+        const date = new Date((week.week + d * 86400) * 1000).toISOString().split("T")[0];
+        byDate[date] = count;
+      }
     }
+    return buildActivity(byDate);
   }
 
+  // Fallback: commits endpoint with pagination (up to 5 pages = 500 commits)
+  // Used when stats API is still warming up for the repo
+  const since = new Date(Date.now() - 84 * 86400000).toISOString();
+  const byDate: Record<string, number> = {};
+  for (let page = 1; page <= 5; page++) {
+    const commits = await restGet<Array<{ commit: { committer?: { date?: string }; author?: { date?: string } } }>>(
+      token,
+      `/repos/${owner}/${repo}/commits?since=${since}&per_page=100&page=${page}`
+    );
+    if (!Array.isArray(commits) || commits.length === 0) break;
+    for (const c of commits) {
+      const dateStr = c.commit?.committer?.date ?? c.commit?.author?.date ?? "";
+      const date = dateStr.split("T")[0];
+      if (date) byDate[date] = (byDate[date] ?? 0) + 1;
+    }
+    if (commits.length < 100) break;
+  }
+  return buildActivity(byDate);
+}
+
+function buildActivity(byDate: Record<string, number>): CommitActivity {
   const now = Date.now();
   const todayStr = new Date().toISOString().split("T")[0];
   const weekAgo = new Date(now - 7 * 86400000).toISOString().split("T")[0];
   const monthAgo = new Date(now - 30 * 86400000).toISOString().split("T")[0];
   const period84dAgo = new Date(now - 84 * 86400000).toISOString().split("T")[0];
-
   return {
     byDate,
     today: byDate[todayStr] ?? 0,
