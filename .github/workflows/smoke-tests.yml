@@ -1,0 +1,23 @@
+name: Smoke Tests
+
+on:
+  schedule:
+    - cron: "0 */4 * * *"   # каждые 4 часа
+  workflow_dispatch:          # запуск вручную из GitHub UI
+
+jobs:
+  smoke:
+    name: Run smoke tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run smoke tests
+        env:
+          TG_TOKEN: ${{ secrets.SMOKE_TG_TOKEN }}
+          TG_CHAT_ID: "153715371"
+          SMOKE_HOST: "89.167.17.79"
+          SMOKE_TIMEOUT: "10"
+        run: python3 scripts/smoke-tests.py

@@ -1,5 +1,54 @@
-import type { Issue, IssueStatus, Priority, Phase, ProjectData } from "../types";
-import { PROJECTS, GITHUB_OWNER, GITHUB_PROJECT_NUMBER } from "./config";
+import type { Issue, IssueStatus, Priority, Phase, ProjectData, Milestone, CommitActivity } from "../types";
+import { getProjects, GITHUB_OWNER, GITHUB_PROJECT_NUMBER } from "./config";
+
+const GITHUB_REST = "https://api.github.com";
+
+async function restGet<T>(token: string, path: string): Promise<T | null> {
+  try {
+    const res = await fetch(`${GITHUB_REST}${path}`, {
+      headers: { Authorization: `bearer ${token}`, Accept: "application/vnd.github.v3+json" },
+    });
+    if (!res.ok) return null;
+    return res.json() as Promise<T>;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchCommitActivity(token: string, owner: string, repo: string): Promise<CommitActivity> {
+  const since = new Date(Date.now() - 84 * 86400000).toISOString();
+  const byDate: Record<string, number> = {};
+  let page = 1;
+
+  while (page <= 3) {
+    const commits = await restGet<Array<{ commit: { committer?: { date?: string }; author?: { date?: string } } }>>(
+      token,
+      `/repos/${owner}/${repo}/commits?since=${since}&per_page=100&page=${page}`
+    );
+    if (!Array.isArray(commits) || commits.length === 0) break;
+
+    for (const c of commits) {
+      const dateStr = c.commit?.committer?.date ?? c.commit?.author?.date ?? "";
+      const date = dateStr.split("T")[0];
+      if (date) byDate[date] = (byDate[date] ?? 0) + 1;
+    }
+
+    if (commits.length < 100) break;
+    page++;
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0];
+  const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+
+  return {
+    byDate,
+    today: byDate[today] ?? 0,
+    thisWeek: Object.entries(byDate).filter(([d]) => d >= weekAgo).reduce((s, [, v]) => s + v, 0),
+    thisMonth: Object.entries(byDate).filter(([d]) => d >= monthAgo).reduce((s, [, v]) => s + v, 0),
+    total84d: Object.values(byDate).reduce((s, v) => s + v, 0),
+  };
+}
 
 const GITHUB_GRAPHQL = "https://api.github.com/graphql";
 
@@ -13,6 +62,9 @@ async function graphql<T>(token: string, query: string, variables: Record<string
     body: JSON.stringify({ query, variables }),
   });
 
+  if (res.status === 401 || res.status === 403) {
+    throw new Error("GitHub token истёк или недостаточно прав. Сбросьте токен и введите новый.");
+  }
   if (!res.ok) {
     throw new Error(`GitHub API error: ${res.status} ${res.statusText}`);
   }
@@ -53,20 +105,28 @@ query($owner: String!, $number: Int!, $cursor: String) {
   user(login: $owner) {
     projectV2(number: $number) {
       items(first: 100, after: $cursor) {
+        totalCount
         pageInfo { hasNextPage endCursor }
         nodes {
           id
+          type
           content {
             ... on Issue {
               title
               url
               createdAt
               updatedAt
+              closedAt
               state
               labels(first: 20) {
                 nodes { name }
               }
               repository { name }
+            }
+            ... on DraftIssue {
+              title
+              createdAt
+              updatedAt
             }
           }
           fieldValues(first: 10) {
@@ -86,11 +146,13 @@ query($owner: String!, $number: Int!, $cursor: String) {
 
 interface ProjectItemNode {
   id: string;
+  type: string;
   content: {
     title?: string;
     url?: string;
     createdAt?: string;
     updatedAt?: string;
+    closedAt?: string | null;
     state?: string;
     labels?: { nodes: { name: string }[] };
     repository?: { name: string };
@@ -107,6 +169,7 @@ interface ProjectItemsResponse {
   user: {
     projectV2: {
       items: {
+        totalCount: number;
         pageInfo: { hasNextPage: boolean; endCursor: string | null };
         nodes: ProjectItemNode[];
       };
@@ -127,8 +190,10 @@ export async function fetchAllProjectItems(token: string): Promise<Issue[]> {
   const issues: Issue[] = [];
   let cursor: string | null = null;
   let hasNext = true;
+  let page = 0;
 
-  while (hasNext) {
+  const MAX_PAGES = 20; // 20 × 100 items = 2000 max
+  while (hasNext && page < MAX_PAGES) {
     const data: ProjectItemsResponse = await graphql<ProjectItemsResponse>(token, PROJECT_ITEMS_QUERY, {
       owner: GITHUB_OWNER,
       number: GITHUB_PROJECT_NUMBER,
@@ -136,13 +201,25 @@ export async function fetchAllProjectItems(token: string): Promise<Issue[]> {
     });
 
     const items: ProjectItemsResponse["user"]["projectV2"]["items"] = data.user.projectV2.items;
-
+    page++;
+    let skipped = 0;
+    const skippedTypes: Record<string, number> = {};
     for (const node of items.nodes) {
-      if (!node.content?.title) continue;
+      if (!node.content?.title) {
+        skipped++;
+        const t = node.type ?? "unknown";
+        skippedTypes[t] = (skippedTypes[t] ?? 0) + 1;
+        continue;
+      }
 
       const labels: string[] = node.content.labels?.nodes.map((l: { name: string }) => l.name) ?? [];
       const statusField = getStatusFromNode(node);
-      const status = parseStatus(statusField);
+      // If GitHub issue state is CLOSED, force Done regardless of project board status
+      const issueState = node.content.state;
+      const status = issueState === "CLOSED" ? "Done" as IssueStatus : parseStatus(statusField);
+
+      // DraftIssue has no repository — use "draft" as repo name
+      const repo = node.content.repository?.name ?? "draft";
 
       issues.push({
         id: node.id,
@@ -151,21 +228,37 @@ export async function fetchAllProjectItems(token: string): Promise<Issue[]> {
         status,
         priority: parsePriority(labels),
         labels,
-        repo: node.content.repository?.name ?? "unknown",
+        repo,
         isBlocked: labels.some((l: string) => l.toLowerCase() === "blocked"),
         createdAt: node.content.createdAt ?? "",
         updatedAt: node.content.updatedAt ?? "",
+        closedAt: node.content.closedAt ?? null,
       });
+    }
+
+    if (skipped > 0) {
+      console.log(`[Dashboard] Page ${page}: ${items.nodes.length} received, ${skipped} skipped (no content)`, skippedTypes);
+    } else {
+      console.log(`[Dashboard] Page ${page}: ${items.nodes.length} received, all have content`);
     }
 
     hasNext = items.pageInfo.hasNextPage;
     cursor = items.pageInfo.endCursor;
   }
 
+  console.log(`[Dashboard] Total fetched: ${issues.length}`);
+
+  // Show breakdown by repo
+  const byRepo: Record<string, number> = {};
+  for (const i of issues) {
+    byRepo[i.repo] = (byRepo[i.repo] ?? 0) + 1;
+  }
+  console.log(`[Dashboard] By repo:`, byRepo);
+
   return issues;
 }
 
-const LAST_COMMIT_QUERY = `
+const REPO_INFO_QUERY = `
 query($owner: String!, $repo: String!) {
   repository(owner: $owner, name: $repo) {
     defaultBranchRef {
@@ -176,9 +269,68 @@ query($owner: String!, $repo: String!) {
       }
     }
     description
+    openMilestones: milestones(first: 20, states: OPEN, orderBy: {field: DUE_DATE, direction: ASC}) {
+      nodes {
+        title
+        description
+        dueOn
+        url
+        state
+        closedIssues: issues(states: CLOSED) { totalCount }
+        openIssues: issues(states: OPEN) { totalCount }
+        allIssues: issues(first: 50, orderBy: {field: CREATED_AT, direction: ASC}) {
+          nodes {
+            number
+            title
+            state
+            url
+            labels(first: 10) { nodes { name } }
+          }
+        }
+      }
+    }
+    closedMilestones: milestones(first: 10, states: CLOSED, orderBy: {field: DUE_DATE, direction: DESC}) {
+      nodes {
+        title
+        description
+        dueOn
+        url
+        state
+        closedIssues: issues(states: CLOSED) { totalCount }
+        openIssues: issues(states: OPEN) { totalCount }
+        allIssues: issues(first: 50, orderBy: {field: CREATED_AT, direction: ASC}) {
+          nodes {
+            number
+            title
+            state
+            url
+            labels(first: 10) { nodes { name } }
+          }
+        }
+      }
+    }
   }
 }
 `;
+
+interface MilestoneIssueNode {
+  number: number;
+  title: string;
+  state: "OPEN" | "CLOSED";
+  url: string;
+  labels: { nodes: { name: string }[] };
+}
+
+interface MilestoneNode {
+  title: string;
+  description: string | null;
+  dueOn: string | null;
+  url: string;
+  state: "OPEN" | "CLOSED";
+  closedIssues: { totalCount: number };
+  openIssues: { totalCount: number };
+  allIssues: { nodes: MilestoneIssueNode[] };
+}
 
 interface RepoInfoResponse {
   repository: {
@@ -186,36 +338,140 @@ interface RepoInfoResponse {
       target: { committedDate: string };
     } | null;
     description: string | null;
+    openMilestones: { nodes: MilestoneNode[] };
+    closedMilestones: { nodes: MilestoneNode[] };
   };
 }
 
-async function fetchRepoInfo(token: string, owner: string, repo: string) {
-  try {
-    const data = await graphql<RepoInfoResponse>(token, LAST_COMMIT_QUERY, { owner, repo });
-    return {
-      lastCommitDate: data.repository.defaultBranchRef?.target.committedDate ?? null,
-      description: data.repository.description ?? "",
-    };
-  } catch {
-    return { lastCommitDate: null, description: "" };
-  }
+interface RepoInfo {
+  lastCommitDate: string | null;
+  description: string;
+  milestones: Milestone[];
+  commitActivity: CommitActivity;
 }
 
-export async function fetchDashboardData(token: string): Promise<ProjectData[]> {
+async function fetchRepoInfo(token: string, owner: string, repo: string): Promise<RepoInfo> {
+  const [graphqlResult, commitActivity] = await Promise.all([
+    graphql<RepoInfoResponse>(token, REPO_INFO_QUERY, { owner, repo }).catch(() => null),
+    fetchCommitActivity(token, owner, repo),
+  ]);
+
+  if (!graphqlResult) {
+    return { lastCommitDate: null, description: "", milestones: [], commitActivity };
+  }
+
+  const allMs = [
+    ...graphqlResult.repository.openMilestones.nodes,
+    ...graphqlResult.repository.closedMilestones.nodes,
+  ];
+  return {
+    lastCommitDate: graphqlResult.repository.defaultBranchRef?.target.committedDate ?? null,
+    description: graphqlResult.repository.description ?? "",
+    milestones: allMs.map((m) => ({
+      title: m.title,
+      description: m.description ?? "",
+      dueOn: m.dueOn,
+      url: m.url,
+      state: m.state,
+      openIssues: m.openIssues.totalCount,
+      closedIssues: m.closedIssues.totalCount,
+      repo,
+      issues: m.allIssues.nodes.map((i) => ({
+        number: i.number,
+        title: i.title,
+        state: i.state,
+        labels: i.labels.nodes.map((l) => l.name),
+        url: i.url,
+      })),
+    })),
+    commitActivity,
+  };
+}
+
+const CACHE_KEY = "makeit_dashboard_cache";
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+interface CacheEntry {
+  data: ProjectData[];
+  timestamp: number;
+}
+
+export async function fetchDashboardData(token: string, forceRefresh = false): Promise<ProjectData[]> {
+  // Check cache
+  if (!forceRefresh) {
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const entry: CacheEntry = JSON.parse(cached);
+        if (Date.now() - entry.timestamp < CACHE_TTL) {
+          console.log("[Dashboard] Using cached data");
+          return entry.data;
+        }
+      }
+    } catch { /* ignore cache errors */ }
+  }
+
   const allIssues = await fetchAllProjectItems(token);
 
-  const projectDataPromises = PROJECTS.map(async (project) => {
+  const projectDataPromises = getProjects().map(async (project) => {
     const repoIssues = allIssues.filter((i) => i.repo === project.repo);
     const repoInfo = await fetchRepoInfo(token, project.owner, project.repo);
 
     const priorityCounts: Record<Priority, number> = { P1: 0, P2: 0, P3: 0, P4: 0 };
     for (const issue of repoIssues) {
-      if (issue.priority) priorityCounts[issue.priority]++;
+      if (issue.priority && issue.status !== "Done") priorityCounts[issue.priority]++;
     }
 
     const doneCount = repoIssues.filter((i) => i.status === "Done").length;
     const totalCount = repoIssues.length;
     const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+
+    // Calculate last activity: most recent of last commit or last issue update
+    const dates = [
+      repoInfo.lastCommitDate,
+      ...repoIssues.map((i) => i.updatedAt),
+    ].filter(Boolean) as string[];
+    const lastActivityDate = dates.length > 0
+      ? dates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
+      : null;
+    const daysSinceActivity = lastActivityDate
+      ? Math.floor((Date.now() - new Date(lastActivityDate).getTime()) / 86400000)
+      : null;
+
+    // Calculate velocity: issues per ACTIVE day (days with at least 1 closure)
+    const now = Date.now();
+    const closedWithDates = repoIssues.filter((i) => i.closedAt);
+
+    function calcVelocity(periodMs: number): number {
+      const items = closedWithDates.filter((i) => now - new Date(i.closedAt!).getTime() < periodMs);
+      if (items.length === 0) return 0;
+      // Count unique active days
+      const activeDays = new Set(items.map((i) => new Date(i.closedAt!).toISOString().split("T")[0]));
+      return items.length / activeDays.size;
+    }
+
+    const velocity7d = calcVelocity(7 * 86400000);
+    const velocity14d = calcVelocity(14 * 86400000);
+    const bestVelocity = Math.max(velocity7d, velocity14d, 0.001);
+    const openCount = totalCount - doneCount;
+    const etaDays = openCount > 0 ? Math.ceil(openCount / bestVelocity * 1.25) : null; // 25% buffer
+    const etaDate = etaDays !== null
+      ? new Date(now + etaDays * 86400000).toISOString()
+      : null;
+
+    // Cycle time: median days issue open→close (last 28 days)
+    const cutoff28d = now - 28 * 86400000;
+    const recentlyClosed = repoIssues.filter(
+      (i) => i.closedAt && new Date(i.closedAt).getTime() > cutoff28d
+    );
+    let cycleTimeDays: number | null = null;
+    if (recentlyClosed.length > 0) {
+      const times = recentlyClosed
+        .map((i) => (new Date(i.closedAt!).getTime() - new Date(i.createdAt).getTime()) / 86400000)
+        .sort((a, b) => a - b);
+      const mid = Math.floor(times.length / 2);
+      cycleTimeDays = times.length % 2 === 0 ? (times[mid - 1] + times[mid]) / 2 : times[mid];
+    }
 
     return {
       repo: project.repo,
@@ -226,11 +482,31 @@ export async function fetchDashboardData(token: string): Promise<ProjectData[]> 
       progress,
       lastCommitDate: repoInfo.lastCommitDate,
       description: repoInfo.description,
-      openCount: totalCount - doneCount,
+      openCount,
       doneCount,
       totalCount,
+      milestones: repoInfo.milestones,
+      budget: project.budget,
+      paid: project.paid,
+      remaining: project.budget - project.paid,
+      daysSinceActivity,
+      lastActivityDate,
+      velocity7d,
+      velocity14d,
+      etaDays,
+      etaDate,
+      cycleTimeDays,
+      commitActivity: repoInfo.commitActivity,
     };
   });
 
-  return Promise.all(projectDataPromises);
+  const result = await Promise.all(projectDataPromises);
+
+  // Save to cache
+  try {
+    const entry: CacheEntry = { data: result, timestamp: Date.now() };
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(entry));
+  } catch { /* ignore quota errors */ }
+
+  return result;
 }
