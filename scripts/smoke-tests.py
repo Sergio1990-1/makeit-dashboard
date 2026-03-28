@@ -31,13 +31,13 @@ class Service:
     expected_status: int = 200
 
 SERVICES = [
-    Service("Sewing-ERP",    8001, ready_path="/health/ready"),
-    Service("Uchet_bot",     8002, ready_path="/health/ready"),
-    Service("Beer_bot",      8003, ready_path="/health/ready"),
-    Service("mankassa-app",  8004, ready_path=None),
-    Service("moliyakg",      8005, ready_path=None),
-    Service("Business-News", 8000, ready_path=None),
+    Service("Sewing-ERP",   8001, ready_path="/health/ready"),
+    Service("Uchet_bot",    8002, ready_path="/health/ready"),
+    Service("Beer_bot",     8003, ready_path="/health/ready"),
+    Service("mankassa-app", 8004, ready_path=None),
     Service("MyMoney",       3010, health_path="/", ready_path=None),
+    Service("Business-News", 8000, ready_path=None),
+    # moliyakg: не задеплоен на VPS
 ]
 
 @dataclass
