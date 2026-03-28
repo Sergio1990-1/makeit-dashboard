@@ -104,4 +104,5 @@ export const MONITOR_MATCH: Record<string, string[]> = {
   "solotax-kg": ["solotax", "api.solotax"],
   "Business-News": ["8000", "biznews", "content"],
   "moliyakg": ["moliya", "8005"],
+  "MyMoney": ["3010", "mymoney"],
 };
