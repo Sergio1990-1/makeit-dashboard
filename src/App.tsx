@@ -33,7 +33,7 @@ function App() {
     refresh,
   } = useDashboard();
 
-  const { monitors, refresh: refreshMonitors } = useMonitors();
+  const { monitors, loading: monitorsLoading, error: monitorsError, refresh: refreshMonitors } = useMonitors();
 
   const [tab, setTab] = useState<TabId>("projects");
   const [chatOpen, setChatOpen] = useState(false);
@@ -173,7 +173,7 @@ function App() {
 
           {tab === "uptime" && (
             <ErrorBoundary fallback="Ошибка в мониторинге">
-              <UptimeBar />
+              <UptimeBar monitors={monitors} loading={monitorsLoading} error={monitorsError} onRefresh={refreshMonitors} />
             </ErrorBoundary>
           )}
 

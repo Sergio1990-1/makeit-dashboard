@@ -1,7 +1,6 @@
 import type { Monitor, MonitorStatus } from "../types";
 import { getWorkerUrl, setWorkerUrl } from "../utils/config";
-import { useMonitors } from "../hooks/useMonitors";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const STATUS_LABEL: Record<MonitorStatus, string> = {
   up: "Online",
@@ -36,16 +35,16 @@ function MonitorRow({ monitor }: { monitor: Monitor }) {
   );
 }
 
-export function UptimeBar() {
-  const { monitors, loading, error, refresh } = useMonitors();
+interface UptimeBarProps {
+  monitors: Monitor[];
+  loading: boolean;
+  error: string | null;
+  onRefresh: () => void;
+}
+
+export function UptimeBar({ monitors, loading, error, onRefresh }: UptimeBarProps) {
   const [urlInput, setUrlInput] = useState("");
   const [hasUrl, setHasUrl] = useState(!!getWorkerUrl());
-
-  useEffect(() => {
-    if (hasUrl) {
-      refresh();
-    }
-  }, [hasUrl, refresh]);
 
   function handleSaveUrl() {
     const trimmed = urlInput.trim();
@@ -100,7 +99,7 @@ export function UptimeBar() {
         </div>
         <button
           className="uptime-refresh"
-          onClick={refresh}
+          onClick={onRefresh}
           disabled={loading}
         >
           {loading ? "Загрузка..." : "Обновить"}
