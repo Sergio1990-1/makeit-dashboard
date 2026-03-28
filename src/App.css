@@ -914,6 +914,20 @@ body {
 .monitor-status-dot--paused  { background: #8b949e; }
 .monitor-status-dot--pending { background: #c9a227; }
 
+.monitor-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+.monitor-badge--up    { color: #3fb950; background: #3fb95015; }
+.monitor-badge--down  { color: #f85149; background: #f8514915; }
+.monitor-badge--paused  { color: #8b949e; background: #8b949e15; }
+.monitor-badge--pending { color: #c9a227; background: #c9a22715; }
+
 /* Uptime tab */
 .uptime-bar {
   padding: 16px 0;

@@ -33,7 +33,7 @@ function App() {
     refresh,
   } = useDashboard();
 
-  const { monitors } = useMonitors();
+  const { monitors, refresh: refreshMonitors } = useMonitors();
 
   const [tab, setTab] = useState<TabId>("projects");
   const [chatOpen, setChatOpen] = useState(false);
@@ -53,7 +53,8 @@ function App() {
 
   useEffect(() => {
     if (getToken()) refresh(false); // use cache on initial load
-  }, [refresh]);
+    refreshMonitors();
+  }, [refresh, refreshMonitors]);
 
   const hasToken = !!getToken();
 

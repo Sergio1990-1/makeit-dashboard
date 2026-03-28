@@ -12,7 +12,7 @@ const STATUS_LABEL: Record<MonitorStatus, string> = {
 
 function MonitorRow({ monitor }: { monitor: Monitor }) {
   const uptime =
-    monitor.uptimePct !== null ? `${monitor.uptimePct.toFixed(2)}%` : "—";
+    monitor.uptimePct != null ? `${monitor.uptimePct.toFixed(2)}%` : "—";
   const checked = monitor.lastCheckedAt
     ? new Date(monitor.lastCheckedAt).toLocaleString("ru-RU", {
         day: "2-digit",

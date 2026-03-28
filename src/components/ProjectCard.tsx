@@ -5,11 +5,11 @@ interface Props {
   monitor?: Monitor;
 }
 
-const STATUS_DOT_TITLE: Record<MonitorStatus, string> = {
-  up: "Online",
-  down: "Down",
-  paused: "Paused",
-  pending: "Pending",
+const STATUS_LABEL: Record<MonitorStatus, string> = {
+  up: "alive",
+  down: "down",
+  paused: "paused",
+  pending: "pending",
 };
 
 const PRIORITY_COLORS: Record<Priority, string> = {
@@ -45,10 +45,10 @@ export function ProjectCard({ project, monitor }: Props) {
         </div>
         <div className="project-right-info">
           {monitor && (
-            <span
-              className={`monitor-status-dot monitor-status-dot--${monitor.status}`}
-              title={STATUS_DOT_TITLE[monitor.status]}
-            />
+            <span className={`monitor-badge monitor-badge--${monitor.status}`}>
+              <span className={`monitor-status-dot monitor-status-dot--${monitor.status}`} />
+              {STATUS_LABEL[monitor.status]}
+            </span>
           )}
           <span className="project-client">клиент: {project.client}</span>
           {project.daysSinceActivity !== null && project.daysSinceActivity > 0 && (
