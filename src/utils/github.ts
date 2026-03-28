@@ -15,38 +15,57 @@ async function restGet<T>(token: string, path: string): Promise<T | null> {
   }
 }
 
+// GitHub Stats API — 1 request per repo, no pagination, covers up to 52 weeks
+// Returns 202 while stats are being computed → retry up to 3 times
+interface CommitWeekStat {
+  days: number[]; // [Sun, Mon, Tue, Wed, Thu, Fri, Sat]
+  total: number;
+  week: number;   // Unix timestamp (seconds) of the Sunday that starts this week (UTC)
+}
+
 async function fetchCommitActivity(token: string, owner: string, repo: string): Promise<CommitActivity> {
-  const since = new Date(Date.now() - 84 * 86400000).toISOString();
-  const byDate: Record<string, number> = {};
-  let page = 1;
+  let weeks: CommitWeekStat[] | null = null;
 
-  while (page <= 3) {
-    const commits = await restGet<Array<{ commit: { committer?: { date?: string }; author?: { date?: string } } }>>(
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const result = await restGet<CommitWeekStat[]>(
       token,
-      `/repos/${owner}/${repo}/commits?since=${since}&per_page=100&page=${page}`
+      `/repos/${owner}/${repo}/stats/commit_activity`
     );
-    if (!Array.isArray(commits) || commits.length === 0) break;
-
-    for (const c of commits) {
-      const dateStr = c.commit?.committer?.date ?? c.commit?.author?.date ?? "";
-      const date = dateStr.split("T")[0];
-      if (date) byDate[date] = (byDate[date] ?? 0) + 1;
+    if (Array.isArray(result) && result.length > 0) {
+      weeks = result;
+      break;
     }
-
-    if (commits.length < 100) break;
-    page++;
+    // 202 Accepted = GitHub is computing stats, wait and retry
+    if (attempt < 2) await new Promise((r) => setTimeout(r, 1500));
   }
 
-  const today = new Date().toISOString().split("T")[0];
-  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0];
-  const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+  if (!weeks) return { byDate: {}, today: 0, thisWeek: 0, thisMonth: 0, total84d: 0 };
+
+  // Convert weekly stats to byDate map
+  // week.week is Unix epoch seconds for the Sunday of that week (UTC 00:00)
+  // days[0]=Sun … days[6]=Sat
+  const byDate: Record<string, number> = {};
+  for (const week of weeks) {
+    for (let d = 0; d < 7; d++) {
+      const count = week.days[d];
+      if (count === 0) continue;
+      const date = new Date((week.week + d * 86400) * 1000).toISOString().split("T")[0];
+      byDate[date] = count;
+    }
+  }
+
+  const now = Date.now();
+  const todayStr = new Date().toISOString().split("T")[0];
+  const weekAgo = new Date(now - 7 * 86400000).toISOString().split("T")[0];
+  const monthAgo = new Date(now - 30 * 86400000).toISOString().split("T")[0];
+  const period84dAgo = new Date(now - 84 * 86400000).toISOString().split("T")[0];
 
   return {
     byDate,
-    today: byDate[today] ?? 0,
+    today: byDate[todayStr] ?? 0,
     thisWeek: Object.entries(byDate).filter(([d]) => d >= weekAgo).reduce((s, [, v]) => s + v, 0),
     thisMonth: Object.entries(byDate).filter(([d]) => d >= monthAgo).reduce((s, [, v]) => s + v, 0),
-    total84d: Object.values(byDate).reduce((s, v) => s + v, 0),
+    total84d: Object.entries(byDate).filter(([d]) => d >= period84dAgo).reduce((s, [, v]) => s + v, 0),
   };
 }
 
