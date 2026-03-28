@@ -59,8 +59,11 @@ function App() {
   const hasToken = !!getToken();
 
   const allMilestones = projects.flatMap((p) => p.milestones);
-  const openMilestones = allMilestones.filter((m) => m.state === "OPEN");
-  const doneMilestones = allMilestones.filter((m) => m.state === "CLOSED");
+  // Milestone считается завершённым если GitHub закрыл его (CLOSED) ИЛИ все issues закрыты
+  const isMilestoneDone = (m: { state: string; openIssues: number; closedIssues: number }) =>
+    m.state === "CLOSED" || (m.openIssues === 0 && m.closedIssues > 0);
+  const openMilestones = allMilestones.filter((m) => !isMilestoneDone(m));
+  const doneMilestones = allMilestones.filter((m) => isMilestoneDone(m));
 
   return (
     <div className="app">
