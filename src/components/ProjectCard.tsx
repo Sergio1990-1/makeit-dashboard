@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ProjectData, Priority, Monitor, MonitorStatus } from "../types";
 import { calcRiskScore } from "../utils/riskScore";
 import { CommitHeatmap } from "./CommitHeatmap";
@@ -15,10 +16,10 @@ const STATUS_LABEL: Record<MonitorStatus, string> = {
 };
 
 const PRIORITY_COLORS: Record<Priority, string> = {
-  P1: "#e03e36",
-  P2: "#db6d28",
-  P3: "#c9a227",
-  P4: "#3fb950",
+  P1: "var(--color-p1)",
+  P2: "var(--color-p2)",
+  P3: "var(--color-p3)",
+  P4: "var(--color-p4)",
 };
 
 const PHASE_LABELS: Record<string, string> = {
@@ -32,44 +33,41 @@ function formatUSD(n: number): string {
 }
 
 export function ProjectCard({ project, monitor }: Props) {
+  const [heatmapOpen, setHeatmapOpen] = useState(false);
   const hasFinances = project.budget > 0;
   const paymentProgress = hasFinances ? Math.round((project.paid / project.budget) * 100) : 0;
   const isStale = project.daysSinceActivity !== null && project.daysSinceActivity >= 2 && project.openCount > 0;
   const risk = calcRiskScore(project, monitor);
 
   return (
-    <div className={`project-card ${isStale ? "project-stale" : ""}`}>
-      <div className="project-row-top">
-        <div className="project-left">
-          <h3 className="project-name">{project.repo}</h3>
-          <span className={`phase-badge phase-${project.phase}`}>
+    <div className={`pc ${isStale ? "pc--stale" : ""} ${risk.level !== "low" ? `pc--risk-${risk.level}` : ""}`}>
+      {/* Row 1: Name + phase + badges */}
+      <div className="pc-header">
+        <div className="pc-name-row">
+          <h3 className="pc-name">{project.repo}</h3>
+          <span className={`pc-phase pc-phase--${project.phase}`}>
             {PHASE_LABELS[project.phase]}
           </span>
         </div>
-        <div className="project-right-info">
+        <div className="pc-badges">
           {monitor && (
-            <span className={`monitor-badge monitor-badge--${monitor.status}`}>
-              <span className={`monitor-status-dot monitor-status-dot--${monitor.status}`} />
+            <span className={`pc-monitor pc-monitor--${monitor.status}`}>
+              <span className={`pc-monitor-dot pc-monitor-dot--${monitor.status}`} />
               {STATUS_LABEL[monitor.status]}
             </span>
           )}
-          <span className={`risk-badge risk-badge--${risk.level}`} title={`Риск: ${risk.score}/100`}>
-            {risk.label} {risk.score}
+          <span className={`pc-risk pc-risk--${risk.level}`}>
+            Риск: {risk.label.toLowerCase()}
           </span>
-          <span className="project-client">клиент: {project.client}</span>
-          {project.daysSinceActivity !== null && project.daysSinceActivity > 0 && (
-            <span className={`activity-badge ${isStale ? "stale" : ""}`}>
-              {project.daysSinceActivity}д без движения
-            </span>
-          )}
         </div>
       </div>
 
-      <div className="project-row-priorities">
-        <span className="total-count">Total: {project.openCount}</span>
+      {/* Row 2: Priorities */}
+      <div className="pc-priorities">
+        <span className="pc-total">Всего: {project.openCount}</span>
         {(["P1", "P2", "P3"] as Priority[]).map((p) => (
-          <span key={p} className="priority-dot-item">
-            <span className="priority-dot" style={{ background: PRIORITY_COLORS[p] }} />
+          <span key={p} className="pc-pri">
+            <span className="pc-pri-dot" style={{ background: PRIORITY_COLORS[p] }} />
             {p}: {project.priorityCounts[p]}
           </span>
         ))}
@@ -77,71 +75,98 @@ export function ProjectCard({ project, monitor }: Props) {
           const labeled = project.priorityCounts.P1 + project.priorityCounts.P2 + project.priorityCounts.P3 + project.priorityCounts.P4;
           const noLabel = project.openCount - labeled;
           return noLabel > 0 ? (
-            <span className="priority-dot-item no-priority">
-              <span className="priority-dot" style={{ background: "#8b949e" }} />
-              ?: {noLabel}
-            </span>
+            <span className="pc-pri pc-pri--none">?: {noLabel}</span>
           ) : null;
         })()}
-        <span className="done-count">Done: {project.doneCount}</span>
+        <span className="pc-done">Done: {project.doneCount}</span>
       </div>
 
+      {/* Row 3: Progress */}
       {project.doneCount > 0 && (
-        <div className="project-progress-row">
-          <div className="progress-bar-container">
-            <div className="progress-bar-fill" style={{ width: `${project.progress}%` }} />
+        <div className="pc-progress">
+          <div className="pc-bar">
+            <div className="pc-bar-fill" style={{ width: `${project.progress}%` }} />
           </div>
-          <span className="project-progress-pct">{project.progress}%</span>
+          <span className="pc-pct">{project.progress}%</span>
         </div>
       )}
 
+      {/* Row 4: Finance */}
       {hasFinances && (
-        <div className="project-finance">
-          <div className="finance-amounts">
-            <span className="finance-paid">{formatUSD(project.paid)}</span>
-            <span className="finance-sep"> / </span>
-            <span className="finance-budget">{formatUSD(project.budget)}</span>
+        <div className="pc-finance">
+          <div className="pc-finance-row">
+            <span className="pc-finance-group">
+              <span className="pc-finance-label">Бюджет</span>
+              <span className="pc-finance-paid">{formatUSD(project.paid)}</span>
+              <span className="pc-finance-sep">/</span>
+              <span className="pc-finance-total">{formatUSD(project.budget)}</span>
+            </span>
             {project.remaining > 0 && (
-              <span className="finance-remaining">остаток {formatUSD(project.remaining)}</span>
+              <span className="pc-finance-group">
+                <span className="pc-finance-label">Остаток</span>
+                <span className="pc-finance-remaining">{formatUSD(project.remaining)}</span>
+              </span>
             )}
           </div>
-          <div className="progress-bar-container finance-bar">
+          <div className="pc-finance-bar">
             <div
-              className="progress-bar-fill"
+              className="pc-finance-fill"
               style={{
                 width: `${paymentProgress}%`,
-                background: paymentProgress >= 100 ? "#3fb950" : "#58a6ff",
+                background: paymentProgress >= 100 ? "var(--color-success)" : "var(--color-primary)",
               }}
             />
           </div>
         </div>
       )}
 
+      {/* Row 5: Velocity + Cycle + ETA */}
       {project.openCount > 0 && (
-        <div className="project-velocity">
-          <span className="velocity-label">
+        <div className="pc-velocity">
+          <span className="pc-vel-item">
             Скорость: {project.velocity7d > 0 ? `${project.velocity7d.toFixed(1)}/день` : "нет данных"}
           </span>
           {project.cycleTimeDays !== null && (
-            <span className="cycle-time" title="Медиана времени закрытия issue (последние 28 дней)">
-              ⏱ цикл: {project.cycleTimeDays < 1
+            <span className="pc-vel-item">
+              Цикл: {project.cycleTimeDays < 1
                 ? `${Math.round(project.cycleTimeDays * 24)}ч`
                 : `${Math.round(project.cycleTimeDays)}д`}
             </span>
           )}
           {project.etaDate && (
-            <span className={`velocity-eta ${project.etaDays && project.etaDays > 60 ? "eta-danger" : project.etaDays && project.etaDays > 30 ? "eta-warning" : "eta-ok"}`}>
-              Прогноз: {new Date(project.etaDate).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
-              {project.etaDays && <span className="eta-days"> (~{project.etaDays}д)</span>}
+            <span className={`pc-eta ${project.etaDays && project.etaDays > 60 ? "pc-eta--danger" : project.etaDays && project.etaDays > 30 ? "pc-eta--warn" : ""}`}>
+              Прогноз завершения: {new Date(project.etaDate).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
+              {project.etaDays && <span className="pc-eta-days"> (~{project.etaDays}д)</span>}
             </span>
           )}
         </div>
       )}
 
-      <CommitHeatmap activity={project.commitActivity} />
+      {/* Row 6: Risk factors */}
+      {risk.level !== "low" && risk.factors.length > 0 && (
+        <div className="pc-risk-factors">
+          {risk.factors.map((f, i) => (
+            <span key={i} className={`risk-factor risk-factor--${risk.level}`}>
+              {f.text}
+            </span>
+          ))}
+        </div>
+      )}
 
+      {/* Row 7: Commits toggle */}
+      <button
+        className="pc-heatmap-toggle"
+        onClick={() => setHeatmapOpen(!heatmapOpen)}
+      >
+        <span className={`pc-heatmap-arrow ${heatmapOpen ? "open" : ""}`}>&#9654;</span>
+        <span>Коммиты</span>
+        <span className="pc-heatmap-count">{project.commitActivity.thisWeek} за 7д</span>
+      </button>
+      {heatmapOpen && <CommitHeatmap activity={project.commitActivity} />}
+
+      {/* Description */}
       {project.description && (
-        <p className="project-focus">{project.description}</p>
+        <p className="pc-desc">{project.description}</p>
       )}
     </div>
   );

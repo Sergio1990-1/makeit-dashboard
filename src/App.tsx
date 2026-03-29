@@ -4,7 +4,7 @@ import { Summary } from "./components/Summary";
 import { ProjectCard } from "./components/ProjectCard";
 import { BlockedItems } from "./components/BlockedItems";
 import { StackedChart } from "./components/StackedChart";
-import { Filters } from "./components/Filters";
+
 import { MilestoneCard } from "./components/MilestoneCard";
 import { UrgentDeadlines } from "./components/UrgentDeadlines";
 import { StaleAlert } from "./components/StaleAlert";
@@ -13,23 +13,21 @@ import { ChatButton } from "./components/ChatButton";
 import { FinanceEditor } from "./components/FinanceEditor";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { UptimeBar } from "./components/UptimeBar";
+import { ClosedChart } from "./components/ClosedChart";
 import { useDashboard } from "./hooks/useDashboard";
 import { useMonitors } from "./hooks/useMonitors";
-import { getToken, MONITOR_MATCH } from "./utils/config";
+import { getToken, clearToken, MONITOR_MATCH } from "./utils/config";
 import type { TabId, Monitor } from "./types";
 import "./App.css";
 
 function App() {
   const {
     projects,
-    filteredIssues,
     summary,
     blockedIssues,
     loading,
     error,
     lastUpdated,
-    filters,
-    setFilters,
     refresh,
   } = useDashboard();
 
@@ -69,19 +67,42 @@ function App() {
     <div className="app">
       <header className="header">
         <div className="header-left">
-          <h1>MakeIT Dashboard</h1>
-          {lastUpdated && (
-            <span className="last-updated">
-              Обновлено: {lastUpdated.toLocaleTimeString("ru-RU")}
-            </span>
-          )}
+          <div className="header-logo">M</div>
+          <div className="header-title-group">
+            <h1>MakeIT</h1>
+            {lastUpdated && (
+              <span className="last-updated">
+                {lastUpdated.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+          </div>
         </div>
         <div className="header-right">
-          <TokenForm onTokenSet={() => refresh(true)} />
+          {!hasToken && <TokenForm onTokenSet={() => refresh(true)} />}
           {hasToken && (
-            <button onClick={() => refresh(true)} disabled={loading} className="btn btn-primary">
-              {loading ? "Загрузка..." : "Обновить"}
-            </button>
+            <>
+              <button
+                onClick={() => refresh(true)}
+                disabled={loading}
+                className="header-icon-btn"
+                title="Обновить"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={loading ? "spin" : ""}>
+                  <path d="M21 12a9 9 0 1 1-6.22-8.56" />
+                  <path d="M21 3v6h-6" />
+                </svg>
+              </button>
+              <button
+                onClick={() => { clearToken(); window.location.reload(); }}
+                className="header-icon-btn header-icon-btn--subtle"
+                title="Настройки токена"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+              </button>
+            </>
           )}
         </div>
       </header>
@@ -110,6 +131,7 @@ function App() {
               { id: "projects" as TabId, label: `Проекты (${projects.length})` },
               { id: "milestones" as TabId, label: `Milestones (${openMilestones.length})` },
               { id: "done" as TabId, label: `Завершённые (${doneMilestones.length})` },
+              { id: "chart" as TabId, label: "График" },
               { id: "uptime" as TabId, label: "Мониторинг" },
             ]).map((t) => (
               <button
@@ -124,16 +146,10 @@ function App() {
 
           {tab === "projects" && (
             <>
-              <Filters filters={filters} onChange={setFilters} projects={projects} />
-
               <section className="projects-grid">
-                {projects.map((p) => {
-                  const issues = filteredIssues(p);
-                  if (filters.priority || filters.status) {
-                    if (issues.length === 0) return null;
-                  }
-                  return <ProjectCard key={p.repo} project={{ ...p, issues }} monitor={getMonitorForRepo(p.repo)} />;
-                })}
+                {projects.map((p) => (
+                  <ProjectCard key={p.repo} project={p} monitor={getMonitorForRepo(p.repo)} />
+                ))}
               </section>
 
               <ErrorBoundary fallback="Ошибка в диаграмме">
@@ -172,6 +188,12 @@ function App() {
                 </div>
               ))}
             </div>
+          )}
+
+          {tab === "chart" && (
+            <ErrorBoundary fallback="Ошибка в графике">
+              <ClosedChart projects={projects} />
+            </ErrorBoundary>
           )}
 
           {tab === "uptime" && (

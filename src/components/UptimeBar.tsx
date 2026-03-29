@@ -1,6 +1,19 @@
 import type { Monitor, MonitorStatus } from "../types";
-import { getWorkerUrl, setWorkerUrl } from "../utils/config";
+import { getWorkerUrl, setWorkerUrl, MONITOR_MATCH } from "../utils/config";
 import { useState } from "react";
+
+/** Reverse lookup: find project name for a monitor */
+function getProjectName(monitor: Monitor): string {
+  for (const [project, keywords] of Object.entries(MONITOR_MATCH)) {
+    const match = keywords.some(
+      (kw) =>
+        monitor.name.toLowerCase().includes(kw.toLowerCase()) ||
+        monitor.url.toLowerCase().includes(kw.toLowerCase())
+    );
+    if (match) return project;
+  }
+  return monitor.name;
+}
 
 const STATUS_LABEL: Record<MonitorStatus, string> = {
   up: "Online",
@@ -21,10 +34,12 @@ function MonitorRow({ monitor }: { monitor: Monitor }) {
       })
     : "—";
 
+  const projectName = getProjectName(monitor);
+
   return (
     <div className={`monitor-row monitor-row--${monitor.status}`}>
       <span className={`monitor-dot monitor-dot--${monitor.status}`} />
-      <span className="monitor-name">{monitor.name}</span>
+      <span className="monitor-name" title={monitor.name}>{projectName}</span>
       <span className="monitor-url">{monitor.url}</span>
       <span className={`monitor-status monitor-status--${monitor.status}`}>
         {STATUS_LABEL[monitor.status]}
