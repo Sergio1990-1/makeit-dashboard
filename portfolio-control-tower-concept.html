@@ -1,0 +1,1179 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MakeIT Portfolio Control Tower</title>
+    <style>
+      :root {
+        --bg: #f4efe6;
+        --bg-strong: #e8dfd1;
+        --surface: rgba(255, 252, 246, 0.82);
+        --surface-strong: #fffaf1;
+        --surface-dark: #102735;
+        --line: rgba(16, 39, 53, 0.12);
+        --text: #17303c;
+        --muted: #5d6f78;
+        --accent: #0b7a75;
+        --accent-2: #e07a4f;
+        --accent-3: #f2cc8f;
+        --success: #2c8b5f;
+        --warn: #d08a18;
+        --danger: #cf4c3c;
+        --critical: #7f1d1d;
+        --shadow: 0 20px 50px rgba(22, 42, 54, 0.12);
+        --radius-xl: 28px;
+        --radius-lg: 22px;
+        --radius-md: 16px;
+        --radius-sm: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(11, 122, 117, 0.16), transparent 30%),
+          radial-gradient(circle at top right, rgba(224, 122, 79, 0.14), transparent 24%),
+          linear-gradient(180deg, #f8f3eb 0%, #f1e9dc 100%);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(23, 48, 60, 0.025) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(23, 48, 60, 0.025) 1px, transparent 1px);
+        background-size: 26px 26px;
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.35), transparent 65%);
+      }
+
+      .shell {
+        width: min(1500px, calc(100vw - 32px));
+        margin: 18px auto;
+        padding: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        border-radius: 34px;
+        background: rgba(248, 243, 235, 0.72);
+        backdrop-filter: blur(16px);
+        box-shadow: var(--shadow);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 18px;
+      }
+
+      .sidebar,
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-xl);
+        background: var(--surface);
+        backdrop-filter: blur(14px);
+      }
+
+      .sidebar {
+        padding: 22px 18px;
+        position: sticky;
+        top: 18px;
+        height: fit-content;
+      }
+
+      .brand {
+        margin-bottom: 28px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: rgba(11, 122, 117, 0.1);
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .brand h1 {
+        margin: 16px 0 8px;
+        font-family: "Iowan Old Style", "Palatino Linotype", serif;
+        font-size: 32px;
+        line-height: 0.98;
+      }
+
+      .brand p,
+      .hint,
+      .subtle {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .nav {
+        display: grid;
+        gap: 10px;
+        margin: 22px 0 28px;
+      }
+
+      .nav-item,
+      .chip,
+      .mini-chip {
+        border-radius: 999px;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.56);
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .nav-item.active {
+        background: linear-gradient(135deg, #123447, #0b7a75);
+        border-color: transparent;
+        color: #fff;
+      }
+
+      .nav-item strong {
+        font-size: 12px;
+        font-weight: 700;
+        opacity: 0.78;
+      }
+
+      .sidebar-block + .sidebar-block {
+        margin-top: 18px;
+      }
+
+      .sidebar-block h3 {
+        margin: 0 0 12px;
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .chip,
+      .mini-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        font-size: 13px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.6);
+      }
+
+      .mini-chip {
+        padding: 4px 9px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .chip.selected {
+        background: rgba(11, 122, 117, 0.12);
+        border-color: rgba(11, 122, 117, 0.35);
+        color: var(--accent);
+      }
+
+      .sidebar-card {
+        padding: 14px;
+        border-radius: var(--radius-md);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.5));
+        border: 1px solid rgba(16, 39, 53, 0.08);
+      }
+
+      .sidebar-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .sidebar-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        font-size: 14px;
+      }
+
+      .content {
+        display: grid;
+        gap: 18px;
+      }
+
+      .hero {
+        padding: 26px;
+        overflow: hidden;
+        position: relative;
+        background:
+          radial-gradient(circle at 90% 15%, rgba(242, 204, 143, 0.35), transparent 20%),
+          radial-gradient(circle at 75% 90%, rgba(11, 122, 117, 0.2), transparent 22%),
+          linear-gradient(135deg, #17303c 0%, #22485b 48%, #0b7a75 100%);
+        color: #fff;
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        right: -40px;
+        top: -40px;
+        width: 240px;
+        height: 240px;
+        border-radius: 38px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        transform: rotate(18deg);
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(340px, 0.9fr);
+        gap: 22px;
+      }
+
+      .hero h2 {
+        margin: 16px 0 10px;
+        font-family: "Iowan Old Style", "Palatino Linotype", serif;
+        font-size: clamp(32px, 5vw, 54px);
+        line-height: 0.94;
+        max-width: 720px;
+      }
+
+      .hero p {
+        margin: 0;
+        max-width: 740px;
+        color: rgba(255, 255, 255, 0.78);
+        line-height: 1.6;
+      }
+
+      .hero-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .hero-strip .mini-chip {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.14);
+      }
+
+      .attention-box {
+        padding: 18px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        backdrop-filter: blur(10px);
+      }
+
+      .attention-box h3 {
+        margin: 0 0 14px;
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.74);
+      }
+
+      .attention-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .attention-item {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 12px;
+        align-items: start;
+        padding: 12px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.09);
+      }
+
+      .attention-rank {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-weight: 800;
+        background: rgba(255, 255, 255, 0.16);
+      }
+
+      .attention-item strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .attention-item span {
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 13px;
+      }
+
+      .attention-tag {
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .critical {
+        background: rgba(207, 76, 60, 0.22);
+        color: #ffd5cf;
+      }
+
+      .warning {
+        background: rgba(242, 204, 143, 0.22);
+        color: #ffefc6;
+      }
+
+      .ok {
+        background: rgba(44, 139, 95, 0.22);
+        color: #d8ffe5;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .metric-card {
+        padding: 18px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.56));
+      }
+
+      .metric-card h3 {
+        margin: 0 0 18px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .metric-value {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .metric-value strong {
+        font-size: clamp(26px, 3vw, 38px);
+        line-height: 1;
+      }
+
+      .metric-value span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .meter {
+        width: 100%;
+        height: 10px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(16, 39, 53, 0.08);
+      }
+
+      .meter > span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--accent), #59b2a2);
+      }
+
+      .metric-note {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: minmax(0, 1.75fr) minmax(320px, 0.95fr);
+        gap: 18px;
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .section-header h3 {
+        margin: 0;
+        font-size: 22px;
+      }
+
+      .section-header p {
+        margin: 4px 0 0;
+        color: var(--muted);
+      }
+
+      .control-table {
+        padding: 20px;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.54);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 1120px;
+      }
+
+      thead th {
+        padding: 14px 14px;
+        text-align: left;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        background: rgba(16, 39, 53, 0.045);
+        border-bottom: 1px solid var(--line);
+      }
+
+      tbody td {
+        padding: 15px 14px;
+        border-bottom: 1px solid rgba(16, 39, 53, 0.08);
+        vertical-align: top;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      tbody tr:hover {
+        background: rgba(11, 122, 117, 0.045);
+      }
+
+      .project-name {
+        font-weight: 800;
+        margin-bottom: 6px;
+      }
+
+      .project-meta {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .health-stack {
+        display: grid;
+        gap: 8px;
+      }
+
+      .health-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 13px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-width: 80px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 12px;
+      }
+
+      .pill.critical {
+        background: rgba(207, 76, 60, 0.12);
+        color: var(--danger);
+      }
+
+      .pill.high {
+        background: rgba(208, 138, 24, 0.14);
+        color: var(--warn);
+      }
+
+      .pill.good {
+        background: rgba(44, 139, 95, 0.12);
+        color: var(--success);
+      }
+
+      .bars {
+        display: grid;
+        gap: 7px;
+      }
+
+      .bar-row {
+        display: grid;
+        grid-template-columns: 48px 1fr 34px;
+        gap: 8px;
+        align-items: center;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .bar-track {
+        height: 8px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(16, 39, 53, 0.08);
+      }
+
+      .bar-fill {
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .bar-fill.docs {
+        background: linear-gradient(90deg, #b68a3b, #f2cc8f);
+      }
+
+      .bar-fill.qa {
+        background: linear-gradient(90deg, #0f5f72, #3aa0b4);
+      }
+
+      .bar-fill.fin {
+        background: linear-gradient(90deg, #1c7b62, #59c48d);
+      }
+
+      .delivery {
+        display: grid;
+        gap: 8px;
+        min-width: 160px;
+      }
+
+      .delta {
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .delta.bad {
+        color: var(--danger);
+      }
+
+      .delta.warn {
+        color: var(--warn);
+      }
+
+      .delta.good {
+        color: var(--success);
+      }
+
+      .task-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .task-card,
+      .detail-card {
+        padding: 16px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.5));
+      }
+
+      .task-card strong,
+      .detail-card strong {
+        display: block;
+        font-size: 15px;
+        margin-bottom: 6px;
+      }
+
+      .task-card p,
+      .detail-card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .task-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .stack {
+        display: grid;
+        gap: 18px;
+      }
+
+      .detail-card.dark {
+        color: #fff;
+        background:
+          radial-gradient(circle at top right, rgba(242, 204, 143, 0.18), transparent 28%),
+          linear-gradient(160deg, #17303c, #102735);
+      }
+
+      .detail-card.dark p,
+      .detail-card.dark .subtle {
+        color: rgba(255, 255, 255, 0.72);
+      }
+
+      .score-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .score-box {
+        padding: 12px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .score-box span {
+        display: block;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: rgba(255, 255, 255, 0.64);
+        margin-bottom: 8px;
+      }
+
+      .score-box strong {
+        margin: 0;
+        font-size: 28px;
+      }
+
+      .doc-checklist {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .check-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: rgba(16, 39, 53, 0.04);
+      }
+
+      .check-row strong {
+        margin: 0;
+        font-size: 14px;
+      }
+
+      .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+      }
+
+      .footer-note {
+        padding: 16px 20px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.58);
+        border: 1px dashed rgba(16, 39, 53, 0.14);
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      @media (max-width: 1220px) {
+        .layout,
+        .hero-grid,
+        .two-col,
+        .metrics {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: static;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .shell {
+          width: calc(100vw - 18px);
+          margin: 9px auto;
+          padding: 10px;
+          border-radius: 24px;
+        }
+
+        .hero,
+        .control-table,
+        .sidebar {
+          padding: 18px;
+        }
+
+        .brand h1 {
+          font-size: 28px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand">
+            <span class="eyebrow">MakeIT PM System</span>
+            <h1>Portfolio Control Tower</h1>
+            <p>Экран, где PM с утра за 5 минут понимает: что горит, где риски, где нет документов, что просрочено и где нужны его действия.</p>
+          </div>
+
+          <div class="nav">
+            <div class="nav-item active"><span>Портфель</span><strong>10</strong></div>
+            <div class="nav-item"><span>Риски</span><strong>4</strong></div>
+            <div class="nav-item"><span>Документы</span><strong>7</strong></div>
+            <div class="nav-item"><span>Финансы</span><strong>$18k</strong></div>
+            <div class="nav-item"><span>SLA / Support</span><strong>2</strong></div>
+          </div>
+
+          <div class="sidebar-block">
+            <h3>Фильтры</h3>
+            <div class="chip-row">
+              <span class="chip selected">Все проекты</span>
+              <span class="chip">Только клиенты</span>
+              <span class="chip">At Risk</span>
+              <span class="chip">Просрочено</span>
+              <span class="chip">Нет docs</span>
+              <span class="chip">Счёт не выставлен</span>
+            </div>
+          </div>
+
+          <div class="sidebar-block">
+            <h3>Распределение PM</h3>
+            <div class="sidebar-card sidebar-list">
+              <div class="sidebar-row">
+                <span>Сергей</span>
+                <strong>6 активных</strong>
+              </div>
+              <div class="meter"><span style="width: 78%"></span></div>
+              <div class="sidebar-row">
+                <span>Поддержка</span>
+                <strong>3 SLA проекта</strong>
+              </div>
+              <div class="sidebar-row">
+                <span>Глубокий риск</span>
+                <strong style="color: var(--danger)">2 проекта</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="sidebar-block">
+            <h3>Сегодня важно</h3>
+            <div class="sidebar-card sidebar-list">
+              <div class="sidebar-row">
+                <span>Sewing-ERP</span>
+                <span class="mini-chip" style="color: var(--danger)">client demo</span>
+              </div>
+              <div class="sidebar-row">
+                <span>mankassa-app</span>
+                <span class="mini-chip" style="color: var(--warn)">invoice</span>
+              </div>
+              <div class="sidebar-row">
+                <span>solotax-kg</span>
+                <span class="mini-chip" style="color: var(--danger)">docs gap</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <main class="content">
+          <section class="panel hero">
+            <div class="hero-grid">
+              <div>
+                <span class="eyebrow" style="background: rgba(255,255,255,0.12); color: #fff;">Morning Brief</span>
+                <h2>Не просто список проектов, а пульт управления сроками, качеством, документами и деньгами.</h2>
+                <p>
+                  Главная идея экрана: показывать не только GitHub-активность, а управленческую готовность проекта.
+                  То есть видно, где сорвётся срок, где не хватает документации, где этап уже почти сдан, но нет приёмки,
+                  где пора писать клиенту и где PM сегодня реально нужен.
+                </p>
+                <div class="hero-strip">
+                  <span class="mini-chip">10 проектов в портфеле</span>
+                  <span class="mini-chip">4 проекта с риском сроков</span>
+                  <span class="mini-chip">7 пробелов в документации</span>
+                  <span class="mini-chip">2 SLA-инцидента под контролем</span>
+                </div>
+              </div>
+
+              <div class="attention-box">
+                <h3>Очередь внимания PM</h3>
+                <div class="attention-list">
+                  <div class="attention-item">
+                    <div class="attention-rank">1</div>
+                    <div>
+                      <strong>Sewing-ERP</strong>
+                      <span>Milestone упрётся в дедлайн через 3 дня. Demo ещё не проведено, forecast ушёл на +5 дней.</span>
+                    </div>
+                    <div class="attention-tag critical">Critical</div>
+                  </div>
+                  <div class="attention-item">
+                    <div class="attention-rank">2</div>
+                    <div>
+                      <strong>mankassa-app</strong>
+                      <span>Разработка стабильно идёт, но этап готов на 82%, счёт клиенту ещё не отправлен.</span>
+                    </div>
+                    <div class="attention-tag warning">Finance</div>
+                  </div>
+                  <div class="attention-item">
+                    <div class="attention-rank">3</div>
+                    <div>
+                      <strong>solotax-kg</strong>
+                      <span>Есть прогресс по задачам, но docs score 41/100: нет runbook, acceptance и актуального changelog.</span>
+                    </div>
+                    <div class="attention-tag warning">Docs</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="metrics">
+            <div class="metric-card">
+              <h3>Общий Health</h3>
+              <div class="metric-value"><strong>74</strong><span>из 100</span></div>
+              <div class="meter"><span style="width: 74%"></span></div>
+              <div class="metric-note">Портфель в целом управляем, но есть 2 проекта, где риск уже влияет на срок.</div>
+            </div>
+            <div class="metric-card">
+              <h3>At Risk</h3>
+              <div class="metric-value"><strong>4</strong><span>проекта</span></div>
+              <div class="meter"><span style="width: 40%; background: linear-gradient(90deg, #d08a18, #e07a4f)"></span></div>
+              <div class="metric-note">Из них 2 по срокам, 1 по документации, 1 по оплате этапа.</div>
+            </div>
+            <div class="metric-card">
+              <h3>Дедлайны 7 дней</h3>
+              <div class="metric-value"><strong>3</strong><span>milestones</span></div>
+              <div class="meter"><span style="width: 62%; background: linear-gradient(90deg, #cf4c3c, #f2cc8f)"></span></div>
+              <div class="metric-note">Нужно заранее видеть не только due date, но и прогноз против плана.</div>
+            </div>
+            <div class="metric-card">
+              <h3>Docs Debt</h3>
+              <div class="metric-value"><strong>7</strong><span>пробелов</span></div>
+              <div class="meter"><span style="width: 58%; background: linear-gradient(90deg, #b68a3b, #f2cc8f)"></span></div>
+              <div class="metric-note">Чаще всего отсутствуют acceptance notes, contract stages и runbooks.</div>
+            </div>
+            <div class="metric-card">
+              <h3>Деньги к действию</h3>
+              <div class="metric-value"><strong>$18k</strong><span>ожидается</span></div>
+              <div class="meter"><span style="width: 66%; background: linear-gradient(90deg, #1c7b62, #59c48d)"></span></div>
+              <div class="metric-note">2 проекта готовы к инвойсу, по 1 проекту нужен follow-up по оплате.</div>
+            </div>
+          </section>
+
+          <div class="two-col">
+            <section class="panel control-table">
+              <div class="section-header">
+                <div>
+                  <h3>Портфельная таблица</h3>
+                  <p>Главный рабочий экран PM. Одна строка = один проект, без переключения по вкладкам.</p>
+                </div>
+                <div class="chip-row">
+                  <span class="chip selected">Sort: Attention</span>
+                  <span class="chip">Group: Stage</span>
+                  <span class="chip">View: PM</span>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Проект</th>
+                      <th>Health</th>
+                      <th>Delivery</th>
+                      <th>Docs / QA / Finance</th>
+                      <th>SLA / Stage</th>
+                      <th>Следующее действие</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <div class="project-name">Sewing-ERP</div>
+                        <div class="project-meta">Клиент: свой проект<br />PM: Сергей • Milestone: ERP Billing Alpha</div>
+                      </td>
+                      <td>
+                        <div class="health-stack">
+                          <div class="health-label"><span>Project Health</span><span class="pill critical">58 At Risk</span></div>
+                          <div class="bars">
+                            <div class="bar-row"><span>Sched</span><div class="bar-track"><div class="bar-fill" style="width: 43%; background: linear-gradient(90deg, #cf4c3c, #e07a4f)"></div></div><strong>43</strong></div>
+                            <div class="bar-row"><span>Ops</span><div class="bar-track"><div class="bar-fill" style="width: 89%; background: linear-gradient(90deg, #0b7a75, #59b2a2)"></div></div><strong>89</strong></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="delivery">
+                          <strong>Target 02 Apr</strong>
+                          <span>Forecast 07 Apr</span>
+                          <span class="delta bad">Slip +5 days</span>
+                          <span class="subtle">3 blocked issues • demo not scheduled</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="bars">
+                          <div class="bar-row"><span>Docs</span><div class="bar-track"><div class="bar-fill docs" style="width: 68%"></div></div><strong>68</strong></div>
+                          <div class="bar-row"><span>QA</span><div class="bar-track"><div class="bar-fill qa" style="width: 76%"></div></div><strong>76</strong></div>
+                          <div class="bar-row"><span>Cash</span><div class="bar-track"><div class="bar-fill fin" style="width: 75%"></div></div><strong>75</strong></div>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="task-meta">
+                          <span class="mini-chip">Tier 1</span>
+                          <span class="mini-chip">Development</span>
+                          <span class="mini-chip" style="color: var(--danger)">Demo gate open</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="project-meta">Назначить demo, закрыть acceptance checklist и перепланировать milestone с объяснением причины.</div>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td>
+                        <div class="project-name">mankassa-app</div>
+                        <div class="project-meta">Клиент: Сергей<br />PM: Сергей • Milestone: Receipt Flow 2.0</div>
+                      </td>
+                      <td>
+                        <div class="health-stack">
+                          <div class="health-label"><span>Project Health</span><span class="pill high">72 Watch</span></div>
+                          <div class="bars">
+                            <div class="bar-row"><span>Sched</span><div class="bar-track"><div class="bar-fill" style="width: 77%; background: linear-gradient(90deg, #d08a18, #f2cc8f)"></div></div><strong>77</strong></div>
+                            <div class="bar-row"><span>Ops</span><div class="bar-track"><div class="bar-fill" style="width: 92%; background: linear-gradient(90deg, #0b7a75, #59b2a2)"></div></div><strong>92</strong></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="delivery">
+                          <strong>Target 10 Apr</strong>
+                          <span>Forecast 11 Apr</span>
+                          <span class="delta warn">Buffer almost gone</span>
+                          <span class="subtle">0 blocked • review aging 2 days</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="bars">
+                          <div class="bar-row"><span>Docs</span><div class="bar-track"><div class="bar-fill docs" style="width: 84%"></div></div><strong>84</strong></div>
+                          <div class="bar-row"><span>QA</span><div class="bar-track"><div class="bar-fill qa" style="width: 79%"></div></div><strong>79</strong></div>
+                          <div class="bar-row"><span>Cash</span><div class="bar-track"><div class="bar-fill fin" style="width: 43%"></div></div><strong>43</strong></div>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="task-meta">
+                          <span class="mini-chip">Tier 1</span>
+                          <span class="mini-chip">Client stage 2</span>
+                          <span class="mini-chip" style="color: var(--warn)">Invoice due</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="project-meta">Собрать клиентский статус-апдейт и отправить счёт за закрываемый этап.</div>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td>
+                        <div class="project-name">solotax-kg</div>
+                        <div class="project-meta">Клиент: свой проект<br />PM: Сергей • Milestone: Tax Filing MVP</div>
+                      </td>
+                      <td>
+                        <div class="health-stack">
+                          <div class="health-label"><span>Project Health</span><span class="pill high">63 Docs Risk</span></div>
+                          <div class="bars">
+                            <div class="bar-row"><span>Sched</span><div class="bar-track"><div class="bar-fill" style="width: 71%; background: linear-gradient(90deg, #d08a18, #f2cc8f)"></div></div><strong>71</strong></div>
+                            <div class="bar-row"><span>Ops</span><div class="bar-track"><div class="bar-fill" style="width: 61%; background: linear-gradient(90deg, #d08a18, #e07a4f)"></div></div><strong>61</strong></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="delivery">
+                          <strong>Target 21 Apr</strong>
+                          <span>Forecast 20 Apr</span>
+                          <span class="delta good">On track</span>
+                          <span class="subtle">1 blocked • no formal acceptance path</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="bars">
+                          <div class="bar-row"><span>Docs</span><div class="bar-track"><div class="bar-fill docs" style="width: 41%"></div></div><strong>41</strong></div>
+                          <div class="bar-row"><span>QA</span><div class="bar-track"><div class="bar-fill qa" style="width: 65%"></div></div><strong>65</strong></div>
+                          <div class="bar-row"><span>Cash</span><div class="bar-track"><div class="bar-fill fin" style="width: 100%"></div></div><strong>100</strong></div>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="task-meta">
+                          <span class="mini-chip">Tier 2</span>
+                          <span class="mini-chip">Build</span>
+                          <span class="mini-chip" style="color: var(--warn)">Runbook missing</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="project-meta">Добить runbook, deployment doc и acceptance criteria, иначе проект будет “ложно зелёным”.</div>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td>
+                        <div class="project-name">Beer_bot</div>
+                        <div class="project-meta">Клиент: Тенгри Бир<br />PM: Сергей • Support stream</div>
+                      </td>
+                      <td>
+                        <div class="health-stack">
+                          <div class="health-label"><span>Project Health</span><span class="pill good">88 Healthy</span></div>
+                          <div class="bars">
+                            <div class="bar-row"><span>Sched</span><div class="bar-track"><div class="bar-fill" style="width: 91%; background: linear-gradient(90deg, #1c7b62, #59c48d)"></div></div><strong>91</strong></div>
+                            <div class="bar-row"><span>Ops</span><div class="bar-track"><div class="bar-fill" style="width: 94%; background: linear-gradient(90deg, #0b7a75, #59b2a2)"></div></div><strong>94</strong></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="delivery">
+                          <strong>SLA 99%</strong>
+                          <span>P1 response 4h</span>
+                          <span class="delta good">No breach</span>
+                          <span class="subtle">Uptime 99.82% • no stale bugs</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="bars">
+                          <div class="bar-row"><span>Docs</span><div class="bar-track"><div class="bar-fill docs" style="width: 86%"></div></div><strong>86</strong></div>
+                          <div class="bar-row"><span>QA</span><div class="bar-track"><div class="bar-fill qa" style="width: 81%"></div></div><strong>81</strong></div>
+                          <div class="bar-row"><span>Cash</span><div class="bar-track"><div class="bar-fill fin" style="width: 100%"></div></div><strong>100</strong></div>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="task-meta">
+                          <span class="mini-chip">Tier 1</span>
+                          <span class="mini-chip">Support</span>
+                          <span class="mini-chip" style="color: var(--success)">Stable</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="project-meta">Нужен только weekly service report и плановая проверка backup / dependency updates.</div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <div class="stack">
+              <section class="panel detail-card dark">
+                <strong>Project Health Breakdown</strong>
+                <p>Вместо одного risk score полезнее показывать PM расклад по слоям: сроки, качество, документы и бизнес-контроль.</p>
+                <div class="score-grid">
+                  <div class="score-box">
+                    <span>Schedule</span>
+                    <strong>61</strong>
+                  </div>
+                  <div class="score-box">
+                    <span>Quality</span>
+                    <strong>74</strong>
+                  </div>
+                  <div class="score-box">
+                    <span>Docs</span>
+                    <strong>58</strong>
+                  </div>
+                  <div class="score-box">
+                    <span>Finance</span>
+                    <strong>69</strong>
+                  </div>
+                </div>
+              </section>
+
+              <section class="panel detail-card">
+                <strong>Документы и готовность</strong>
+                <p>Этот блок нужен, чтобы видеть не только progress по issues, но и фактическую управленческую завершённость проекта.</p>
+                <div class="doc-checklist">
+                  <div class="check-row">
+                    <span><span class="legend-dot" style="background: var(--success)"></span>README / OVERVIEW</span>
+                    <strong>8/10</strong>
+                  </div>
+                  <div class="check-row">
+                    <span><span class="legend-dot" style="background: var(--warn)"></span>CONTRACT_STAGES / payments</span>
+                    <strong>5/10</strong>
+                  </div>
+                  <div class="check-row">
+                    <span><span class="legend-dot" style="background: var(--danger)"></span>Acceptance / demo notes</span>
+                    <strong>3/10</strong>
+                  </div>
+                  <div class="check-row">
+                    <span><span class="legend-dot" style="background: var(--accent)"></span>Runbook / smoke / incident</span>
+                    <strong>7/10</strong>
+                  </div>
+                </div>
+              </section>
+
+              <section class="panel detail-card">
+                <strong>Автоматические действия</strong>
+                <p>Система сама подсказывает PM, что именно нужно сделать сегодня, а не просто красит карточку в красный.</p>
+                <div class="task-list">
+                  <div class="task-card">
+                    <strong>09:30 — Daily PM Brief</strong>
+                    <p>Собрать digest по рискам, дедлайнам, оплатам и проектам без движения за 48 часов.</p>
+                    <div class="task-meta">
+                      <span class="mini-chip">Telegram</span>
+                      <span class="mini-chip">Email summary</span>
+                    </div>
+                  </div>
+                  <div class="task-card">
+                    <strong>12:00 — Missing Docs Sweep</strong>
+                    <p>Отметить проекты, где milestone почти done, но нет acceptance criteria, demo note или client status.</p>
+                    <div class="task-meta">
+                      <span class="mini-chip">Docs score</span>
+                      <span class="mini-chip">Auto-flag</span>
+                    </div>
+                  </div>
+                  <div class="task-card">
+                    <strong>17:00 — Client Update Queue</strong>
+                    <p>Подготовить 2–3 коротких статуса для клиентов, у кого сегодня нужен апдейт или счёт.</p>
+                    <div class="task-meta">
+                      <span class="mini-chip">Status draft</span>
+                      <span class="mini-chip">Invoice reminder</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <div class="footer-note">
+            Этот макет специально сделан как отдельный концепт будущего экрана. Ключевая мысль: PM должен видеть не только задачи,
+            а управленческую картину проекта целиком — срок, прогноз, документы, приёмку, деньги, SLA и следующее нужное действие.
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

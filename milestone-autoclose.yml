@@ -1,0 +1,60 @@
+name: Auto-close Milestone
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  issues: write
+
+jobs:
+  check-milestone:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check and close milestone
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const milestone = issue.milestone;
+
+            if (!milestone) {
+              console.log('Issue has no milestone, skipping.');
+              return;
+            }
+
+            console.log(`Issue #${issue.number} closed. Checking milestone "${milestone.title}" (#${milestone.number})...`);
+
+            // Get current milestone data
+            const { data: ms } = await github.rest.issues.getMilestone({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              milestone_number: milestone.number,
+            });
+
+            console.log(`Milestone "${ms.title}": ${ms.open_issues} open, ${ms.closed_issues} closed`);
+
+            if (ms.open_issues === 0 && ms.closed_issues > 0) {
+              console.log('All issues closed! Closing milestone...');
+
+              await github.rest.issues.updateMilestone({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                milestone_number: milestone.number,
+                state: 'closed',
+              });
+
+              console.log(`✅ Milestone "${ms.title}" closed automatically.`);
+
+              // Add a comment to the last closed issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `🎉 Milestone **"${ms.title}"** автоматически закрыт — все ${ms.closed_issues} задач выполнены!`,
+              });
+            } else {
+              const total = ms.open_issues + ms.closed_issues;
+              const pct = Math.round((ms.closed_issues / total) * 100);
+              console.log(`Milestone not complete yet: ${ms.closed_issues}/${total} (${pct}%)`);
+            }
