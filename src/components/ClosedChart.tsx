@@ -43,11 +43,19 @@ export function ClosedChart({ projects }: Props) {
   const maxCount = Math.max(...Object.values(countsByDay), 1);
   const total = Object.values(countsByDay).reduce((a, b) => a + b, 0);
 
+  // Calculate average of previous 6 days (excluding today which is the last element)
+  const previous6Days = days.slice(0, 6);
+  const sum6Days = previous6Days.reduce((sum, day) => sum + countsByDay[day], 0);
+  const avg6Days = Math.round(sum6Days / 6);
+
   return (
     <div className="bento-panel span-8 panel-chart">
       <div className="bento-panel-title">
-        Активность (Закрытые Issue)
-        <span className="closed-chart-total-badge" style={{color: "var(--color-text-secondary)", fontWeight: "normal"}}>Всего за неделю: {total}</span>
+        <span>Активность (Закрытые Issue)</span>
+        <div style={{ display: "flex", gap: "var(--sp-4)" }}>
+          <span className="closed-chart-total-badge">Всего за неделю: {total}</span>
+          <span className="closed-chart-total-badge">Среднее в день: {avg6Days}</span>
+        </div>
       </div>
 
       <div className="closed-chart">

@@ -41,7 +41,7 @@ export function ProjectCard({ project, monitor }: Props) {
 
   return (
     <div className={`pc pc--phase-${project.phase} ${isStale ? "pc--stale" : ""} ${risk.level !== "low" ? `pc--risk-${risk.level}` : ""}`}>
-      {/* Row 1: Name + phase + badges */}
+      {/* Row 1: Header */}
       <div className="pc-header">
         <div className="pc-name-row">
           <h3 className="pc-name">{project.repo}</h3>
@@ -62,8 +62,8 @@ export function ProjectCard({ project, monitor }: Props) {
         </div>
       </div>
 
-      {/* Slot 2: Priorities */}
-      <div className="pc-slot">
+      {/* Row 2: Priorities */}
+      <div className="pc-slot pc-slot--priorities">
         <div className="pc-priorities">
           <span className="pc-total">{project.openCount} <span className="pc-total-label">открытых</span></span>
           <div className="pc-pri-group">
@@ -84,21 +84,21 @@ export function ProjectCard({ project, monitor }: Props) {
         </div>
       </div>
 
-      {/* Slot 3: Progress */}
-      <div className="pc-slot">
-        {project.doneCount > 0 && (
+      {/* Row 3: Progress - Ghost Slot */}
+      <div className="pc-slot pc-slot--progress">
+        {project.doneCount > 0 ? (
           <div className="pc-progress">
             <div className="pc-bar">
               <div className="pc-bar-fill" style={{ width: `${project.progress}%` }} />
             </div>
             <span className="pc-pct">{project.progress}%</span>
           </div>
-        )}
+        ) : null}
       </div>
 
-      {/* Slot 4: Finance */}
-      <div className="pc-slot">
-        {hasFinances && (
+      {/* Row 4: Finance - Ghost Slot */}
+      <div className="pc-slot pc-slot--finance">
+        {hasFinances ? (
           <div className="pc-finance">
             <div className="pc-finance-row">
               <span className="pc-finance-group">
@@ -124,22 +124,22 @@ export function ProjectCard({ project, monitor }: Props) {
               />
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
-      {/* Slot 5: Stats */}
-      <div className="pc-slot">
-        {project.openCount > 0 && (project.velocity7d > 0 || project.cycleTimeDays !== null || project.etaDate) && (
-          <div className="pc-stats">
+      {/* Row 5: Stats - Ghost Slot */}
+      <div className="pc-slot pc-slot--stats">
+        {(project.openCount > 0 && (project.velocity7d > 0 || project.cycleTimeDays !== null || project.etaDate)) ? (
+          <div className="pc-stats" style={{ flexWrap: 'nowrap', overflow: 'hidden' }}>
             {project.velocity7d > 0 && (
-              <div className="pc-stat">
-                <span className="pc-stat-label">Скорость</span>
+              <div className="pc-stat" title="Скорость закрытия задач">
+                <span className="pc-stat-label">⚡️</span>
                 <span className="pc-stat-value">{project.velocity7d.toFixed(1)}<span className="pc-stat-days">/д</span></span>
               </div>
             )}
             {project.cycleTimeDays !== null && (
-              <div className="pc-stat">
-                <span className="pc-stat-label">Цикл</span>
+              <div className="pc-stat" title="Среднее время цикла">
+                <span className="pc-stat-label">⏱️</span>
                 <span className="pc-stat-value">
                   {project.cycleTimeDays < 1
                     ? `${Math.round(project.cycleTimeDays * 24)}ч`
@@ -150,22 +150,22 @@ export function ProjectCard({ project, monitor }: Props) {
             {project.etaDate && (() => {
               const etaClass = project.etaDays && project.etaDays > 60 ? "danger" : project.etaDays && project.etaDays > 30 ? "warn" : "eta";
               return (
-                <div className="pc-stat pc-stat--eta">
-                  <span className="pc-stat-label">Прогноз</span>
+                <div className="pc-stat pc-stat--eta" title="Прогноз завершения">
+                  <span className="pc-stat-label">🎯</span>
                   <span className={`pc-stat-value pc-stat-value--${etaClass}`}>
                     {new Date(project.etaDate).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
-                    {project.etaDays && <span className="pc-stat-days"> ({project.etaDays > 0 ? "+" : ""}{project.etaDays}д)</span>}
+                    {project.etaDays && <span className={`pc-stat-days ${project.etaDays > 0 ? "val-danger" : "val-success"}`}> ({project.etaDays > 0 ? "+" : ""}{project.etaDays}д)</span>}
                   </span>
                 </div>
               );
             })()}
           </div>
-        )}
+        ) : null}
       </div>
 
-      {/* Slot 6: Risk factors */}
-      <div className="pc-slot">
-        {risk.level !== "low" && risk.factors.length > 0 && (
+      {/* Row 6: Risk Factors */}
+      <div className="pc-slot pc-slot--risks">
+        {risk.level !== "low" && risk.factors.length > 0 ? (
           <div className="pc-risk-factors">
             {risk.factors.map((f, i) => (
               <span key={i} className={`risk-factor risk-factor--${risk.level}`}>
@@ -173,10 +173,10 @@ export function ProjectCard({ project, monitor }: Props) {
               </span>
             ))}
           </div>
-        )}
+        ) : null}
       </div>
 
-      {/* Slot 7: Commits + description */}
+      {/* Row 7: Footer */}
       <div className="pc-slot pc-slot--last">
         <button
           className="pc-heatmap-toggle"
@@ -187,9 +187,6 @@ export function ProjectCard({ project, monitor }: Props) {
           <span className="pc-heatmap-count">{project.commitActivity.thisWeek} за 7д</span>
         </button>
         {heatmapOpen && <CommitHeatmap activity={project.commitActivity} />}
-        {project.description && (
-          <p className="pc-desc">{project.description}</p>
-        )}
       </div>
     </div>
   );

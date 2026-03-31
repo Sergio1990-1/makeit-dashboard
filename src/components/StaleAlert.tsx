@@ -12,7 +12,7 @@ export function StaleAlert({ projects }: Props) {
   if (stale.length === 0) return null;
 
   return (
-    <div className="bento-panel panel-stale">
+    <div className="bento-panel span-4 panel-stale">
       <div className="bento-panel-title" style={{ color: "var(--color-caution)" }}>Нет движения ({stale.length})</div>
       {stale.map((p) => (
         <div key={p.repo} className="stale-item">

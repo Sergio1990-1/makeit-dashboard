@@ -137,7 +137,7 @@ function App() {
       )}
 
       {hasToken && projects.length > 0 && (
-        <div className="bento-grid">
+        <div className={`bento-grid ${tab === "dashboard" ? "dashboard-grid" : ""}`}>
           {tab === "dashboard" && (
             <>
               <ErrorBoundary fallback="Ошибка в метриках">
@@ -148,15 +148,12 @@ function App() {
                 <ClosedChart projects={projects} />
               </ErrorBoundary>
 
-              <div className="span-4" style={{ display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
-                <ErrorBoundary fallback="Ошибка в дедлайнах">
-                  <UrgentDeadlines milestones={allMilestones} />
-                </ErrorBoundary>
-                <StaleAlert projects={projects} />
-              </div>
+              <ErrorBoundary fallback="Ошибка в дедлайнах">
+                <UrgentDeadlines milestones={allMilestones} />
+              </ErrorBoundary>
 
-              <div className="bento-panel span-8 panel-projects">
-                <div className="bento-panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="bento-panel span-8 panel-projects" style={{ gridRow: "span 2", display: 'flex', flexDirection: 'column' }}>
+                <div className="bento-panel-title">
                   Активные проекты
                   <span onClick={() => setTab("projects")} style={{ color: "var(--color-primary)", cursor: "pointer", fontSize: "var(--text-sm)", fontWeight: "normal" }}>
                     Все проекты →
@@ -171,14 +168,23 @@ function App() {
                       return recentB - recentA;
                     })
                     .slice(0, 4)
-                    .reduce<typeof projects[]>((rows, p, i) => { if (i % 2 === 0) rows.push([p]); else rows[rows.length - 1].push(p); return rows; }, [])
-                    .map((pair, i) => (
-                      <div key={i} className="pc-row">
-                        {pair.map(p => <ProjectCard key={p.repo} project={p} monitor={getMonitorForRepo(p.repo)} />)}
-                      </div>
+                    .map((p) => (
+                      <ProjectCard key={p.repo} project={p} monitor={getMonitorForRepo(p.repo)} />
                     ))}
                 </section>
               </div>
+
+              <ErrorBoundary fallback="Ошибка в мониторинге">
+                <StaleAlert projects={projects} />
+              </ErrorBoundary>
+
+              <ErrorBoundary fallback="Ошибка в blocked items">
+                <BlockedItems issues={blockedIssues} />
+              </ErrorBoundary>
+
+              <ErrorBoundary fallback="Ошибка в диаграмме">
+                <StackedChart projects={projects} />
+              </ErrorBoundary>
             </>
           )}
 
@@ -190,22 +196,11 @@ function App() {
                 </div>
                 <section className="projects-grid">
                   {projects
-                    .reduce<typeof projects[]>((rows, p, i) => { if (i % 2 === 0) rows.push([p]); else rows[rows.length - 1].push(p); return rows; }, [])
-                    .map((pair, i) => (
-                      <div key={i} className="pc-row">
-                        {pair.map(p => <ProjectCard key={p.repo} project={p} monitor={getMonitorForRepo(p.repo)} />)}
-                      </div>
+                    .map((p) => (
+                      <ProjectCard key={p.repo} project={p} monitor={getMonitorForRepo(p.repo)} />
                     ))}
                 </section>
               </div>
-
-              <ErrorBoundary fallback="Ошибка в диаграмме">
-                <StackedChart projects={projects} />
-              </ErrorBoundary>
-
-              <ErrorBoundary fallback="Ошибка в blocked items">
-                <BlockedItems issues={blockedIssues} />
-              </ErrorBoundary>
             </>
           )}
 

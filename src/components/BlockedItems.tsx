@@ -8,7 +8,7 @@ export function BlockedItems({ issues }: Props) {
   if (issues.length === 0) return null;
 
   return (
-    <div className="bento-panel span-8">
+    <div className="bento-panel span-4">
       <div className="bento-panel-title" style={{ color: "var(--color-danger)" }}>
         Заблокировано
         <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-danger)", fontSize: "var(--text-base)" }}>
