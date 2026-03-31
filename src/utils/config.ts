@@ -14,6 +14,7 @@ const DEFAULT_PROJECTS: ProjectConfig[] = [
   { repo: "quiet-walls", client: "Тихие Стены", owner: GITHUB_OWNER, budget: 0, paid: 0 },
   { repo: "moliyakg", client: "Свой проект", owner: GITHUB_OWNER, budget: 0, paid: 0 },
   { repo: "MyMoney", client: "Свой проект", owner: GITHUB_OWNER, budget: 0, paid: 0 },
+  { repo: "makeit-auditor", client: "Свой проект", owner: GITHUB_OWNER, budget: 0, paid: 0 },
 ];
 
 const FINANCE_KEY = "makeit_finances";
