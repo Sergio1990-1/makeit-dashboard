@@ -31,75 +31,32 @@ export function UrgentDeadlines({ milestones }: Props) {
 
   if (items.length === 0) return null;
 
-  const overdue = items.filter((i) => i.days < 0);
-  const today = items.filter((i) => i.days === 0);
-  const thisWeek = items.filter((i) => i.days > 0);
-
   return (
-    <div className="deadlines">
-      {overdue.length > 0 && (
-        <DeadlineGroup
-          label="Просрочено"
-          variant="overdue"
-          items={overdue}
-        />
-      )}
-      {today.length > 0 && (
-        <DeadlineGroup
-          label="Сегодня"
-          variant="today"
-          items={today}
-        />
-      )}
-      {thisWeek.length > 0 && (
-        <DeadlineGroup
-          label="Эта неделя"
-          variant="week"
-          items={thisWeek}
-        />
-      )}
-    </div>
-  );
-}
-
-function DeadlineGroup({ label, variant, items }: {
-  label: string;
-  variant: "overdue" | "today" | "week";
-  items: GroupedItem[];
-}) {
-  return (
-    <div className={`dl-group dl-group--${variant}`}>
-      <div className="dl-group-header">
-        <span className={`dl-dot dl-dot--${variant}`} />
-        <span className="dl-group-label">{label}</span>
-        <span className="dl-group-count">{items.length}</span>
+    <div className="bento-panel span-4 panel-deadlines">
+      <div className="bento-panel-title" style={{ color: "var(--color-danger)" }}>
+        Горящие дедлайны
       </div>
-      {items.map((item, i) => {
-        const m = item.milestone;
-        const pct = m.openIssues + m.closedIssues > 0
-          ? Math.round((m.closedIssues / (m.openIssues + m.closedIssues)) * 100)
-          : 0;
-        return (
-          <div key={i} className="dl-item">
-            <div className="dl-item-content">
+      <div className="dl-list">
+        {items.map((item, i) => {
+          const m = item.milestone;
+          const isOverdue = item.days < 0;
+          const isToday = item.days === 0;
+          const borderColor = isOverdue ? "var(--color-danger)" : isToday ? "var(--color-warning)" : "var(--color-primary)";
+          const badgeClass = isOverdue ? "danger" : isToday ? "warning" : "primary";
+
+          return (
+            <div key={i} className="dl-item" style={{ borderLeftColor: borderColor }}>
               <span className="dl-repo">{m.repo}</span>
               <span className="dl-title">{m.title}</span>
+              <div className="dl-badges">
+                {isOverdue && <span className={`badge badge-${badgeClass}`}>ПРОСРОЧЕНО ({Math.abs(item.days)}д)</span>}
+                {isToday && <span className={`badge badge-${badgeClass}`}>СЕГОДНЯ</span>}
+                {!isOverdue && !isToday && <span className={`badge badge-${badgeClass}`}>{item.days}д — {formatDate(m.dueOn!)}</span>}
+              </div>
             </div>
-            <div className="dl-item-meta">
-              <span className="dl-pct">{pct}%</span>
-              {item.days < 0 && (
-                <span className="dl-badge dl-badge--overdue">{Math.abs(item.days)}д</span>
-              )}
-              {item.days === 0 && (
-                <span className="dl-badge dl-badge--today">сегодня</span>
-              )}
-              {item.days > 0 && (
-                <span className="dl-badge dl-badge--week">{item.days}д — {formatDate(m.dueOn!)}</span>
-              )}
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

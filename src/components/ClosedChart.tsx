@@ -44,10 +44,10 @@ export function ClosedChart({ projects }: Props) {
   const total = Object.values(countsByDay).reduce((a, b) => a + b, 0);
 
   return (
-    <section className="closed-chart-section">
-      <div className="closed-chart-header">
-        <h2>Закрытые issues за неделю</h2>
-        <span className="closed-chart-total-badge">Всего: {total}</span>
+    <div className="bento-panel span-8 panel-chart">
+      <div className="bento-panel-title">
+        Активность (Закрытые Issue)
+        <span className="closed-chart-total-badge" style={{color: "var(--color-text-secondary)", fontWeight: "normal"}}>Всего за неделю: {total}</span>
       </div>
 
       <div className="closed-chart">
@@ -72,6 +72,6 @@ export function ClosedChart({ projects }: Props) {
           );
         })}
       </div>
-    </section>
+    </div>
   );
 }

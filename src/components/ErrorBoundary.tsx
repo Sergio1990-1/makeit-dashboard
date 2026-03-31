@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from "react";
+import { Component, Fragment, type ReactNode } from "react";
 
 interface Props {
   fallback?: string;
@@ -40,6 +40,6 @@ export class ErrorBoundary extends Component<Props, State> {
         </div>
       );
     }
-    return <span key={this.state.retryKey}>{this.props.children}</span>;
+    return <Fragment key={this.state.retryKey}>{this.props.children}</Fragment>;
   }
 }

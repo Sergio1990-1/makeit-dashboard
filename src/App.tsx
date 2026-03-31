@@ -33,7 +33,7 @@ function App() {
 
   const { monitors, loading: monitorsLoading, error: monitorsError, refresh: refreshMonitors } = useMonitors();
 
-  const [tab, setTab] = useState<TabId>("projects");
+  const [tab, setTab] = useState<TabId>("dashboard");
   const [chatOpen, setChatOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
 
@@ -116,22 +116,13 @@ function App() {
       )}
 
       {hasToken && projects.length > 0 && (
-        <>
-          <ErrorBoundary fallback="Ошибка в метриках">
-            <Summary metrics={summary} onFinanceClick={() => setFinanceOpen(true)} />
-          </ErrorBoundary>
-
-          <ErrorBoundary fallback="Ошибка в дедлайнах">
-            <UrgentDeadlines milestones={allMilestones} />
-            <StaleAlert projects={projects} />
-          </ErrorBoundary>
-
-          <div className="tabs">
+        <div className="bento-grid">
+          <div className="tabs span-12">
             {([
+              { id: "dashboard" as TabId, label: `Дашборд` },
               { id: "projects" as TabId, label: `Проекты (${projects.length})` },
               { id: "milestones" as TabId, label: `Milestones (${openMilestones.length})` },
               { id: "done" as TabId, label: `Завершённые (${doneMilestones.length})` },
-              { id: "chart" as TabId, label: "График" },
               { id: "uptime" as TabId, label: "Мониторинг" },
             ]).map((t) => (
               <button
@@ -144,13 +135,51 @@ function App() {
             ))}
           </div>
 
+          {tab === "dashboard" && (
+            <>
+              <ErrorBoundary fallback="Ошибка в метриках">
+                <Summary metrics={summary} onFinanceClick={() => setFinanceOpen(true)} />
+              </ErrorBoundary>
+
+              <ErrorBoundary fallback="Ошибка в графике">
+                <ClosedChart projects={projects} />
+              </ErrorBoundary>
+
+              <div className="span-4" style={{ display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
+                <ErrorBoundary fallback="Ошибка в дедлайнах">
+                  <UrgentDeadlines milestones={allMilestones} />
+                </ErrorBoundary>
+                <StaleAlert projects={projects} />
+              </div>
+
+              <div className="bento-panel span-8 panel-projects">
+                <div className="bento-panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  Активные проекты
+                  <span onClick={() => setTab("projects")} style={{ color: "var(--color-primary)", cursor: "pointer", fontSize: "var(--text-sm)", fontWeight: "normal" }}>
+                    Все проекты →
+                  </span>
+                </div>
+                <section className="projects-grid">
+                  {projects.slice(0, 4).map((p) => (
+                    <ProjectCard key={p.repo} project={p} monitor={getMonitorForRepo(p.repo)} />
+                  ))}
+                </section>
+              </div>
+            </>
+          )}
+
           {tab === "projects" && (
             <>
-              <section className="projects-grid">
-                {projects.map((p) => (
-                  <ProjectCard key={p.repo} project={p} monitor={getMonitorForRepo(p.repo)} />
-                ))}
-              </section>
+              <div className="bento-panel span-12 panel-projects">
+                <div className="bento-panel-title">
+                  Все проекты
+                </div>
+                <section className="projects-grid">
+                  {projects.map((p) => (
+                    <ProjectCard key={p.repo} project={p} monitor={getMonitorForRepo(p.repo)} />
+                  ))}
+                </section>
+              </div>
 
               <ErrorBoundary fallback="Ошибка в диаграмме">
                 <StackedChart projects={projects} />
@@ -190,10 +219,15 @@ function App() {
             </div>
           )}
 
-          {tab === "chart" && (
-            <ErrorBoundary fallback="Ошибка в графике">
-              <ClosedChart projects={projects} />
-            </ErrorBoundary>
+          {tab === "done" && (
+            <div className="milestones-grouped">
+              <h2 style={{ marginBottom: 16 }}>Недавно закрытые</h2>
+              <div className="milestones-grid">
+                {doneMilestones.map((m, i) => (
+                  <MilestoneCard key={`done-${m.repo}-${m.title}-${i}`} milestone={m} />
+                ))}
+              </div>
+            </div>
           )}
 
           {tab === "uptime" && (
@@ -224,7 +258,7 @@ function App() {
               ))}
             </div>
           )}
-        </>
+        </div>
       )}
 
       {hasToken && !loading && projects.length === 0 && !error && (
