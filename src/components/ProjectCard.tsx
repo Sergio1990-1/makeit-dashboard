@@ -62,8 +62,8 @@ export function ProjectCard({ project, monitor }: Props) {
         </div>
       </div>
 
-      {/* Row 2: Priorities */}
-      <div className="pc-slot pc-slot--priorities">
+      {/* Row 2: Issues & Progress Group - STAYS ALIGNED */}
+      <div className="pc-slot pc-slot--issues">
         <div className="pc-priorities">
           <span className="pc-total">{project.openCount} <span className="pc-total-label">открытых</span></span>
           <div className="pc-pri-group">
@@ -82,10 +82,6 @@ export function ProjectCard({ project, monitor }: Props) {
             })()}
           </div>
         </div>
-      </div>
-
-      {/* Row 3: Progress - Ghost Slot */}
-      <div className="pc-slot pc-slot--progress">
         {project.doneCount > 0 ? (
           <div className="pc-progress">
             <div className="pc-bar">
@@ -93,11 +89,11 @@ export function ProjectCard({ project, monitor }: Props) {
             </div>
             <span className="pc-pct">{project.progress}%</span>
           </div>
-        ) : null}
+        ) : <div className="pc-progress-placeholder" />}
       </div>
 
-      {/* Row 4: Finance - Ghost Slot */}
-      <div className="pc-slot pc-slot--finance">
+      {/* Row 3: Finance Group - STAYS ALIGNED */}
+      <div className="pc-slot pc-slot--finance-group">
         {hasFinances ? (
           <div className="pc-finance">
             <div className="pc-finance-row">
@@ -124,11 +120,11 @@ export function ProjectCard({ project, monitor }: Props) {
               />
             </div>
           </div>
-        ) : null}
+        ) : <div className="pc-finance-placeholder" />}
       </div>
 
-      {/* Row 5: Stats - Ghost Slot */}
-      <div className="pc-slot pc-slot--stats">
+      {/* Row 4: Stats - STAYS ALIGNED */}
+      <div className="pc-slot pc-slot--stats-group">
         {(project.openCount > 0 && (project.velocity7d > 0 || project.cycleTimeDays !== null || project.etaDate)) ? (
           <div className="pc-stats" style={{ flexWrap: 'nowrap', overflow: 'hidden' }}>
             {project.velocity7d > 0 && (
@@ -160,10 +156,10 @@ export function ProjectCard({ project, monitor }: Props) {
               );
             })()}
           </div>
-        ) : null}
+        ) : <div className="pc-stats-placeholder" />}
       </div>
 
-      {/* Row 6: Risk Factors */}
+      {/* Row 5: Risk Factors */}
       <div className="pc-slot pc-slot--risks">
         {risk.level !== "low" && risk.factors.length > 0 ? (
           <div className="pc-risk-factors">
