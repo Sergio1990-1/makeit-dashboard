@@ -77,6 +77,27 @@ function App() {
             )}
           </div>
         </div>
+
+        {hasToken && projects.length > 0 && (
+          <nav className="header-tabs">
+            {([
+              { id: "dashboard" as TabId, label: "Дашборд" },
+              { id: "projects" as TabId, label: `Проекты (${projects.length})` },
+              { id: "milestones" as TabId, label: `Milestones (${openMilestones.length})` },
+              { id: "done" as TabId, label: `Завершённые (${doneMilestones.length})` },
+              { id: "uptime" as TabId, label: "Мониторинг" },
+            ]).map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`tab ${tab === t.id ? "tab-active" : ""}`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </nav>
+        )}
+
         <div className="header-right">
           {!hasToken && <TokenForm onTokenSet={() => refresh(true)} />}
           {hasToken && (
@@ -117,24 +138,6 @@ function App() {
 
       {hasToken && projects.length > 0 && (
         <div className="bento-grid">
-          <div className="tabs span-12">
-            {([
-              { id: "dashboard" as TabId, label: `Дашборд` },
-              { id: "projects" as TabId, label: `Проекты (${projects.length})` },
-              { id: "milestones" as TabId, label: `Milestones (${openMilestones.length})` },
-              { id: "done" as TabId, label: `Завершённые (${doneMilestones.length})` },
-              { id: "uptime" as TabId, label: "Мониторинг" },
-            ]).map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className={`tab ${tab === t.id ? "tab-active" : ""}`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-
           {tab === "dashboard" && (
             <>
               <ErrorBoundary fallback="Ошибка в метриках">
@@ -160,9 +163,20 @@ function App() {
                   </span>
                 </div>
                 <section className="projects-grid">
-                  {projects.slice(0, 4).map((p) => (
-                    <ProjectCard key={p.repo} project={p} monitor={getMonitorForRepo(p.repo)} />
-                  ))}
+                  {[...projects]
+                    .sort((a, b) => {
+                      const cutoff = Date.now() - 3 * 24 * 60 * 60 * 1000;
+                      const recentA = a.issues.filter(i => i.closedAt && new Date(i.closedAt).getTime() > cutoff).length;
+                      const recentB = b.issues.filter(i => i.closedAt && new Date(i.closedAt).getTime() > cutoff).length;
+                      return recentB - recentA;
+                    })
+                    .slice(0, 4)
+                    .reduce<typeof projects[]>((rows, p, i) => { if (i % 2 === 0) rows.push([p]); else rows[rows.length - 1].push(p); return rows; }, [])
+                    .map((pair, i) => (
+                      <div key={i} className="pc-row">
+                        {pair.map(p => <ProjectCard key={p.repo} project={p} monitor={getMonitorForRepo(p.repo)} />)}
+                      </div>
+                    ))}
                 </section>
               </div>
             </>
@@ -175,9 +189,13 @@ function App() {
                   Все проекты
                 </div>
                 <section className="projects-grid">
-                  {projects.map((p) => (
-                    <ProjectCard key={p.repo} project={p} monitor={getMonitorForRepo(p.repo)} />
-                  ))}
+                  {projects
+                    .reduce<typeof projects[]>((rows, p, i) => { if (i % 2 === 0) rows.push([p]); else rows[rows.length - 1].push(p); return rows; }, [])
+                    .map((pair, i) => (
+                      <div key={i} className="pc-row">
+                        {pair.map(p => <ProjectCard key={p.repo} project={p} monitor={getMonitorForRepo(p.repo)} />)}
+                      </div>
+                    ))}
                 </section>
               </div>
 
@@ -220,42 +238,42 @@ function App() {
           )}
 
           {tab === "done" && (
-            <div className="milestones-grouped">
-              <h2 style={{ marginBottom: 16 }}>Недавно закрытые</h2>
-              <div className="milestones-grid">
-                {doneMilestones.map((m, i) => (
-                  <MilestoneCard key={`done-${m.repo}-${m.title}-${i}`} milestone={m} />
+            <div className="bento-panel span-12">
+              <div className="bento-panel-title">
+                Завершённые milestones
+                <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-success)", fontSize: "var(--text-base)" }}>
+                  {doneMilestones.length}
+                </span>
+              </div>
+              {doneMilestones.length === 0 && (
+                <div className="empty-state">Пока нет завершённых milestones</div>
+              )}
+              <div className="milestones-grouped" style={{ padding: 0 }}>
+                {Object.entries(
+                  doneMilestones.reduce<Record<string, typeof doneMilestones>>((acc, m) => {
+                    (acc[m.repo] ??= []).push(m);
+                    return acc;
+                  }, {})
+                ).map(([repo, milestones]) => (
+                  <div key={repo} className="milestone-group">
+                    <h3 className="milestone-group-title">{repo} <span className="milestone-group-count">({milestones.length})</span></h3>
+                    <div className="milestones-grid">
+                      {milestones.map((m, i) => (
+                        <MilestoneCard key={`${m.repo}-${m.title}-${i}`} milestone={m} />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
           )}
 
           {tab === "uptime" && (
-            <ErrorBoundary fallback="Ошибка в мониторинге">
-              <UptimeBar monitors={monitors} loading={monitorsLoading} error={monitorsError} onRefresh={refreshMonitors} />
-            </ErrorBoundary>
-          )}
-
-          {tab === "done" && (
-            <div className="milestones-grouped">
-              {doneMilestones.length === 0 && (
-                <div className="empty-state">Пока нет завершённых milestones</div>
-              )}
-              {Object.entries(
-                doneMilestones.reduce<Record<string, typeof doneMilestones>>((acc, m) => {
-                  (acc[m.repo] ??= []).push(m);
-                  return acc;
-                }, {})
-              ).map(([repo, milestones]) => (
-                <div key={repo} className="milestone-group">
-                  <h3 className="milestone-group-title">{repo} <span className="milestone-group-count">({milestones.length})</span></h3>
-                  <div className="milestones-grid">
-                    {milestones.map((m, i) => (
-                      <MilestoneCard key={`${m.repo}-${m.title}-${i}`} milestone={m} />
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <div className="bento-panel span-12">
+              <div className="bento-panel-title">Мониторинг</div>
+              <ErrorBoundary fallback="Ошибка в мониторинге">
+                <UptimeBar monitors={monitors} loading={monitorsLoading} error={monitorsError} onRefresh={refreshMonitors} />
+              </ErrorBoundary>
             </div>
           )}
         </div>

@@ -10,8 +10,8 @@ export function StackedChart({ projects }: Props) {
   const maxTotal = Math.max(...projects.map((p) => p.totalCount), 1);
 
   return (
-    <section className="chart-section">
-      <h2>Распределение по проектам</h2>
+    <div className="bento-panel span-4">
+      <div className="bento-panel-title">Распределение задач</div>
       <div className="stacked-chart">
         {projects.map((p) => (
           <div key={p.repo} className="chart-row">
@@ -54,6 +54,6 @@ export function StackedChart({ projects }: Props) {
         <span className="legend-item"><span className="legend-color p3" /> P3</span>
         <span className="legend-item"><span className="legend-color done" /> Done</span>
       </div>
-    </section>
+    </div>
   );
 }

@@ -12,7 +12,6 @@ function compactUSD(n: number): string {
 
 export function Summary({ metrics, onFinanceClick }: Props) {
   const hasFinances = metrics.totalBudget > 0;
-  // TODO + In Progress + Review
   const totalOpen = metrics.todoCount + metrics.inProgressCount + metrics.reviewCount;
   const pctDone = metrics.totalIssues > 0
     ? Math.round((metrics.doneCount / metrics.totalIssues) * 100)
@@ -34,27 +33,23 @@ export function Summary({ metrics, onFinanceClick }: Props) {
 
         <div className="metrics-grid">
           <div>
+            <div className="metric-value" style={{color: "var(--color-text)"}}>{metrics.totalIssues}</div>
+            <div className="metric-label">Всего</div>
+          </div>
+          <div>
             <div className="metric-value val-success">{metrics.doneCount}</div>
             <div className="metric-label">Сделано</div>
           </div>
           <div>
-            <div className="metric-value val-accent">{metrics.inProgressCount}</div>
-            <div className="metric-label">В процессе</div>
-          </div>
-          <div>
-            <div className="metric-value" style={{color: "var(--color-text-secondary)"}}>{metrics.todoCount}</div>
-            <div className="metric-label">TODO</div>
-          </div>
-          <div>
-            <div className="metric-value val-danger">{totalOpen - metrics.inProgressCount - metrics.todoCount}</div>
-            <div className="metric-label">Проверка/Блок</div>
+            <div className="metric-value" style={{color: "var(--color-text-secondary)"}}>{totalOpen}</div>
+            <div className="metric-label">Открытых</div>
           </div>
         </div>
       </div>
 
       {hasFinances && (
-        <div 
-          className="metric-finance-group" 
+        <div
+          className="metric-finance-group"
           onClick={onFinanceClick}
           role={onFinanceClick ? "button" : undefined}
         >

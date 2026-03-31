@@ -8,8 +8,13 @@ export function BlockedItems({ issues }: Props) {
   if (issues.length === 0) return null;
 
   return (
-    <section className="blocked-section">
-      <h2>Blocked Items ({issues.length})</h2>
+    <div className="bento-panel span-8">
+      <div className="bento-panel-title" style={{ color: "var(--color-danger)" }}>
+        Заблокировано
+        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-danger)", fontSize: "var(--text-base)" }}>
+          {issues.length}
+        </span>
+      </div>
       <div className="blocked-list">
         {issues.map((issue) => (
           <div key={issue.id} className="blocked-item">
@@ -21,6 +26,6 @@ export function BlockedItems({ issues }: Props) {
           </div>
         ))}
       </div>
-    </section>
+    </div>
   );
 }

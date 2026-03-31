@@ -40,7 +40,7 @@ export function ProjectCard({ project, monitor }: Props) {
   const risk = calcRiskScore(project, monitor);
 
   return (
-    <div className={`pc ${isStale ? "pc--stale" : ""} ${risk.level !== "low" ? `pc--risk-${risk.level}` : ""}`}>
+    <div className={`pc pc--phase-${project.phase} ${isStale ? "pc--stale" : ""} ${risk.level !== "low" ? `pc--risk-${risk.level}` : ""}`}>
       {/* Row 1: Name + phase + badges */}
       <div className="pc-header">
         <div className="pc-name-row">
@@ -62,112 +62,135 @@ export function ProjectCard({ project, monitor }: Props) {
         </div>
       </div>
 
-      {/* Row 2: Priorities */}
-      <div className="pc-priorities">
-        <span className="pc-total">Всего: {project.openCount}</span>
-        {(["P1", "P2", "P3"] as Priority[]).map((p) => (
-          <span key={p} className="pc-pri">
-            <span className="pc-pri-dot" style={{ background: PRIORITY_COLORS[p] }} />
-            {p}: {project.priorityCounts[p]}
-          </span>
-        ))}
-        {(() => {
-          const labeled = project.priorityCounts.P1 + project.priorityCounts.P2 + project.priorityCounts.P3 + project.priorityCounts.P4;
-          const noLabel = project.openCount - labeled;
-          return noLabel > 0 ? (
-            <span className="pc-pri pc-pri--none">?: {noLabel}</span>
-          ) : null;
-        })()}
-        <span className="pc-done">Done: {project.doneCount}</span>
+      {/* Slot 2: Priorities */}
+      <div className="pc-slot">
+        <div className="pc-priorities">
+          <span className="pc-total">{project.openCount} <span className="pc-total-label">открытых</span></span>
+          <div className="pc-pri-group">
+            {(["P1", "P2", "P3"] as Priority[]).map((p) => (
+              <span key={p} className="pc-pri">
+                <span className="pc-pri-dot" style={{ background: PRIORITY_COLORS[p] }} />
+                {project.priorityCounts[p]}
+              </span>
+            ))}
+            {(() => {
+              const labeled = project.priorityCounts.P1 + project.priorityCounts.P2 + project.priorityCounts.P3 + project.priorityCounts.P4;
+              const noLabel = project.openCount - labeled;
+              return noLabel > 0 ? (
+                <span className="pc-pri pc-pri--none">? {noLabel}</span>
+              ) : null;
+            })()}
+          </div>
+        </div>
       </div>
 
-      {/* Row 3: Progress */}
-      {project.doneCount > 0 && (
-        <div className="pc-progress">
-          <div className="pc-bar">
-            <div className="pc-bar-fill" style={{ width: `${project.progress}%` }} />
+      {/* Slot 3: Progress */}
+      <div className="pc-slot">
+        {project.doneCount > 0 && (
+          <div className="pc-progress">
+            <div className="pc-bar">
+              <div className="pc-bar-fill" style={{ width: `${project.progress}%` }} />
+            </div>
+            <span className="pc-pct">{project.progress}%</span>
           </div>
-          <span className="pc-pct">{project.progress}%</span>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Row 4: Finance */}
-      {hasFinances && (
-        <div className="pc-finance">
-          <div className="pc-finance-row">
-            <span className="pc-finance-group">
-              <span className="pc-finance-label">Бюджет</span>
-              <span className="pc-finance-paid">{formatUSD(project.paid)}</span>
-              <span className="pc-finance-sep">/</span>
-              <span className="pc-finance-total">{formatUSD(project.budget)}</span>
-            </span>
-            {project.remaining > 0 && (
+      {/* Slot 4: Finance */}
+      <div className="pc-slot">
+        {hasFinances && (
+          <div className="pc-finance">
+            <div className="pc-finance-row">
               <span className="pc-finance-group">
-                <span className="pc-finance-label">Остаток</span>
-                <span className="pc-finance-remaining">{formatUSD(project.remaining)}</span>
+                <span className="pc-finance-label">Бюджет</span>
+                <span className="pc-finance-paid">{formatUSD(project.paid)}</span>
+                <span className="pc-finance-sep">/</span>
+                <span className="pc-finance-total">{formatUSD(project.budget)}</span>
               </span>
+              {project.remaining > 0 && (
+                <span className="pc-finance-group">
+                  <span className="pc-finance-label">Остаток</span>
+                  <span className="pc-finance-remaining">{formatUSD(project.remaining)}</span>
+                </span>
+              )}
+            </div>
+            <div className="pc-finance-bar">
+              <div
+                className="pc-finance-fill"
+                style={{
+                  width: `${paymentProgress}%`,
+                  background: paymentProgress >= 100 ? "var(--color-success)" : "var(--color-primary)",
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Slot 5: Stats */}
+      <div className="pc-slot">
+        {project.openCount > 0 && (project.velocity7d > 0 || project.cycleTimeDays !== null || project.etaDate) && (
+          <div className="pc-stats">
+            {project.velocity7d > 0 && (
+              <div className="pc-stat">
+                <span className="pc-stat-label">Скорость</span>
+                <span className="pc-stat-value">{project.velocity7d.toFixed(1)}<span className="pc-stat-days">/д</span></span>
+              </div>
             )}
+            {project.cycleTimeDays !== null && (
+              <div className="pc-stat">
+                <span className="pc-stat-label">Цикл</span>
+                <span className="pc-stat-value">
+                  {project.cycleTimeDays < 1
+                    ? `${Math.round(project.cycleTimeDays * 24)}ч`
+                    : `${Math.round(project.cycleTimeDays)}д`}
+                </span>
+              </div>
+            )}
+            {project.etaDate && (() => {
+              const etaClass = project.etaDays && project.etaDays > 60 ? "danger" : project.etaDays && project.etaDays > 30 ? "warn" : "eta";
+              return (
+                <div className="pc-stat pc-stat--eta">
+                  <span className="pc-stat-label">Прогноз</span>
+                  <span className={`pc-stat-value pc-stat-value--${etaClass}`}>
+                    {new Date(project.etaDate).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
+                    {project.etaDays && <span className="pc-stat-days"> ({project.etaDays > 0 ? "+" : ""}{project.etaDays}д)</span>}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
-          <div className="pc-finance-bar">
-            <div
-              className="pc-finance-fill"
-              style={{
-                width: `${paymentProgress}%`,
-                background: paymentProgress >= 100 ? "var(--color-success)" : "var(--color-primary)",
-              }}
-            />
+        )}
+      </div>
+
+      {/* Slot 6: Risk factors */}
+      <div className="pc-slot">
+        {risk.level !== "low" && risk.factors.length > 0 && (
+          <div className="pc-risk-factors">
+            {risk.factors.map((f, i) => (
+              <span key={i} className={`risk-factor risk-factor--${risk.level}`}>
+                {f.text}
+              </span>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Row 5: Velocity + Cycle + ETA */}
-      {project.openCount > 0 && (
-        <div className="pc-velocity">
-          <span className="pc-vel-item">
-            Скорость: {project.velocity7d > 0 ? `${project.velocity7d.toFixed(1)}/день` : "нет данных"}
-          </span>
-          {project.cycleTimeDays !== null && (
-            <span className="pc-vel-item">
-              Цикл: {project.cycleTimeDays < 1
-                ? `${Math.round(project.cycleTimeDays * 24)}ч`
-                : `${Math.round(project.cycleTimeDays)}д`}
-            </span>
-          )}
-          {project.etaDate && (
-            <span className={`pc-eta ${project.etaDays && project.etaDays > 60 ? "pc-eta--danger" : project.etaDays && project.etaDays > 30 ? "pc-eta--warn" : ""}`}>
-              Прогноз завершения: {new Date(project.etaDate).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
-              {project.etaDays && <span className="pc-eta-days"> (~{project.etaDays}д)</span>}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Row 6: Risk factors */}
-      {risk.level !== "low" && risk.factors.length > 0 && (
-        <div className="pc-risk-factors">
-          {risk.factors.map((f, i) => (
-            <span key={i} className={`risk-factor risk-factor--${risk.level}`}>
-              {f.text}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Row 7: Commits toggle */}
-      <button
-        className="pc-heatmap-toggle"
-        onClick={() => setHeatmapOpen(!heatmapOpen)}
-      >
-        <span className={`pc-heatmap-arrow ${heatmapOpen ? "open" : ""}`}>&#9654;</span>
-        <span>Коммиты</span>
-        <span className="pc-heatmap-count">{project.commitActivity.thisWeek} за 7д</span>
-      </button>
-      {heatmapOpen && <CommitHeatmap activity={project.commitActivity} />}
-
-      {/* Description */}
-      {project.description && (
-        <p className="pc-desc">{project.description}</p>
-      )}
+      {/* Slot 7: Commits + description */}
+      <div className="pc-slot pc-slot--last">
+        <button
+          className="pc-heatmap-toggle"
+          onClick={() => setHeatmapOpen(!heatmapOpen)}
+        >
+          <span className={`pc-heatmap-arrow ${heatmapOpen ? "open" : ""}`}>&#9654;</span>
+          <span>Коммиты</span>
+          <span className="pc-heatmap-count">{project.commitActivity.thisWeek} за 7д</span>
+        </button>
+        {heatmapOpen && <CommitHeatmap activity={project.commitActivity} />}
+        {project.description && (
+          <p className="pc-desc">{project.description}</p>
+        )}
+      </div>
     </div>
   );
 }
