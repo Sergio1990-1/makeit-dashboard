@@ -107,8 +107,8 @@ export function AuditProjectCard({ project, status, auditIssueProgress, onRun, o
             </div>
           </div>
 
-          {/* State D: Issues Fixed counter (shown when issues were created) */}
-          {project.last_run?.issues_created && auditIssueProgress && (
+          {/* State D: Issues Fixed counter (shown when audit-labeled issues exist in dashboard) */}
+          {auditIssueProgress && (
             <div className="pc-slot" style={{ marginTop: "8px", paddingTop: "10px", borderTop: "1px solid var(--color-border)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
                 <span style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>Исправлено</span>

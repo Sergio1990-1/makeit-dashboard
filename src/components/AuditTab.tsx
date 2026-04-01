@@ -82,7 +82,7 @@ makeit-audit serve`}
               i.labels.some((l) => l.toLowerCase() === "audit"),
             ) ?? [];
             const auditIssueProgress =
-              p.last_run?.issues_created && auditIssues.length > 0
+              auditIssues.length > 0
                 ? {
                     total: auditIssues.length,
                     closed: auditIssues.filter((i) => i.closedAt !== null).length,
