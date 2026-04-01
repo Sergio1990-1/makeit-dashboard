@@ -390,7 +390,26 @@ const SYSTEM_RULES = `Ты — AI-помощник менеджера проек
 - Считай по АКТИВНЫМ дням (дни с ≥1 закрытием), не календарным
 - P1 = 1-3 дня, P2 = 0.5-1 день, P3 = мелкие
 - +25% буфер. Если данных <3 дней — предупреди
-- НЕ меняй мнение без новых данных`;
+- НЕ меняй мнение без новых данных
+
+## СОЗДАНИЕ ISSUES ИЗ АУДИТА (когда пользователь просит создать задачи по результатам LLM-аудита)
+ЗАПРЕЩЕНО создавать по одному issue на каждую находку — это создаёт 100+ микрозадач.
+Думай как тимлид, раздающий задачи на спринт:
+
+ГРУППИРУЙ в одну задачу если:
+- Одна и та же root cause (например "нет валидации входных данных в API endpoints")
+- Одинаковый паттерн исправления (например "заменить float на Decimal для денег")
+- Одна подсистема/модуль с несколькими схожими проблемами
+- Косметика одного типа (unused imports, type hints, etc.)
+
+ОТДЕЛЬНАЯ задача только если:
+- Самостоятельная уязвимость безопасности (SQL injection, etc.)
+- Критический баг с потерей данных
+- Требует отдельного архитектурного решения
+
+РАЗМЕР: 15–25 задач итого. Каждая на 1–4 часа работы, не на 5 минут.
+Тело задачи: список конкретных файлов/строк как чеклист "- [ ] \`file.py:42\` — описание".
+Лейблы для аудит-задач: ОБЯЗАТЕЛЬНО добавляй "audit" + приоритет + тип (bug/security/tech-debt).`;
 
 function buildSystemPrompt(ctx: DashboardContext): string {
   const today = new Date();
@@ -426,20 +445,42 @@ ${projectLines.join("\n")}
 
 // ── Audit findings → GitHub Issues (standalone, no tool loop) ──
 
-const _AUDIT_SYSTEM_PROMPT = `You are a senior code reviewer. Convert audit findings into concise GitHub issues.
+const _AUDIT_SYSTEM_PROMPT = `You are a senior code reviewer. Convert audit findings into actionable GitHub issues.
 Return a JSON array (no markdown, raw JSON only). Each element:
 {
-  "title": "<concise title mentioning filename>",
-  "body": "**Problem:** <what's wrong>\\n\\n**Location:** \`<file>:<line>\`\\n\\n**Recommendation:** <how to fix>",
+  "title": "<concise title mentioning module/area, not individual line>",
+  "body": "**Problem:** <what's wrong>\\n\\n**Findings:**\\n<checklist of grouped items with file:line>\\n\\n**Recommendation:** <how to fix>",
   "labels": ["audit", "<P1-critical|P2-high|P3-medium>", "<bug|security|tech-debt>"],
   "severity": "<critical|high|medium|low>",
-  "finding_index": <original index in input array>
+  "finding_index": <index of first finding in this group>
 }
-Rules:
+
+## GROUPING RULES (most important)
+Think like a tech lead assigning sprint tasks, NOT like a linter listing violations.
+
+GROUP together when findings share:
+- Same root cause (e.g., "missing input validation across API endpoints")
+- Same fix pattern (e.g., "replace float with Decimal for money fields")
+- Same module/subsystem (e.g., "type safety issues in auth service")
+- Cosmetic/style issues of the same kind (e.g., "unused imports in frontend")
+
+CREATE separate issue when:
+- Finding is a standalone security vulnerability
+- Finding is a critical data integrity bug
+- Finding requires its own design decision or significant refactoring
+- Different subsystems are affected and fixes are independent
+
+## SIZING RULES
+- Target: 15–25 issues total (not 50 micro-tasks)
+- Each issue should take 1–4 hours to fix, not 5 minutes
+- P1-critical and P2-high findings that are standalone → separate issues
+- P3-medium findings → group by module (1 issue per module covering all medium issues)
+- Body checklist format for grouped issues: "- [ ] \`file.py:42\` — description"
+
+## OTHER RULES
 - Skip exact duplicates (same file + line).
-- Max 50 issues total.
 - Labels must use exactly: audit, P1-critical, P2-high, P3-medium, bug, security, tech-debt.
-- Title must be concise (<= 80 chars) and reference the filename.`;
+- Title <= 80 chars, describes the problem area (not a single line number).`;
 
 export async function generateIssuesFromFindings(
   findings: AuditFinding[],
