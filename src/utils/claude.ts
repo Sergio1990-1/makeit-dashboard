@@ -443,98 +443,163 @@ ${projectLines.join("\n")}
 ## Репозитории: ${ctx.projects.map((p) => p.repo).join(", ")}`;
 }
 
-// ── Audit findings → GitHub Issues (standalone, no tool loop) ──
+// ── Audit findings → GitHub Issues (grouped by theme, one Claude call per group) ──
 
-const _AUDIT_SYSTEM_PROMPT = `You are a senior code reviewer. Convert audit findings into actionable GitHub issues.
-Return a JSON array (no markdown, raw JSON only). Each element:
-{
-  "title": "<concise title mentioning module/area, not individual line>",
-  "body": "**Problem:** <what's wrong>\\n\\n**Findings:**\\n<checklist of grouped items with file:line>\\n\\n**Recommendation:** <how to fix>",
-  "labels": ["audit", "<P1-critical|P2-high|P3-medium>", "<bug|security|tech-debt>"],
-  "severity": "<critical|high|medium|low>",
-  "finding_index": <index of first finding in this group>
+interface AuditTheme {
+  key: string;
+  label: string;
+  keywords: string[];
 }
 
-## GROUPING RULES (most important)
-Think like a tech lead assigning sprint tasks, NOT like a linter listing violations.
+const AUDIT_THEMES: AuditTheme[] = [
+  {
+    key: "security",
+    label: "Security vulnerabilities",
+    keywords: ["path traversal", "traversal", "injection", "xss", "csrf", "credential", "secret"],
+  },
+  {
+    key: "race_condition",
+    label: "Race conditions & concurrency",
+    keywords: ["race condition", "race", "concurrent", "deadlock"],
+  },
+  {
+    key: "float_decimal",
+    label: "Float vs Decimal in financial calculations",
+    keywords: ["float", "decimal", "округл", "monetary", "денег", "деньг"],
+  },
+  {
+    key: "transaction",
+    label: "Missing database transactions",
+    keywords: ["транзакц", "transaction", "db.begin", "rollback", "atomicit"],
+  },
+  {
+    key: "auth",
+    label: "Missing authentication & authorization",
+    keywords: ["auth", "права", "доступ", "permission", "role", "require_role", "unauthorized"],
+  },
+  {
+    key: "error_handling",
+    label: "Unhandled exceptions & error handling",
+    keywords: ["исключен", "exception", "unhandled", "error handling"],
+  },
+  {
+    key: "data_integrity",
+    label: "Data integrity & validation",
+    keywords: ["integrity", "constraint", "валидац", "validation", "refresh", "flush", "foreign key"],
+  },
+  {
+    key: "other",
+    label: "Other code quality issues",
+    keywords: [],
+  },
+];
 
-GROUP together when findings share:
-- Same root cause (e.g., "missing input validation across API endpoints")
-- Same fix pattern (e.g., "replace float with Decimal for money fields")
-- Same module/subsystem (e.g., "type safety issues in auth service")
-- Cosmetic/style issues of the same kind (e.g., "unused imports in frontend")
+function groupFindingsByTheme(
+  findings: AuditFinding[],
+): Array<{ theme: AuditTheme; findings: AuditFinding[] }> {
+  const groups = new Map<string, AuditFinding[]>(AUDIT_THEMES.map((t) => [t.key, []]));
 
-CREATE separate issue when:
-- Finding is a standalone security vulnerability
-- Finding is a critical data integrity bug
-- Finding requires its own design decision or significant refactoring
-- Different subsystems are affected and fixes are independent
+  for (const finding of findings) {
+    const text = (finding.description + " " + (finding.recommendation ?? "")).toLowerCase();
+    let assigned = false;
+    for (const theme of AUDIT_THEMES.slice(0, -1)) {
+      if (theme.keywords.some((kw) => text.includes(kw))) {
+        groups.get(theme.key)!.push(finding);
+        assigned = true;
+        break;
+      }
+    }
+    if (!assigned) groups.get("other")!.push(finding);
+  }
 
-## SIZING RULES
-- Target: 15–25 issues total (not 50 micro-tasks)
-- Each issue should take 1–4 hours to fix, not 5 minutes
-- P1-critical and P2-high findings that are standalone → separate issues
-- P3-medium findings → group by module (1 issue per module covering all medium issues)
-- Body checklist format for grouped issues: "- [ ] \`file.py:42\` — description"
+  return AUDIT_THEMES.map((theme) => ({ theme, findings: groups.get(theme.key)! })).filter(
+    (g) => g.findings.length > 0,
+  );
+}
 
-## OTHER RULES
-- Skip exact duplicates (same file + line).
-- Labels must use exactly: audit, P1-critical, P2-high, P3-medium, bug, security, tech-debt.
-- Title <= 80 chars, describes the problem area (not a single line number).`;
+const _AUDIT_BATCH_PROMPT = `You are a senior code reviewer creating GitHub issues from audit findings.
+You receive findings for ONE specific theme. Create 1–5 focused issues (not more).
+
+Group by module/subsystem that needs the same fix (e.g., "financial API layer", "auth endpoints", "export service").
+Do NOT create one issue per finding.
+
+Return JSON array only — no markdown fences, no prose:
+[{
+  "title": "<≤80 chars: area + problem>",
+  "body": "**Problem:** <why risky in production>\\n\\n**Findings:**\\n- [ ] \`file:line\` — description\\n\\n**Recommendation:** <concrete fix>",
+  "labels": ["audit", "<P1-critical|P2-high|P3-medium>", "<bug|security|tech-debt>"],
+  "severity": "<critical|high|medium|low>",
+  "finding_index": <index of first finding in group>
+}]
+
+Rules: list ALL file:line pairs in Findings checklist; labels exactly as shown above.`;
 
 export async function generateIssuesFromFindings(
   findings: AuditFinding[],
   repoName: string,
   anthropicApiKey: string,
+  onProgress?: (current: number, total: number, groupLabel: string) => void,
 ): Promise<GeneratedIssue[]> {
-  // Filter: critical + high; expand to medium if fewer than 30 after filter
+  // Include critical + high; expand to medium if fewer than 30
   let filtered = findings.filter((f) => f.severity === "critical" || f.severity === "high");
   if (filtered.length < 30) {
     filtered = findings.filter(
       (f) => f.severity === "critical" || f.severity === "high" || f.severity === "medium",
     );
   }
-  // Cap at 200 to keep prompt size reasonable
-  filtered = filtered.slice(0, 200);
 
-  const findingsJson = JSON.stringify(
-    filtered.map((f, idx) => ({
-      index: idx,
-      severity: f.severity,
-      file: f.file,
-      line: f.line,
-      description: f.description,
-      recommendation: f.recommendation,
-    })),
-  );
-
+  const groups = groupFindingsByTheme(filtered);
   const client = new Anthropic({ apiKey: anthropicApiKey, dangerouslyAllowBrowser: true });
+  const allIssues: GeneratedIssue[] = [];
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 8192,
-    system: _AUDIT_SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Repository: ${repoName}\n\nFindings (${filtered.length} items):\n${findingsJson}\n\nReturn the JSON array now.`,
-      },
-    ],
-  });
+  for (let i = 0; i < groups.length; i++) {
+    const { theme, findings: groupFindings } = groups[i];
+    onProgress?.(i + 1, groups.length, theme.label);
 
-  const text = response.content
-    .filter((b) => b.type === "text")
-    .map((b) => (b.type === "text" ? b.text : ""))
-    .join("");
+    // Per-group cap: 100 findings max (enough for 1-5 issues, output stays small)
+    const batch = groupFindings.slice(0, 100);
 
-  // Extract JSON array from response (strip potential markdown fences)
-  const jsonMatch = text.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) {
-    throw new Error(`Claude did not return a JSON array. Response: ${text.slice(0, 200)}`);
+    const findingsJson = JSON.stringify(
+      batch.map((f, idx) => ({
+        index: idx,
+        severity: f.severity,
+        file: f.file.replace(/^backend\/app\//, "").replace(/^frontend\/src\//, "fe/"),
+        line: f.line,
+        description: f.description,
+        recommendation: f.recommendation,
+      })),
+    );
+
+    try {
+      const response = await client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4096,
+        system: _AUDIT_BATCH_PROMPT,
+        messages: [
+          {
+            role: "user",
+            content: `Theme: ${theme.label}\nRepository: ${repoName}\n\nFindings (${batch.length}):\n${findingsJson}\n\nCreate 1-5 grouped issues. Return JSON array.`,
+          },
+        ],
+      });
+
+      const text = response.content
+        .filter((b) => b.type === "text")
+        .map((b) => (b.type === "text" ? b.text : ""))
+        .join("");
+
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]) as GeneratedIssue[];
+        if (Array.isArray(parsed)) allIssues.push(...parsed);
+      }
+    } catch (e) {
+      // One group failing shouldn't abort everything — log and continue
+      console.warn(`Audit issue generation failed for theme "${theme.label}":`, e);
+    }
   }
 
-  const parsed = JSON.parse(jsonMatch[0]) as GeneratedIssue[];
-  return Array.isArray(parsed) ? parsed : [];
+  return allIssues;
 }
 
 // ── Chat with tool use loop ──
