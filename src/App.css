@@ -227,7 +227,9 @@ body::after {
 
 /* Dashboard specific grid: stretch rows to fit tallest card, maintaining slot alignment */
 .dashboard-grid {
-  grid-template-rows: auto 1.08fr 0.92fr auto; /* Fine-tuned to align precisely with card boundaries after header offset */
+  grid-template-rows: auto auto auto auto; /* Total collapse to content. Left/Right heights will match row-by-row naturally. */
+  align-items: stretch;
+  align-content: start; /* Prevent overall grid stretching to page height */
 }
 
 @media (max-width: 1024px) {
@@ -258,7 +260,11 @@ body::after {
   opacity: 0.08;
   pointer-events: none;
 }
-
+.panel-deadlines,
+.panel-stale,
+.panel-projects {
+  padding: 10px 14px !important; /* Compact specific middle panels as requested */
+}
 .bento-panel::before {
   content: '';
   position: absolute;
@@ -797,11 +803,11 @@ body::after {
 .dl-list {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
+  gap: var(--sp-1);
 }
 
 .dl-item {
-  padding: var(--sp-3);
+  padding: 8px var(--sp-3);
   background: var(--color-surface); /* Distinct background from body */
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
@@ -899,7 +905,7 @@ body::after {
 .stale-row {
   display: flex;
   flex-direction: column;
-  padding: 10px 0;
+  padding: 5px 0;
   border-bottom: 1px solid var(--color-border);
   transition: background 0.2s, transform 0.2s;
 }
@@ -1038,8 +1044,8 @@ body::after {
   grid-auto-rows: min-content !important;
   align-content: start !important;
   align-items: start !important; /* Prevent cards from stretching in height */
-  gap: var(--sp-4) !important;
-  flex: 1;
+  gap: 8px var(--sp-4) !important; /* Tighter vertical gap, maintained horizontal */
+  /* Removed flex: 1 to prevent stretching to parent panel height */
 }
 
 /* Hide description in summary grid to ensure uniformity as requested */

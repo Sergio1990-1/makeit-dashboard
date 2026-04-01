@@ -51,7 +51,7 @@ export function ClosedChart({ projects }: Props) {
   return (
     <div className="bento-panel span-8 panel-chart">
       <div className="bento-panel-title">
-        <span>Активность (Закрытые Issue)</span>
+        <span>Закрытые ISSUES</span>
         <div style={{ display: "flex", gap: "var(--sp-4)" }}>
           <span className="closed-chart-total-badge">Всего за неделю: {total}</span>
           <span className="closed-chart-total-badge">Среднее в день: {avg6Days}</span>
