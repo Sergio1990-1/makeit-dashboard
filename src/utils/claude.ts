@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { ProjectData, SummaryMetrics, Issue } from "../types";
+import type { ProjectData, SummaryMetrics, Issue, AuditFinding, GeneratedIssue } from "../types";
 import { GITHUB_OWNER, GITHUB_PROJECT_NUMBER, getToken } from "./config";
 import {
   listRepoFiles,
@@ -422,6 +422,78 @@ ${projectLines.join("\n")}
 
 ## Blocked (${blocked.length}): ${blocked.join("; ") || "нет"}
 ## Репозитории: ${ctx.projects.map((p) => p.repo).join(", ")}`;
+}
+
+// ── Audit findings → GitHub Issues (standalone, no tool loop) ──
+
+const _AUDIT_SYSTEM_PROMPT = `You are a senior code reviewer. Convert audit findings into concise GitHub issues.
+Return a JSON array (no markdown, raw JSON only). Each element:
+{
+  "title": "<concise title mentioning filename>",
+  "body": "**Problem:** <what's wrong>\\n\\n**Location:** \`<file>:<line>\`\\n\\n**Recommendation:** <how to fix>",
+  "labels": ["audit", "<P1-critical|P2-high|P3-medium>", "<bug|security|tech-debt>"],
+  "severity": "<critical|high|medium|low>",
+  "finding_index": <original index in input array>
+}
+Rules:
+- Skip exact duplicates (same file + line).
+- Max 50 issues total.
+- Labels must use exactly: audit, P1-critical, P2-high, P3-medium, bug, security, tech-debt.
+- Title must be concise (<= 80 chars) and reference the filename.`;
+
+export async function generateIssuesFromFindings(
+  findings: AuditFinding[],
+  repoName: string,
+  anthropicApiKey: string,
+): Promise<GeneratedIssue[]> {
+  // Filter: critical + high; expand to medium if fewer than 30 after filter
+  let filtered = findings.filter((f) => f.severity === "critical" || f.severity === "high");
+  if (filtered.length < 30) {
+    filtered = findings.filter(
+      (f) => f.severity === "critical" || f.severity === "high" || f.severity === "medium",
+    );
+  }
+  // Cap at 200 to keep prompt size reasonable
+  filtered = filtered.slice(0, 200);
+
+  const findingsJson = JSON.stringify(
+    filtered.map((f, idx) => ({
+      index: idx,
+      severity: f.severity,
+      file: f.file,
+      line: f.line,
+      description: f.description,
+      recommendation: f.recommendation,
+    })),
+  );
+
+  const client = new Anthropic({ apiKey: anthropicApiKey, dangerouslyAllowBrowser: true });
+
+  const response = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 8192,
+    system: _AUDIT_SYSTEM_PROMPT,
+    messages: [
+      {
+        role: "user",
+        content: `Repository: ${repoName}\n\nFindings (${filtered.length} items):\n${findingsJson}\n\nReturn the JSON array now.`,
+      },
+    ],
+  });
+
+  const text = response.content
+    .filter((b) => b.type === "text")
+    .map((b) => (b.type === "text" ? b.text : ""))
+    .join("");
+
+  // Extract JSON array from response (strip potential markdown fences)
+  const jsonMatch = text.match(/\[[\s\S]*\]/);
+  if (!jsonMatch) {
+    throw new Error(`Claude did not return a JSON array. Response: ${text.slice(0, 200)}`);
+  }
+
+  const parsed = JSON.parse(jsonMatch[0]) as GeneratedIssue[];
+  return Array.isArray(parsed) ? parsed : [];
 }
 
 // ── Chat with tool use loop ──
