@@ -67,7 +67,7 @@ export function ProjectCard({ project, monitor }: Props) {
         <div className="pc-priorities">
           <span className="pc-total">{project.openCount} <span className="pc-total-label">открытых</span></span>
           <div className="pc-pri-group">
-            {(["P1", "P2", "P3"] as Priority[]).map((p) => (
+            {(["P1", "P2", "P3", "P4"] as Priority[]).map((p) => (
               <span key={p} className="pc-pri">
                 <span className="pc-pri-dot" style={{ background: PRIORITY_COLORS[p] }} />
                 {project.priorityCounts[p]}
