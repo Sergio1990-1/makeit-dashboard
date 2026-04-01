@@ -14,6 +14,7 @@ import { FinanceEditor } from "./components/FinanceEditor";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { UptimeBar } from "./components/UptimeBar";
 import { ClosedChart } from "./components/ClosedChart";
+import { AuditTab } from "./components/AuditTab";
 import { useDashboard } from "./hooks/useDashboard";
 import { useMonitors } from "./hooks/useMonitors";
 import { getToken, clearToken, MONITOR_MATCH } from "./utils/config";
@@ -86,6 +87,7 @@ function App() {
               { id: "milestones" as TabId, label: `Milestones (${openMilestones.length})` },
               { id: "done" as TabId, label: `Завершённые (${doneMilestones.length})` },
               { id: "uptime" as TabId, label: "Мониторинг" },
+              { id: "audit" as TabId, label: "Аудит" },
             ]).map((t) => (
               <button
                 key={t.id}
@@ -202,6 +204,10 @@ function App() {
                 </section>
               </div>
             </>
+          )}
+
+          {tab === "audit" && (
+            <AuditTab dashboardProjects={projects} />
           )}
 
           {tab === "milestones" && (
