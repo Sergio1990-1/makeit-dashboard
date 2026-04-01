@@ -17,35 +17,24 @@ export function AuditTab({ dashboardProjects = [] }: Props) {
 
   if (loading) {
     return (
-      <div className="bento-panel span-12 panel-projects" style={{ minHeight: "300px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--color-text-muted)" }}>
-        <div className="spinner" style={{ width: "24px", height: "24px", border: "2px solid var(--color-primary)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite", marginBottom: "16px" }} />
+      <div className="bento-panel span-12 panel-projects audit-loading">
+        <div className="audit-spinner" />
         Загрузка конфигурации из makeit-auditor...
       </div>
     );
   }
 
-  // Offline State (Server not running)
   if (auditorAvailable === false) {
     return (
-      <div className="bento-panel span-12 panel-projects" style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "var(--sp-8)" }}>
-        <div style={{ maxWidth: "560px", padding: "32px", background: "var(--color-bg)", borderRadius: "var(--radius-xl)", border: "1px solid var(--color-border)", boxShadow: "var(--shadow-md)" }}>
-          <h2 style={{ fontSize: "18px", marginBottom: "16px", color: "var(--color-text)", fontWeight: 700 }}>
-            ⚡ Локальный сервер недоступен
-          </h2>
-          <p style={{ color: "var(--color-text-muted)", marginBottom: "24px", fontSize: "14px", lineHeight: 1.5 }}>
-            Вкладка «Аудит» общается с системной утилитой <code>makeit-auditor</code> по локальной сети через порт <code>8765</code>. 
+      <div className="bento-panel span-12 panel-projects audit-offline">
+        <div className="audit-offline-card">
+          <h2 className="audit-offline-title">⚡ Локальный сервер недоступен</h2>
+          <p className="audit-offline-desc">
+            Вкладка «Аудит» общается с системной утилитой <code>makeit-auditor</code> по локальной сети через порт <code>8765</code>.
             Запустите её в терминале, чтобы продолжить:
           </p>
-          <pre style={{ background: "var(--color-surface-hover)", padding: "16px", borderRadius: "8px", fontSize: "13px", color: "var(--color-text)", fontFamily: "var(--font-mono)", marginBottom: "24px", border: "1px solid var(--color-border)", textAlign: "left" }}>
-{`cd ~/Desktop/makeit-auditor
-source .venv/bin/activate
-makeit-audit serve`}
-          </pre>
-          <button 
-            className="btn btn-primary" 
-            onClick={refresh}
-            style={{ width: "100%", padding: "12px", borderRadius: "8px", fontWeight: 600 }}
-          >
+          <pre className="audit-offline-code">{`cd ~/Desktop/makeit-auditor\nsource .venv/bin/activate\nmakeit-audit serve`}</pre>
+          <button className="btn btn-primary audit-offline-btn" onClick={refresh}>
             Сервер запущен (Обновить)
           </button>
         </div>
@@ -56,25 +45,18 @@ makeit-audit serve`}
   return (
     <>
       <div className="bento-panel span-12 panel-projects">
-        <div className="bento-panel-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="bento-panel-title">
           <div>
             Аудит Кода
-            <span style={{ fontSize: "11px", color: "var(--color-text-muted)", marginLeft: "12px", fontWeight: "normal", textTransform: "none" }}>
-              Локальная интеграция LLM-аудитора
-            </span>
+            <span className="audit-header-sub">Локальная интеграция LLM-аудитора</span>
           </div>
-          <button 
-            className="btn btn-sm" 
-            onClick={refresh}
-            style={{ padding: "4px 8px", minHeight: "28px" }}
-          >
+          <button className="btn btn-sm audit-refresh-btn" onClick={refresh}>
             ↻ Обновить
           </button>
         </div>
-        
+
         <section className="projects-grid">
           {projects.map((p) => {
-            // Match audit project to dashboard project by repo (case-insensitive)
             const dashProject = dashboardProjects.find(
               (dp) => dp.repo.toLowerCase() === (p.repo.split("/")[1] || p.repo).toLowerCase(),
             );
@@ -106,15 +88,15 @@ makeit-audit serve`}
 
       {confirmingProject && (
         <AuditConfirmDialog
-            projectName={confirmingProject.name}
-            maxPrice={confirmingProject.gpu_config.max_price_per_hour}
-            timeoutHours={confirmingProject.gpu_config.timeout_hours}
-            onCancel={() => setConfirmingProject(null)}
-            onConfirm={async () => {
-                const name = confirmingProject.name;
-                setConfirmingProject(null);
-                await startRun(name);
-            }}
+          projectName={confirmingProject.name}
+          maxPrice={confirmingProject.gpu_config.max_price_per_hour}
+          timeoutHours={confirmingProject.gpu_config.timeout_hours}
+          onCancel={() => setConfirmingProject(null)}
+          onConfirm={async () => {
+            const name = confirmingProject.name;
+            setConfirmingProject(null);
+            await startRun(name);
+          }}
         />
       )}
 
@@ -137,10 +119,6 @@ makeit-audit serve`}
           />
         );
       })()}
-
-      <style>{`
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-      `}</style>
     </>
   );
 }

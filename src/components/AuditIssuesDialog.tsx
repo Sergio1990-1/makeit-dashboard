@@ -13,6 +13,20 @@ interface Props {
 
 type DialogState = "generating" | "preview" | "creating" | "error";
 
+const SEVERITY_COLOR: Record<string, string> = {
+  critical: "var(--color-danger)",
+  high: "var(--color-warning)",
+  medium: "var(--color-primary)",
+  low: "var(--color-text-muted)",
+};
+
+const SEVERITY_LABEL: Record<string, string> = {
+  critical: "CRIT",
+  high: "HIGH",
+  medium: "MED",
+  low: "LOW",
+};
+
 export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
   const [state, setState] = useState<DialogState>("generating");
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +38,6 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
   const repoOwner = project.repo.split("/")[0] || GITHUB_OWNER;
   const repoName = project.repo.split("/")[1] || project.name;
 
-  // Step 1: On mount — fetch findings and generate issues via Claude
   useEffect(() => {
     let cancelled = false;
 
@@ -102,10 +115,8 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
         );
         urls.push(created.url);
       } catch {
-        // Continue on individual errors — don't abort the whole batch
         urls.push("");
       }
-      // Rate limit: 200ms between requests
       if (i < selectedIssues.length - 1) {
         await new Promise((r) => setTimeout(r, 200));
       }
@@ -115,237 +126,82 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
     onComplete(successUrls.length, successUrls);
   }
 
-  const severityBadge: Record<string, string> = {
-    critical: "var(--color-danger)",
-    high: "var(--color-warning)",
-    medium: "var(--color-primary)",
-    low: "var(--color-text-muted)",
-  };
-
-  const severityLabel: Record<string, string> = {
-    critical: "CRIT",
-    high: "HIGH",
-    medium: "MED",
-    low: "LOW",
-  };
-
   return (
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.6)",
-        zIndex: 1000,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "16px",
-      }}
+      className="dialog-overlay"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div
-        style={{
-          background: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius-xl)",
-          boxShadow: "var(--shadow-lg)",
-          width: "100%",
-          maxWidth: "640px",
-          maxHeight: "80vh",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
-      >
+      <div className="dialog">
         {/* Header */}
-        <div
-          style={{
-            padding: "16px 20px",
-            borderBottom: "1px solid var(--color-border)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 700 }}>
+        <div className="dialog-header">
+          <h3 className="dialog-title">
             {state === "generating" && `Генерирую issues для ${project.name}...`}
             {state === "preview" && `Создать ${issues.length} issues в ${project.repo}`}
             {state === "creating" && "Создаю issues..."}
             {state === "error" && "Ошибка"}
           </h3>
-          <button
-            onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--color-text-muted)",
-              fontSize: "18px",
-              lineHeight: 1,
-              padding: "4px",
-            }}
-          >
-            ✕
-          </button>
+          <button className="dialog-close" onClick={onClose}>✕</button>
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
-
-          {/* State 1: Generating */}
+        <div className="dialog-body">
           {state === "generating" && (
-            <div style={{ textAlign: "center", padding: "40px 0" }}>
-              <div
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  border: "3px solid var(--color-primary)",
-                  borderTopColor: "transparent",
-                  borderRadius: "50%",
-                  animation: "spin 1s linear infinite",
-                  margin: "0 auto 16px",
-                }}
-              />
-              <p style={{ color: "var(--color-text-muted)", fontSize: "14px" }}>
-                Claude анализирует findings и генерирует issues...
-              </p>
+            <div className="dialog-spinner-wrap">
+              <div className="dialog-spinner" />
+              <p className="dialog-hint">Claude анализирует findings и генерирует issues...</p>
             </div>
           )}
 
-          {/* State 2: Preview */}
           {state === "preview" && (
             <div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "12px",
-                }}
-              >
-                <span style={{ fontSize: "13px", color: "var(--color-text-muted)" }}>
-                  Выбрано: {selected.size} / {issues.length}
-                </span>
-                <button
-                  onClick={toggleAll}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "var(--color-primary)",
-                    fontSize: "12px",
-                    padding: "2px 6px",
-                  }}
-                >
+              <div className="issues-meta">
+                <span className="issues-meta-count">Выбрано: {selected.size} / {issues.length}</span>
+                <button className="issues-toggle-all" onClick={toggleAll}>
                   {selected.size === issues.length ? "Снять все" : "Выбрать все"}
                 </button>
               </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <div className="issues-list">
                 {issues.map((issue, idx) => (
                   <label
                     key={idx}
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: "8px",
-                      padding: "8px 10px",
-                      borderRadius: "var(--radius-md)",
-                      cursor: "pointer",
-                      background: selected.has(idx)
-                        ? "var(--color-surface-hover)"
-                        : "transparent",
-                      border: "1px solid var(--color-border)",
-                      transition: "background 0.15s",
-                    }}
+                    className={`issue-row ${selected.has(idx) ? 'issue-row--selected' : ''}`}
                   >
                     <input
                       type="checkbox"
                       checked={selected.has(idx)}
                       onChange={() => toggleIssue(idx)}
-                      style={{ marginTop: "2px", flexShrink: 0 }}
                     />
                     <span
-                      style={{
-                        fontSize: "10px",
-                        fontWeight: 700,
-                        color: severityBadge[issue.severity] || "var(--color-text-muted)",
-                        fontFamily: "var(--font-mono)",
-                        flexShrink: 0,
-                        minWidth: "34px",
-                      }}
+                      className="issue-severity"
+                      style={{ color: SEVERITY_COLOR[issue.severity] || "var(--color-text-muted)" }}
                     >
-                      {severityLabel[issue.severity] || issue.severity.toUpperCase()}
+                      {SEVERITY_LABEL[issue.severity] || issue.severity.toUpperCase()}
                     </span>
-                    <span
-                      style={{
-                        fontSize: "13px",
-                        color: "var(--color-text)",
-                        lineHeight: 1.4,
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {issue.title}
-                    </span>
+                    <span className="issue-title">{issue.title}</span>
                   </label>
                 ))}
               </div>
             </div>
           )}
 
-          {/* State 3: Creating */}
           {state === "creating" && (
-            <div style={{ padding: "20px 0" }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: "8px",
-                  fontSize: "13px",
-                }}
-              >
-                <span style={{ color: "var(--color-text-muted)" }}>Создаю issues...</span>
-                <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>
-                  {creatingIndex + 1} / {selected.size}
-                </span>
+            <div className="dialog-progress-wrap">
+              <div className="dialog-progress-header">
+                <span className="dialog-progress-label">Создаю issues...</span>
+                <span className="dialog-progress-count">{creatingIndex + 1} / {selected.size}</span>
               </div>
-              <div
-                style={{
-                  height: "8px",
-                  background: "var(--color-border)",
-                  borderRadius: "var(--radius-full)",
-                  overflow: "hidden",
-                }}
-              >
+              <div className="dialog-progress-track">
                 <div
-                  style={{
-                    height: "100%",
-                    width: `${((creatingIndex + 1) / Math.max(selected.size, 1)) * 100}%`,
-                    background: "var(--color-primary)",
-                    borderRadius: "var(--radius-full)",
-                    transition: "width 0.3s ease-out",
-                  }}
+                  className="dialog-progress-fill"
+                  style={{ width: `${((creatingIndex + 1) / Math.max(selected.size, 1)) * 100}%` }}
                 />
               </div>
-              <div
-                style={{
-                  marginTop: "12px",
-                  fontSize: "11px",
-                  color: "var(--color-text-muted)",
-                  fontFamily: "var(--font-mono)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {creatingTitle}
-              </div>
+              <div className="dialog-progress-title">{creatingTitle}</div>
             </div>
           )}
 
-          {/* State: Error */}
           {state === "error" && (
-            <div style={{ color: "var(--color-danger)", fontSize: "13px", lineHeight: 1.5 }}>
+            <div className="dialog-error">
               <strong>Ошибка:</strong> {error}
             </div>
           )}
@@ -353,18 +209,8 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
 
         {/* Footer */}
         {state === "preview" && (
-          <div
-            style={{
-              padding: "12px 20px",
-              borderTop: "1px solid var(--color-border)",
-              display: "flex",
-              gap: "8px",
-              justifyContent: "flex-end",
-            }}
-          >
-            <button className="btn btn-sm" onClick={onClose}>
-              Отмена
-            </button>
+          <div className="dialog-footer dialog-footer--end">
+            <button className="btn btn-sm" onClick={onClose}>Отмена</button>
             <button
               className="btn btn-primary btn-sm"
               onClick={handleCreate}
@@ -376,21 +222,10 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
         )}
 
         {state === "error" && (
-          <div
-            style={{
-              padding: "12px 20px",
-              borderTop: "1px solid var(--color-border)",
-              display: "flex",
-              justifyContent: "flex-end",
-            }}
-          >
-            <button className="btn btn-sm" onClick={onClose}>
-              Закрыть
-            </button>
+          <div className="dialog-footer dialog-footer--end">
+            <button className="btn btn-sm" onClick={onClose}>Закрыть</button>
           </div>
         )}
-
-        <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
       </div>
     </div>
   );
