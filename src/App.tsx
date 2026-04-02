@@ -15,6 +15,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { UptimeBar } from "./components/UptimeBar";
 import { ClosedChart } from "./components/ClosedChart";
 import { AuditTab } from "./components/AuditTab";
+import { PipelineControlPanel } from "./components/PipelineControlPanel";
 import { useDashboard } from "./hooks/useDashboard";
 import { useMonitors } from "./hooks/useMonitors";
 import { getToken, clearToken, MONITOR_MATCH } from "./utils/config";
@@ -88,6 +89,7 @@ function App() {
               { id: "done" as TabId, label: `Завершённые (${doneMilestones.length})` },
               { id: "uptime" as TabId, label: "Мониторинг" },
               { id: "audit" as TabId, label: "Аудит" },
+              { id: "pipeline" as TabId, label: "Pipeline" },
             ]).map((t) => (
               <button
                 key={t.id}
@@ -208,6 +210,10 @@ function App() {
 
           {tab === "audit" && (
             <AuditTab dashboardProjects={projects} />
+          )}
+
+          {tab === "pipeline" && (
+            <PipelineControlPanel />
           )}
 
           {tab === "milestones" && (

@@ -96,7 +96,7 @@ export interface Filters {
   status: IssueStatus | null;
 }
 
-export type TabId = "dashboard" | "projects" | "milestones" | "done" | "uptime" | "audit";
+export type TabId = "dashboard" | "projects" | "milestones" | "done" | "uptime" | "audit" | "pipeline";
 
 export type MonitorStatus = "up" | "down" | "paused" | "pending";
 
