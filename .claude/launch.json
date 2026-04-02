@@ -3,9 +3,12 @@
   "configurations": [
     {
       "name": "makeit-dashboard",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "/opt/homebrew/bin/npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 4173
+      "port": 4173,
+      "env": {
+        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+      }
     }
   ]
 }
