@@ -50,9 +50,21 @@ export function usePipeline() {
   const checkAvailability = useCallback(async () => {
     const ok = await isPipelineRunning();
     setAvailable(ok);
-    if (ok) await loadStatus();
+    if (ok) {
+      try {
+        const s = await fetchPipelineStatus();
+        setStatus(s);
+        setError(null);
+        // Resume polling if pipeline was already running when the tab was opened
+        if (s.running && pollRef.current === null) {
+          startPolling();
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Ошибка статуса");
+      }
+    }
     return ok;
-  }, [loadStatus]);
+  }, [startPolling]);
 
   useEffect(() => {
     void checkAvailability();

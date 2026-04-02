@@ -22,8 +22,19 @@ function statusClass(status: string): string {
 }
 
 export function PipelineControlPanel() {
-  const { available, status, stats, error, starting, stopping, start, stop, refresh, loadStats } =
-    usePipeline();
+  const {
+    available,
+    status,
+    stats,
+    statsProject,
+    error,
+    starting,
+    stopping,
+    start,
+    stop,
+    refresh,
+    loadStats,
+  } = usePipeline();
 
   const [selectedProject, setSelectedProject] = useState<string>(
     `${GITHUB_OWNER}/moliyakg`,
@@ -172,7 +183,7 @@ export function PipelineControlPanel() {
         {/* Stats */}
         {stats && (
           <section className="pipeline-stats">
-            <div className="pipeline-stats-title">Статистика — {stats && selectedProject.split("/")[1]}</div>
+            <div className="pipeline-stats-title">Статистика — {statsProject?.split("/")[1]}</div>
             <div className="pipeline-stats-grid">
               <div className="pipeline-stat-card">
                 <span className="pipeline-stat-value">{stats.total_issues}</span>
