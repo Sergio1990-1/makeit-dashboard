@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import type { AuditProjectStatus, GeneratedIssue } from "../types";
 import { fetchAuditFindings } from "../utils/auditor";
 import { generateIssuesFromFindings } from "../utils/claude";
-import { createIssue } from "../utils/github-actions";
-import { getToken, getClaudeKey, GITHUB_OWNER } from "../utils/config";
+import { createIssue, addIssueToProject } from "../utils/github-actions";
+import { getToken, getClaudeKey, GITHUB_OWNER, GITHUB_PROJECT_NUMBER } from "../utils/config";
 
 interface Props {
   project: AuditProjectStatus;
@@ -34,6 +34,7 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [creatingIndex, setCreatingIndex] = useState(0);
   const [creatingTitle, setCreatingTitle] = useState("");
+  const [genProgress, setGenProgress] = useState<{ current: number; total: number; label: string } | null>(null);
 
   const repoOwner = project.repo.split("/")[0] || GITHUB_OWNER;
   const repoName = project.repo.split("/")[1] || project.name;
@@ -55,6 +56,9 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
           findings.findings,
           repoName,
           claudeKey,
+          (current, total, label) => {
+            if (!cancelled) setGenProgress({ current, total, label });
+          },
         );
         if (cancelled) return;
 
@@ -114,6 +118,9 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
           issue.labels,
         );
         urls.push(created.url);
+        try {
+          await addIssueToProject(token, repoOwner, repoName, created.number, GITHUB_PROJECT_NUMBER);
+        } catch { /* non-fatal — issue exists even if project board add fails */ }
       } catch {
         urls.push("");
       }
@@ -148,7 +155,21 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
           {state === "generating" && (
             <div className="dialog-spinner-wrap">
               <div className="dialog-spinner" />
-              <p className="dialog-hint">Claude анализирует findings и генерирует issues...</p>
+              {genProgress ? (
+                <>
+                  <p className="dialog-hint">
+                    Группа {genProgress.current} / {genProgress.total}: {genProgress.label}
+                  </p>
+                  <div className="dialog-progress-track" style={{ marginTop: 8 }}>
+                    <div
+                      className="dialog-progress-fill"
+                      style={{ width: `${(genProgress.current / genProgress.total) * 100}%` }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <p className="dialog-hint">Группирую findings по темам...</p>
+              )}
             </div>
           )}
 
