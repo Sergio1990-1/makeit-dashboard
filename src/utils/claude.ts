@@ -532,6 +532,13 @@ Return JSON array only — no markdown fences, no prose:
   "finding_index": <index of first finding in group>
 }]
 
+PRIORITY RULE (most important — do not ignore):
+The priority label MUST reflect the HIGHEST severity finding in the group.
+- ANY finding with severity="critical" in the group → label MUST be "P1-critical"
+- ANY finding with severity="high" (and none critical) → label MUST be "P2-high"
+- All findings severity="medium" or lower → "P3-medium"
+Never average or downgrade — one critical finding makes the whole issue P1-critical.
+
 Rules: list ALL file:line pairs in Findings checklist; labels exactly as shown above.`;
 
 export async function generateIssuesFromFindings(
