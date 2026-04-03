@@ -28,12 +28,11 @@ export function AuditTab({ dashboardProjects = [] }: Props) {
     return (
       <div className="bento-panel span-12 panel-projects audit-offline">
         <div className="audit-offline-card">
-          <h2 className="audit-offline-title">⚡ Локальный сервер недоступен</h2>
+          <h2 className="audit-offline-title">⚡ Сервер аудита недоступен</h2>
           <p className="audit-offline-desc">
-            Вкладка «Аудит» общается с системной утилитой <code>makeit-auditor</code> по локальной сети через порт <code>8765</code>.
-            Запустите её в терминале, чтобы продолжить:
+            Не удалось подключиться к makeit-auditor API. Убедитесь, что сервис запущен.
           </p>
-          <pre className="audit-offline-code">{`cd ~/Desktop/makeit-auditor\nsource .venv/bin/activate\nmakeit-audit serve`}</pre>
+          <pre className="audit-offline-code">{`# Локально:\ncd ~/Desktop/makeit-auditor\nsource .venv/bin/activate\nmakeit-audit serve\n\n# Или на VPS — проверьте контейнер:\nssh root@89.167.17.79 "docker ps | grep makeit_auditor"`}</pre>
           <button className="btn btn-primary audit-offline-btn" onClick={refresh}>
             Сервер запущен (Обновить)
           </button>
