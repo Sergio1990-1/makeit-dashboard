@@ -62,14 +62,18 @@ export async function isPipelineRunning(): Promise<boolean> {
     });
     clearTimeout(timeoutId);
     return res.ok;
-  } catch {
+  } catch (e) {
+    console.error("[pipeline] health check failed:", e);
     return false;
   }
 }
 
 export async function fetchPipelineStatus(): Promise<PipelineStatus> {
   const res = await fetch(`${PIPELINE_BASE_URL}/pipeline/status`, { cache: "no-store" });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    console.error("[pipeline] status failed:", res.status, await res.text().catch(() => ""));
+    throw new Error(`HTTP ${res.status}`);
+  }
   return res.json() as Promise<PipelineStatus>;
 }
 
@@ -83,16 +87,20 @@ export async function fetchPipelineStats(project: string): Promise<PipelineStats
 }
 
 export async function startPipeline(req: PipelineStartRequest): Promise<string> {
+  console.log("[pipeline] starting:", JSON.stringify(req));
   const res = await fetch(`${PIPELINE_BASE_URL}/pipeline/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(req),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+    const body = await res.text().catch(() => "");
+    console.error("[pipeline] start failed:", res.status, body);
+    const err = (() => { try { return JSON.parse(body); } catch { return { detail: `HTTP ${res.status}` }; } })();
     throw new Error((err as { detail: string }).detail ?? `HTTP ${res.status}`);
   }
   const data = (await res.json()) as { message: string };
+  console.log("[pipeline] start response:", data.message);
   return data.message;
 }
 

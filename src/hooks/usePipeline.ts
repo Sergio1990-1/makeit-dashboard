@@ -37,15 +37,17 @@ export function usePipeline() {
       const s = await fetchPipelineStatus();
       setStatus(s);
       setError(null);
-      // Stop polling only after 3 consecutive not-running responses
-      // (avoids race condition where background task hasn't started yet)
       if (!s.running) {
         notRunningCountRef.current += 1;
-        if (notRunningCountRef.current >= 3) stopPolling();
+        if (notRunningCountRef.current >= 3) {
+          console.log("[pipeline] stopped polling (3x not running)");
+          stopPolling();
+        }
       } else {
         notRunningCountRef.current = 0;
       }
     } catch (err) {
+      console.error("[pipeline] poll error:", err);
       setError(err instanceof Error ? err.message : "Ошибка статуса");
     }
   }, [stopPolling]);
