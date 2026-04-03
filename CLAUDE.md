@@ -65,16 +65,13 @@ npm run build      # Build check
 - `AUDITOR_URL` и `PIPELINE_URL` читаются в `auditor.ts` / `pipeline.ts`
 - Дефолт: `localhost:8765` / `localhost:8766` (для локальной разработки)
 
-### Пересборка на VPS
+### Деплой на VPS (одна команда)
 ```bash
-ssh root@89.167.17.79
-cd /opt/apps/makeit-stack
-# обновить код:
-cd makeit-dashboard && git pull && cd ..
-# или rsync с Mac:
-# rsync -az --exclude='.git' --exclude='node_modules' --exclude='dist' ~/Desktop/makeit-dashboard/ root@89.167.17.79:/opt/apps/makeit-stack/makeit-dashboard/
-docker compose build dashboard && docker compose up -d dashboard
+ssh root@89.167.17.79 bash /opt/apps/makeit-stack/deploy.sh
 ```
+Скрипт: git pull обоих репо → docker compose build → up -d → restart nginx → проверка.
+
+Репозитории на сервере клонированы через SSH (`git@github.com:Sergio1990-1/...`).
 
 ## Важно
 - Не коммитить .env файлы
