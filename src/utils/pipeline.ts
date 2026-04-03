@@ -55,7 +55,7 @@ export interface PipelineStats {
 export async function isPipelineRunning(): Promise<boolean> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1500);
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     const res = await fetch(`${PIPELINE_BASE_URL}/health`, {
       signal: controller.signal,
       cache: "no-store",
