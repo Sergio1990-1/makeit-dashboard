@@ -150,11 +150,31 @@ export function PipelineControlPanel() {
     loadStats,
   } = usePipeline();
 
-  const [selectedProject, setSelectedProject] = useState<string>(
-    `${GITHUB_OWNER}/moliyakg`,
-  );
-  const [selectedLabels, setSelectedLabels] = useState<LabelOption[]>(["P1-critical", "P2-high"]);
-  const [limit, setLimit] = useState(4);
+  const [selectedProject, setSelectedProject] = useState<string>(() => {
+    return localStorage.getItem("pipeline_project") || `${GITHUB_OWNER}/moliyakg`;
+  });
+  const [selectedLabels, setSelectedLabels] = useState<LabelOption[]>(() => {
+    try {
+      const saved = localStorage.getItem("pipeline_labels");
+      if (saved) return JSON.parse(saved) as LabelOption[];
+    } catch { /* ignore */ }
+    return ["P1-critical", "P2-high"];
+  });
+  const [limit, setLimit] = useState(() => {
+    return Number(localStorage.getItem("pipeline_limit")) || 4;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("pipeline_project", selectedProject);
+  }, [selectedProject]);
+
+  useEffect(() => {
+    localStorage.setItem("pipeline_labels", JSON.stringify(selectedLabels));
+  }, [selectedLabels]);
+
+  useEffect(() => {
+    localStorage.setItem("pipeline_limit", String(limit));
+  }, [limit]);
 
   useEffect(() => {
     if (available && selectedProject) void loadStats(selectedProject);
