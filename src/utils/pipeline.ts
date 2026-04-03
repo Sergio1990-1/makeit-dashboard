@@ -8,6 +8,13 @@ export interface PipelineStartRequest {
   limit?: number;
 }
 
+export interface PipelineStageEntry {
+  stage: string;
+  status: string;
+  ts: number;
+  detail?: string;
+}
+
 export interface PipelineResult {
   issue_number: number;
   status: string;
@@ -15,6 +22,9 @@ export interface PipelineResult {
   pr_url: string | null;
   retries: number;
   error: string | null;
+  stages?: PipelineStageEntry[];
+  review_verdict?: string;
+  review_summary?: string;
 }
 
 export interface PipelineQueueItem {
@@ -31,6 +41,7 @@ export interface PipelineStatus {
   active_tasks: number;
   results: PipelineResult[];
   queue: PipelineQueueItem[];
+  issue_stages?: Record<number, PipelineStageEntry[]>;
 }
 
 export interface PipelineStats {
