@@ -22,12 +22,14 @@ export function usePipeline() {
   const [stopping, setStopping] = useState(false);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const notRunningCountRef = useRef(0);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current !== null) {
       clearInterval(pollRef.current);
       pollRef.current = null;
     }
+    notRunningCountRef.current = 0;
   }, []);
 
   const loadStatus = useCallback(async () => {
@@ -35,8 +37,14 @@ export function usePipeline() {
       const s = await fetchPipelineStatus();
       setStatus(s);
       setError(null);
-      // Stop polling once pipeline is no longer running
-      if (!s.running) stopPolling();
+      // Stop polling only after 3 consecutive not-running responses
+      // (avoids race condition where background task hasn't started yet)
+      if (!s.running) {
+        notRunningCountRef.current += 1;
+        if (notRunningCountRef.current >= 3) stopPolling();
+      } else {
+        notRunningCountRef.current = 0;
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка статуса");
     }
@@ -87,6 +95,8 @@ export function usePipeline() {
       setStarting(true);
       try {
         await startPipeline(req);
+        // Give background task time to set running=true before first poll
+        await new Promise((r) => setTimeout(r, 1500));
         await loadStatus();
         startPolling();
       } catch (err) {
