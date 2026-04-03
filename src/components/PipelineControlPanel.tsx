@@ -193,7 +193,7 @@ export function PipelineControlPanel() {
           Pipeline недоступен
         </div>
         <p style={{ color: "var(--color-text-secondary)", fontSize: "var(--text-sm)", margin: 0, textAlign: "center", maxWidth: 480 }}>
-          Запустите API сервер на порту 8766
+          Pipeline API сервер не отвечает. Убедитесь, что Mac включён и API запущен.
         </p>
         <pre style={{
           background: "var(--color-bg)",
@@ -208,7 +208,7 @@ export function PipelineControlPanel() {
           maxWidth: 520,
           width: "100%",
         }}>
-          {`cd ~/Desktop/makeit-pipeline\nsource .venv/bin/activate\nuvicorn makeit_pipeline.api:create_app --factory --port 8766`}
+          {`# На Mac:\ncd ~/Desktop/makeit-pipeline\nsource .venv/bin/activate\nuvicorn makeit_pipeline.api:create_app --factory --port 8766`}
         </pre>
         <button className="btn btn-primary" onClick={() => void refresh()}>
           Обновить

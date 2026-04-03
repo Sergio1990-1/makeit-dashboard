@@ -1,6 +1,7 @@
 import type { AuditProjectStatus, AuditRunStatus, AuditFindings } from "../types";
 
-const AUDITOR_BASE_URL = "http://127.0.0.1:8765";
+const AUDITOR_BASE_URL =
+  (window as any).__MAKEIT_CONFIG__?.AUDITOR_URL ?? "http://127.0.0.1:8765";
 
 export async function fetchAuditProjects(): Promise<AuditProjectStatus[]> {
   const res = await fetch(`${AUDITOR_BASE_URL}/api/projects`, { cache: "no-store" });

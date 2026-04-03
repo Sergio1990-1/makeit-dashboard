@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const base = process.env.VITE_BASE ?? '/makeit-dashboard/'
+
 export default defineConfig({
   plugins: [
     react(),
@@ -24,8 +26,8 @@ export default defineConfig({
         background_color: '#0d1117',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/makeit-dashboard/',
-        scope: '/makeit-dashboard/',
+        start_url: base,
+        scope: base,
         icons: [
           {
             src: 'icon-192.png',
@@ -66,7 +68,7 @@ export default defineConfig({
       },
     }),
   ],
-  base: '/makeit-dashboard/',
+  base,
   server: {
     port: 4173,
     strictPort: true,
