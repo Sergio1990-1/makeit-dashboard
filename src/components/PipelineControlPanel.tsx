@@ -41,13 +41,25 @@ function formatDuration(seconds: number): string {
   return `${h}ч ${m % 60}м`;
 }
 
+function isTaskFinished(stages: PipelineStageEntry[]): boolean {
+  // Task is done when merge or dev/review reached completed/failed
+  return stages.some(
+    (s) => s.stage === "merge" && (s.status === "completed" || s.status === "failed"),
+  ) || stages.some(
+    (s) => s.status === "failed" && (s.stage === "dev" || s.stage === "review"),
+  );
+}
+
 function getElapsedSeconds(stages: PipelineStageEntry[] | undefined): number | null {
   if (!stages?.length) return null;
   const first = stages[0];
-  const last = stages[stages.length - 1];
-  // If task is done/failed, use recorded elapsed
-  if (last.status === "completed" || last.status === "failed") {
-    return last.elapsed ?? (last.ts - first.ts);
+  // Find the max elapsed from any stage
+  if (isTaskFinished(stages)) {
+    let maxElapsed = 0;
+    for (const s of stages) {
+      if (s.elapsed != null && s.elapsed > maxElapsed) maxElapsed = s.elapsed;
+    }
+    return maxElapsed || (stages[stages.length - 1].ts - first.ts);
   }
   // Active task — compute from first timestamp
   return (Date.now() / 1000) - first.ts;
@@ -56,9 +68,7 @@ function getElapsedSeconds(stages: PipelineStageEntry[] | undefined): number | n
 function LiveTimer({ stages }: { stages?: PipelineStageEntry[] }) {
   const [, setTick] = useState(0);
   const elapsed = getElapsedSeconds(stages);
-  const isActive = stages?.length
-    ? !["completed", "failed"].includes(stages[stages.length - 1].status)
-    : false;
+  const isActive = stages?.length ? !isTaskFinished(stages) : false;
 
   useEffect(() => {
     if (!isActive) return;
