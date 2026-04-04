@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { ProjectData, SummaryMetrics, Issue, AuditFinding, GeneratedIssue } from "../types";
+import type { ProjectData, SummaryMetrics, Issue, AuditFinding, GeneratedIssue, Verdict } from "../types";
 import { GITHUB_OWNER, GITHUB_PROJECT_NUMBER, getToken } from "./config";
 import {
   listRepoFiles,
@@ -546,6 +546,7 @@ export async function generateIssuesFromFindings(
   repoName: string,
   anthropicApiKey: string,
   onProgress?: (current: number, total: number, groupLabel: string) => void,
+  verdictByFinding?: Map<AuditFinding, Verdict>,
 ): Promise<GeneratedIssue[]> {
   // Include critical + high; expand to medium if fewer than 30
   let filtered = findings.filter((f) => f.severity === "critical" || f.severity === "high");
@@ -565,6 +566,11 @@ export async function generateIssuesFromFindings(
 
     // Per-group cap: 100 findings max (enough for 1-5 issues, output stays small)
     const batch = groupFindings.slice(0, 100);
+
+    // Check if any finding in this batch is UNCERTAIN — those groups get needs-human
+    const hasUncertain = verdictByFinding
+      ? batch.some((f) => verdictByFinding.get(f) === "UNCERTAIN")
+      : false;
 
     const findingsJson = JSON.stringify(
       batch.map((f, idx) => ({
@@ -598,7 +604,15 @@ export async function generateIssuesFromFindings(
       const jsonMatch = text.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]) as GeneratedIssue[];
-        if (Array.isArray(parsed)) allIssues.push(...parsed);
+        if (Array.isArray(parsed)) {
+          // Inject needs-human label for groups with UNCERTAIN findings
+          if (hasUncertain) {
+            for (const issue of parsed) {
+              if (!issue.labels.includes("needs-human")) issue.labels.push("needs-human");
+            }
+          }
+          allIssues.push(...parsed);
+        }
       }
     } catch (e) {
       // One group failing shouldn't abort everything — log and continue

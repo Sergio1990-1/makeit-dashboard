@@ -6,13 +6,16 @@ interface Props {
   auditIssueProgress?: { total: number; closed: number };
   onRun?: () => void;
   onCancel?: () => void;
+  onVerify?: () => void;
   onCreateIssues?: () => void;
 }
 
-export function AuditProjectCard({ project, status, auditIssueProgress, onRun, onCancel, onCreateIssues }: Props) {
+export function AuditProjectCard({ project, status, auditIssueProgress, onRun, onCancel, onVerify, onCreateIssues }: Props) {
   const isRunning = status?.state === "running";
   const isFailed = status?.state === "failed";
   const hasRun = Boolean(project.last_run);
+  const verification = project.last_run?.verification ?? null;
+  const isVerified = verification !== null;
   const repoName = project.repo.split('/')[1] || project.name;
   const repoOwner = project.repo.split('/')[0] || "Unknown";
 
@@ -150,6 +153,22 @@ export function AuditProjectCard({ project, status, auditIssueProgress, onRun, o
         </>
       )}
 
+      {/* Verification summary strip (only when verified) */}
+      {!isRunning && hasRun && isVerified && verification && (
+        <div className="pc-slot apc-verify-summary">
+          <span className="apc-verify-label">Верифицировано:</span>
+          <span className="apc-verify-stat" style={{ color: "var(--color-danger)" }}>
+            ✓ {verification.confirmed}
+          </span>
+          <span className="apc-verify-stat" style={{ color: "var(--color-success)" }}>
+            ✗ {verification.false_positive}
+          </span>
+          <span className="apc-verify-stat" style={{ color: "var(--color-warning)" }}>
+            ? {verification.uncertain}
+          </span>
+        </div>
+      )}
+
       {/* Row 4: Actions */}
       <div className="apc-actions">
         {isRunning ? (
@@ -163,9 +182,23 @@ export function AuditProjectCard({ project, status, auditIssueProgress, onRun, o
         )}
         {!isRunning && hasRun && (
           <button
+            className={`btn btn-sm apc-btn-full ${isVerified ? "btn-success" : ""}`}
+            onClick={onVerify}
+            title={isVerified
+              ? "Результаты верификации сохранены. Нажмите для повторной верификации."
+              : "Верифицировать findings перед созданием issues"}
+          >
+            {isVerified ? "✓ Верифицировано" : "◈ Верифицировать"}
+          </button>
+        )}
+        {!isRunning && hasRun && (
+          <button
             className="btn btn-primary btn-sm apc-btn-full"
             onClick={onCreateIssues}
-            title="Создать GitHub Issues из результатов аудита"
+            disabled={!isVerified}
+            title={!isVerified
+              ? "Сначала выполните верификацию"
+              : "Создать GitHub Issues из результатов аудита"}
           >
             ✦ Issues
           </button>

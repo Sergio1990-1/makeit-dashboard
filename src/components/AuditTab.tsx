@@ -3,6 +3,7 @@ import { useAudit } from "../hooks/useAudit";
 import { AuditProjectCard } from "./AuditProjectCard";
 import { AuditConfirmDialog } from "./AuditConfirmDialog";
 import { AuditIssuesDialog } from "./AuditIssuesDialog";
+import { AuditVerifyDialog } from "./AuditVerifyDialog";
 import { postAuditMeta } from "../utils/auditor";
 import type { AuditProjectStatus, ProjectData } from "../types";
 
@@ -14,6 +15,7 @@ export function AuditTab({ dashboardProjects = [] }: Props) {
   const { projects, runStatuses, auditorAvailable, loading, refresh, startRun, cancelRun } = useAudit();
   const [confirmingProject, setConfirmingProject] = useState<AuditProjectStatus | null>(null);
   const [issuesDialogProject, setIssuesDialogProject] = useState<string | null>(null);
+  const [verifyDialogProject, setVerifyDialogProject] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -78,6 +80,7 @@ export function AuditTab({ dashboardProjects = [] }: Props) {
                 auditIssueProgress={auditIssueProgress}
                 onRun={() => setConfirmingProject(p)}
                 onCancel={() => cancelRun(p.name)}
+                onVerify={() => setVerifyDialogProject(p.name)}
                 onCreateIssues={() => setIssuesDialogProject(p.name)}
               />
             );
@@ -98,6 +101,21 @@ export function AuditTab({ dashboardProjects = [] }: Props) {
           }}
         />
       )}
+
+      {verifyDialogProject && (() => {
+        const dialogProject = projects.find((p) => p.name === verifyDialogProject);
+        if (!dialogProject) return null;
+        return (
+          <AuditVerifyDialog
+            project={dialogProject}
+            onClose={() => setVerifyDialogProject(null)}
+            onComplete={() => {
+              setVerifyDialogProject(null);
+              refresh();
+            }}
+          />
+        );
+      })()}
 
       {issuesDialogProject && (() => {
         const dialogProject = projects.find((p) => p.name === issuesDialogProject);
