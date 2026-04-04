@@ -72,7 +72,7 @@ export async function verifyFindings(
     const batch = selected.slice(i, i + batchSize);
     const batchResults = await Promise.all(
       batch.map(({ finding, index }) =>
-        verifyFinding(client, finding, index, githubToken, repoOwner, repoName, cache),
+        verifyFinding(client, finding, index, githubToken, repoOwner, repoName, cache, signal),
       ),
     );
 

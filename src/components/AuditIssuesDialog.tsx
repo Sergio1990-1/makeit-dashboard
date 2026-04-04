@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { AuditProjectStatus, AuditFinding, GeneratedIssue, Verdict } from "../types";
+import type { AuditProjectStatus, GeneratedIssue, Verdict } from "../types";
 import { fetchAuditFindings, fetchAuditVerification } from "../utils/auditor";
 import { generateIssuesFromFindings } from "../utils/claude";
 import { createIssue, addIssueToProject } from "../utils/github-actions";
@@ -52,21 +52,23 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
         const findings = await fetchAuditFindings(project.name);
         if (cancelled) return;
 
-        // Load verification and filter out FALSE_POSITIVE findings
-        let filteredFindings: AuditFinding[] = findings.findings;
-        const verdictByFinding = new Map<AuditFinding, Verdict>();
+        // Load verification, filter out FALSE_POSITIVE findings, and build a
+        // lookup from finding → original index so the generator can flag
+        // UNCERTAIN groups with needs-human.
+        const originalIndex = new WeakMap<object, number>();
+        findings.findings.forEach((f, idx) => originalIndex.set(f, idx));
+
+        let filteredFindings = findings.findings;
+        let verdictByIndex: Map<number, Verdict> | undefined;
         try {
           const verification = await fetchAuditVerification(project.name);
           if (cancelled) return;
-          const verdictByIdx = new Map(verification.results.map((r) => [r.finding_index, r.verdict]));
+          verdictByIndex = new Map(
+            verification.results.map((r) => [r.finding_index, r.verdict as Verdict]),
+          );
           filteredFindings = findings.findings.filter((_, idx) => {
-            const verdict = verdictByIdx.get(idx);
-            return verdict !== "FALSE_POSITIVE";
+            return verdictByIndex!.get(idx) !== "FALSE_POSITIVE";
           });
-          for (let i = 0; i < findings.findings.length; i++) {
-            const v = verdictByIdx.get(i);
-            if (v) verdictByFinding.set(findings.findings[i], v);
-          }
         } catch {
           // No verification available — proceed with all findings (backward compat)
         }
@@ -78,7 +80,8 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
           (current, total, label) => {
             if (!cancelled) setGenProgress({ current, total, label });
           },
-          verdictByFinding,
+          verdictByIndex,
+          (f) => originalIndex.get(f),
         );
         if (cancelled) return;
 

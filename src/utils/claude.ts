@@ -541,12 +541,22 @@ Never average or downgrade — one critical finding makes the whole issue P1-cri
 
 Rules: list ALL file:line pairs in Findings checklist; labels exactly as shown above.`;
 
+/**
+ * Caller must supply findings with `original_index` attached if `verdictByIndex`
+ * is provided, so we can look up each finding's verdict after grouping.
+ */
+export interface IndexedFinding {
+  finding: AuditFinding;
+  originalIndex: number;
+}
+
 export async function generateIssuesFromFindings(
   findings: AuditFinding[],
   repoName: string,
   anthropicApiKey: string,
   onProgress?: (current: number, total: number, groupLabel: string) => void,
-  verdictByFinding?: Map<AuditFinding, Verdict>,
+  verdictByIndex?: Map<number, Verdict>,
+  originalIndexOf?: (f: AuditFinding) => number | undefined,
 ): Promise<GeneratedIssue[]> {
   // Include critical + high; expand to medium if fewer than 30
   let filtered = findings.filter((f) => f.severity === "critical" || f.severity === "high");
@@ -568,8 +578,11 @@ export async function generateIssuesFromFindings(
     const batch = groupFindings.slice(0, 100);
 
     // Check if any finding in this batch is UNCERTAIN — those groups get needs-human
-    const hasUncertain = verdictByFinding
-      ? batch.some((f) => verdictByFinding.get(f) === "UNCERTAIN")
+    const hasUncertain = verdictByIndex && originalIndexOf
+      ? batch.some((f) => {
+          const idx = originalIndexOf(f);
+          return idx !== undefined && verdictByIndex.get(idx) === "UNCERTAIN";
+        })
       : false;
 
     const findingsJson = JSON.stringify(

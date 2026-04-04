@@ -204,8 +204,11 @@ function parseVerifyResponse(text: string): VerifyAgentResponse | null {
 /**
  * Verify a single audit finding against actual code.
  *
- * Returns a VerificationResult with verdict. On transient errors, retries once.
+ * Returns a VerificationResult with verdict. On transient errors (API failure
+ * or invalid JSON), retries once with 2s backoff and fresh message history.
  * On persistent failure, returns a result with `error` set.
+ *
+ * AbortError is rethrown so the caller can discard partial batch results.
  */
 export async function verifyFinding(
   client: Anthropic,
@@ -215,6 +218,7 @@ export async function verifyFinding(
   owner: string,
   repo: string,
   cache: FileCache,
+  signal?: AbortSignal,
 ): Promise<VerificationResult> {
   const verifiedAt = new Date().toISOString();
   const base: Omit<VerificationResult, "verdict" | "reason" | "code_snippet" | "error"> = {
@@ -226,31 +230,36 @@ export async function verifyFinding(
   };
 
   const userMessage = `Finding to verify:
-  File: ${finding.file}
-  Line: ${finding.line ?? "(unknown)"}
-  Severity: ${finding.severity}
-  Tool: ${finding.tool}
-  Description: ${finding.description}
-  Recommendation: ${finding.recommendation}
+File: ${finding.file}
+Line: ${finding.line ?? "(unknown)"}
+Severity: ${finding.severity}
+Tool: ${finding.tool}
+Description: ${finding.description}
+Recommendation: ${finding.recommendation}
 
 Verify it now.`;
 
-  let currentMessages: Anthropic.MessageParam[] = [
-    { role: "user", content: userMessage },
-  ];
-
-  // Up to 4 iterations = 1 initial + 3 tool reads
+  // Up to 2 attempts × 4 iterations each. Each attempt starts with fresh message
+  // history so a bad assistant reply in attempt 1 doesn't poison attempt 2.
   let lastError: string | null = null;
   for (let attempt = 0; attempt < 2; attempt++) {
+    let currentMessages: Anthropic.MessageParam[] = [
+      { role: "user", content: userMessage },
+    ];
+    let iterationDidFail = false;
+
     try {
       for (let iter = 0; iter < 4; iter++) {
-        const response = await client.messages.create({
-          model: VERIFY_MODEL,
-          max_tokens: 1024,
-          system: VERIFY_SYSTEM_PROMPT,
-          tools: [VERIFY_TOOL],
-          messages: currentMessages,
-        });
+        const response = await client.messages.create(
+          {
+            model: VERIFY_MODEL,
+            max_tokens: 1024,
+            system: VERIFY_SYSTEM_PROMPT,
+            tools: [VERIFY_TOOL],
+            messages: currentMessages,
+          },
+          { signal },
+        );
 
         if (response.stop_reason === "tool_use") {
           currentMessages = [
@@ -292,15 +301,35 @@ Verify it now.`;
           return { ...base, ...parsed, error: null };
         }
         lastError = "invalid JSON response from model";
+        iterationDidFail = true;
         break;
       }
-      // Exhausted iterations without end_turn
-      lastError = lastError ?? "verification did not converge within 4 iterations";
+      if (!iterationDidFail) {
+        lastError = "verification did not converge within 4 iterations";
+      }
     } catch (e) {
+      // Propagate abort up so caller can discard the whole batch
+      if (e instanceof Error && (e.name === "AbortError" || signal?.aborted)) {
+        throw e;
+      }
       lastError = e instanceof Error ? e.message : String(e);
-      // Reset messages and retry once
-      currentMessages = [{ role: "user", content: userMessage }];
-      await new Promise((r) => setTimeout(r, 2000));
+    }
+
+    // Backoff before second attempt
+    if (attempt === 0) {
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(resolve, 2000);
+        if (signal) {
+          signal.addEventListener(
+            "abort",
+            () => {
+              clearTimeout(timer);
+              reject(new DOMException("Aborted", "AbortError"));
+            },
+            { once: true },
+          );
+        }
+      });
     }
   }
 
