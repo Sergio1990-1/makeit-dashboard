@@ -213,7 +213,7 @@ function App() {
           )}
 
           {tab === "pipeline" && (
-            <PipelineControlPanel />
+            <PipelineControlPanel projects={projects} />
           )}
 
           {tab === "milestones" && (

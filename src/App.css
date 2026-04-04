@@ -1920,16 +1920,54 @@ body::after {
   width: 100%;
   min-width: 0;
   height: 28px;
-  background: var(--color-neutral-tint-2); /* Same as ref strip */
+  background: var(--color-neutral-tint-2);
   border-radius: var(--radius-sm);
   overflow: hidden;
+}
+.closed-chart-bar-stack {
+  display: flex;
+  height: 100%;
 }
 .closed-chart-bar-fill {
   height: 100%;
   background: var(--color-success);
-  border-radius: var(--radius-sm);
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
+.closed-chart-bar-fill:first-child {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+.closed-chart-bar-fill:last-child {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.closed-chart-bar-fill:only-child {
+  border-radius: var(--radius-sm);
+}
+.closed-chart-bar-fill-pipeline {
+  background: #f97316;
+}
+.closed-chart-badge-pipeline {
+  color: #f97316;
+  border-color: rgba(249, 115, 22, 0.3);
+}
+.closed-chart-legend {
+  display: flex;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-2);
+}
+.closed-chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.closed-chart-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.closed-chart-legend-dot-manual { background: var(--color-success); }
+.closed-chart-legend-dot-pipeline { background: #f97316; }
 .closed-chart-count {
   font-size: var(--text-sm);
   font-weight: 600;
@@ -1939,6 +1977,7 @@ body::after {
   text-align: right;
 }
 .closed-chart-count-zero { color: var(--color-text-faint); font-weight: 400; }
+.pipeline-closed-chart-panel { grid-column: span 12; }
 
 /* ══════════════════════════════════════════
    MILESTONES

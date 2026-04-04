@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { usePipeline } from "../hooks/usePipeline";
 import { GITHUB_OWNER, PROJECTS } from "../utils/config";
 import type { PipelineStageEntry } from "../utils/pipeline";
+import type { ProjectData } from "../types";
+import { PipelineClosedChart } from "./PipelineClosedChart";
 
 const LABEL_OPTIONS = ["P1-critical", "P2-high", "P3-medium"] as const;
 type LabelOption = (typeof LABEL_OPTIONS)[number];
@@ -196,7 +198,11 @@ function StageProgress({
 
 /* ── Main component ── */
 
-export function PipelineControlPanel() {
+interface PipelineControlPanelProps {
+  projects?: ProjectData[];
+}
+
+export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
   const {
     available,
     status,
@@ -420,6 +426,11 @@ export function PipelineControlPanel() {
           )}
         </div>
       </div>
+
+      {/* ── Pipeline closed chart ── */}
+      {projects && projects.length > 0 && (
+        <PipelineClosedChart projects={projects} />
+      )}
 
       {/* ── Stats row ── */}
       {stats && (
