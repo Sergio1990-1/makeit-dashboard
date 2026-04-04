@@ -1,4 +1,4 @@
-import type { AuditProjectStatus, AuditRunStatus, AuditFindings } from "../types";
+import type { AuditProjectStatus, AuditRunStatus, AuditFindings, VerificationReport } from "../types";
 
 const AUDITOR_BASE_URL =
   (window as any).__MAKEIT_CONFIG__?.AUDITOR_URL ?? "http://127.0.0.1:8765";
@@ -69,6 +69,36 @@ export async function postAuditMeta(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ issues_created: issuesCreated, issue_urls: issueUrls }),
   });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ detail: "Unknown error" }));
+    throw new Error(errorData.detail || `HTTP error: ${res.status}`);
+  }
+}
+
+export async function fetchAuditVerification(project: string): Promise<VerificationReport> {
+  const res = await fetch(
+    `${AUDITOR_BASE_URL}/api/audit/${encodeURIComponent(project)}/verification`,
+    { cache: "no-store" },
+  );
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ detail: "Unknown error" }));
+    throw new Error(errorData.detail || `HTTP error: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function postAuditVerification(
+  project: string,
+  report: Omit<VerificationReport, "project">,
+): Promise<void> {
+  const res = await fetch(
+    `${AUDITOR_BASE_URL}/api/audit/${encodeURIComponent(project)}/verification`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(report),
+    },
+  );
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({ detail: "Unknown error" }));
     throw new Error(errorData.detail || `HTTP error: ${res.status}`);

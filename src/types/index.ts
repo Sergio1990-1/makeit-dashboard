@@ -127,6 +127,15 @@ export interface AuditLastRun {
   severity_counts: { critical: number; high: number; medium: number; low: number };
   gist_url: string | null;
   issues_created: number | null;
+  verification: AuditVerificationSummary | null;
+}
+
+export interface AuditVerificationSummary {
+  verified_at: string;
+  confirmed: number;
+  false_positive: number;
+  uncertain: number;
+  errors: number;
 }
 
 export interface AuditProjectStatus {
@@ -176,4 +185,32 @@ export interface GeneratedIssue {
   labels: string[];
   severity: "critical" | "high" | "medium" | "low";
   finding_index: number;
+}
+
+// Verification types
+export type Verdict = "CONFIRMED" | "FALSE_POSITIVE" | "UNCERTAIN";
+
+export interface VerificationResult {
+  finding_index: number;
+  verdict: Verdict;
+  reason: string;
+  code_snippet: string | null;
+  file: string;
+  line: number | null;
+  verified_at: string;
+  model: string;
+  error: string | null;
+}
+
+export interface VerificationReport {
+  project: string;
+  audit_timestamp: string;
+  verified_at: string;
+  model: string;
+  total_findings: number;
+  confirmed_count: number;
+  false_positive_count: number;
+  uncertain_count: number;
+  error_count: number;
+  results: VerificationResult[];
 }

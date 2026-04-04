@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import type { AuditProjectStatus, GeneratedIssue } from "../types";
-import { fetchAuditFindings } from "../utils/auditor";
+import type { AuditProjectStatus, AuditFinding, GeneratedIssue, Verdict } from "../types";
+import { fetchAuditFindings, fetchAuditVerification } from "../utils/auditor";
 import { generateIssuesFromFindings } from "../utils/claude";
 import { createIssue, addIssueToProject } from "../utils/github-actions";
 import { getToken, getClaudeKey, GITHUB_OWNER, GITHUB_PROJECT_NUMBER } from "../utils/config";
@@ -52,13 +52,33 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
         const findings = await fetchAuditFindings(project.name);
         if (cancelled) return;
 
+        // Load verification and filter out FALSE_POSITIVE findings
+        let filteredFindings: AuditFinding[] = findings.findings;
+        const verdictByFinding = new Map<AuditFinding, Verdict>();
+        try {
+          const verification = await fetchAuditVerification(project.name);
+          if (cancelled) return;
+          const verdictByIdx = new Map(verification.results.map((r) => [r.finding_index, r.verdict]));
+          filteredFindings = findings.findings.filter((_, idx) => {
+            const verdict = verdictByIdx.get(idx);
+            return verdict !== "FALSE_POSITIVE";
+          });
+          for (let i = 0; i < findings.findings.length; i++) {
+            const v = verdictByIdx.get(i);
+            if (v) verdictByFinding.set(findings.findings[i], v);
+          }
+        } catch {
+          // No verification available — proceed with all findings (backward compat)
+        }
+
         const generated = await generateIssuesFromFindings(
-          findings.findings,
+          filteredFindings,
           repoName,
           claudeKey,
           (current, total, label) => {
             if (!cancelled) setGenProgress({ current, total, label });
           },
+          verdictByFinding,
         );
         if (cancelled) return;
 
