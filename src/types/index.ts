@@ -127,6 +127,7 @@ export interface AuditLastRun {
   severity_counts: { critical: number; high: number; medium: number; low: number };
   gist_url: string | null;
   issues_created: number | null;
+  issue_urls: string[] | null;
   verification: AuditVerificationSummary | null;
 }
 
@@ -159,6 +160,7 @@ export interface AuditRunStatus {
 }
 
 export interface AuditFinding {
+  category?: "bug" | "security" | "business_logic" | "architecture" | "performance" | "data_integrity";
   severity: "critical" | "high" | "medium" | "low";
   source: "deterministic" | "llm" | "both";
   tool: string;
