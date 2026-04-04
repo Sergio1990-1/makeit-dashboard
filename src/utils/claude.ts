@@ -452,46 +452,12 @@ interface AuditTheme {
 }
 
 const AUDIT_THEMES: AuditTheme[] = [
-  {
-    key: "security",
-    label: "Security vulnerabilities",
-    keywords: ["path traversal", "traversal", "injection", "xss", "csrf", "credential", "secret"],
-  },
-  {
-    key: "race_condition",
-    label: "Race conditions & concurrency",
-    keywords: ["race condition", "race", "concurrent", "deadlock"],
-  },
-  {
-    key: "float_decimal",
-    label: "Float vs Decimal in financial calculations",
-    keywords: ["float", "decimal", "округл", "monetary", "денег", "деньг"],
-  },
-  {
-    key: "transaction",
-    label: "Missing database transactions",
-    keywords: ["транзакц", "transaction", "db.begin", "rollback", "atomicit"],
-  },
-  {
-    key: "auth",
-    label: "Missing authentication & authorization",
-    keywords: ["auth", "права", "доступ", "permission", "role", "require_role", "unauthorized"],
-  },
-  {
-    key: "error_handling",
-    label: "Unhandled exceptions & error handling",
-    keywords: ["исключен", "exception", "unhandled", "error handling"],
-  },
-  {
-    key: "data_integrity",
-    label: "Data integrity & validation",
-    keywords: ["integrity", "constraint", "валидац", "validation", "refresh", "flush", "foreign key"],
-  },
-  {
-    key: "other",
-    label: "Other code quality issues",
-    keywords: [],
-  },
+  { key: "security", label: "Security vulnerabilities", keywords: [] },
+  { key: "business_logic", label: "Business logic violations", keywords: [] },
+  { key: "architecture", label: "Architecture issues", keywords: [] },
+  { key: "performance", label: "Performance issues", keywords: [] },
+  { key: "data_integrity", label: "Data integrity risks", keywords: [] },
+  { key: "bug", label: "Bugs & error handling", keywords: [] },
 ];
 
 function groupFindingsByTheme(
@@ -500,16 +466,13 @@ function groupFindingsByTheme(
   const groups = new Map<string, AuditFinding[]>(AUDIT_THEMES.map((t) => [t.key, []]));
 
   for (const finding of findings) {
-    const text = (finding.description + " " + (finding.recommendation ?? "")).toLowerCase();
-    let assigned = false;
-    for (const theme of AUDIT_THEMES.slice(0, -1)) {
-      if (theme.keywords.some((kw) => text.includes(kw))) {
-        groups.get(theme.key)!.push(finding);
-        assigned = true;
-        break;
-      }
+    const cat = finding.category || "bug";
+    const theme = AUDIT_THEMES.find((t) => t.key === cat);
+    if (theme) {
+      groups.get(theme.key)!.push(finding);
+    } else {
+      groups.get("bug")!.push(finding);
     }
-    if (!assigned) groups.get("other")!.push(finding);
   }
 
   return AUDIT_THEMES.map((theme) => ({ theme, findings: groups.get(theme.key)! })).filter(
@@ -527,7 +490,7 @@ Return JSON array only — no markdown fences, no prose:
 [{
   "title": "<≤80 chars: area + problem>",
   "body": "**Problem:** <why risky in production>\\n\\n**Findings:**\\n- [ ] \`file:line\` — description\\n\\n**Recommendation:** <concrete fix>",
-  "labels": ["audit", "<P1-critical|P2-high|P3-medium>", "<bug|security|tech-debt>"],
+  "labels": ["audit", "<P1-critical|P2-high|P3-medium>", "<bug|security|tech-debt|business_logic|architecture|performance|data_integrity>"],
   "severity": "<critical|high|medium|low>",
   "finding_index": <index of first finding in group>
 }]
@@ -589,6 +552,7 @@ export async function generateIssuesFromFindings(
       batch.map((f, idx) => ({
         index: idx,
         severity: f.severity,
+        category: f.category || "bug",
         file: f.file.replace(/^backend\/app\//, "").replace(/^frontend\/src\//, "fe/"),
         line: f.line,
         description: f.description,

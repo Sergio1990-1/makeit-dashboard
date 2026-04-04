@@ -61,9 +61,13 @@ export function AuditTab({ dashboardProjects = [] }: Props) {
             const dashProject = dashboardProjects.find(
               (dp) => dp.repo.toLowerCase() === (p.repo.split("/")[1] || p.repo).toLowerCase(),
             );
-            const auditIssues = dashProject?.issues.filter((i) =>
-              i.labels.some((l) => l.toLowerCase() === "audit"),
-            ) ?? [];
+            // Show issue progress only for issues created in the current audit run
+            const currentIssueUrls = p.last_run?.issue_urls ?? [];
+            const auditIssues = currentIssueUrls.length > 0
+              ? (dashProject?.issues.filter((i) =>
+                  currentIssueUrls.includes(i.url)
+                ) ?? [])
+              : [];
             const auditIssueProgress =
               auditIssues.length > 0
                 ? {
@@ -92,6 +96,8 @@ export function AuditTab({ dashboardProjects = [] }: Props) {
         <AuditConfirmDialog
           projectName={confirmingProject.name}
           maxPrice={confirmingProject.gpu_config.max_price_per_hour}
+          lastRunCost={confirmingProject.last_run?.cost_usd ?? null}
+          lastRunDuration={confirmingProject.last_run?.duration_seconds ?? null}
           timeoutHours={confirmingProject.gpu_config.timeout_hours}
           onCancel={() => setConfirmingProject(null)}
           onConfirm={async () => {
