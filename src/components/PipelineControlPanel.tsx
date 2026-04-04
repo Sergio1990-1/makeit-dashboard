@@ -30,6 +30,57 @@ const VERDICT_STYLE: Record<string, { color: string; bg: string }> = {
   PARTIAL: { color: "var(--blue-500)", bg: "rgba(76, 141, 255, 0.12)" },
 };
 
+/* ── Duration helpers ── */
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${Math.floor(seconds)}с`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  if (m < 60) return `${m}м ${s}с`;
+  const h = Math.floor(m / 60);
+  return `${h}ч ${m % 60}м`;
+}
+
+function getElapsedSeconds(stages: PipelineStageEntry[] | undefined): number | null {
+  if (!stages?.length) return null;
+  const first = stages[0];
+  const last = stages[stages.length - 1];
+  // If task is done/failed, use recorded elapsed
+  if (last.status === "completed" || last.status === "failed") {
+    return last.elapsed ?? (last.ts - first.ts);
+  }
+  // Active task — compute from first timestamp
+  return (Date.now() / 1000) - first.ts;
+}
+
+function LiveTimer({ stages }: { stages?: PipelineStageEntry[] }) {
+  const [, setTick] = useState(0);
+  const elapsed = getElapsedSeconds(stages);
+  const isActive = stages?.length
+    ? !["completed", "failed"].includes(stages[stages.length - 1].status)
+    : false;
+
+  useEffect(() => {
+    if (!isActive) return;
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [isActive]);
+
+  if (elapsed === null) return null;
+
+  return (
+    <span style={{
+      fontFamily: "var(--font-mono)",
+      fontSize: "var(--text-xs)",
+      color: isActive ? "var(--blue-500)" : "var(--color-text-muted)",
+      minWidth: 42,
+      textAlign: "right",
+    }}>
+      {formatDuration(elapsed)}
+    </span>
+  );
+}
+
 /* ── Stage progress helpers ── */
 
 function getStageStatus(
@@ -459,7 +510,10 @@ export function PipelineControlPanel() {
                         {item.title}
                       </span>
                       {liveStages ? (
-                        <StageProgress stages={liveStages} />
+                        <>
+                          <StageProgress stages={liveStages} />
+                          <LiveTimer stages={liveStages} />
+                        </>
                       ) : (
                         <span style={{
                           fontSize: "var(--text-xs)",
@@ -552,6 +606,9 @@ export function PipelineControlPanel() {
                       {r.review_verdict}
                     </span>
                   )}
+
+                  {/* Duration */}
+                  <LiveTimer stages={r.stages} />
 
                   {/* Spacer */}
                   <div style={{ flex: 1 }} />

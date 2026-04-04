@@ -14,6 +14,7 @@ export interface PipelineStageEntry {
   status: string;
   ts: number;
   detail?: string;
+  elapsed?: number;
 }
 
 export interface PipelineResult {
