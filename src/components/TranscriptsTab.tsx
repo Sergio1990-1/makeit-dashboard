@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { uploadTranscript, fetchTranscriptResult, type TranscriptResult } from "../utils/transcript";
 import { TranscriptProgress } from "./TranscriptProgress";
 import { TranscriptBrief } from "./TranscriptBrief";
+import { TranscriptHistory } from "./TranscriptHistory";
 import type { ProjectConfig } from "../types";
 
 const VALID_EXTENSIONS = ["mp3", "wav", "m4a", "txt", "md"];
@@ -19,6 +20,7 @@ export function TranscriptsTab({ projects }: Props) {
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [briefResult, setBriefResult] = useState<TranscriptResult | null>(null);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback((f: File | null) => {
@@ -75,6 +77,7 @@ export function TranscriptsTab({ projects }: Props) {
 
   const onProgressDone = useCallback(async (_resultUrl: string | null, taskId: string) => {
     setActiveTaskId(null);
+    setHistoryRefreshKey((k) => k + 1);
     try {
       const data = await fetchTranscriptResult(taskId);
       setBriefResult(data);
@@ -93,6 +96,17 @@ export function TranscriptsTab({ projects }: Props) {
     setResult(null);
   }, []);
 
+  const onOpenFromHistory = useCallback(async (taskId: string) => {
+    setBriefResult(null);
+    setResult(null);
+    try {
+      const data = await fetchTranscriptResult(taskId);
+      setBriefResult(data);
+    } catch (err) {
+      setResult({ ok: false, message: `Не удалось загрузить результат: ${err}` });
+    }
+  }, []);
+
   const fileExt = file?.name.split(".").pop()?.toLowerCase() ?? "";
   const isAudio = ["mp3", "wav", "m4a"].includes(fileExt);
 
@@ -105,7 +119,7 @@ export function TranscriptsTab({ projects }: Props) {
         </div>
       </div>
 
-      {/* BRIEF result (shown after successful processing) */}
+      {/* BRIEF result (shown after successful processing or history open) */}
       {briefResult && (
         <TranscriptBrief result={briefResult} onNewUpload={onNewUpload} />
       )}
@@ -202,6 +216,11 @@ export function TranscriptsTab({ projects }: Props) {
             </div>
           )}
         </div>
+      )}
+
+      {/* History table (always visible below form, hidden when BRIEF is shown) */}
+      {!briefResult && !activeTaskId && (
+        <TranscriptHistory onOpen={onOpenFromHistory} refreshKey={historyRefreshKey} />
       )}
     </div>
   );
