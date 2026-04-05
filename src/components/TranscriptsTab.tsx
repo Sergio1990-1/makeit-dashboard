@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { uploadTranscript } from "../utils/transcript";
+import { TranscriptProgress } from "./TranscriptProgress";
 import type { ProjectConfig } from "../types";
 
 const VALID_EXTENSIONS = ["mp3", "wav", "m4a", "txt", "md"];
@@ -15,6 +16,7 @@ export function TranscriptsTab({ projects }: Props) {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback((f: File | null) => {
@@ -58,7 +60,7 @@ export function TranscriptsTab({ projects }: Props) {
     setResult(null);
     try {
       const res = await uploadTranscript(file, project);
-      setResult({ ok: true, message: `Задача создана: ${res.task_id}` });
+      setActiveTaskId(res.task_id);
       setFile(null);
       if (inputRef.current) inputRef.current.value = "";
     } catch (err) {
@@ -67,6 +69,20 @@ export function TranscriptsTab({ projects }: Props) {
       setUploading(false);
     }
   }, [file, project]);
+
+  const onProgressDone = useCallback((resultUrl: string | null) => {
+    setResult({
+      ok: true,
+      message: resultUrl
+        ? `Обработка завершена. Результат доступен.`
+        : "Обработка завершена.",
+    });
+  }, []);
+
+  const onRetry = useCallback(() => {
+    setActiveTaskId(null);
+    setResult(null);
+  }, []);
 
   const fileExt = file?.name.split(".").pop()?.toLowerCase() ?? "";
   const isAudio = ["mp3", "wav", "m4a"].includes(fileExt);
@@ -80,87 +96,106 @@ export function TranscriptsTab({ projects }: Props) {
         </div>
       </div>
 
-      <div className="tpc-form">
-        {/* Drop zone */}
-        <div
-          className={`tpc-dropzone${dragging ? " tpc-dropzone--active" : ""}${file ? " tpc-dropzone--has-file" : ""}`}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
-          onClick={() => inputRef.current?.click()}
-        >
-          <input
-            ref={inputRef}
-            type="file"
-            accept={ALL_ACCEPTED}
-            onChange={onFileChange}
-            className="tpc-file-input"
-          />
-          {file ? (
-            <div className="tpc-file-info">
-              <span className={`tpc-file-badge${isAudio ? " tpc-file-badge--audio" : " tpc-file-badge--text"}`}>
-                {isAudio ? "🎙 Аудио" : "📄 Текст"}
-              </span>
-              <span className="tpc-file-name">{file.name}</span>
-              <span className="tpc-file-size">{(file.size / 1024).toFixed(1)} KB</span>
-              <button
-                className="tpc-file-remove"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleFile(null);
-                  if (inputRef.current) inputRef.current.value = "";
-                }}
+      {/* Progress tracker (shown after upload) */}
+      {activeTaskId && (
+        <TranscriptProgress
+          taskId={activeTaskId}
+          onDone={onProgressDone}
+          onRetry={onRetry}
+        />
+      )}
+
+      {/* Upload form (hidden while progress is active) */}
+      {!activeTaskId && (
+        <div className="tpc-form">
+          {/* Drop zone */}
+          <div
+            className={`tpc-dropzone${dragging ? " tpc-dropzone--active" : ""}${file ? " tpc-dropzone--has-file" : ""}`}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+            onClick={() => inputRef.current?.click()}
+          >
+            <input
+              ref={inputRef}
+              type="file"
+              accept={ALL_ACCEPTED}
+              onChange={onFileChange}
+              className="tpc-file-input"
+            />
+            {file ? (
+              <div className="tpc-file-info">
+                <span className={`tpc-file-badge${isAudio ? " tpc-file-badge--audio" : " tpc-file-badge--text"}`}>
+                  {isAudio ? "🎙 Аудио" : "📄 Текст"}
+                </span>
+                <span className="tpc-file-name">{file.name}</span>
+                <span className="tpc-file-size">{(file.size / 1024).toFixed(1)} KB</span>
+                <button
+                  className="tpc-file-remove"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFile(null);
+                    if (inputRef.current) inputRef.current.value = "";
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div className="tpc-drop-placeholder">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <p>Перетащите файл сюда или нажмите для выбора</p>
+                <span className="tpc-drop-hint">mp3, wav, m4a, txt, md</span>
+              </div>
+            )}
+          </div>
+
+          {/* Project selector + submit */}
+          <div className="tpc-controls">
+            <div className="tpc-field">
+              <label className="tpc-label" htmlFor="tpc-project">Проект</label>
+              <select
+                id="tpc-project"
+                className="tpc-select"
+                value={project}
+                onChange={(e) => setProject(e.target.value)}
               >
-                ✕
-              </button>
+                {projects.map((p) => (
+                  <option key={p.repo} value={p.repo}>
+                    {p.repo} — {p.client}
+                  </option>
+                ))}
+              </select>
             </div>
-          ) : (
-            <div className="tpc-drop-placeholder">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
-              <p>Перетащите файл сюда или нажмите для выбора</p>
-              <span className="tpc-drop-hint">mp3, wav, m4a, txt, md</span>
+
+            <button
+              className="btn btn-primary tpc-submit"
+              disabled={!file || uploading}
+              onClick={onSubmit}
+            >
+              {uploading ? "Отправка…" : "Обработать"}
+            </button>
+          </div>
+
+          {/* Result feedback */}
+          {result && (
+            <div className={`tpc-result${result.ok ? " tpc-result--ok" : " tpc-result--err"}`}>
+              {result.message}
             </div>
           )}
         </div>
+      )}
 
-        {/* Project selector + submit */}
-        <div className="tpc-controls">
-          <div className="tpc-field">
-            <label className="tpc-label" htmlFor="tpc-project">Проект</label>
-            <select
-              id="tpc-project"
-              className="tpc-select"
-              value={project}
-              onChange={(e) => setProject(e.target.value)}
-            >
-              {projects.map((p) => (
-                <option key={p.repo} value={p.repo}>
-                  {p.repo} — {p.client}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button
-            className="btn btn-primary tpc-submit"
-            disabled={!file || uploading}
-            onClick={onSubmit}
-          >
-            {uploading ? "Отправка…" : "Обработать"}
-          </button>
+      {/* Completion result (shown after progress finishes) */}
+      {!activeTaskId && result?.ok && (
+        <div className="tpc-result tpc-result--ok" style={{ marginTop: "var(--sp-4)" }}>
+          {result.message}
         </div>
-
-        {/* Result feedback */}
-        {result && (
-          <div className={`tpc-result${result.ok ? " tpc-result--ok" : " tpc-result--err"}`}>
-            {result.message}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
