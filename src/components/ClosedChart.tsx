@@ -4,12 +4,19 @@ interface Props {
   projects: ProjectData[];
 }
 
+function toLocalDay(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function getLast7Days(): string[] {
   const days: string[] = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    days.push(d.toISOString().slice(0, 10));
+    days.push(toLocalDay(d));
   }
   return days;
 }
@@ -33,7 +40,7 @@ export function ClosedChart({ projects }: Props) {
   for (const p of projects) {
     for (const issue of p.issues) {
       if (issue.closedAt) {
-        const closedDay = issue.closedAt.slice(0, 10);
+        const closedDay = toLocalDay(new Date(issue.closedAt));
         if (closedDay in countsByDay) {
           if (issue.labels.includes(PIPELINE_LABEL)) {
             countsByDay[closedDay].pipeline++;
