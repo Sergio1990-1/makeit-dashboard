@@ -117,11 +117,9 @@ export function TranscriptsTab({ projects }: Props) {
   }, []);
 
   const onEditSave = useCallback((updatedBrief: string) => {
-    if (briefResult) {
-      setBriefResult({ ...briefResult, brief: updatedBrief });
-    }
+    setBriefResult((prev) => prev ? { ...prev, brief: updatedBrief } : prev);
     setEditing(false);
-  }, [briefResult]);
+  }, []);
 
   const fileExt = file?.name.split(".").pop()?.toLowerCase() ?? "";
   const isAudio = ["mp3", "wav", "m4a"].includes(fileExt);

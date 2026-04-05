@@ -1,22 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
-import { marked } from "marked";
-import DOMPurify from "dompurify";
 import { saveTranscriptBrief } from "../utils/transcript";
-
-const SANITIZE_OPTS = { ADD_TAGS: ["mark" as const], ADD_ATTR: ["class"] };
-
-/** Highlight markers in raw HTML */
-function highlightMarkers(html: string): string {
-  return html
-    .replace(
-      /\[неразборчиво:[^\]]*\]/gi,
-      (m) => `<mark class="tpc-marker tpc-marker--unclear">${m}</mark>`,
-    )
-    .replace(
-      /\[противоречие:[^\]]*\]/gi,
-      (m) => `<mark class="tpc-marker tpc-marker--conflict">${m}</mark>`,
-    );
-}
+import { renderBriefHtml } from "../utils/transcript-markdown";
 
 interface Props {
   taskId: string;
@@ -31,10 +15,7 @@ export function TranscriptEditor({ taskId, initialBrief, onSave, onCancel }: Pro
   const [error, setError] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"split" | "edit" | "preview">("split");
 
-  const previewHtml = useMemo(() => {
-    const raw = marked.parse(text, { async: false }) as string;
-    return DOMPurify.sanitize(highlightMarkers(raw), SANITIZE_OPTS);
-  }, [text]);
+  const previewHtml = useMemo(() => renderBriefHtml(text), [text]);
 
   const hasChanges = text !== initialBrief;
 

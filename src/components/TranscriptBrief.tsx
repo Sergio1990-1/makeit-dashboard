@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { marked } from "marked";
-import DOMPurify from "dompurify";
+import { renderBriefHtml, renderMarkdownHtml } from "../utils/transcript-markdown";
 import type { TranscriptResult } from "../utils/transcript";
 
 interface Props {
@@ -24,21 +23,6 @@ function countMarkers(text: string, tag: string): number {
   return (text.match(re) || []).length;
 }
 
-/** Highlight markers in raw HTML (before sanitization) */
-function highlightMarkers(html: string): string {
-  return html
-    .replace(
-      /\[неразборчиво:[^\]]*\]/gi,
-      (m) => `<mark class="tpc-marker tpc-marker--unclear">${m}</mark>`,
-    )
-    .replace(
-      /\[противоречие:[^\]]*\]/gi,
-      (m) => `<mark class="tpc-marker tpc-marker--conflict">${m}</mark>`,
-    );
-}
-
-const SANITIZE_OPTS = { ADD_TAGS: ["mark" as const], ADD_ATTR: ["class"] };
-
 export function TranscriptBrief({ result, onNewUpload, onEdit }: Props) {
   const [accordionOpen, setAccordionOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -46,16 +30,11 @@ export function TranscriptBrief({ result, onNewUpload, onEdit }: Props) {
   const unclearCount = useMemo(() => countMarkers(result.brief, "неразборчиво"), [result.brief]);
   const conflictCount = useMemo(() => countMarkers(result.brief, "противоречие"), [result.brief]);
 
-  const briefHtml = useMemo(() => {
-    const raw = marked.parse(result.brief, { async: false }) as string;
-    const highlighted = highlightMarkers(raw);
-    return DOMPurify.sanitize(highlighted, SANITIZE_OPTS);
-  }, [result.brief]);
+  const briefHtml = useMemo(() => renderBriefHtml(result.brief), [result.brief]);
 
   const transcriptHtml = useMemo(() => {
     if (!result.transcript) return "";
-    const raw = marked.parse(result.transcript, { async: false }) as string;
-    return DOMPurify.sanitize(raw);
+    return renderMarkdownHtml(result.transcript);
   }, [result.transcript]);
 
   const onDownload = useCallback(() => {
