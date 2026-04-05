@@ -6,7 +6,14 @@ const VERIFY_MODEL = "claude-sonnet-4-20250514";
 
 const VERIFY_SYSTEM_PROMPT = `You are a skeptical senior code reviewer verifying an automated audit finding.
 
-Your task: determine whether the reported issue EXISTS in the CURRENT code at the
+## First question: is this about CODE?
+If the finding is a tooling/environment configuration issue (missing type stubs,
+module resolution, mypy/ruff config, "import-not-found", "import-untyped",
+"attr-defined" for installed framework modules like alembic.op, sqlalchemy.ext.*,
+redis.asyncio), return verdict NOT_A_BUG immediately without reading code.
+These are fixable by a single config edit — they do not describe code defects.
+
+Otherwise: determine whether the reported issue EXISTS in the CURRENT code at the
 reported location. Automated audits have a ~50% false positive rate because they
 miss existing mitigations (validators called earlier in the stack, type guards,
 SQLAlchemy-provided escaping, framework protections, dead code paths, etc).
@@ -30,6 +37,14 @@ Assume the finding MIGHT be a false positive. Look actively for mitigations:
 
 ## Verdicts (choose exactly one)
 
+NOT_A_BUG — The finding is not about a code defect at all.
+  Use when the finding describes:
+  • A type-checker environment issue (missing stubs, "import-not-found",
+    "import-untyped", "attr-defined" for installed framework modules)
+  • A tooling configuration issue (mypy/ruff/linter config, not code quality)
+  • A style/naming suggestion without correctness impact
+  Require: explain why the finding is outside the scope of "is this code buggy".
+
 CONFIRMED — The bug exists in current code with no existing mitigation.
   Require: you can point to the specific line that fails, AND name the attack/scenario.
 
@@ -46,13 +61,14 @@ UNCERTAIN — Cannot determine statically without runtime context, architectural
 Reply with ONLY this JSON, no markdown, no prose:
 
 {
-  "verdict": "CONFIRMED" | "FALSE_POSITIVE" | "UNCERTAIN",
+  "verdict": "CONFIRMED" | "FALSE_POSITIVE" | "UNCERTAIN" | "NOT_A_BUG",
   "reason": "<1-3 sentences, quote the key line number(s)>",
   "code_snippet": "<the relevant ±10 lines of code you based your decision on>"
 }
 
-Important: reason MUST cite specific line numbers. If CONFIRMED, name the
-attack/failure mode. If FALSE_POSITIVE, name the mitigation and where it lives.`;
+Important: reason MUST cite specific line numbers (unless NOT_A_BUG). If CONFIRMED,
+name the attack/failure mode. If FALSE_POSITIVE, name the mitigation and where it
+lives. If NOT_A_BUG, explain why it's out of scope.`;
 
 const VERIFY_TOOL: Anthropic.Tool = {
   name: "read_code_at_location",
@@ -186,7 +202,10 @@ function parseVerifyResponse(text: string): VerifyAgentResponse | null {
     const verdict = parsed.verdict;
     const reason = parsed.reason;
     if (
-      (verdict !== "CONFIRMED" && verdict !== "FALSE_POSITIVE" && verdict !== "UNCERTAIN") ||
+      (verdict !== "CONFIRMED" &&
+        verdict !== "FALSE_POSITIVE" &&
+        verdict !== "UNCERTAIN" &&
+        verdict !== "NOT_A_BUG") ||
       typeof reason !== "string"
     ) {
       return null;
@@ -239,17 +258,20 @@ Recommendation: ${finding.recommendation}
 
 Verify it now.`;
 
-  // Up to 2 attempts × 4 iterations each. Each attempt starts with fresh message
+  // Up to 2 attempts × 8 iterations each. Each attempt starts with fresh message
   // history so a bad assistant reply in attempt 1 doesn't poison attempt 2.
+  // Within an attempt, an invalid-JSON response gets ONE nudge back with the
+  // original reasoning preserved — after that we break and retry from scratch.
   let lastError: string | null = null;
   for (let attempt = 0; attempt < 2; attempt++) {
     let currentMessages: Anthropic.MessageParam[] = [
       { role: "user", content: userMessage },
     ];
     let iterationDidFail = false;
+    let jsonNudgeUsed = false;
 
     try {
-      for (let iter = 0; iter < 4; iter++) {
+      for (let iter = 0; iter < 8; iter++) {
         const response = await client.messages.create(
           {
             model: VERIFY_MODEL,
@@ -301,11 +323,27 @@ Verify it now.`;
           return { ...base, ...parsed, error: null };
         }
         lastError = "invalid JSON response from model";
+        // One-shot nudge: keep the assistant's prior reasoning in history and
+        // ask it to reformat into JSON. If that also fails, give up this
+        // attempt and let the outer retry start over with fresh history.
+        if (!jsonNudgeUsed) {
+          jsonNudgeUsed = true;
+          currentMessages = [
+            ...currentMessages,
+            { role: "assistant", content: response.content },
+            {
+              role: "user",
+              content:
+                "Your previous response was not valid JSON. Respond ONLY with the JSON object starting with { and ending with }, no prose before or after.",
+            },
+          ];
+          continue;
+        }
         iterationDidFail = true;
         break;
       }
       if (!iterationDidFail) {
-        lastError = "verification did not converge within 4 iterations";
+        lastError = "verification did not converge within 8 iterations";
       }
     } catch (e) {
       // Propagate abort up so caller can discard the whole batch

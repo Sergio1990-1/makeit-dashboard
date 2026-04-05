@@ -67,7 +67,8 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
             verification.results.map((r) => [r.finding_index, r.verdict as Verdict]),
           );
           filteredFindings = findings.findings.filter((_, idx) => {
-            return verdictByIndex!.get(idx) !== "FALSE_POSITIVE";
+            const v = verdictByIndex!.get(idx);
+            return v !== "FALSE_POSITIVE" && v !== "NOT_A_BUG";
           });
         } catch {
           // No verification available — proceed with all findings (backward compat)
