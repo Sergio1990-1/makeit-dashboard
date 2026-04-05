@@ -1,5 +1,9 @@
 import type { Issue, IssueStatus, Priority, Phase, ProjectData, Milestone, CommitActivity } from "../types";
-import { getProjects, GITHUB_OWNER, GITHUB_PROJECT_NUMBER } from "./config";
+import { getProjects, GITHUB_OWNER, GITHUB_PROJECT_NUMBER, DEFAULT_PROJECTS, loadFinances } from "./config";
+
+const CACHE_BASE_URL =
+  (window as unknown as { __MAKEIT_CONFIG__?: { CACHE_URL?: string } }).__MAKEIT_CONFIG__?.CACHE_URL
+  ?? "";
 
 const GITHUB_REST = "https://api.github.com";
 
@@ -446,21 +450,79 @@ interface CacheEntry {
   timestamp: number;
 }
 
+// ── Backend-first fetch with fallback to direct GitHub API ──
+
+function mergeFinancialData(projects: ProjectData[]): ProjectData[] {
+  const finances = loadFinances();
+  return projects.map((p) => {
+    const f = finances[p.repo];
+    const d = DEFAULT_PROJECTS.find((dp) => dp.repo === p.repo);
+    const budget = f?.budget ?? d?.budget ?? 0;
+    const paid = f?.paid ?? d?.paid ?? 0;
+    return { ...p, budget, paid, remaining: budget - paid };
+  });
+}
+
+async function fetchFromCache(forceRefresh: boolean): Promise<ProjectData[] | null> {
+  if (!CACHE_BASE_URL) return null;
+
+  try {
+    // Force refresh: trigger blocking sync (waits for completion on server)
+    if (forceRefresh) {
+      const syncRes = await fetch(`${CACHE_BASE_URL}/api/sync`, {
+        method: "POST",
+        signal: AbortSignal.timeout(120000), // 2 min timeout for full sync
+      }).catch(() => null);
+      if (syncRes && syncRes.ok) {
+        // Sync completed, fetch fresh data
+      }
+    }
+
+    const res = await fetch(`${CACHE_BASE_URL}/api/projects`, {
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    if (!json.data || !Array.isArray(json.data)) return null;
+
+    console.log(`[Dashboard] Using cache backend (synced: ${json.lastSync}, ${Math.round(json.syncDuration / 1000)}s)`);
+    return mergeFinancialData(json.data);
+  } catch {
+    console.log("[Dashboard] Cache backend unavailable, falling back to direct API");
+    return null;
+  }
+}
+
 export async function fetchDashboardData(token: string, forceRefresh = false): Promise<ProjectData[]> {
-  // Check cache
+  // 1. Try cache backend first
+  const cached = await fetchFromCache(forceRefresh);
+  if (cached) {
+    // Save to session storage for offline/fast reload
+    try {
+      const entry: CacheEntry = { data: cached, timestamp: Date.now() };
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(entry));
+    } catch { /* ignore quota errors */ }
+    return cached;
+  }
+
+  // 2. Fallback: check session storage cache
   if (!forceRefresh) {
     try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const entry: CacheEntry = JSON.parse(cached);
+      const sessionCached = sessionStorage.getItem(CACHE_KEY);
+      if (sessionCached) {
+        const entry: CacheEntry = JSON.parse(sessionCached);
         if (Date.now() - entry.timestamp < CACHE_TTL) {
-          console.log("[Dashboard] Using cached data");
+          console.log("[Dashboard] Using session cached data");
           return entry.data;
         }
       }
     } catch { /* ignore cache errors */ }
   }
 
+  // 3. Fallback: direct GitHub API (original logic)
+  console.log("[Dashboard] Fetching directly from GitHub API");
   const allIssues = await fetchAllProjectItems(token);
 
   const projectDataPromises = getProjects().map(async (project) => {
@@ -472,14 +534,11 @@ export async function fetchDashboardData(token: string, forceRefresh = false): P
       if (issue.priority && issue.status !== "Done") priorityCounts[issue.priority]++;
     }
 
-    // Use real GitHub issue counts (not project board) for accurate totals.
-    // Board may not contain all issues; GitHub API is the source of truth.
     const openCount = repoInfo.openIssueCount;
     const doneCount = repoInfo.closedIssueCount;
     const totalCount = openCount + doneCount;
     const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
 
-    // Calculate last activity: most recent of last commit or last issue update
     const dates = [
       repoInfo.lastCommitDate,
       ...repoIssues.map((i) => i.updatedAt),
@@ -491,18 +550,12 @@ export async function fetchDashboardData(token: string, forceRefresh = false): P
       ? Math.floor((Date.now() - new Date(lastActivityDate).getTime()) / 86400000)
       : null;
 
-    // Calculate velocity: issues per ACTIVE day (days with at least 1 closure).
-    // Velocity is derived from project board closures (repoIssues), while openCount
-    // comes from GitHub API. This is intentional: velocity = observed closure rate,
-    // openCount = real remaining work. ETA is capped at 365 days to avoid misleading
-    // values when board has few closures relative to total open issues.
     const now = Date.now();
     const closedWithDates = repoIssues.filter((i) => i.closedAt);
 
     function calcVelocity(periodMs: number): number {
       const items = closedWithDates.filter((i) => now - new Date(i.closedAt!).getTime() < periodMs);
       if (items.length === 0) return 0;
-      // Count unique active days
       const activeDays = new Set(items.map((i) => new Date(i.closedAt!).toISOString().split("T")[0]));
       return items.length / activeDays.size;
     }
@@ -510,13 +563,12 @@ export async function fetchDashboardData(token: string, forceRefresh = false): P
     const velocity7d = calcVelocity(7 * 86400000);
     const velocity14d = calcVelocity(14 * 86400000);
     const bestVelocity = Math.max(velocity7d, velocity14d, 0.001);
-    const rawEtaDays = openCount > 0 ? Math.ceil(openCount / bestVelocity * 1.25) : null; // 25% buffer
+    const rawEtaDays = openCount > 0 ? Math.ceil(openCount / bestVelocity * 1.25) : null;
     const etaDays = rawEtaDays !== null ? Math.min(rawEtaDays, 365) : null;
     const etaDate = etaDays !== null
       ? new Date(now + etaDays * 86400000).toISOString()
       : null;
 
-    // Cycle time: median days issue open→close (last 28 days)
     const cutoff28d = now - 28 * 86400000;
     const recentlyClosed = repoIssues.filter(
       (i) => i.closedAt && new Date(i.closedAt).getTime() > cutoff28d

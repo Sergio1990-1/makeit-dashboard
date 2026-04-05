@@ -3,8 +3,9 @@ import type { ProjectConfig } from "../types";
 export const GITHUB_OWNER = "Sergio1990-1";
 export const GITHUB_PROJECT_NUMBER = 1;
 
-// Default project config — finances are overridden by localStorage
-const DEFAULT_PROJECTS: ProjectConfig[] = [
+// Default project config — finances are overridden by localStorage.
+// MUST stay in sync with server/src/config.ts PROJECTS list.
+export const DEFAULT_PROJECTS: ProjectConfig[] = [
   { repo: "Sewing-ERP", client: "Свой проект", owner: GITHUB_OWNER, budget: 20000, paid: 15000 },
   { repo: "mankassa-app", client: "Сергей", owner: GITHUB_OWNER, budget: 13500, paid: 3000 },
   { repo: "solotax-kg", client: "Свой проект", owner: GITHUB_OWNER, budget: 12000, paid: 4000 },
@@ -24,7 +25,7 @@ interface FinanceData {
   [repo: string]: { budget: number; paid: number };
 }
 
-function loadFinances(): FinanceData {
+export function loadFinances(): FinanceData {
   try {
     const raw = localStorage.getItem(FINANCE_KEY);
     return raw ? JSON.parse(raw) : {};
