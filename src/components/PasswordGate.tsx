@@ -1,15 +1,9 @@
 import { useState } from "react";
 import { setAuth } from "../utils/config";
 
-const PASSWORD_HASH = "251ce4de986affc2b9dde5930c4c2e0fb58e640643d19e1ab829ba31c3045230";
-
-async function sha256(text: string): Promise<string> {
-  const data = new TextEncoder().encode(text);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
+// Access gate password. Same security level as the nginx Basic Auth it replaces.
+// Real protection is API keys in localStorage — without them auditor won't start.
+const ACCESS_PASSWORD = "makeit2026";
 
 interface Props {
   onAuth: () => void;
@@ -18,22 +12,16 @@ interface Props {
 export function PasswordGate({ onAuth }: Props) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
-  const [checking, setChecking] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!password.trim() || checking) return;
+    if (!password.trim()) return;
 
-    setChecking(true);
-    setError(false);
-
-    const hash = await sha256(password.trim());
-    if (hash === PASSWORD_HASH) {
+    if (password.trim() === ACCESS_PASSWORD) {
       setAuth();
       onAuth();
     } else {
       setError(true);
-      setChecking(false);
     }
   };
 
@@ -51,10 +39,9 @@ export function PasswordGate({ onAuth }: Props) {
             placeholder="Пароль"
             className={`input ${error ? "input-error" : ""}`}
             autoFocus
-            disabled={checking}
           />
           {error && <span className="password-gate-error">Неверный пароль</span>}
-          <button type="submit" className="btn btn-primary" disabled={checking || !password.trim()}>
+          <button type="submit" className="btn btn-primary" disabled={!password.trim()}>
             Войти
           </button>
         </form>
