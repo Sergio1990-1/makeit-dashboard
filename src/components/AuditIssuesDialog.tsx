@@ -128,6 +128,7 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
     setCreatingIndex(0);
 
     const urls: string[] = [];
+    const failures: { title: string; error: string }[] = [];
     for (let i = 0; i < selectedIssues.length; i++) {
       const issue = selectedIssues[i];
       setCreatingIndex(i);
@@ -145,8 +146,12 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
         try {
           await addIssueToProject(token, repoOwner, repoName, created.number, GITHUB_PROJECT_NUMBER);
         } catch { /* non-fatal — issue exists even if project board add fails */ }
-      } catch {
+      } catch (e) {
         urls.push("");
+        failures.push({
+          title: issue.title,
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
       if (i < selectedIssues.length - 1) {
         await new Promise((r) => setTimeout(r, 200));
@@ -154,6 +159,24 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
     }
 
     const successUrls = urls.filter(Boolean);
+
+    // If every attempt failed, surface the errors instead of closing silently.
+    if (successUrls.length === 0 && failures.length > 0) {
+      const preview = failures
+        .slice(0, 3)
+        .map((f) => `• ${f.title}: ${f.error}`)
+        .join("\n");
+      const more = failures.length > 3 ? `\n(и ещё ${failures.length - 3})` : "";
+      setError(`Не удалось создать ни одного issue (${failures.length} ошибок):\n${preview}${more}`);
+      setState("error");
+      return;
+    }
+
+    // Partial failure — log and continue; successes get saved.
+    if (failures.length > 0) {
+      console.warn(`${failures.length} issue(s) failed to create:`, failures);
+    }
+
     onComplete(successUrls.length, successUrls);
   }
 
