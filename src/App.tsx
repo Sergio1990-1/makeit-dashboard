@@ -23,12 +23,7 @@ import { PasswordGate } from "./components/PasswordGate";
 import type { TabId, Monitor } from "./types";
 import "./App.css";
 
-function App() {
-  const [authed, setAuthed] = useState(getAuth());
-
-  if (!authed) {
-    return <PasswordGate onAuth={() => setAuthed(true)} />;
-  }
+function AppInner() {
   const {
     projects,
     summary,
@@ -317,6 +312,16 @@ function App() {
       )}
     </div>
   );
+}
+
+function App() {
+  const [authed, setAuthed] = useState(getAuth());
+
+  if (!authed) {
+    return <PasswordGate onAuth={() => setAuthed(true)} />;
+  }
+
+  return <AppInner />;
 }
 
 export default App;
