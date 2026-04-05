@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getData, getStatus, isSyncing, syncAndWait } from "./cache";
+import { getData, getStatus, syncAndWait } from "./cache";
 import { SYNC_API_KEY } from "./config";
 
 export const router = Router();
