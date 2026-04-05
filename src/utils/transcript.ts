@@ -93,7 +93,7 @@ export async function uploadTranscript(
 ): Promise<TranscriptUploadResponse> {
   const form = new FormData();
   form.append("file", file);
-  form.append("project", project);
+  form.append("project_context", project);
 
   const res = await fetch(`${getBaseUrl()}/transcript/upload`, {
     method: "POST",
