@@ -57,6 +57,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globIgnores: ['config.js'], // Runtime config — replaced by volume mount on VPS
+        navigateFallbackDenylist: [/^\/api\//], // Don't intercept API calls
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\.github\.com\/.*/i,
