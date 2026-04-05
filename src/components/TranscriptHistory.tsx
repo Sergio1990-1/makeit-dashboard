@@ -119,7 +119,7 @@ export function TranscriptHistory({ onOpen, refreshKey }: Props) {
               {filtered.map((item) => (
                 <tr key={item.task_id}>
                   <td className="tpc-history-date">
-                    {new Date(item.created_at).toLocaleDateString("ru-RU", {
+                    {new Date(item.created_at).toLocaleString("ru-RU", {
                       day: "2-digit",
                       month: "2-digit",
                       year: "2-digit",

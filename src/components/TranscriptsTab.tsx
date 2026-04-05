@@ -20,6 +20,7 @@ export function TranscriptsTab({ projects }: Props) {
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [briefResult, setBriefResult] = useState<TranscriptResult | null>(null);
+  const [loadingBrief, setLoadingBrief] = useState(false);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -99,11 +100,14 @@ export function TranscriptsTab({ projects }: Props) {
   const onOpenFromHistory = useCallback(async (taskId: string) => {
     setBriefResult(null);
     setResult(null);
+    setLoadingBrief(true);
     try {
       const data = await fetchTranscriptResult(taskId);
       setBriefResult(data);
     } catch (err) {
       setResult({ ok: false, message: `Не удалось загрузить результат: ${err}` });
+    } finally {
+      setLoadingBrief(false);
     }
   }, []);
 
@@ -119,6 +123,13 @@ export function TranscriptsTab({ projects }: Props) {
         </div>
       </div>
 
+      {/* Loading BRIEF from history */}
+      {loadingBrief && (
+        <div className="tpc-history-loading">
+          <div className="audit-spinner" /> Загрузка результата...
+        </div>
+      )}
+
       {/* BRIEF result (shown after successful processing or history open) */}
       {briefResult && (
         <TranscriptBrief result={briefResult} onNewUpload={onNewUpload} />
@@ -133,8 +144,8 @@ export function TranscriptsTab({ projects }: Props) {
         />
       )}
 
-      {/* Upload form (hidden while progress is active or brief is shown) */}
-      {!activeTaskId && !briefResult && (
+      {/* Upload form (hidden while progress is active, brief is shown, or loading) */}
+      {!activeTaskId && !briefResult && !loadingBrief && (
         <div className="tpc-form">
           {/* Drop zone */}
           <div
@@ -218,8 +229,8 @@ export function TranscriptsTab({ projects }: Props) {
         </div>
       )}
 
-      {/* History table (always visible below form, hidden when BRIEF is shown) */}
-      {!briefResult && !activeTaskId && (
+      {/* History table (hidden when BRIEF is shown or loading) */}
+      {!briefResult && !activeTaskId && !loadingBrief && (
         <TranscriptHistory onOpen={onOpenFromHistory} refreshKey={historyRefreshKey} />
       )}
     </div>
