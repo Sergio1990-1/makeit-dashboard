@@ -18,11 +18,17 @@ import { AuditTab } from "./components/AuditTab";
 import { PipelineControlPanel } from "./components/PipelineControlPanel";
 import { useDashboard } from "./hooks/useDashboard";
 import { useMonitors } from "./hooks/useMonitors";
-import { getToken, clearToken, MONITOR_MATCH } from "./utils/config";
+import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH } from "./utils/config";
+import { PasswordGate } from "./components/PasswordGate";
 import type { TabId, Monitor } from "./types";
 import "./App.css";
 
 function App() {
+  const [authed, setAuthed] = useState(getAuth());
+
+  if (!authed) {
+    return <PasswordGate onAuth={() => setAuthed(true)} />;
+  }
   const {
     projects,
     summary,
@@ -118,9 +124,9 @@ function App() {
                 </svg>
               </button>
               <button
-                onClick={() => { clearToken(); window.location.reload(); }}
+                onClick={() => { clearAuth(); clearToken(); clearClaudeKey(); window.location.reload(); }}
                 className="header-icon-btn header-icon-btn--subtle"
-                title="Настройки токена"
+                title="Выйти"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="3" />

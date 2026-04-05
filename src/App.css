@@ -3164,3 +3164,40 @@ body::after {
   overflow-x: auto;
   white-space: pre;
 }
+
+/* ── Password Gate ── */
+.password-gate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: var(--sp-4);
+  background: var(--color-bg);
+}
+.password-gate-card {
+  text-align: center;
+  max-width: 360px;
+  width: 100%;
+}
+.password-gate-title {
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  color: var(--color-text);
+  margin-bottom: var(--sp-1);
+}
+.password-gate-subtitle {
+  color: var(--color-text-muted);
+  margin-bottom: var(--sp-6);
+}
+.password-gate-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.password-gate-error {
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}
+.input-error {
+  border-color: var(--color-danger) !important;
+}

@@ -98,6 +98,21 @@ export function clearWorkerUrl(): void {
   localStorage.removeItem("betterstack_worker_url");
 }
 
+// SPA authentication
+const AUTH_KEY = "makeit_auth";
+
+export function getAuth(): boolean {
+  return localStorage.getItem(AUTH_KEY) === "authenticated";
+}
+
+export function setAuth(): void {
+  localStorage.setItem(AUTH_KEY, "authenticated");
+}
+
+export function clearAuth(): void {
+  localStorage.removeItem(AUTH_KEY);
+}
+
 // Map repo name → keywords to match against monitor name/url
 export const MONITOR_MATCH: Record<string, string[]> = {
   "Sewing-ERP": ["8001", "sewing"],
