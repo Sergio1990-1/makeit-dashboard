@@ -8,13 +8,22 @@ interface Props {
   onNewUpload: () => void;
 }
 
+/** Russian plural forms: 1, 2-4, 5+ */
+function plural(n: number, one: string, few: string, many: string): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few;
+  return many;
+}
+
 /** Count occurrences of a marker pattern like [неразборчиво: ...] */
 function countMarkers(text: string, tag: string): number {
   const re = new RegExp(`\\[${tag}:[^\\]]*\\]`, "gi");
   return (text.match(re) || []).length;
 }
 
-/** Highlight markers in HTML after markdown rendering */
+/** Highlight markers in raw HTML (before sanitization) */
 function highlightMarkers(html: string): string {
   return html
     .replace(
@@ -27,6 +36,8 @@ function highlightMarkers(html: string): string {
     );
 }
 
+const SANITIZE_OPTS = { ADD_TAGS: ["mark" as const], ADD_ATTR: ["class"] };
+
 export function TranscriptBrief({ result, onNewUpload }: Props) {
   const [accordionOpen, setAccordionOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -36,7 +47,8 @@ export function TranscriptBrief({ result, onNewUpload }: Props) {
 
   const briefHtml = useMemo(() => {
     const raw = marked.parse(result.brief, { async: false }) as string;
-    return highlightMarkers(DOMPurify.sanitize(raw));
+    const highlighted = highlightMarkers(raw);
+    return DOMPurify.sanitize(highlighted, SANITIZE_OPTS);
   }, [result.brief]);
 
   const transcriptHtml = useMemo(() => {
@@ -53,7 +65,7 @@ export function TranscriptBrief({ result, onNewUpload }: Props) {
     a.download = `BRIEF-${result.task_id}.md`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [result]);
+  }, [result.brief, result.task_id]);
 
   const onCopy = useCallback(async () => {
     try {
@@ -61,7 +73,6 @@ export function TranscriptBrief({ result, onNewUpload }: Props) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback for older browsers
       const ta = document.createElement("textarea");
       ta.value = result.brief;
       document.body.appendChild(ta);
@@ -80,12 +91,12 @@ export function TranscriptBrief({ result, onNewUpload }: Props) {
         <div className="tpc-brief-counters">
           {unclearCount > 0 && (
             <span className="tpc-counter tpc-counter--unclear">
-              {unclearCount} неразборчив{unclearCount === 1 ? "ое" : "ых"} мест{unclearCount === 1 ? "о" : ""}
+              {unclearCount} {plural(unclearCount, "неразборчивое место", "неразборчивых места", "неразборчивых мест")}
             </span>
           )}
           {conflictCount > 0 && (
             <span className="tpc-counter tpc-counter--conflict">
-              {conflictCount} противореч{conflictCount === 1 ? "ие" : "ий"}
+              {conflictCount} {plural(conflictCount, "противоречие", "противоречия", "противоречий")}
             </span>
           )}
           {unclearCount === 0 && conflictCount === 0 && (
@@ -116,6 +127,7 @@ export function TranscriptBrief({ result, onNewUpload }: Props) {
         <div className="tpc-accordion">
           <button
             className="tpc-accordion-toggle"
+            aria-expanded={accordionOpen}
             onClick={() => setAccordionOpen(!accordionOpen)}
           >
             <svg
