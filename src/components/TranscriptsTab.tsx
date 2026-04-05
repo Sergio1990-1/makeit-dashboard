@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { uploadTranscript, fetchTranscriptResult, type TranscriptResult } from "../utils/transcript";
 import { TranscriptProgress } from "./TranscriptProgress";
 import { TranscriptBrief } from "./TranscriptBrief";
+import { TranscriptEditor } from "./TranscriptEditor";
 import { TranscriptHistory } from "./TranscriptHistory";
 import type { ProjectConfig } from "../types";
 
@@ -20,6 +21,7 @@ export function TranscriptsTab({ projects }: Props) {
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [briefResult, setBriefResult] = useState<TranscriptResult | null>(null);
+  const [editing, setEditing] = useState(false);
   const [loadingBrief, setLoadingBrief] = useState(false);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -64,6 +66,7 @@ export function TranscriptsTab({ projects }: Props) {
     setUploading(true);
     setResult(null);
     setBriefResult(null);
+    setEditing(false);
     try {
       const res = await uploadTranscript(file, project);
       setActiveTaskId(res.task_id);
@@ -94,11 +97,13 @@ export function TranscriptsTab({ projects }: Props) {
 
   const onNewUpload = useCallback(() => {
     setBriefResult(null);
+    setEditing(false);
     setResult(null);
   }, []);
 
   const onOpenFromHistory = useCallback(async (taskId: string) => {
     setBriefResult(null);
+    setEditing(false);
     setResult(null);
     setLoadingBrief(true);
     try {
@@ -109,6 +114,11 @@ export function TranscriptsTab({ projects }: Props) {
     } finally {
       setLoadingBrief(false);
     }
+  }, []);
+
+  const onEditSave = useCallback((updatedBrief: string) => {
+    setBriefResult((prev) => prev ? { ...prev, brief: updatedBrief } : prev);
+    setEditing(false);
   }, []);
 
   const fileExt = file?.name.split(".").pop()?.toLowerCase() ?? "";
@@ -130,9 +140,23 @@ export function TranscriptsTab({ projects }: Props) {
         </div>
       )}
 
+      {/* Editor mode */}
+      {briefResult && editing && (
+        <TranscriptEditor
+          taskId={briefResult.task_id}
+          initialBrief={briefResult.brief}
+          onSave={onEditSave}
+          onCancel={() => setEditing(false)}
+        />
+      )}
+
       {/* BRIEF result (shown after successful processing or history open) */}
-      {briefResult && (
-        <TranscriptBrief result={briefResult} onNewUpload={onNewUpload} />
+      {briefResult && !editing && (
+        <TranscriptBrief
+          result={briefResult}
+          onNewUpload={onNewUpload}
+          onEdit={() => setEditing(true)}
+        />
       )}
 
       {/* Progress tracker (shown after upload) */}
