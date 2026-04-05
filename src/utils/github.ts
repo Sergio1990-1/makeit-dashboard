@@ -311,6 +311,8 @@ query($owner: String!, $repo: String!) {
       }
     }
     description
+    openIssueCount: issues(states: OPEN) { totalCount }
+    closedIssueCount: issues(states: CLOSED) { totalCount }
     openMilestones: milestones(first: 20, states: OPEN, orderBy: {field: DUE_DATE, direction: ASC}) {
       nodes {
         title
@@ -380,6 +382,8 @@ interface RepoInfoResponse {
       target: { committedDate: string };
     } | null;
     description: string | null;
+    openIssueCount: { totalCount: number };
+    closedIssueCount: { totalCount: number };
     openMilestones: { nodes: MilestoneNode[] };
     closedMilestones: { nodes: MilestoneNode[] };
   };
@@ -390,6 +394,8 @@ interface RepoInfo {
   description: string;
   milestones: Milestone[];
   commitActivity: CommitActivity;
+  openIssueCount: number;
+  closedIssueCount: number;
 }
 
 async function fetchRepoInfo(token: string, owner: string, repo: string): Promise<RepoInfo> {
@@ -399,7 +405,7 @@ async function fetchRepoInfo(token: string, owner: string, repo: string): Promis
   ]);
 
   if (!graphqlResult) {
-    return { lastCommitDate: null, description: "", milestones: [], commitActivity };
+    return { lastCommitDate: null, description: "", milestones: [], commitActivity, openIssueCount: 0, closedIssueCount: 0 };
   }
 
   const allMs = [
@@ -427,6 +433,8 @@ async function fetchRepoInfo(token: string, owner: string, repo: string): Promis
       })),
     })),
     commitActivity,
+    openIssueCount: graphqlResult.repository.openIssueCount.totalCount,
+    closedIssueCount: graphqlResult.repository.closedIssueCount.totalCount,
   };
 }
 
@@ -464,8 +472,11 @@ export async function fetchDashboardData(token: string, forceRefresh = false): P
       if (issue.priority && issue.status !== "Done") priorityCounts[issue.priority]++;
     }
 
-    const doneCount = repoIssues.filter((i) => i.status === "Done").length;
-    const totalCount = repoIssues.length;
+    // Use real GitHub issue counts (not project board) for accurate totals.
+    // Board may not contain all issues; GitHub API is the source of truth.
+    const openCount = repoInfo.openIssueCount;
+    const doneCount = repoInfo.closedIssueCount;
+    const totalCount = openCount + doneCount;
     const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
 
     // Calculate last activity: most recent of last commit or last issue update
@@ -480,7 +491,11 @@ export async function fetchDashboardData(token: string, forceRefresh = false): P
       ? Math.floor((Date.now() - new Date(lastActivityDate).getTime()) / 86400000)
       : null;
 
-    // Calculate velocity: issues per ACTIVE day (days with at least 1 closure)
+    // Calculate velocity: issues per ACTIVE day (days with at least 1 closure).
+    // Velocity is derived from project board closures (repoIssues), while openCount
+    // comes from GitHub API. This is intentional: velocity = observed closure rate,
+    // openCount = real remaining work. ETA is capped at 365 days to avoid misleading
+    // values when board has few closures relative to total open issues.
     const now = Date.now();
     const closedWithDates = repoIssues.filter((i) => i.closedAt);
 
@@ -495,8 +510,8 @@ export async function fetchDashboardData(token: string, forceRefresh = false): P
     const velocity7d = calcVelocity(7 * 86400000);
     const velocity14d = calcVelocity(14 * 86400000);
     const bestVelocity = Math.max(velocity7d, velocity14d, 0.001);
-    const openCount = totalCount - doneCount;
-    const etaDays = openCount > 0 ? Math.ceil(openCount / bestVelocity * 1.25) : null; // 25% buffer
+    const rawEtaDays = openCount > 0 ? Math.ceil(openCount / bestVelocity * 1.25) : null; // 25% buffer
+    const etaDays = rawEtaDays !== null ? Math.min(rawEtaDays, 365) : null;
     const etaDate = etaDays !== null
       ? new Date(now + etaDays * 86400000).toISOString()
       : null;

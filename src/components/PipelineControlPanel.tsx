@@ -479,14 +479,16 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
             </span>
           </div>
           {(() => {
-            // Merge queue items with live stage data; prefer issue_stages as source of truth
-            const stageIssueNums = Object.keys(issueStages).map(Number);
+            // Merge queue items with live stage data; prefer issue_stages as source of truth.
+            // Exclude issues already in results (completed) so only truly active tasks show.
+            const completedNums = new Set(status.results.map((r) => r.issue_number));
+            const stageIssueNums = Object.keys(issueStages).map(Number).filter((n) => !completedNums.has(n));
             const queueNums = new Set(status.queue.map((q) => q.number));
             // Issues that have stages but aren't in queue (already running)
             const extraNums = stageIssueNums.filter((n) => !queueNums.has(n));
             const allItems = [
               ...extraNums.map((n) => ({ number: n, title: `Issue #${n}`, status: "in_progress", priority: 0 })),
-              ...status.queue,
+              ...status.queue.filter((q) => !completedNums.has(q.number)),
             ];
             if (allItems.length === 0) {
               return (

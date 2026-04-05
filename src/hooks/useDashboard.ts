@@ -65,6 +65,7 @@ export function useDashboard() {
 
   const summary: SummaryMetrics = useMemo(() => ({
     totalIssues: projects.reduce((s, p) => s + p.totalCount, 0),
+    openCount: projects.reduce((s, p) => s + p.openCount, 0),
     todoCount: projects.reduce((s, p) => s + p.issues.filter((i) => i.status === "Todo").length, 0),
     inProgressCount: projects.reduce((s, p) => s + p.issues.filter((i) => i.status === "In Progress").length, 0),
     reviewCount: projects.reduce((s, p) => s + p.issues.filter((i) => i.status === "Review").length, 0),
