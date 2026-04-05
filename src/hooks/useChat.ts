@@ -3,10 +3,22 @@ import type { ChatMessage, ProjectData, SummaryMetrics, Issue } from "../types";
 import { sendChatMessage, type ClaudeMessage } from "../utils/claude";
 import { getClaudeKey, getToken } from "../utils/config";
 
+// Tools that modify GitHub data and should trigger a dashboard refresh
+const DATA_MUTATING_TOOLS = new Set([
+  "create_issue",
+  "close_issue",
+  "add_labels",
+  "add_comment",
+  "create_milestone",
+  "update_milestone",
+  "assign_issue_to_milestone",
+]);
+
 interface ChatContext {
   projects: ProjectData[];
   summary: SummaryMetrics;
   blockedIssues: Issue[];
+  onDataChanged?: () => void;
 }
 
 const TOOL_LABELS: Record<string, string> = {
@@ -69,13 +81,20 @@ export function useChat(context: ChatContext) {
           content: m.content,
         }));
 
+        let dataMutated = false;
         const response = await sendChatMessage(apiKey, history, contextRef.current, (toolName) => {
           setToolStatus(TOOL_LABELS[toolName] ?? `Использую ${toolName}...`);
+          if (DATA_MUTATING_TOOLS.has(toolName)) dataMutated = true;
         });
 
         const assistantMsg: ChatMessage = { role: "assistant", content: response, timestamp: new Date() };
         messagesRef.current = [...messagesRef.current, assistantMsg];
         setMessages(messagesRef.current);
+
+        // Trigger dashboard refresh if AI modified data
+        if (dataMutated) {
+          contextRef.current.onDataChanged?.();
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Ошибка Claude API");
       } finally {

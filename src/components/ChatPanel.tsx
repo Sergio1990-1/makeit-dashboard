@@ -13,6 +13,7 @@ interface Props {
   projects: ProjectData[];
   summary: SummaryMetrics;
   blockedIssues: Issue[];
+  onDataChanged?: () => void;
 }
 
 const QUICK_ACTIONS = [
@@ -43,7 +44,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
   );
 }
 
-export function ChatPanel({ open, onClose, projects, summary, blockedIssues }: Props) {
+export function ChatPanel({ open, onClose, projects, summary, blockedIssues, onDataChanged }: Props) {
   const [input, setInput] = useState("");
   const [keyInput, setKeyInput] = useState("");
   const [hasKey, setHasKey] = useState(!!getClaudeKey());
@@ -54,6 +55,7 @@ export function ChatPanel({ open, onClose, projects, summary, blockedIssues }: P
     projects,
     summary,
     blockedIssues,
+    onDataChanged,
   });
 
   useEffect(() => {

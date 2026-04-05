@@ -299,6 +299,7 @@ function App() {
         projects={projects}
         summary={summary}
         blockedIssues={blockedIssues}
+        onDataChanged={() => refresh(true)}
       />
 
       {financeOpen && (

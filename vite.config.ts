@@ -28,6 +28,14 @@ export default defineConfig({
         orientation: 'portrait',
         start_url: base,
         scope: base,
+        categories: ['business', 'productivity'],
+        shortcuts: [
+          {
+            name: 'Утренний брифинг',
+            url: `${base}?action=briefing`,
+            description: 'AI брифинг по проектам',
+          },
+        ],
         icons: [
           {
             src: 'icon-192.png',
@@ -57,7 +65,21 @@ export default defineConfig({
               cacheName: 'github-api',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 5, // 5 min
+                maxAgeSeconds: 60 * 5,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
+            urlPattern: /\/api\/projects/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'cache-backend',
+              expiration: {
+                maxEntries: 5,
+                maxAgeSeconds: 60 * 30, // 30 min offline fallback
               },
               cacheableResponse: {
                 statuses: [0, 200],
