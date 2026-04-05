@@ -133,8 +133,11 @@ export function AuditTab({ dashboardProjects = [] }: Props) {
             onComplete={async (issuesCreated, issueUrls) => {
               try {
                 await postAuditMeta(issuesDialogProject, issuesCreated, issueUrls);
-              } catch {
-                // Non-critical: meta save failure doesn't block the user
+              } catch (e) {
+                // Non-critical: issues are already created in GitHub even if
+                // auditor meta save fails. Surface to console so the user can
+                // diagnose (audit card may show "0 issues" despite success).
+                console.error("Failed to save audit meta (issues still exist in GitHub):", e);
               }
               setIssuesDialogProject(null);
               refresh();
