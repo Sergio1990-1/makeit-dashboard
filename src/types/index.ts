@@ -137,6 +137,8 @@ export interface AuditVerificationSummary {
   false_positive: number;
   uncertain: number;
   errors: number;
+  /** Absent on legacy reports; treat undefined as 0. */
+  not_a_bug?: number;
 }
 
 export interface AuditProjectStatus {
@@ -190,7 +192,7 @@ export interface GeneratedIssue {
 }
 
 // Verification types
-export type Verdict = "CONFIRMED" | "FALSE_POSITIVE" | "UNCERTAIN";
+export type Verdict = "CONFIRMED" | "FALSE_POSITIVE" | "UNCERTAIN" | "NOT_A_BUG";
 
 export interface VerificationResult {
   finding_index: number;
@@ -214,5 +216,7 @@ export interface VerificationReport {
   false_positive_count: number;
   uncertain_count: number;
   error_count: number;
+  /** Absent on legacy reports; treat undefined as 0. */
+  not_a_bug_count?: number;
   results: VerificationResult[];
 }

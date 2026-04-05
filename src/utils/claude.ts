@@ -533,23 +533,55 @@ export async function generateIssuesFromFindings(
   const client = new Anthropic({ apiKey: anthropicApiKey, dangerouslyAllowBrowser: true });
   const allIssues: GeneratedIssue[] = [];
 
-  for (let i = 0; i < groups.length; i++) {
-    const { theme, findings: groupFindings } = groups[i];
-    onProgress?.(i + 1, groups.length, theme.label);
+  // Count the number of theme×bucket sub-calls for accurate progress reporting.
+  // When verdicts are available, each theme may fan out into two Claude calls
+  // (confirmed bucket + uncertain bucket), so the progress total is dynamic.
+  type Bucket = "confirmed" | "uncertain";
 
-    // Per-group cap: 100 findings max (enough for 1-5 issues, output stays small)
+  function bucketOf(f: AuditFinding): Bucket {
+    if (!verdictByIndex || !originalIndexOf) return "confirmed";
+    const idx = originalIndexOf(f);
+    if (idx === undefined) return "confirmed";
+    const v = verdictByIndex.get(idx);
+    // UNCERTAIN and errored findings go into the review bucket; CONFIRMED and
+    // anything else (legacy reports) stays in the confirmed bucket.
+    return v === "UNCERTAIN" ? "uncertain" : "confirmed";
+  }
+
+  // Plan the calls up front so onProgress can report accurate totals.
+  interface PlannedCall {
+    theme: AuditTheme;
+    bucket: Bucket;
+    findings: AuditFinding[];
+    label: string;
+  }
+  const planned: PlannedCall[] = [];
+  for (const { theme, findings: groupFindings } of groups) {
     const batch = groupFindings.slice(0, 100);
+    const confirmedBatch: AuditFinding[] = [];
+    const uncertainBatch: AuditFinding[] = [];
+    for (const f of batch) {
+      (bucketOf(f) === "uncertain" ? uncertainBatch : confirmedBatch).push(f);
+    }
+    if (confirmedBatch.length > 0) {
+      planned.push({ theme, bucket: "confirmed", findings: confirmedBatch, label: theme.label });
+    }
+    if (uncertainBatch.length > 0) {
+      planned.push({
+        theme,
+        bucket: "uncertain",
+        findings: uncertainBatch,
+        label: `${theme.label} (review)`,
+      });
+    }
+  }
 
-    // Check if any finding in this batch is UNCERTAIN — those groups get needs-human
-    const hasUncertain = verdictByIndex && originalIndexOf
-      ? batch.some((f) => {
-          const idx = originalIndexOf(f);
-          return idx !== undefined && verdictByIndex.get(idx) === "UNCERTAIN";
-        })
-      : false;
+  for (let i = 0; i < planned.length; i++) {
+    const call = planned[i];
+    onProgress?.(i + 1, planned.length, call.label);
 
     const findingsJson = JSON.stringify(
-      batch.map((f, idx) => ({
+      call.findings.map((f, idx) => ({
         index: idx,
         severity: f.severity,
         category: f.category || "bug",
@@ -560,6 +592,11 @@ export async function generateIssuesFromFindings(
       })),
     );
 
+    const reviewNote =
+      call.bucket === "uncertain"
+        ? `\n\nNote: these findings were flagged UNCERTAIN by the verifier — they need human review. Prefix each issue title with "[Review] ".`
+        : "";
+
     try {
       const response = await client.messages.create({
         model: "claude-sonnet-4-20250514",
@@ -568,7 +605,7 @@ export async function generateIssuesFromFindings(
         messages: [
           {
             role: "user",
-            content: `Theme: ${theme.label}\nRepository: ${repoName}\n\nFindings (${batch.length}):\n${findingsJson}\n\nCreate 1-5 grouped issues. Return JSON array.`,
+            content: `Theme: ${call.theme.label}\nRepository: ${repoName}\n\nFindings (${call.findings.length}):\n${findingsJson}${reviewNote}\n\nCreate 1-5 grouped issues. Return JSON array.`,
           },
         ],
       });
@@ -582,10 +619,10 @@ export async function generateIssuesFromFindings(
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]) as GeneratedIssue[];
         if (Array.isArray(parsed)) {
-          // Inject needs-human label for groups with UNCERTAIN findings
-          if (hasUncertain) {
+          if (call.bucket === "uncertain") {
             for (const issue of parsed) {
               if (!issue.labels.includes("needs-human")) issue.labels.push("needs-human");
+              if (!issue.title.startsWith("[Review]")) issue.title = `[Review] ${issue.title}`;
             }
           }
           allIssues.push(...parsed);
@@ -593,7 +630,7 @@ export async function generateIssuesFromFindings(
       }
     } catch (e) {
       // One group failing shouldn't abort everything — log and continue
-      console.warn(`Audit issue generation failed for theme "${theme.label}":`, e);
+      console.warn(`Audit issue generation failed for "${call.label}":`, e);
     }
   }
 
