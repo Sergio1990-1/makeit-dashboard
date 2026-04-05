@@ -42,16 +42,23 @@ export interface VerifyProgress {
   cacheHits: number;
 }
 
+// Upper bound on findings included in verification / issue generation.
+// Post-Phase-A audits are much cleaner (moliyakg: 352 → 81), so we can
+// afford to verify medium severity too. When critical+high alone cover
+// enough ground we stop there; otherwise we extend to medium up to this
+// target. Applied identically in `generateIssuesFromFindings`.
+export const VERIFICATION_TARGET_COUNT = 200;
+
 /** Subset of findings actually sent to issues — mirrors `generateIssuesFromFindings`. */
 export function selectFindingsForVerification(
   findings: AuditFinding[],
 ): { finding: AuditFinding; index: number }[] {
-  // Start with critical + high, expand to medium if < 30 (same rule as issue generation)
+  // Start with critical + high, expand to medium until reaching the target.
   const indexed = findings.map((f, index) => ({ finding: f, index }));
   let filtered = indexed.filter(
     (f) => f.finding.severity === "critical" || f.finding.severity === "high",
   );
-  if (filtered.length < 30) {
+  if (filtered.length < VERIFICATION_TARGET_COUNT) {
     filtered = indexed.filter(
       (f) =>
         f.finding.severity === "critical" ||
