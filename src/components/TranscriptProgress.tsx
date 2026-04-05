@@ -17,7 +17,7 @@ function stageIndex(stage: TranscriptStage): number {
 
 interface Props {
   taskId: string;
-  onDone: (resultUrl: string | null) => void;
+  onDone: (resultUrl: string | null, taskId: string) => void;
   onRetry: () => void;
 }
 
@@ -44,7 +44,7 @@ export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
 
       if (s.stage === "done" || s.error) {
         stopPolling();
-        if (s.stage === "done") onDone(s.result_url);
+        if (s.stage === "done") onDone(s.result_url, taskId);
       }
     } catch (err) {
       failCountRef.current += 1;
