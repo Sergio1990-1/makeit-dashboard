@@ -3208,3 +3208,152 @@ body::after {
 .input-error {
   border-color: var(--color-danger) !important;
 }
+
+/* ========== Transcripts Tab (.tpc-) ========== */
+
+.tpc-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-4) 0 0;
+}
+
+.tpc-dropzone {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-8) var(--sp-4);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  color: var(--color-text-muted);
+}
+.tpc-dropzone:hover,
+.tpc-dropzone--active {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+}
+.tpc-dropzone--has-file {
+  border-style: solid;
+  border-color: var(--color-primary);
+  padding: var(--sp-4);
+}
+
+.tpc-file-input {
+  display: none;
+}
+
+.tpc-drop-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.tpc-drop-placeholder svg {
+  opacity: 0.4;
+}
+.tpc-drop-placeholder p {
+  margin: 0;
+  font-size: var(--text-base);
+}
+.tpc-drop-hint {
+  font-size: var(--text-sm);
+  opacity: 0.5;
+  font-family: var(--font-mono);
+}
+
+.tpc-file-info {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.tpc-file-badge {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+.tpc-file-badge--audio {
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  color: var(--color-primary);
+}
+.tpc-file-badge--text {
+  background: color-mix(in srgb, var(--color-success) 15%, transparent);
+  color: var(--color-success);
+}
+.tpc-file-name {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.tpc-file-size {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.tpc-file-remove {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: var(--text-base);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+.tpc-file-remove:hover {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+}
+
+.tpc-controls {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: flex-end;
+}
+.tpc-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.tpc-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.tpc-select {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+}
+.tpc-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.tpc-submit {
+  white-space: nowrap;
+  padding: 8px 24px;
+  font-weight: 600;
+}
+
+.tpc-result {
+  padding: var(--sp-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+}
+.tpc-result--ok {
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+  color: var(--color-success);
+}
+.tpc-result--err {
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  color: var(--color-danger);
+}

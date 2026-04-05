@@ -16,9 +16,10 @@ import { UptimeBar } from "./components/UptimeBar";
 import { ClosedChart } from "./components/ClosedChart";
 import { AuditTab } from "./components/AuditTab";
 import { PipelineControlPanel } from "./components/PipelineControlPanel";
+import { TranscriptsTab } from "./components/TranscriptsTab";
 import { useDashboard } from "./hooks/useDashboard";
 import { useMonitors } from "./hooks/useMonitors";
-import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH } from "./utils/config";
+import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH, PROJECTS } from "./utils/config";
 import { PasswordGate } from "./components/PasswordGate";
 import type { TabId, Monitor } from "./types";
 import "./App.css";
@@ -89,8 +90,9 @@ function AppInner() {
               { id: "milestones" as TabId, label: `Milestones (${openMilestones.length})` },
               { id: "done" as TabId, label: `Завершённые (${doneMilestones.length})` },
               { id: "uptime" as TabId, label: "Мониторинг" },
-              { id: "audit" as TabId, label: "Аудит" },
               { id: "pipeline" as TabId, label: "Pipeline" },
+              { id: "transcripts" as TabId, label: "Транскрипты" },
+              { id: "audit" as TabId, label: "Аудит" },
             ]).map((t) => (
               <button
                 key={t.id}
@@ -215,6 +217,10 @@ function AppInner() {
 
           {tab === "pipeline" && (
             <PipelineControlPanel projects={projects} />
+          )}
+
+          {tab === "transcripts" && (
+            <TranscriptsTab projects={PROJECTS} />
           )}
 
           {tab === "milestones" && (
