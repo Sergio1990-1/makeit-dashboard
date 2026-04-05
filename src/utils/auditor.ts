@@ -1,7 +1,8 @@
 import type { AuditProjectStatus, AuditRunStatus, AuditFindings, VerificationReport } from "../types";
 
 const AUDITOR_BASE_URL =
-  (window as any).__MAKEIT_CONFIG__?.AUDITOR_URL ?? "http://127.0.0.1:8765";
+  (window as unknown as { __MAKEIT_CONFIG__?: { AUDITOR_URL?: string } }).__MAKEIT_CONFIG__?.AUDITOR_URL
+  ?? "http://127.0.0.1:8765";
 
 export async function fetchAuditProjects(): Promise<AuditProjectStatus[]> {
   const res = await fetch(`${AUDITOR_BASE_URL}/api/projects`, { cache: "no-store" });
@@ -34,7 +35,7 @@ export async function isAuditorRunning(): Promise<boolean> {
     
     clearTimeout(timeoutId);
     return res.ok;
-  } catch (e) {
+  } catch {
     return false;
   }
 }

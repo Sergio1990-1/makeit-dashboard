@@ -47,8 +47,8 @@ export function useAudit() {
       }
       setRunStatuses(initialStatuses);
       
-    } catch (err: any) {
-      setError(err.message || "Failed to load projects");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load projects");
     } finally {
       setLoading(false);
     }
@@ -62,7 +62,7 @@ export function useAudit() {
   // Phase 2: Polling logic
   useEffect(() => {
     const activeProjects = Object.entries(runStatuses)
-      .filter(([_, status]) => status.state === "running")
+      .filter(([, status]) => status.state === "running")
       .map(([name]) => name);
 
     if (activeProjects.length === 0) return;
@@ -101,8 +101,8 @@ export function useAudit() {
       await startAuditRun(projectName);
       const status = await fetchAuditStatus(projectName);
       setRunStatuses(prev => ({ ...prev, [projectName]: status }));
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
       throw err;
     }
   };
@@ -112,8 +112,8 @@ export function useAudit() {
       await cancelAuditRun(projectName);
       const status = await fetchAuditStatus(projectName);
       setRunStatuses(prev => ({ ...prev, [projectName]: status }));
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
       throw err;
     }
   };

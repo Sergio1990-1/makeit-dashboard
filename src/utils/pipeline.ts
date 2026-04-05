@@ -1,7 +1,8 @@
 /** API client for the makeit-pipeline local server (port 8766). */
 
 const PIPELINE_BASE_URL =
-  (window as any).__MAKEIT_CONFIG__?.PIPELINE_URL ?? "http://127.0.0.1:8766";
+  (window as unknown as { __MAKEIT_CONFIG__?: { PIPELINE_URL?: string } }).__MAKEIT_CONFIG__?.PIPELINE_URL
+  ?? "http://127.0.0.1:8766";
 
 export interface PipelineStartRequest {
   project?: string;
