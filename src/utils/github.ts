@@ -1,9 +1,9 @@
 import type { Issue, IssueStatus, Priority, Phase, ProjectData, Milestone, CommitActivity } from "../types";
 import { getProjects, GITHUB_OWNER, GITHUB_PROJECT_NUMBER, DEFAULT_PROJECTS, loadFinances } from "./config";
 
-const CACHE_BASE_URL =
-  (window as unknown as { __MAKEIT_CONFIG__?: { CACHE_URL?: string } }).__MAKEIT_CONFIG__?.CACHE_URL
-  ?? "";
+function getCacheUrl(): string {
+  return (window as unknown as { __MAKEIT_CONFIG__?: { CACHE_URL?: string } }).__MAKEIT_CONFIG__?.CACHE_URL ?? "";
+}
 
 const GITHUB_REST = "https://api.github.com";
 
@@ -464,12 +464,14 @@ function mergeFinancialData(projects: ProjectData[]): ProjectData[] {
 }
 
 async function fetchFromCache(forceRefresh: boolean): Promise<ProjectData[] | null> {
-  if (!CACHE_BASE_URL) return null;
+  const cacheUrl = getCacheUrl();
+  console.log(`[Dashboard] Cache URL: "${cacheUrl}", forceRefresh: ${forceRefresh}`);
+  if (!cacheUrl) return null;
 
   try {
     // Force refresh: trigger blocking sync (waits for completion on server)
     if (forceRefresh) {
-      const syncRes = await fetch(`${CACHE_BASE_URL}/api/sync`, {
+      const syncRes = await fetch(`${cacheUrl}/api/sync`, {
         method: "POST",
         signal: AbortSignal.timeout(120000), // 2 min timeout for full sync
       }).catch(() => null);
@@ -478,7 +480,7 @@ async function fetchFromCache(forceRefresh: boolean): Promise<ProjectData[] | nu
       }
     }
 
-    const res = await fetch(`${CACHE_BASE_URL}/api/projects`, {
+    const res = await fetch(`${cacheUrl}/api/projects`, {
       signal: AbortSignal.timeout(5000),
     });
 
