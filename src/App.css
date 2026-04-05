@@ -1051,6 +1051,13 @@ body::after {
   /* Removed flex: 1 to prevent stretching to parent panel height */
 }
 
+/* Single column in standalone PWA (mobile) */
+@media (display-mode: standalone) {
+  .projects-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* Hide description in summary grid to ensure uniformity as requested */
 .projects-grid .pc-desc {
   display: none !important;
