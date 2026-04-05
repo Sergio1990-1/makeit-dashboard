@@ -69,6 +69,24 @@ export async function fetchTranscriptList(): Promise<TranscriptListItem[]> {
   return res.json();
 }
 
+export async function saveTranscriptBrief(
+  taskId: string,
+  brief: string,
+): Promise<void> {
+  const res = await fetch(
+    `${getBaseUrl()}/api/transcripts/result/${encodeURIComponent(taskId)}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ brief }),
+    },
+  );
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Save failed (${res.status}): ${text}`);
+  }
+}
+
 export async function uploadTranscript(
   file: File,
   project: string,

@@ -6,6 +6,7 @@ import type { TranscriptResult } from "../utils/transcript";
 interface Props {
   result: TranscriptResult;
   onNewUpload: () => void;
+  onEdit: () => void;
 }
 
 /** Russian plural forms: 1, 2-4, 5+ */
@@ -38,7 +39,7 @@ function highlightMarkers(html: string): string {
 
 const SANITIZE_OPTS = { ADD_TAGS: ["mark" as const], ADD_ATTR: ["class"] };
 
-export function TranscriptBrief({ result, onNewUpload }: Props) {
+export function TranscriptBrief({ result, onNewUpload, onEdit }: Props) {
   const [accordionOpen, setAccordionOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -104,6 +105,9 @@ export function TranscriptBrief({ result, onNewUpload }: Props) {
           )}
         </div>
         <div className="tpc-brief-actions">
+          <button className="btn btn-sm" onClick={onEdit}>
+            Редактировать
+          </button>
           <button className="btn btn-sm" onClick={onCopy}>
             {copied ? "Скопировано!" : "Копировать"}
           </button>

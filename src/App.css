@@ -3745,3 +3745,65 @@ body::after {
   background: color-mix(in srgb, var(--color-danger) 15%, transparent);
   color: var(--color-danger);
 }
+
+/* Transcript Editor */
+
+.tpc-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4) 0 0;
+}
+.tpc-editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+.tpc-editor-modes {
+  display: flex;
+  gap: var(--sp-1);
+}
+.tpc-editor-actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.tpc-editor-panes {
+  display: flex;
+  gap: var(--sp-3);
+  min-height: 400px;
+}
+.tpc-editor-panes--split > * {
+  flex: 1;
+  min-width: 0;
+}
+.tpc-editor-panes--edit,
+.tpc-editor-panes--preview {
+  flex-direction: column;
+}
+
+.tpc-editor-textarea {
+  width: 100%;
+  min-height: 400px;
+  padding: var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  resize: vertical;
+  tab-size: 2;
+}
+.tpc-editor-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.tpc-editor-preview {
+  overflow-y: auto;
+  max-height: 500px;
+}
