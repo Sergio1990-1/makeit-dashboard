@@ -2,9 +2,8 @@ import { useCallback, useRef, useState } from "react";
 import { uploadTranscript } from "../utils/transcript";
 import type { ProjectConfig } from "../types";
 
-const ACCEPTED_AUDIO = ".mp3,.wav,.m4a";
-const ACCEPTED_TEXT = ".txt,.md";
-const ALL_ACCEPTED = `${ACCEPTED_AUDIO},${ACCEPTED_TEXT}`;
+const VALID_EXTENSIONS = ["mp3", "wav", "m4a", "txt", "md"];
+const ALL_ACCEPTED = ".mp3,.wav,.m4a,.txt,.md";
 
 interface Props {
   projects: ProjectConfig[];
@@ -35,7 +34,13 @@ export function TranscriptsTab({ projects }: Props) {
       e.preventDefault();
       setDragging(false);
       const dropped = e.dataTransfer.files[0];
-      if (dropped) handleFile(dropped);
+      if (!dropped) return;
+      const ext = dropped.name.split(".").pop()?.toLowerCase() ?? "";
+      if (!VALID_EXTENSIONS.includes(ext)) {
+        setResult({ ok: false, message: `Неподдерживаемый формат .${ext}. Допустимые: ${VALID_EXTENSIONS.join(", ")}` });
+        return;
+      }
+      handleFile(dropped);
     },
     [handleFile],
   );

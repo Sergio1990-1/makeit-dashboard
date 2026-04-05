@@ -90,9 +90,9 @@ function AppInner() {
               { id: "milestones" as TabId, label: `Milestones (${openMilestones.length})` },
               { id: "done" as TabId, label: `Завершённые (${doneMilestones.length})` },
               { id: "uptime" as TabId, label: "Мониторинг" },
-              { id: "audit" as TabId, label: "Аудит" },
               { id: "pipeline" as TabId, label: "Pipeline" },
               { id: "transcripts" as TabId, label: "Транскрипты" },
+              { id: "audit" as TabId, label: "Аудит" },
             ]).map((t) => (
               <button
                 key={t.id}

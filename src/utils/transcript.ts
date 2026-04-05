@@ -1,8 +1,11 @@
 /** API client for the makeit-pipeline transcript processor. */
 
-const PIPELINE_BASE_URL =
-  (window as unknown as { __MAKEIT_CONFIG__?: { PIPELINE_URL?: string } }).__MAKEIT_CONFIG__?.PIPELINE_URL
-  ?? "http://127.0.0.1:8766";
+function getBaseUrl(): string {
+  return (
+    (window as unknown as { __MAKEIT_CONFIG__?: { PIPELINE_URL?: string } }).__MAKEIT_CONFIG__?.PIPELINE_URL
+    ?? "http://127.0.0.1:8766"
+  );
+}
 
 export interface TranscriptUploadResponse {
   task_id: string;
@@ -17,7 +20,7 @@ export async function uploadTranscript(
   form.append("file", file);
   form.append("project", project);
 
-  const res = await fetch(`${PIPELINE_BASE_URL}/api/transcripts/upload`, {
+  const res = await fetch(`${getBaseUrl()}/api/transcripts/upload`, {
     method: "POST",
     body: form,
   });
@@ -26,8 +29,4 @@ export async function uploadTranscript(
     throw new Error(`Upload failed (${res.status}): ${text}`);
   }
   return res.json();
-}
-
-export function getTranscriptApiUrl(): string {
-  return PIPELINE_BASE_URL;
 }
