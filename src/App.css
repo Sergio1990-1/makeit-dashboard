@@ -3496,3 +3496,139 @@ body::after {
 .tpc-progress-error .btn {
   align-self: flex-start;
 }
+
+/* Transcript BRIEF Display */
+
+.tpc-brief {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-4) 0 0;
+}
+.tpc-brief-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+.tpc-brief-counters {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.tpc-counter {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: var(--radius-sm);
+}
+.tpc-counter--unclear {
+  background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+  color: var(--color-warning);
+}
+.tpc-counter--conflict {
+  background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+  color: var(--color-danger);
+}
+.tpc-counter--clean {
+  background: color-mix(in srgb, var(--color-success) 15%, transparent);
+  color: var(--color-success);
+}
+
+.tpc-brief-actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.tpc-brief-content {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-4) var(--sp-5);
+  line-height: 1.7;
+  font-size: var(--text-sm);
+  overflow-x: auto;
+}
+.tpc-brief-content h1,
+.tpc-brief-content h2,
+.tpc-brief-content h3 {
+  margin-top: var(--sp-4);
+  margin-bottom: var(--sp-2);
+  color: var(--color-text);
+}
+.tpc-brief-content h1 { font-size: var(--text-lg); }
+.tpc-brief-content h2 { font-size: var(--text-base); }
+.tpc-brief-content p { margin: var(--sp-2) 0; }
+.tpc-brief-content ul,
+.tpc-brief-content ol {
+  padding-left: var(--sp-5);
+  margin: var(--sp-2) 0;
+}
+.tpc-brief-content code {
+  font-family: var(--font-mono);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+.tpc-brief-content blockquote {
+  border-left: 3px solid var(--color-primary);
+  margin: var(--sp-2) 0;
+  padding: var(--sp-2) var(--sp-4);
+  color: var(--color-text-muted);
+}
+
+/* Marker highlights */
+.tpc-marker {
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+.tpc-marker--unclear {
+  background: color-mix(in srgb, var(--color-warning) 20%, transparent);
+  color: var(--color-warning);
+}
+.tpc-marker--conflict {
+  background: color-mix(in srgb, var(--color-danger) 20%, transparent);
+  color: var(--color-danger);
+}
+
+/* Accordion */
+.tpc-accordion {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.tpc-accordion-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--color-surface);
+  border: none;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-align: left;
+}
+.tpc-accordion-toggle:hover {
+  color: var(--color-text);
+}
+.tpc-accordion-icon {
+  transition: transform 0.2s;
+}
+.tpc-accordion-icon--open {
+  transform: rotate(180deg);
+}
+.tpc-accordion-body {
+  padding: var(--sp-4) var(--sp-5);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  max-height: 400px;
+  overflow-y: auto;
+}
+.tpc-accordion-body p { margin: var(--sp-2) 0; }

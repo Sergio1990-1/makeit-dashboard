@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
-import { uploadTranscript } from "../utils/transcript";
+import { uploadTranscript, fetchTranscriptResult, type TranscriptResult } from "../utils/transcript";
 import { TranscriptProgress } from "./TranscriptProgress";
+import { TranscriptBrief } from "./TranscriptBrief";
 import type { ProjectConfig } from "../types";
 
 const VALID_EXTENSIONS = ["mp3", "wav", "m4a", "txt", "md"];
@@ -17,6 +18,7 @@ export function TranscriptsTab({ projects }: Props) {
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [briefResult, setBriefResult] = useState<TranscriptResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback((f: File | null) => {
@@ -58,6 +60,7 @@ export function TranscriptsTab({ projects }: Props) {
     if (!file || !project) return;
     setUploading(true);
     setResult(null);
+    setBriefResult(null);
     try {
       const res = await uploadTranscript(file, project);
       setActiveTaskId(res.task_id);
@@ -70,18 +73,23 @@ export function TranscriptsTab({ projects }: Props) {
     }
   }, [file, project]);
 
-  const onProgressDone = useCallback((resultUrl: string | null) => {
+  const onProgressDone = useCallback(async (_resultUrl: string | null, taskId: string) => {
     setActiveTaskId(null);
-    setResult({
-      ok: true,
-      message: resultUrl
-        ? `Обработка завершена. Результат доступен.`
-        : "Обработка завершена.",
-    });
+    try {
+      const data = await fetchTranscriptResult(taskId);
+      setBriefResult(data);
+    } catch (err) {
+      setResult({ ok: false, message: `Обработка завершена, но не удалось загрузить результат: ${err}` });
+    }
   }, []);
 
   const onRetry = useCallback(() => {
     setActiveTaskId(null);
+    setResult(null);
+  }, []);
+
+  const onNewUpload = useCallback(() => {
+    setBriefResult(null);
     setResult(null);
   }, []);
 
@@ -97,6 +105,11 @@ export function TranscriptsTab({ projects }: Props) {
         </div>
       </div>
 
+      {/* BRIEF result (shown after successful processing) */}
+      {briefResult && (
+        <TranscriptBrief result={briefResult} onNewUpload={onNewUpload} />
+      )}
+
       {/* Progress tracker (shown after upload) */}
       {activeTaskId && (
         <TranscriptProgress
@@ -106,8 +119,8 @@ export function TranscriptsTab({ projects }: Props) {
         />
       )}
 
-      {/* Upload form (hidden while progress is active) */}
-      {!activeTaskId && (
+      {/* Upload form (hidden while progress is active or brief is shown) */}
+      {!activeTaskId && !briefResult && (
         <div className="tpc-form">
           {/* Drop zone */}
           <div

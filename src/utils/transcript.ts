@@ -33,6 +33,23 @@ export async function fetchTranscriptStatus(taskId: string): Promise<TranscriptS
   return res.json();
 }
 
+export interface TranscriptResult {
+  task_id: string;
+  brief: string;       // BRIEF.md content (markdown)
+  transcript: string;  // cleaned transcript text
+}
+
+export async function fetchTranscriptResult(taskId: string): Promise<TranscriptResult> {
+  const res = await fetch(`${getBaseUrl()}/api/transcripts/result/${encodeURIComponent(taskId)}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Failed to load result (${res.status}): ${text}`);
+  }
+  return res.json();
+}
+
 export async function uploadTranscript(
   file: File,
   project: string,
