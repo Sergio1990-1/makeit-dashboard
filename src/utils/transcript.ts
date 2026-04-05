@@ -12,6 +12,27 @@ export interface TranscriptUploadResponse {
   status: string;
 }
 
+export type TranscriptStage = "upload" | "transcription" | "processing" | "done";
+
+export interface TranscriptStatus {
+  task_id: string;
+  stage: TranscriptStage;
+  progress: number; // 0–100
+  error: string | null;
+  result_url: string | null;
+}
+
+export async function fetchTranscriptStatus(taskId: string): Promise<TranscriptStatus> {
+  const res = await fetch(`${getBaseUrl()}/api/transcripts/status/${encodeURIComponent(taskId)}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Status check failed (${res.status}): ${text}`);
+  }
+  return res.json();
+}
+
 export async function uploadTranscript(
   file: File,
   project: string,
