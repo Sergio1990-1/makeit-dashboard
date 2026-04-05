@@ -60,6 +60,7 @@ export interface ProjectData {
 
 export interface SummaryMetrics {
   totalIssues: number;
+  openCount: number;
   todoCount: number;
   inProgressCount: number;
   reviewCount: number;

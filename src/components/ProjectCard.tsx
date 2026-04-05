@@ -75,7 +75,9 @@ export function ProjectCard({ project, monitor }: Props) {
             ))}
             {(() => {
               const labeled = project.priorityCounts.P1 + project.priorityCounts.P2 + project.priorityCounts.P3 + project.priorityCounts.P4;
-              const noLabel = project.openCount - labeled;
+              // Count open board issues (not GitHub total) for accurate "no priority" count
+              const boardOpen = project.issues.filter((i) => i.status !== "Done").length;
+              const noLabel = boardOpen - labeled;
               return noLabel > 0 ? (
                 <span className="pc-pri pc-pri--none">? {noLabel}</span>
               ) : null;

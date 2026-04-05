@@ -12,7 +12,7 @@ function compactUSD(n: number): string {
 
 export function Summary({ metrics, onFinanceClick }: Props) {
   const hasFinances = metrics.totalBudget > 0;
-  const totalOpen = metrics.todoCount + metrics.inProgressCount + metrics.reviewCount;
+  const totalOpen = metrics.openCount;
   const pctDone = metrics.totalIssues > 0
     ? Math.round((metrics.doneCount / metrics.totalIssues) * 100)
     : 0;
