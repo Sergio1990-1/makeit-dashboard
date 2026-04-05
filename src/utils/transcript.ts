@@ -50,6 +50,25 @@ export async function fetchTranscriptResult(taskId: string): Promise<TranscriptR
   return res.json();
 }
 
+export interface TranscriptListItem {
+  task_id: string;
+  project: string;
+  filename: string;
+  status: "done" | "processing" | "failed";
+  created_at: string; // ISO timestamp
+}
+
+export async function fetchTranscriptList(): Promise<TranscriptListItem[]> {
+  const res = await fetch(`${getBaseUrl()}/api/transcripts/list`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Failed to load history (${res.status}): ${text}`);
+  }
+  return res.json();
+}
+
 export async function uploadTranscript(
   file: File,
   project: string,

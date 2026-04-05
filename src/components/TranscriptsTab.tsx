@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { uploadTranscript, fetchTranscriptResult, type TranscriptResult } from "../utils/transcript";
 import { TranscriptProgress } from "./TranscriptProgress";
 import { TranscriptBrief } from "./TranscriptBrief";
+import { TranscriptHistory } from "./TranscriptHistory";
 import type { ProjectConfig } from "../types";
 
 const VALID_EXTENSIONS = ["mp3", "wav", "m4a", "txt", "md"];
@@ -19,6 +20,8 @@ export function TranscriptsTab({ projects }: Props) {
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [briefResult, setBriefResult] = useState<TranscriptResult | null>(null);
+  const [loadingBrief, setLoadingBrief] = useState(false);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback((f: File | null) => {
@@ -75,6 +78,7 @@ export function TranscriptsTab({ projects }: Props) {
 
   const onProgressDone = useCallback(async (_resultUrl: string | null, taskId: string) => {
     setActiveTaskId(null);
+    setHistoryRefreshKey((k) => k + 1);
     try {
       const data = await fetchTranscriptResult(taskId);
       setBriefResult(data);
@@ -93,6 +97,20 @@ export function TranscriptsTab({ projects }: Props) {
     setResult(null);
   }, []);
 
+  const onOpenFromHistory = useCallback(async (taskId: string) => {
+    setBriefResult(null);
+    setResult(null);
+    setLoadingBrief(true);
+    try {
+      const data = await fetchTranscriptResult(taskId);
+      setBriefResult(data);
+    } catch (err) {
+      setResult({ ok: false, message: `Не удалось загрузить результат: ${err}` });
+    } finally {
+      setLoadingBrief(false);
+    }
+  }, []);
+
   const fileExt = file?.name.split(".").pop()?.toLowerCase() ?? "";
   const isAudio = ["mp3", "wav", "m4a"].includes(fileExt);
 
@@ -105,7 +123,14 @@ export function TranscriptsTab({ projects }: Props) {
         </div>
       </div>
 
-      {/* BRIEF result (shown after successful processing) */}
+      {/* Loading BRIEF from history */}
+      {loadingBrief && (
+        <div className="tpc-history-loading">
+          <div className="audit-spinner" /> Загрузка результата...
+        </div>
+      )}
+
+      {/* BRIEF result (shown after successful processing or history open) */}
       {briefResult && (
         <TranscriptBrief result={briefResult} onNewUpload={onNewUpload} />
       )}
@@ -119,8 +144,8 @@ export function TranscriptsTab({ projects }: Props) {
         />
       )}
 
-      {/* Upload form (hidden while progress is active or brief is shown) */}
-      {!activeTaskId && !briefResult && (
+      {/* Upload form (hidden while progress is active, brief is shown, or loading) */}
+      {!activeTaskId && !briefResult && !loadingBrief && (
         <div className="tpc-form">
           {/* Drop zone */}
           <div
@@ -202,6 +227,11 @@ export function TranscriptsTab({ projects }: Props) {
             </div>
           )}
         </div>
+      )}
+
+      {/* History table (hidden when BRIEF is shown or loading) */}
+      {!briefResult && !activeTaskId && !loadingBrief && (
+        <TranscriptHistory onOpen={onOpenFromHistory} refreshKey={historyRefreshKey} />
       )}
     </div>
   );

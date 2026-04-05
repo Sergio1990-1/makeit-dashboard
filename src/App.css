@@ -3632,3 +3632,116 @@ body::after {
   overflow-y: auto;
 }
 .tpc-accordion-body p { margin: var(--sp-2) 0; }
+
+/* Transcript History Table */
+
+.tpc-history {
+  margin-top: var(--sp-4);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--sp-4);
+}
+.tpc-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-3);
+  gap: var(--sp-3);
+}
+.tpc-history-title {
+  font-weight: 700;
+  font-size: var(--text-base);
+  color: var(--color-text);
+}
+.tpc-history-filter {
+  max-width: 220px;
+  font-size: var(--text-xs);
+  padding: 4px 8px;
+}
+.tpc-history-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-4) 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+.tpc-history-error {
+  padding: var(--sp-3);
+  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+  border-radius: var(--radius-sm);
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.tpc-history-error p { margin: 0; }
+.tpc-history-empty {
+  padding: var(--sp-4);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.tpc-history-table-wrap {
+  overflow-x: auto;
+}
+.tpc-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.tpc-history-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 2px solid var(--color-border);
+}
+.tpc-history-table td {
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+.tpc-history-table tbody tr:hover {
+  background: color-mix(in srgb, var(--color-primary) 4%, transparent);
+}
+.tpc-history-date {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+.tpc-history-project {
+  font-weight: 600;
+}
+.tpc-history-file {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tpc-status {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+.tpc-status--done {
+  background: color-mix(in srgb, var(--color-success) 15%, transparent);
+  color: var(--color-success);
+}
+.tpc-status--processing {
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  color: var(--color-primary);
+}
+.tpc-status--failed {
+  background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+  color: var(--color-danger);
+}
