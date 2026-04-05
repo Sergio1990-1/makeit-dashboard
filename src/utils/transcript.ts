@@ -23,7 +23,7 @@ export interface TranscriptStatus {
 }
 
 export async function fetchTranscriptStatus(taskId: string): Promise<TranscriptStatus> {
-  const res = await fetch(`${getBaseUrl()}/api/transcripts/status/${encodeURIComponent(taskId)}`, {
+  const res = await fetch(`${getBaseUrl()}/transcript/status/${encodeURIComponent(taskId)}`, {
     cache: "no-store",
   });
   if (!res.ok) {
@@ -40,7 +40,7 @@ export interface TranscriptResult {
 }
 
 export async function fetchTranscriptResult(taskId: string): Promise<TranscriptResult> {
-  const res = await fetch(`${getBaseUrl()}/api/transcripts/result/${encodeURIComponent(taskId)}`, {
+  const res = await fetch(`${getBaseUrl()}/transcript/result/${encodeURIComponent(taskId)}`, {
     cache: "no-store",
   });
   if (!res.ok) {
@@ -59,7 +59,7 @@ export interface TranscriptListItem {
 }
 
 export async function fetchTranscriptList(): Promise<TranscriptListItem[]> {
-  const res = await fetch(`${getBaseUrl()}/api/transcripts/list`, {
+  const res = await fetch(`${getBaseUrl()}/transcript/list`, {
     cache: "no-store",
   });
   if (!res.ok) {
@@ -74,7 +74,7 @@ export async function saveTranscriptBrief(
   brief: string,
 ): Promise<void> {
   const res = await fetch(
-    `${getBaseUrl()}/api/transcripts/result/${encodeURIComponent(taskId)}`,
+    `${getBaseUrl()}/transcript/result/${encodeURIComponent(taskId)}`,
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -95,7 +95,7 @@ export async function uploadTranscript(
   form.append("file", file);
   form.append("project", project);
 
-  const res = await fetch(`${getBaseUrl()}/api/transcripts/upload`, {
+  const res = await fetch(`${getBaseUrl()}/transcript/upload`, {
     method: "POST",
     body: form,
   });
