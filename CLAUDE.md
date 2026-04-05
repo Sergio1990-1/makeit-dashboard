@@ -12,10 +12,25 @@ Live-дашборд по всем проектам MakeIT. Данные из Git
 ## Структура
 ```
 src/
-  components/   — React-компоненты (TokenForm, Summary, ProjectCard, etc.)
-  hooks/        — Custom hooks (useDashboard)
-  types/        — TypeScript типы
-  utils/        — Config проектов, GitHub API client
+  components/       — React-компоненты (24 шт., см. docs/ARCHITECTURE.md)
+  hooks/            — Custom hooks:
+    useDashboard.ts   — проекты, фильтры, метрики (GitHub API)
+    useAudit.ts       — запуск аудитов, статус, findings (Auditor API)
+    usePipeline.ts    — pipeline задачи, live timer (Pipeline API)
+    useMonitors.ts    — uptime мониторы (BetterStack API)
+    useChat.ts        — чат-интерфейс
+  types/            — TypeScript типы
+  utils/            — Клиенты API и утилиты:
+    config.ts         — список проектов (хардкод)
+    github.ts         — GraphQL клиент, загрузка из Projects V2
+    auditor.ts        — Auditor REST API клиент
+    pipeline.ts       — Pipeline REST API клиент
+    betterstack.ts    — BetterStack Uptime API клиент
+    verification.ts   — оркестрация верификации audit findings
+    verify-agent.ts   — Claude-агент для верификации отдельного finding
+    claude.ts         — Claude API интеграция
+    github-actions.ts — GitHub Actions API (чтение файлов из репо)
+    riskScore.ts      — расчёт risk score для аудитов
 ```
 
 ## Запуск
@@ -40,11 +55,23 @@ npm run build      # Build check
 ```
 
 ## Архитектура
-- SPA без роутинга
+- SPA с tab-навигацией (7 вкладок: Дашборд, Проекты, Milestones, Завершённые, Мониторинг, Аудит, Pipeline)
 - GitHub PAT хранится в localStorage
 - Данные загружаются при открытии + по кнопке «Обновить»
 - Проекты захардкожены в src/utils/config.ts
-- Фильтрация: по проекту, приоритету, статусу
+
+## Источники данных
+- **GitHub GraphQL API** — проекты, issues, milestones, коммиты
+- **Auditor API** (`AUDITOR_URL`) — запуск аудитов, findings, верификация
+- **Pipeline API** (`PIPELINE_URL`) — pipeline задачи, статус, stage progress
+- **BetterStack API** — uptime мониторинг сервисов
+- **Claude API** — верификация audit findings (browser-side)
+
+## Подсистемы
+- **Audit** — запуск code audit, просмотр findings по категориям, верификация через Claude, создание GitHub Issues
+- **Pipeline** — управление pipeline задачами, live timer, stage progress, 7-дневный график закрытых задач
+- **Monitoring** — uptime сервисов (BetterStack), commit heatmap, stale alerts
+- **Milestones** — open/done milestones, urgent deadlines, progress tracking
 
 ## Deploy
 
