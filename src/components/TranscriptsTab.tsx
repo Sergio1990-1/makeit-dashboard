@@ -71,6 +71,7 @@ export function TranscriptsTab({ projects }: Props) {
   }, [file, project]);
 
   const onProgressDone = useCallback((resultUrl: string | null) => {
+    setActiveTaskId(null);
     setResult({
       ok: true,
       message: resultUrl
@@ -187,13 +188,6 @@ export function TranscriptsTab({ projects }: Props) {
               {result.message}
             </div>
           )}
-        </div>
-      )}
-
-      {/* Completion result (shown after progress finishes) */}
-      {!activeTaskId && result?.ok && (
-        <div className="tpc-result tpc-result--ok" style={{ marginTop: "var(--sp-4)" }}>
-          {result.message}
         </div>
       )}
     </div>

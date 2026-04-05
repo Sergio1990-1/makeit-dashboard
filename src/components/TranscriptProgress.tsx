@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchTranscriptStatus, type TranscriptStage, type TranscriptStatus } from "../utils/transcript";
 
 const POLL_INTERVAL = 3000;
+const MAX_POLL_FAILURES = 5;
 
 const STAGES: { key: TranscriptStage; label: string }[] = [
-  { key: "upload", label: "Upload" },
+  { key: "upload", label: "Загрузка" },
   { key: "transcription", label: "Транскрипция" },
   { key: "processing", label: "Обработка" },
   { key: "done", label: "Готово" },
@@ -23,35 +24,51 @@ interface Props {
 export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
   const [status, setStatus] = useState<TranscriptStatus | null>(null);
   const [pollError, setPollError] = useState<string | null>(null);
+  const [pollExhausted, setPollExhausted] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval>>(null);
+  const failCountRef = useRef(0);
+
+  const stopPolling = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
 
   const poll = useCallback(async () => {
     try {
       const s = await fetchTranscriptStatus(taskId);
       setStatus(s);
       setPollError(null);
+      failCountRef.current = 0;
 
       if (s.stage === "done" || s.error) {
-        if (timerRef.current) clearInterval(timerRef.current);
+        stopPolling();
         if (s.stage === "done") onDone(s.result_url);
       }
     } catch (err) {
+      failCountRef.current += 1;
       setPollError(String(err));
+      if (failCountRef.current >= MAX_POLL_FAILURES) {
+        stopPolling();
+        setPollExhausted(true);
+      }
     }
-  }, [taskId, onDone]);
+  }, [taskId, onDone, stopPolling]);
 
   useEffect(() => {
-    // Schedule first poll immediately (via setTimeout to avoid sync setState in effect)
+    failCountRef.current = 0;
     const initial = setTimeout(poll, 0);
     timerRef.current = setInterval(poll, POLL_INTERVAL);
     return () => {
       clearTimeout(initial);
-      if (timerRef.current) clearInterval(timerRef.current);
+      stopPolling();
     };
-  }, [poll]);
+  }, [poll, stopPolling]);
 
   const currentIdx = status ? stageIndex(status.stage) : 0;
   const hasError = !!status?.error;
+  const pct = status ? Math.min(100, Math.max(0, status.progress)) : 0;
 
   return (
     <div className="tpc-progress">
@@ -94,16 +111,16 @@ export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
       {status && !hasError && status.stage !== "done" && (
         <div className="tpc-progress-bar-wrap">
           <div className="tpc-progress-bar">
-            <div className="tpc-progress-bar-fill" style={{ width: `${status.progress}%` }} />
+            <div className="tpc-progress-bar-fill" style={{ width: `${pct}%` }} />
           </div>
-          <span className="tpc-progress-pct">{status.progress}%</span>
+          <span className="tpc-progress-pct">{pct}%</span>
         </div>
       )}
 
       {/* Error message */}
       {hasError && (
         <div className="tpc-progress-error">
-          <p>{status!.error}</p>
+          <p>{status?.error}</p>
           <button className="btn btn-primary" onClick={onRetry}>
             Повторить
           </button>
@@ -112,8 +129,13 @@ export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
 
       {/* Poll error (network issue, not task error) */}
       {pollError && !hasError && (
-        <div className="tpc-result tpc-result--err">
-          Ошибка опроса статуса: {pollError}
+        <div className="tpc-progress-error">
+          <p>Соединение потеряно: {pollError}</p>
+          {pollExhausted && (
+            <button className="btn btn-primary" onClick={onRetry}>
+              Повторить
+            </button>
+          )}
         </div>
       )}
     </div>
