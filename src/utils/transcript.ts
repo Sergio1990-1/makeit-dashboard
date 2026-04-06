@@ -17,9 +17,37 @@ export type TranscriptStage = "upload" | "transcription" | "processing" | "done"
 export interface TranscriptStatus {
   task_id: string;
   stage: TranscriptStage;
+  stage_detail: string;
   progress: number; // 0–100
   error: string | null;
   result_url: string | null;
+  file_name: string;
+  started_at: string | null;
+  duration_seconds: number;
+  speaker_count: number;
+}
+
+/** Map backend status string to frontend stage.
+ *  For errors, use the backend `stage` field to determine where the failure occurred. */
+function mapStatusToStage(status: string, backendStage?: string): TranscriptStage {
+  switch (status) {
+    case "queued":
+      return "upload";
+    case "transcribing":
+      return "transcription";
+    case "processing":
+      return "processing";
+    case "done":
+      return "done";
+    case "error": {
+      // Determine which stage the error occurred in
+      const s = (backendStage || "").toLowerCase();
+      if (s.includes("транскрипц")) return "transcription";
+      return "processing";
+    }
+    default:
+      return "upload";
+  }
 }
 
 export async function fetchTranscriptStatus(taskId: string): Promise<TranscriptStatus> {
@@ -30,7 +58,19 @@ export async function fetchTranscriptStatus(taskId: string): Promise<TranscriptS
     const text = await res.text().catch(() => "");
     throw new Error(`Status check failed (${res.status}): ${text}`);
   }
-  return res.json();
+  const data = await res.json();
+  return {
+    task_id: data.job_id,
+    stage: mapStatusToStage(data.status, data.stage),
+    stage_detail: data.stage_detail || data.stage || "",
+    progress: data.progress ?? 0,
+    error: data.error || null,
+    result_url: null,
+    file_name: data.file_name || "",
+    started_at: data.started_at || null,
+    duration_seconds: data.duration_seconds ?? 0,
+    speaker_count: data.speaker_count ?? 0,
+  };
 }
 
 export interface TranscriptResult {
@@ -47,14 +87,19 @@ export async function fetchTranscriptResult(taskId: string): Promise<TranscriptR
     const text = await res.text().catch(() => "");
     throw new Error(`Failed to load result (${res.status}): ${text}`);
   }
-  return res.json();
+  const data = await res.json();
+  return {
+    task_id: data.job_id,
+    brief: data.brief_content || "",
+    transcript: data.transcript_text || "",
+  };
 }
 
 export interface TranscriptListItem {
   task_id: string;
   project: string;
   filename: string;
-  status: "done" | "processing" | "failed";
+  status: "done" | "queued" | "transcribing" | "processing" | "error";
   created_at: string; // ISO timestamp
 }
 
@@ -66,7 +111,14 @@ export async function fetchTranscriptList(): Promise<TranscriptListItem[]> {
     const text = await res.text().catch(() => "");
     throw new Error(`Failed to load history (${res.status}): ${text}`);
   }
-  return res.json();
+  const data: Array<Record<string, string>> = await res.json();
+  return data.map((item) => ({
+    task_id: item.job_id,
+    project: item.project || "",
+    filename: item.file_name || "",
+    status: item.status as TranscriptListItem["status"],
+    created_at: item.created_at || "",
+  }));
 }
 
 export async function saveTranscriptBrief(
@@ -103,5 +155,6 @@ export async function uploadTranscript(
     const text = await res.text().catch(() => "");
     throw new Error(`Upload failed (${res.status}): ${text}`);
   }
-  return res.json();
+  const data = await res.json();
+  return { task_id: data.job_id, status: data.status };
 }

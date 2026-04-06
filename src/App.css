@@ -3366,10 +3366,47 @@ body::after {
   flex-direction: column;
   gap: var(--sp-4);
 }
+.tpc-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
 .tpc-progress-title {
   font-size: var(--text-lg);
   font-weight: 700;
   color: var(--color-text);
+}
+.tpc-progress-elapsed {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-1) var(--sp-2);
+  white-space: nowrap;
+}
+.tpc-progress-detail {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--text-sm);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+.tpc-progress-detail-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: tpc-pulse-dot 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes tpc-pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 .tpc-stepper {
@@ -3468,7 +3505,10 @@ body::after {
   height: 100%;
   background: var(--color-primary);
   border-radius: 4px;
-  transition: width 0.3s ease;
+  transition: width 0.5s ease;
+}
+.tpc-progress-bar-fill--done {
+  background: var(--color-success);
 }
 .tpc-progress-pct {
   font-family: var(--font-mono);
@@ -3495,6 +3535,43 @@ body::after {
 }
 .tpc-progress-error .btn {
   align-self: flex-start;
+}
+.tpc-progress-error-context {
+  font-style: italic;
+  opacity: 0.8;
+}
+.tpc-progress-error--network {
+  background: color-mix(in srgb, var(--color-warning, #f59e0b) 8%, transparent);
+  color: var(--color-warning, #f59e0b);
+}
+
+/* Intermediate stats (shown after transcription) */
+.tpc-progress-stats {
+  display: flex;
+  gap: var(--sp-4);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+.tpc-progress-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--text-sm);
+}
+.tpc-progress-stat-icon {
+  display: flex;
+  color: var(--color-text-muted);
+}
+.tpc-progress-stat-label {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+.tpc-progress-stat-value {
+  color: var(--color-text);
+  font-weight: 700;
+  font-family: var(--font-mono);
 }
 
 /* Transcript BRIEF Display */
@@ -3744,6 +3821,24 @@ body::after {
 .tpc-status--failed {
   background: color-mix(in srgb, var(--color-danger) 15%, transparent);
   color: var(--color-danger);
+}
+.tpc-status--active {
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tpc-status-pulse {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: tpc-pulse-dot 1.5s ease-in-out infinite;
+}
+.tpc-history-row--active {
+  background: color-mix(in srgb, var(--color-primary) 4%, transparent);
 }
 
 /* Transcript Editor */
