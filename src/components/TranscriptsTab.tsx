@@ -7,17 +7,37 @@ import { TranscriptHistory } from "./TranscriptHistory";
 import type { ProjectConfig } from "../types";
 
 const VALID_EXTENSIONS = ["mp3", "wav", "m4a", "txt", "md"];
+const AUDIO_EXTENSIONS = ["mp3", "wav", "m4a"];
 const ALL_ACCEPTED = ".mp3,.wav,.m4a,.txt,.md";
+const MAX_FILES = 15;
+const MAX_CONCURRENT = 2;
+
+type BatchFileStatus = "pending" | "uploading" | "processing" | "done" | "error";
+
+interface BatchFile {
+  id: string; // unique key
+  file: File;
+  status: BatchFileStatus;
+  taskId?: string;
+  error?: string;
+}
 
 interface Props {
   projects: ProjectConfig[];
 }
 
+function getFileExt(name: string): string {
+  return name.split(".").pop()?.toLowerCase() ?? "";
+}
+
+function isAudioFile(name: string): boolean {
+  return AUDIO_EXTENSIONS.includes(getFileExt(name));
+}
+
 export function TranscriptsTab({ projects }: Props) {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [project, setProject] = useState(projects[0]?.repo ?? "");
   const [dragging, setDragging] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [briefResult, setBriefResult] = useState<TranscriptResult | null>(null);
@@ -25,11 +45,43 @@ export function TranscriptsTab({ projects }: Props) {
   const [loadingBrief, setLoadingBrief] = useState(false);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [transcriptionModel, setTranscriptionModel] = useState<TranscriptionModel>("fast");
+
+  // Batch upload state
+  const [batchFiles, setBatchFiles] = useState<BatchFile[]>([]);
+  const [batchActive, setBatchActive] = useState(false);
+  const abortRef = useRef(false);
+
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = useCallback((f: File | null) => {
-    setFile(f);
+  const addFiles = useCallback((newFiles: File[]) => {
     setResult(null);
+    const valid: File[] = [];
+    for (const f of newFiles) {
+      const ext = getFileExt(f.name);
+      if (!VALID_EXTENSIONS.includes(ext)) {
+        setResult({ ok: false, message: `Пропущен файл с неподдерживаемым форматом: .${ext}` });
+        continue;
+      }
+      valid.push(f);
+    }
+    setFiles((prev) => {
+      const combined = [...prev, ...valid];
+      if (combined.length > MAX_FILES) {
+        setResult({ ok: false, message: `Максимум ${MAX_FILES} файлов. Лишние не добавлены.` });
+        return combined.slice(0, MAX_FILES);
+      }
+      return combined;
+    });
+  }, []);
+
+  const removeFile = useCallback((index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const clearFiles = useCallback(() => {
+    setFiles([]);
+    setResult(null);
+    if (inputRef.current) inputRef.current.value = "";
   }, []);
 
   const onDragOver = useCallback((e: React.DragEvent) => {
@@ -43,28 +95,25 @@ export function TranscriptsTab({ projects }: Props) {
     (e: React.DragEvent) => {
       e.preventDefault();
       setDragging(false);
-      const dropped = e.dataTransfer.files[0];
-      if (!dropped) return;
-      const ext = dropped.name.split(".").pop()?.toLowerCase() ?? "";
-      if (!VALID_EXTENSIONS.includes(ext)) {
-        setResult({ ok: false, message: `Неподдерживаемый формат .${ext}. Допустимые: ${VALID_EXTENSIONS.join(", ")}` });
-        return;
-      }
-      handleFile(dropped);
+      const dropped = Array.from(e.dataTransfer.files);
+      if (dropped.length > 0) addFiles(dropped);
     },
-    [handleFile],
+    [addFiles],
   );
 
   const onFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      handleFile(e.target.files?.[0] ?? null);
+      const selected = Array.from(e.target.files ?? []);
+      if (selected.length > 0) addFiles(selected);
+      if (inputRef.current) inputRef.current.value = "";
     },
-    [handleFile],
+    [addFiles],
   );
 
-  const onSubmit = useCallback(async () => {
-    if (!file || !project) return;
-    setUploading(true);
+  // --- Single-file upload (backward compat for single file) ---
+  const onSubmitSingle = useCallback(async () => {
+    if (files.length !== 1 || !project) return;
+    const file = files[0];
     setResult(null);
     setBriefResult(null);
     setEditing(false);
@@ -72,15 +121,97 @@ export function TranscriptsTab({ projects }: Props) {
       const res = await uploadTranscript(file, project, transcriptionModel);
       setActiveTaskId(res.task_id);
       setHistoryRefreshKey((k) => k + 1);
-      setFile(null);
-      if (inputRef.current) inputRef.current.value = "";
+      clearFiles();
     } catch (err) {
       setResult({ ok: false, message: String(err) });
-    } finally {
-      setUploading(false);
     }
-  }, [file, project, transcriptionModel]);
+  }, [files, project, transcriptionModel, clearFiles]);
 
+  // --- Batch upload queue ---
+  const onSubmitBatch = useCallback(async () => {
+    if (files.length < 2 || !project) return;
+    abortRef.current = false;
+    setBriefResult(null);
+    setEditing(false);
+    setResult(null);
+
+    const batch: BatchFile[] = files.map((f, i) => ({
+      id: `${Date.now()}-${i}`,
+      file: f,
+      status: "pending" as BatchFileStatus,
+    }));
+    setBatchFiles(batch);
+    setBatchActive(true);
+    setFiles([]);
+    if (inputRef.current) inputRef.current.value = "";
+
+    // Process queue with max concurrency
+    const queue = [...batch];
+    const active = new Set<string>();
+
+    const updateFile = (id: string, patch: Partial<BatchFile>) => {
+      setBatchFiles((prev) =>
+        prev.map((bf) => (bf.id === id ? { ...bf, ...patch } : bf)),
+      );
+    };
+
+    const processOne = async (bf: BatchFile) => {
+      if (abortRef.current) {
+        active.delete(bf.id);
+        return;
+      }
+      updateFile(bf.id, { status: "uploading" });
+      try {
+        const res = await uploadTranscript(bf.file, project, transcriptionModel);
+        updateFile(bf.id, { status: "done", taskId: res.task_id });
+      } catch (err) {
+        updateFile(bf.id, { status: "error", error: String(err) });
+      } finally {
+        active.delete(bf.id);
+      }
+    };
+
+    // Run with concurrency limit
+    let idx = 0;
+    const runNext = async (): Promise<void> => {
+      while (idx < queue.length && !abortRef.current) {
+        if (active.size >= MAX_CONCURRENT) {
+          await new Promise((r) => setTimeout(r, 300));
+          continue;
+        }
+        const item = queue[idx++];
+        active.add(item.id); // add synchronously before async call
+        processOne(item); // fire and don't await — managed by concurrency
+      }
+      // Wait for remaining active
+      while (active.size > 0) {
+        await new Promise((r) => setTimeout(r, 300));
+      }
+    };
+
+    try {
+      await runNext();
+    } finally {
+      setHistoryRefreshKey((k) => k + 1);
+      setBatchActive(false);
+    }
+  }, [files, project, transcriptionModel]);
+
+  const onSubmit = useCallback(() => {
+    if (files.length === 1) return onSubmitSingle();
+    if (files.length >= 2) return onSubmitBatch();
+  }, [files.length, onSubmitSingle, onSubmitBatch]);
+
+  const onCancelBatch = useCallback(() => {
+    abortRef.current = true;
+  }, []);
+
+  const onCloseBatch = useCallback(() => {
+    setBatchFiles([]);
+    setBatchActive(false);
+  }, []);
+
+  // --- Existing callbacks (unchanged) ---
   const onProgressDone = useCallback(async (_resultUrl: string | null, taskId: string) => {
     setActiveTaskId(null);
     setHistoryRefreshKey((k) => k + 1);
@@ -130,8 +261,16 @@ export function TranscriptsTab({ projects }: Props) {
     setEditing(false);
   }, []);
 
-  const fileExt = file?.name.split(".").pop()?.toLowerCase() ?? "";
-  const isAudio = ["mp3", "wav", "m4a"].includes(fileExt);
+  // Determine if any selected file is audio (for model toggle)
+  const hasAudio = files.some((f) => isAudioFile(f.name));
+
+  // Batch progress stats
+  const batchDone = batchFiles.filter((f) => f.status === "done").length;
+  const batchErrors = batchFiles.filter((f) => f.status === "error").length;
+  const batchTotal = batchFiles.length;
+  const batchAllFinished = batchFiles.length > 0 && batchFiles.every((f) => f.status === "done" || f.status === "error");
+
+  const showUploadForm = !activeTaskId && !briefResult && !loadingBrief && !batchActive && batchFiles.length === 0;
 
   return (
     <div className="bento-panel span-12 panel-projects">
@@ -168,7 +307,7 @@ export function TranscriptsTab({ projects }: Props) {
         />
       )}
 
-      {/* Progress tracker (shown after upload) */}
+      {/* Progress tracker (shown after single upload) */}
       {activeTaskId && (
         <TranscriptProgress
           taskId={activeTaskId}
@@ -177,12 +316,72 @@ export function TranscriptsTab({ projects }: Props) {
         />
       )}
 
+      {/* Batch upload progress */}
+      {batchFiles.length > 0 && (
+        <div className="tpc-batch">
+          <div className="tpc-batch-header">
+            <span className="tpc-batch-title">
+              Пакетная загрузка
+            </span>
+            <span className="tpc-batch-progress">
+              {batchDone}/{batchTotal} готово
+              {batchErrors > 0 && <span className="tpc-batch-errors">, {batchErrors} ошибок</span>}
+            </span>
+          </div>
+
+          {/* Overall progress bar */}
+          <div className="tpc-batch-bar">
+            <div
+              className="tpc-batch-bar-fill"
+              style={{ width: `${((batchDone + batchErrors) / batchTotal) * 100}%` }}
+            />
+          </div>
+
+          {/* Per-file status list */}
+          <div className="tpc-batch-list">
+            {batchFiles.map((bf) => (
+              <div key={bf.id} className={`tpc-batch-item tpc-batch-item--${bf.status}`}>
+                <span className="tpc-batch-item-icon">
+                  {bf.status === "pending" && "⏳"}
+                  {bf.status === "uploading" && "⬆️"}
+                  {bf.status === "processing" && "⚙️"}
+                  {bf.status === "done" && "✅"}
+                  {bf.status === "error" && "❌"}
+                </span>
+                <span className="tpc-batch-item-name">{bf.file.name}</span>
+                <span className="tpc-batch-item-status">
+                  {bf.status === "pending" && "Ожидание"}
+                  {bf.status === "uploading" && "Загрузка..."}
+                  {bf.status === "processing" && "Обработка..."}
+                  {bf.status === "done" && "Готово"}
+                  {bf.status === "error" && (bf.error ?? "Ошибка")}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Batch actions */}
+          <div className="tpc-batch-actions">
+            {batchActive && (
+              <button className="btn btn-sm" onClick={onCancelBatch}>
+                Остановить очередь
+              </button>
+            )}
+            {batchAllFinished && (
+              <button className="btn btn-sm btn-primary" onClick={onCloseBatch}>
+                Закрыть
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Upload form (hidden while progress is active, brief is shown, or loading) */}
-      {!activeTaskId && !briefResult && !loadingBrief && (
+      {showUploadForm && (
         <div className="tpc-form">
           {/* Drop zone */}
           <div
-            className={`tpc-dropzone${dragging ? " tpc-dropzone--active" : ""}${file ? " tpc-dropzone--has-file" : ""}`}
+            className={`tpc-dropzone${dragging ? " tpc-dropzone--active" : ""}${files.length > 0 ? " tpc-dropzone--has-file" : ""}`}
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
             onDrop={onDrop}
@@ -192,26 +391,35 @@ export function TranscriptsTab({ projects }: Props) {
               ref={inputRef}
               type="file"
               accept={ALL_ACCEPTED}
+              multiple
               onChange={onFileChange}
               className="tpc-file-input"
             />
-            {file ? (
-              <div className="tpc-file-info">
-                <span className={`tpc-file-badge${isAudio ? " tpc-file-badge--audio" : " tpc-file-badge--text"}`}>
-                  {isAudio ? "🎙 Аудио" : "📄 Текст"}
-                </span>
-                <span className="tpc-file-name">{file.name}</span>
-                <span className="tpc-file-size">{(file.size / 1024).toFixed(1)} KB</span>
-                <button
-                  className="tpc-file-remove"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleFile(null);
-                    if (inputRef.current) inputRef.current.value = "";
-                  }}
-                >
-                  ✕
-                </button>
+            {files.length > 0 ? (
+              <div className="tpc-file-list" onClick={(e) => e.stopPropagation()}>
+                {files.map((f, i) => {
+                  const ext = getFileExt(f.name);
+                  const audio = AUDIO_EXTENSIONS.includes(ext);
+                  return (
+                    <div key={`${f.name}-${i}`} className="tpc-file-info">
+                      <span className={`tpc-file-badge${audio ? " tpc-file-badge--audio" : " tpc-file-badge--text"}`}>
+                        {audio ? "🎙" : "📄"}
+                      </span>
+                      <span className="tpc-file-name">{f.name}</span>
+                      <span className="tpc-file-size">{(f.size / 1024).toFixed(1)} KB</span>
+                      <button
+                        className="tpc-file-remove"
+                        onClick={() => removeFile(i)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
+                <div className="tpc-file-list-footer">
+                  <span className="tpc-file-count">{files.length} файл{files.length === 1 ? "" : files.length < 5 ? "а" : "ов"}</span>
+                  <button className="tpc-file-clear" onClick={clearFiles}>Очистить все</button>
+                </div>
               </div>
             ) : (
               <div className="tpc-drop-placeholder">
@@ -220,8 +428,8 @@ export function TranscriptsTab({ projects }: Props) {
                   <polyline points="17 8 12 3 7 8" />
                   <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
-                <p>Перетащите файл сюда или нажмите для выбора</p>
-                <span className="tpc-drop-hint">mp3, wav, m4a, txt, md</span>
+                <p>Перетащите файлы сюда или нажмите для выбора</p>
+                <span className="tpc-drop-hint">mp3, wav, m4a, txt, md (до {MAX_FILES} файлов)</span>
               </div>
             )}
           </div>
@@ -244,8 +452,8 @@ export function TranscriptsTab({ projects }: Props) {
               </select>
             </div>
 
-            {/* Model toggle (only for audio files) */}
-            {isAudio && (
+            {/* Model toggle (only when audio files selected) */}
+            {hasAudio && (
               <div className="tpc-field tpc-model-field">
                 <label className="tpc-label">Модель</label>
                 <div className="tpc-model-toggle">
@@ -273,10 +481,10 @@ export function TranscriptsTab({ projects }: Props) {
 
             <button
               className="btn btn-primary tpc-submit"
-              disabled={!file || uploading}
+              disabled={files.length === 0}
               onClick={onSubmit}
             >
-              {uploading ? "Отправка…" : "Обработать"}
+              {files.length > 1 ? `Обработать (${files.length})` : "Обработать"}
             </button>
           </div>
 

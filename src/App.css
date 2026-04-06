@@ -3341,6 +3341,141 @@ body::after {
   background: color-mix(in srgb, var(--color-danger) 10%, transparent);
 }
 
+/* Multi-file list */
+.tpc-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  width: 100%;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: var(--sp-1) 0;
+}
+.tpc-file-list .tpc-file-info {
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+}
+.tpc-file-list .tpc-file-info:hover {
+  background: var(--color-surface);
+}
+.tpc-file-list-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--sp-2);
+  border-top: 1px solid var(--color-border);
+}
+.tpc-file-count {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.tpc-file-clear {
+  background: none;
+  border: none;
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+.tpc-file-clear:hover {
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+}
+
+/* Batch upload progress */
+.tpc-batch {
+  padding: var(--sp-4) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.tpc-batch-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tpc-batch-title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-text);
+}
+.tpc-batch-progress {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.tpc-batch-errors {
+  color: var(--color-danger);
+}
+.tpc-batch-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.tpc-batch-bar-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+.tpc-batch-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  max-height: 300px;
+  overflow-y: auto;
+}
+.tpc-batch-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  background: var(--color-surface);
+}
+.tpc-batch-item--done {
+  opacity: 0.7;
+}
+.tpc-batch-item--error {
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface));
+}
+.tpc-batch-item--uploading,
+.tpc-batch-item--processing {
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+}
+.tpc-batch-item-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.tpc-batch-item-name {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.tpc-batch-item-status {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.tpc-batch-item--error .tpc-batch-item-status {
+  color: var(--color-danger);
+}
+.tpc-batch-actions {
+  display: flex;
+  gap: var(--sp-2);
+  justify-content: flex-end;
+}
+
 .tpc-controls {
   display: flex;
   gap: var(--sp-3);

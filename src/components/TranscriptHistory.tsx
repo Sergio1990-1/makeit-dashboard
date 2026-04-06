@@ -5,7 +5,6 @@ interface Props {
   onOpen: (taskId: string) => void;
   onResume: (taskId: string) => void;
   refreshKey: number; // increment to trigger refresh
-  onDeleted?: () => void;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -26,7 +25,7 @@ const STATUS_CLASS: Record<string, string> = {
 
 const ACTIVE_STATUSES = new Set(["queued", "transcribing", "processing"]);
 
-export function TranscriptHistory({ onOpen, onResume, refreshKey, onDeleted }: Props) {
+export function TranscriptHistory({ onOpen, onResume, refreshKey }: Props) {
   const [items, setItems] = useState<TranscriptListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,11 +81,10 @@ export function TranscriptHistory({ onOpen, onResume, refreshKey, onDeleted }: P
     try {
       await deleteTranscript(taskId);
       setItems((prev) => prev.filter((i) => i.task_id !== taskId));
-      onDeleted?.();
     } catch (err) {
       setError(`Не удалось удалить: ${err}`);
     }
-  }, [onDeleted]);
+  }, []);
 
   const projects = useMemo(
     () => [...new Set(items.map((i) => i.project))].sort(),
