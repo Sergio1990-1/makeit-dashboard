@@ -43,12 +43,7 @@ export function ProjectCard({ project, monitor }: Props) {
     <div className={`pc pc--phase-${project.phase} ${isStale ? "pc--stale" : ""} ${risk.level !== "low" ? `pc--risk-${risk.level}` : ""}`}>
       {/* Row 1: Header */}
       <div className="pc-header">
-        <div className="pc-name-row">
-          <h3 className="pc-name">{project.repo}</h3>
-          <span className={`pc-phase pc-phase--${project.phase}`}>
-            {PHASE_LABELS[project.phase]}
-          </span>
-        </div>
+        <h3 className="pc-name">{project.repo}</h3>
         <div className="pc-badges">
           {monitor && (
             <span className={`pc-monitor pc-monitor--${monitor.status}`}>
@@ -56,6 +51,9 @@ export function ProjectCard({ project, monitor }: Props) {
               {STATUS_LABEL[monitor.status]}
             </span>
           )}
+          <span className={`pc-phase-icon pc-phase-icon--${project.phase}`} role="img" aria-label={PHASE_LABELS[project.phase]} title={PHASE_LABELS[project.phase]}>
+            {project.phase === "development" ? "▶" : project.phase === "support" ? "⏸" : "◻"}
+          </span>
           <span className={`pc-risk pc-risk--${risk.level}`}>
             Риск: {risk.label.toLowerCase()}
           </span>
