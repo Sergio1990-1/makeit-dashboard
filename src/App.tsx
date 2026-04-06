@@ -15,6 +15,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { UptimeBar } from "./components/UptimeBar";
 import { ClosedChart } from "./components/ClosedChart";
 import { AuditTab } from "./components/AuditTab";
+import { UXAuditTab } from "./components/UXAuditTab";
 import { PipelineControlPanel } from "./components/PipelineControlPanel";
 import { useDashboard } from "./hooks/useDashboard";
 import { useMonitors } from "./hooks/useMonitors";
@@ -90,6 +91,7 @@ function AppInner() {
               { id: "done" as TabId, label: `Завершённые (${doneMilestones.length})` },
               { id: "uptime" as TabId, label: "Мониторинг" },
               { id: "audit" as TabId, label: "Аудит" },
+              { id: "ux-audit" as TabId, label: "UX Аудит" },
               { id: "pipeline" as TabId, label: "Pipeline" },
             ]).map((t) => (
               <button
@@ -211,6 +213,10 @@ function AppInner() {
 
           {tab === "audit" && (
             <AuditTab dashboardProjects={projects} />
+          )}
+
+          {tab === "ux-audit" && (
+            <UXAuditTab />
           )}
 
           {tab === "pipeline" && (
