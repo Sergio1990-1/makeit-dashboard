@@ -38,6 +38,7 @@ function AppInner() {
   const { monitors, loading: monitorsLoading, error: monitorsError, refresh: refreshMonitors } = useMonitors();
 
   const [tab, setTab] = useState<TabId>("dashboard");
+  const [msTab, setMsTab] = useState<"open" | "done">("open");
   const [chatOpen, setChatOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
 
@@ -87,8 +88,7 @@ function AppInner() {
             {([
               { id: "dashboard" as TabId, label: "Дашборд" },
               { id: "projects" as TabId, label: `Проекты (${projects.length})` },
-              { id: "milestones" as TabId, label: `Milestones (${openMilestones.length})` },
-              { id: "done" as TabId, label: `Завершённые (${doneMilestones.length})` },
+              { id: "milestones" as TabId, label: `Milestones (${allMilestones.length})` },
               { id: "uptime" as TabId, label: "Мониторинг" },
               { id: "pipeline" as TabId, label: "Pipeline" },
               { id: "transcripts" as TabId, label: "Транскрипты" },
@@ -223,64 +223,56 @@ function AppInner() {
             <TranscriptsTab projects={PROJECTS} />
           )}
 
-          {tab === "milestones" && (
-            <div className="milestones-grouped">
-              {openMilestones.length === 0 && (
-                <div className="empty-state">Нет открытых milestones</div>
-              )}
-              {Object.entries(
-                openMilestones
-                  .sort((a, b) => {
-                    if (a.dueOn && b.dueOn) return new Date(a.dueOn).getTime() - new Date(b.dueOn).getTime();
-                    return a.dueOn ? -1 : b.dueOn ? 1 : 0;
-                  })
-                  .reduce<Record<string, typeof openMilestones>>((acc, m) => {
-                    (acc[m.repo] ??= []).push(m);
-                    return acc;
-                  }, {})
-              ).map(([repo, milestones]) => (
-                <div key={repo} className="milestone-group">
-                  <h3 className="milestone-group-title">{repo} <span className="milestone-group-count">({milestones.length})</span></h3>
-                  <div className="milestones-grid">
-                    {milestones.map((m, i) => (
-                      <MilestoneCard key={`${m.repo}-${m.title}-${i}`} milestone={m} />
-                    ))}
-                  </div>
+          {tab === "milestones" && (() => {
+            const list = msTab === "open" ? openMilestones : doneMilestones;
+            const sorted = msTab === "open"
+              ? [...list].sort((a, b) => {
+                  if (a.dueOn && b.dueOn) return new Date(a.dueOn).getTime() - new Date(b.dueOn).getTime();
+                  return a.dueOn ? -1 : b.dueOn ? 1 : 0;
+                })
+              : list;
+            const grouped = Object.entries(
+              sorted.reduce<Record<string, typeof list>>((acc, m) => {
+                (acc[m.repo] ??= []).push(m);
+                return acc;
+              }, {})
+            );
+            return (
+              <div className="bento-panel span-12">
+                <div className="milestones-sub-tabs">
+                  <button
+                    className={`milestones-sub-tab ${msTab === "open" ? "milestones-sub-tab-active" : ""}`}
+                    onClick={() => setMsTab("open")}
+                  >
+                    Открытые <span className="milestones-sub-tab-count">{openMilestones.length}</span>
+                  </button>
+                  <button
+                    className={`milestones-sub-tab ${msTab === "done" ? "milestones-sub-tab-active" : ""}`}
+                    onClick={() => setMsTab("done")}
+                  >
+                    Завершённые <span className="milestones-sub-tab-count">{doneMilestones.length}</span>
+                  </button>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {tab === "done" && (
-            <div className="bento-panel span-12">
-              <div className="bento-panel-title">
-                Завершённые milestones
-                <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: "var(--color-success)", fontSize: "var(--text-base)" }}>
-                  {doneMilestones.length}
-                </span>
-              </div>
-              {doneMilestones.length === 0 && (
-                <div className="empty-state">Пока нет завершённых milestones</div>
-              )}
-              <div className="milestones-grouped" style={{ padding: 0 }}>
-                {Object.entries(
-                  doneMilestones.reduce<Record<string, typeof doneMilestones>>((acc, m) => {
-                    (acc[m.repo] ??= []).push(m);
-                    return acc;
-                  }, {})
-                ).map(([repo, milestones]) => (
-                  <div key={repo} className="milestone-group">
-                    <h3 className="milestone-group-title">{repo} <span className="milestone-group-count">({milestones.length})</span></h3>
-                    <div className="milestones-grid">
-                      {milestones.map((m, i) => (
-                        <MilestoneCard key={`${m.repo}-${m.title}-${i}`} milestone={m} />
-                      ))}
-                    </div>
+                {list.length === 0 && (
+                  <div className="empty-state">
+                    {msTab === "open" ? "Нет открытых milestones" : "Пока нет завершённых milestones"}
                   </div>
-                ))}
+                )}
+                <div className="milestones-grouped" style={{ padding: 0 }}>
+                  {grouped.map(([repo, milestones]) => (
+                    <div key={repo} className="milestone-group">
+                      <h3 className="milestone-group-title">{repo} <span className="milestone-group-count">({milestones.length})</span></h3>
+                      <div className="milestones-grid">
+                        {milestones.map((m, i) => (
+                          <MilestoneCard key={`${m.repo}-${m.title}-${i}`} milestone={m} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {tab === "uptime" && (
             <div className="bento-panel span-12">
