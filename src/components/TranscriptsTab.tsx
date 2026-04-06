@@ -156,13 +156,13 @@ export function TranscriptsTab({ projects }: Props) {
     };
 
     const processOne = async (bf: BatchFile) => {
-      if (abortRef.current) return;
-      active.add(bf.id);
+      if (abortRef.current) {
+        active.delete(bf.id);
+        return;
+      }
       updateFile(bf.id, { status: "uploading" });
       try {
         const res = await uploadTranscript(bf.file, project, transcriptionModel);
-        updateFile(bf.id, { status: "processing", taskId: res.task_id });
-        // We don't wait for processing to finish — it happens server-side
         updateFile(bf.id, { status: "done", taskId: res.task_id });
       } catch (err) {
         updateFile(bf.id, { status: "error", error: String(err) });
@@ -180,6 +180,7 @@ export function TranscriptsTab({ projects }: Props) {
           continue;
         }
         const item = queue[idx++];
+        active.add(item.id); // add synchronously before async call
         processOne(item); // fire and don't await — managed by concurrency
       }
       // Wait for remaining active
@@ -188,9 +189,12 @@ export function TranscriptsTab({ projects }: Props) {
       }
     };
 
-    await runNext();
-    setHistoryRefreshKey((k) => k + 1);
-    setBatchActive(false);
+    try {
+      await runNext();
+    } finally {
+      setHistoryRefreshKey((k) => k + 1);
+      setBatchActive(false);
+    }
   }, [files, project, transcriptionModel]);
 
   const onSubmit = useCallback(() => {
@@ -360,7 +364,7 @@ export function TranscriptsTab({ projects }: Props) {
           <div className="tpc-batch-actions">
             {batchActive && (
               <button className="btn btn-sm" onClick={onCancelBatch}>
-                Отменить
+                Остановить очередь
               </button>
             )}
             {batchAllFinished && (
