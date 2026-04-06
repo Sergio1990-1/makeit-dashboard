@@ -78,10 +78,10 @@ export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
 
   useEffect(() => {
     failCountRef.current = 0;
-    setElapsed(0);
+    const start = Date.now();
     const initial = setTimeout(poll, 0);
     timerRef.current = setInterval(poll, POLL_INTERVAL);
-    elapsedRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    elapsedRef.current = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
     return () => {
       clearTimeout(initial);
       stopPolling();
