@@ -12,10 +12,11 @@ const SEVERITY_COLOR: Record<string, string> = {
 const SEVERITY_ORDER = ["critical", "high", "medium", "low"];
 
 export function UXAuditTab() {
-  const { projects, statuses, results, auditorAvailable, loading, refresh, startRun, cancelRun } = useUXAudit();
+  const { projects, statuses, results, auditorAvailable, loading, error, refresh, startRun, cancelRun } = useUXAudit();
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [findingFilter, setFindingFilter] = useState<string>("all");
   const [pageFilter, setPageFilter] = useState<string>("all");
+  const [runError, setRunError] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -32,7 +33,7 @@ export function UXAuditTab() {
         <div className="audit-offline-card">
           <h2 className="audit-offline-title">UX Audit — сервер недоступен</h2>
           <p className="audit-offline-desc">
-            Не удалось подключитьс�� к makeit-auditor API. Убедитесь, что сервис запущен.
+            Не удалось подключиться к makeit-auditor API. Убедитесь, что сервис запущен.
           </p>
           <button className="btn btn-primary audit-offline-btn" onClick={refresh}>
             Обновить
@@ -53,6 +54,13 @@ export function UXAuditTab() {
           ↻ Обновить
         </button>
       </div>
+
+      {(error || runError) && (
+        <div className="ux-card-error" style={{ marginBottom: "var(--sp-3)" }}>
+          <span className="ux-error-badge">Ошибка</span>
+          <span className="ux-error-msg">{runError || error}</span>
+        </div>
+      )}
 
       <section className="projects-grid">
         {projects.map((p) => {
@@ -75,7 +83,12 @@ export function UXAuditTab() {
                       Отменить
                     </button>
                   ) : (
-                    <button className="btn btn-sm btn-primary" onClick={() => startRun(p.name)}>
+                    <button className="btn btn-sm btn-primary" onClick={async () => {
+                      setRunError(null);
+                      try { await startRun(p.name); } catch (e) {
+                        setRunError(e instanceof Error ? e.message : String(e));
+                      }
+                    }}>
                       Запустить UX
                     </button>
                   )}
@@ -124,7 +137,10 @@ export function UXAuditTab() {
                   </div>
                   <button
                     className="btn btn-sm ux-btn-expand"
-                    onClick={() => setExpandedProject(isExpanded ? null : p.name)}
+                    onClick={() => {
+                      setExpandedProject(isExpanded ? null : p.name);
+                      if (!isExpanded) { setFindingFilter("all"); setPageFilter("all"); }
+                    }}
                   >
                     {isExpanded ? "Свернуть" : "Подробнее"}
                   </button>

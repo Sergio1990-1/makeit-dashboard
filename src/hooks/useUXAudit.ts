@@ -29,12 +29,11 @@ export function useUXAudit() {
       }
 
       const data = await fetchAuditProjects();
-      // Filter to projects with production_url
       setProjects(data);
 
       // Load initial statuses
       const initialStatuses: Record<string, UXAuditRunStatus> = {};
-      for (const p of uxProjects) {
+      for (const p of data) {
         try {
           initialStatuses[p.name] = await fetchUXStatus(p.name);
         } catch {
