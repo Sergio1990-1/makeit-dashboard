@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { fetchTranscriptList, type TranscriptListItem } from "../utils/transcript";
+import { fetchTranscriptList, deleteTranscript, type TranscriptListItem } from "../utils/transcript";
 
 interface Props {
   onOpen: (taskId: string) => void;
   onResume: (taskId: string) => void;
   refreshKey: number; // increment to trigger refresh
+  onDeleted?: () => void;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -25,7 +26,7 @@ const STATUS_CLASS: Record<string, string> = {
 
 const ACTIVE_STATUSES = new Set(["queued", "transcribing", "processing"]);
 
-export function TranscriptHistory({ onOpen, onResume, refreshKey }: Props) {
+export function TranscriptHistory({ onOpen, onResume, refreshKey, onDeleted }: Props) {
   const [items, setItems] = useState<TranscriptListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +76,17 @@ export function TranscriptHistory({ onOpen, onResume, refreshKey }: Props) {
       }
     };
   }, [hasActive, load]);
+
+  const handleDelete = useCallback(async (taskId: string, filename: string) => {
+    if (!window.confirm(`Удалить транскрипцию ${filename}?`)) return;
+    try {
+      await deleteTranscript(taskId);
+      setItems((prev) => prev.filter((i) => i.task_id !== taskId));
+      onDeleted?.();
+    } catch (err) {
+      setError(`Не удалось удалить: ${err}`);
+    }
+  }, [onDeleted]);
 
   const projects = useMemo(
     () => [...new Set(items.map((i) => i.project))].sort(),
@@ -141,6 +153,7 @@ export function TranscriptHistory({ onOpen, onResume, refreshKey }: Props) {
                 <th>Дата</th>
                 <th>Проект</th>
                 <th>Файл</th>
+                <th>Модель</th>
                 <th>Статус</th>
                 <th></th>
               </tr>
@@ -161,13 +174,22 @@ export function TranscriptHistory({ onOpen, onResume, refreshKey }: Props) {
                     </td>
                     <td className="tpc-history-project">{item.project}</td>
                     <td className="tpc-history-file">{item.filename}</td>
+                    <td className="tpc-history-model">
+                      {item.transcription_model === "quality" ? (
+                        <span title="Качественная (диаризация)">&#127919;</span>
+                      ) : item.transcription_model === "fast" ? (
+                        <span title="Быстрая">&#9889;</span>
+                      ) : (
+                        <span className="tpc-text-muted">—</span>
+                      )}
+                    </td>
                     <td>
                       <span className={`tpc-status ${STATUS_CLASS[item.status] ?? ""}`}>
                         {isActive && <span className="tpc-status-pulse" />}
                         {STATUS_LABELS[item.status] ?? item.status}
                       </span>
                     </td>
-                    <td>
+                    <td className="tpc-history-actions">
                       {item.status === "done" && (
                         <button
                           className="btn btn-sm btn-primary"
@@ -182,6 +204,15 @@ export function TranscriptHistory({ onOpen, onResume, refreshKey }: Props) {
                           onClick={() => onResume(item.task_id)}
                         >
                           Следить
+                        </button>
+                      )}
+                      {(item.status === "done" || item.status === "error") && (
+                        <button
+                          className="btn btn-sm tpc-delete-btn"
+                          onClick={() => handleDelete(item.task_id, item.filename)}
+                          title="Удалить транскрипцию"
+                        >
+                          &#128465;
                         </button>
                       )}
                     </td>

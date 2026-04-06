@@ -95,12 +95,15 @@ export async function fetchTranscriptResult(taskId: string): Promise<TranscriptR
   };
 }
 
+export type TranscriptionModel = "fast" | "quality";
+
 export interface TranscriptListItem {
   task_id: string;
   project: string;
   filename: string;
   status: "done" | "queued" | "transcribing" | "processing" | "error";
   created_at: string; // ISO timestamp
+  transcription_model?: TranscriptionModel;
 }
 
 export async function fetchTranscriptList(): Promise<TranscriptListItem[]> {
@@ -118,6 +121,7 @@ export async function fetchTranscriptList(): Promise<TranscriptListItem[]> {
     filename: item.file_name || "",
     status: item.status as TranscriptListItem["status"],
     created_at: item.created_at || "",
+    transcription_model: (item.transcription_model as TranscriptionModel) || undefined,
   }));
 }
 
@@ -142,10 +146,12 @@ export async function saveTranscriptBrief(
 export async function uploadTranscript(
   file: File,
   project: string,
+  transcriptionModel: TranscriptionModel = "fast",
 ): Promise<TranscriptUploadResponse> {
   const form = new FormData();
   form.append("file", file);
   form.append("project_context", project);
+  form.append("transcription_model", transcriptionModel);
 
   const res = await fetch(`${getBaseUrl()}/transcript/upload`, {
     method: "POST",
@@ -157,4 +163,15 @@ export async function uploadTranscript(
   }
   const data = await res.json();
   return { task_id: data.job_id, status: data.status };
+}
+
+export async function deleteTranscript(taskId: string): Promise<void> {
+  const res = await fetch(
+    `${getBaseUrl()}/transcript/${encodeURIComponent(taskId)}`,
+    { method: "DELETE" },
+  );
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Delete failed (${res.status}): ${text}`);
+  }
 }
