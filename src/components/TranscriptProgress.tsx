@@ -42,6 +42,7 @@ export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval>>(null);
   const elapsedRef = useRef<ReturnType<typeof setInterval>>(null);
+  const startedAtRef = useRef<number | null>(null);
   const failCountRef = useRef(0);
 
   const stopPolling = useCallback(() => {
@@ -62,6 +63,11 @@ export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
       setPollError(null);
       failCountRef.current = 0;
 
+      // Capture started_at from API for persistent elapsed timer
+      if (s.started_at && startedAtRef.current === null) {
+        startedAtRef.current = new Date(s.started_at).getTime();
+      }
+
       if (s.stage === "done" || s.error) {
         stopPolling();
         if (s.stage === "done") onDone(s.result_url, taskId);
@@ -78,10 +84,15 @@ export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
 
   useEffect(() => {
     failCountRef.current = 0;
-    const start = Date.now();
+    startedAtRef.current = null;
     const initial = setTimeout(poll, 0);
     timerRef.current = setInterval(poll, POLL_INTERVAL);
-    elapsedRef.current = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
+    elapsedRef.current = setInterval(() => {
+      const t0 = startedAtRef.current;
+      if (t0 !== null) {
+        setElapsed(Math.max(0, Math.floor((Date.now() - t0) / 1000)));
+      }
+    }, 1000);
     return () => {
       clearTimeout(initial);
       stopPolling();
