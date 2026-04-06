@@ -70,6 +70,7 @@ export function TranscriptsTab({ projects }: Props) {
     try {
       const res = await uploadTranscript(file, project);
       setActiveTaskId(res.task_id);
+      setHistoryRefreshKey((k) => k + 1);
       setFile(null);
       if (inputRef.current) inputRef.current.value = "";
     } catch (err) {
