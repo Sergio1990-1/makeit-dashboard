@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { uploadTranscript, fetchTranscriptResult, type TranscriptResult } from "../utils/transcript";
+import { uploadTranscript, fetchTranscriptResult, type TranscriptResult, type TranscriptionModel } from "../utils/transcript";
 import { TranscriptProgress } from "./TranscriptProgress";
 import { TranscriptBrief } from "./TranscriptBrief";
 import { TranscriptEditor } from "./TranscriptEditor";
@@ -24,6 +24,7 @@ export function TranscriptsTab({ projects }: Props) {
   const [editing, setEditing] = useState(false);
   const [loadingBrief, setLoadingBrief] = useState(false);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+  const [transcriptionModel, setTranscriptionModel] = useState<TranscriptionModel>("fast");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback((f: File | null) => {
@@ -68,7 +69,7 @@ export function TranscriptsTab({ projects }: Props) {
     setBriefResult(null);
     setEditing(false);
     try {
-      const res = await uploadTranscript(file, project);
+      const res = await uploadTranscript(file, project, transcriptionModel);
       setActiveTaskId(res.task_id);
       setHistoryRefreshKey((k) => k + 1);
       setFile(null);
@@ -78,7 +79,7 @@ export function TranscriptsTab({ projects }: Props) {
     } finally {
       setUploading(false);
     }
-  }, [file, project]);
+  }, [file, project, transcriptionModel]);
 
   const onProgressDone = useCallback(async (_resultUrl: string | null, taskId: string) => {
     setActiveTaskId(null);
@@ -225,7 +226,7 @@ export function TranscriptsTab({ projects }: Props) {
             )}
           </div>
 
-          {/* Project selector + submit */}
+          {/* Project selector + model toggle + submit */}
           <div className="tpc-controls">
             <div className="tpc-field">
               <label className="tpc-label" htmlFor="tpc-project">Проект</label>
@@ -242,6 +243,33 @@ export function TranscriptsTab({ projects }: Props) {
                 ))}
               </select>
             </div>
+
+            {/* Model toggle (only for audio files) */}
+            {isAudio && (
+              <div className="tpc-field tpc-model-field">
+                <label className="tpc-label">Модель</label>
+                <div className="tpc-model-toggle">
+                  <button
+                    type="button"
+                    className={`tpc-model-option${transcriptionModel === "fast" ? " tpc-model-option--active" : ""}`}
+                    onClick={() => setTranscriptionModel("fast")}
+                    title="30 секунд, спикеры определяются по контексту"
+                  >
+                    <span className="tpc-model-icon">&#9889;</span>
+                    Быстрая
+                  </button>
+                  <button
+                    type="button"
+                    className={`tpc-model-option${transcriptionModel === "quality" ? " tpc-model-option--active" : ""}`}
+                    onClick={() => setTranscriptionModel("quality")}
+                    title="7-15 минут, точная диаризация спикеров"
+                  >
+                    <span className="tpc-model-icon">&#127919;</span>
+                    Качественная
+                  </button>
+                </div>
+              </div>
+            )}
 
             <button
               className="btn btn-primary tpc-submit"
