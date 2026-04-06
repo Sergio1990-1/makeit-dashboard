@@ -1104,7 +1104,7 @@ body::after {
 }
 
 .pc-slot--last {
-  margin-top: -2px; /* Pull slightly closer to compensate for grid gap */
+  margin-top: auto;
 }
 
 @media (max-width: 1024px) {
@@ -1179,18 +1179,48 @@ body::after {
   gap: var(--sp-2);
   margin-bottom: 2px; /* Pull content closer to name */
 }
+.pc-name {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}
+
+.pc-phase-icon {
+  font-size: 0.625rem;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+.pc-phase-icon--development {
+  color: var(--green-500);
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+}
+.pc-phase-icon--support {
+  color: var(--blue-500);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+.pc-phase-icon--pre-dev {
+  color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-text-muted) 12%, transparent);
+}
+
+/* Legacy: used by AuditProjectCard */
 .pc-name-row {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
   min-width: 0;
   flex: 1;
-}
-.pc-name {
-  font-size: var(--text-lg);
-  font-weight: 800; /* Extra weight for premium presence */
-  letter-spacing: -0.03em;
-  color: var(--color-text);
 }
 .pc-phase {
   font-size: var(--text-xs);
@@ -1200,21 +1230,6 @@ body::after {
   padding: 2px 6px;
   border-radius: 4px;
   white-space: nowrap;
-}
-
-.pc-phase--development {
-  background: color-mix(in srgb, var(--color-success) 12%, transparent);
-  color: var(--green-500);
-}
-
-.pc-phase--support {
-  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-  color: var(--blue-500);
-}
-
-.pc-phase--pre-dev {
-  background: color-mix(in srgb, var(--color-text-muted) 12%, transparent);
-  color: var(--color-text-muted);
 }
 
 .pc-badges {
