@@ -12,7 +12,7 @@ Live-дашборд по всем проектам MakeIT. Данные из Git
 ## Структура
 ```
 src/
-  components/       — React-компоненты (24 шт., см. docs/ARCHITECTURE.md)
+  components/       — React-компоненты (29 шт., см. docs/ARCHITECTURE.md)
   hooks/            — Custom hooks:
     useDashboard.ts   — проекты, фильтры, метрики (GitHub API)
     useAudit.ts       — запуск аудитов, статус, findings (Auditor API)
@@ -25,6 +25,8 @@ src/
     github.ts         — GraphQL клиент, загрузка из Projects V2
     auditor.ts        — Auditor REST API клиент
     pipeline.ts       — Pipeline REST API клиент
+    transcript.ts     — Transcript API клиент (Pipeline backend)
+    transcript-markdown.ts — Markdown-рендеринг BRIEF (DOMPurify + marked)
     betterstack.ts    — BetterStack Uptime API клиент
     verification.ts   — оркестрация верификации audit findings
     verify-agent.ts   — Claude-агент для верификации отдельного finding
@@ -55,7 +57,7 @@ npm run build      # Build check
 ```
 
 ## Архитектура
-- SPA с tab-навигацией (7 вкладок: Дашборд, Проекты, Milestones, Завершённые, Мониторинг, Аудит, Pipeline)
+- SPA с tab-навигацией (8 вкладок: Дашборд, Проекты, Milestones, Завершённые, Мониторинг, Pipeline, Транскрипты, Аудит)
 - GitHub PAT хранится в localStorage
 - Данные загружаются при открытии + по кнопке «Обновить»
 - Проекты захардкожены в src/utils/config.ts
@@ -63,13 +65,14 @@ npm run build      # Build check
 ## Источники данных
 - **GitHub GraphQL API** — проекты, issues, milestones, коммиты
 - **Auditor API** (`AUDITOR_URL`) — запуск аудитов, findings, верификация
-- **Pipeline API** (`PIPELINE_URL`) — pipeline задачи, статус, stage progress
+- **Pipeline API** (`PIPELINE_URL`) — pipeline задачи, статус, stage progress, транскрипция аудио
 - **BetterStack API** — uptime мониторинг сервисов
 - **Claude API** — верификация audit findings (browser-side)
 
 ## Подсистемы
 - **Audit** — запуск code audit, просмотр findings по категориям, верификация через Claude, создание GitHub Issues
 - **Pipeline** — управление pipeline задачами, live timer, stage progress, 7-дневный график закрытых задач
+- **Transcripts** — загрузка аудио/текста, транскрипция (OpenAI Whisper), LLM-обработка → BRIEF.md с решениями/требованиями. Редактор с live preview, история обработок, гранулярный прогресс
 - **Monitoring** — uptime сервисов (BetterStack), commit heatmap, stale alerts
 - **Milestones** — open/done milestones, urgent deadlines, progress tracking
 
@@ -96,9 +99,17 @@ npm run build      # Build check
 ```bash
 ssh root@89.167.17.79 bash /opt/apps/makeit-stack/deploy.sh
 ```
-Скрипт: git pull обоих репо → docker compose build → up -d → restart nginx → проверка.
+Скрипт: git pull обоих репо → docker compose build → up -d → restart nginx → проверка 4 сервисов (Dashboard, Auditor, Cache, Pipeline tunnel).
 
 Репозитории на сервере клонированы через SSH (`git@github.com:Sergio1990-1/...`).
+
+### Pipeline Mac (двухмаковая архитектура)
+- Pipeline API (makeit-pipeline) работает на отдельном Mac (sergeymakarov)
+- Запускается через macOS LaunchAgent (`com.makeit.pipeline-api`)
+- SSH reverse tunnel (`com.makeit.pipeline-tunnel`) пробрасывает порт 8766 на VPS
+- `load_dotenv()` встроен в `api.py`, ручной source .env не нужен
+- Обновление pipeline: `git pull` + перезапуск LaunchAgent на pipeline Mac
+- Pipeline Mac НЕ деплоится через VPS deploy.sh — обновляется отдельно
 
 ## Важно
 - Не коммитить .env файлы
