@@ -97,7 +97,7 @@ export interface Filters {
   status: IssueStatus | null;
 }
 
-export type TabId = "dashboard" | "projects" | "milestones" | "uptime" | "audit" | "pipeline" | "transcripts";
+export type TabId = "dashboard" | "projects" | "milestones" | "uptime" | "audit" | "ux-audit" | "pipeline" | "transcripts";
 
 export type MonitorStatus = "up" | "down" | "paused" | "pending";
 
@@ -205,6 +205,53 @@ export interface VerificationResult {
   verified_at: string;
   model: string;
   error: string | null;
+}
+
+// ══════════════════════════════════════════
+// UX AUDIT TYPES
+// ══════════════════════════════════════════
+
+export interface UXAuditRunStatus {
+  state: "idle" | "running" | "completed" | "failed" | "cancelled";
+  stage?: string;
+  progress: number;
+  message: string;
+  error: string | null;
+}
+
+export interface UXScreenshot {
+  url: string;
+  page_name: string;
+  viewport: string;
+  width: number;
+  height: number;
+  path: string;
+}
+
+export interface UXFinding {
+  severity: "critical" | "high" | "medium" | "low";
+  category: string;
+  source: string;
+  tool: string;
+  file: string;
+  line: number | null;
+  description: string;
+  recommendation: string;
+  confidence: number | null;
+}
+
+export interface UXAuditResults {
+  project: string;
+  production_url: string;
+  total_findings: number;
+  l1_findings: number;
+  vision_findings: number;
+  severity_counts: { critical: number; high: number; medium: number; low: number };
+  findings: UXFinding[];
+  screenshots: UXScreenshot[];
+  screenshot_errors: string[];
+  vision_errors: string[];
+  l1_stats: Record<string, number>;
 }
 
 export interface VerificationReport {

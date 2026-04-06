@@ -15,6 +15,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { UptimeBar } from "./components/UptimeBar";
 import { ClosedChart } from "./components/ClosedChart";
 import { AuditTab } from "./components/AuditTab";
+import { UXAuditTab } from "./components/UXAuditTab";
 import { PipelineControlPanel } from "./components/PipelineControlPanel";
 import { TranscriptsTab } from "./components/TranscriptsTab";
 import { useDashboard } from "./hooks/useDashboard";
@@ -102,6 +103,7 @@ function AppInner() {
               { id: "pipeline" as TabId, label: "Pipeline" },
               { id: "transcripts" as TabId, label: "Транскрипты" },
               { id: "audit" as TabId, label: "Аудит" },
+              { id: "ux-audit" as TabId, label: "UX Аудит" },
             ]).map((t) => (
               <button
                 key={t.id}
@@ -288,6 +290,9 @@ function AppInner() {
           {/* Stateful tabs — mount lazily on first visit, keep alive via display:none */}
           <div className="bento-grid" style={{ display: tab === "audit" ? undefined : "none" }}>
             {visitedTabs.has("audit") && <AuditTab dashboardProjects={projects} />}
+          </div>
+          <div className="bento-grid" style={{ display: tab === "ux-audit" ? undefined : "none" }}>
+            {visitedTabs.has("ux-audit") && <UXAuditTab />}
           </div>
           <div className="bento-grid" style={{ display: tab === "pipeline" ? undefined : "none" }}>
             {visitedTabs.has("pipeline") && <PipelineControlPanel projects={projects} />}
