@@ -116,6 +116,13 @@ export function TranscriptsTab({ projects }: Props) {
     }
   }, []);
 
+  const onResumeFromHistory = useCallback((taskId: string) => {
+    setBriefResult(null);
+    setEditing(false);
+    setResult(null);
+    setActiveTaskId(taskId);
+  }, []);
+
   const onEditSave = useCallback((updatedBrief: string) => {
     setBriefResult((prev) => prev ? { ...prev, brief: updatedBrief } : prev);
     setEditing(false);
@@ -255,7 +262,7 @@ export function TranscriptsTab({ projects }: Props) {
 
       {/* History table (hidden when BRIEF is shown or loading) */}
       {!briefResult && !activeTaskId && !loadingBrief && (
-        <TranscriptHistory onOpen={onOpenFromHistory} refreshKey={historyRefreshKey} />
+        <TranscriptHistory onOpen={onOpenFromHistory} onResume={onResumeFromHistory} refreshKey={historyRefreshKey} />
       )}
     </div>
   );

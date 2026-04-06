@@ -3,27 +3,35 @@ import { fetchTranscriptList, type TranscriptListItem } from "../utils/transcrip
 
 interface Props {
   onOpen: (taskId: string) => void;
+  onResume: (taskId: string) => void;
   refreshKey: number; // increment to trigger refresh
 }
 
 const STATUS_LABELS: Record<string, string> = {
   done: "Готово",
-  processing: "В обработке",
-  failed: "Ошибка",
+  queued: "В очереди",
+  transcribing: "Транскрипция",
+  processing: "Обработка",
+  error: "Ошибка",
 };
 
 const STATUS_CLASS: Record<string, string> = {
   done: "tpc-status--done",
-  processing: "tpc-status--processing",
-  failed: "tpc-status--failed",
+  queued: "tpc-status--active",
+  transcribing: "tpc-status--active",
+  processing: "tpc-status--active",
+  error: "tpc-status--failed",
 };
 
-export function TranscriptHistory({ onOpen, refreshKey }: Props) {
+const ACTIVE_STATUSES = new Set(["queued", "transcribing", "processing"]);
+
+export function TranscriptHistory({ onOpen, onResume, refreshKey }: Props) {
   const [items, setItems] = useState<TranscriptListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterProject, setFilterProject] = useState("");
   const prevRefreshKey = useRef(refreshKey);
+  const autoRefreshRef = useRef<ReturnType<typeof setInterval>>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,6 +58,24 @@ export function TranscriptHistory({ onOpen, refreshKey }: Props) {
     }
   }, [refreshKey, load]);
 
+  // Auto-refresh while there are active jobs
+  const hasActive = useMemo(
+    () => items.some((i) => ACTIVE_STATUSES.has(i.status)),
+    [items],
+  );
+
+  useEffect(() => {
+    if (hasActive) {
+      autoRefreshRef.current = setInterval(load, 5000);
+    }
+    return () => {
+      if (autoRefreshRef.current) {
+        clearInterval(autoRefreshRef.current);
+        autoRefreshRef.current = null;
+      }
+    };
+  }, [hasActive, load]);
+
   const projects = useMemo(
     () => [...new Set(items.map((i) => i.project))].sort(),
     [items],
@@ -59,9 +85,13 @@ export function TranscriptHistory({ onOpen, refreshKey }: Props) {
     const list = filterProject
       ? items.filter((i) => i.project === filterProject)
       : items;
-    return [...list].sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-    );
+    // Active jobs first, then by date
+    return [...list].sort((a, b) => {
+      const aActive = ACTIVE_STATUSES.has(a.status) ? 0 : 1;
+      const bActive = ACTIVE_STATUSES.has(b.status) ? 0 : 1;
+      if (aActive !== bActive) return aActive - bActive;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
   }, [items, filterProject]);
 
   if (loading) {
@@ -116,36 +146,48 @@ export function TranscriptHistory({ onOpen, refreshKey }: Props) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((item) => (
-                <tr key={item.task_id}>
-                  <td className="tpc-history-date">
-                    {new Date(item.created_at).toLocaleString("ru-RU", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </td>
-                  <td className="tpc-history-project">{item.project}</td>
-                  <td className="tpc-history-file">{item.filename}</td>
-                  <td>
-                    <span className={`tpc-status ${STATUS_CLASS[item.status] ?? ""}`}>
-                      {STATUS_LABELS[item.status] ?? item.status}
-                    </span>
-                  </td>
-                  <td>
-                    {item.status === "done" && (
-                      <button
-                        className="btn btn-sm btn-primary"
-                        onClick={() => onOpen(item.task_id)}
-                      >
-                        Открыть
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((item) => {
+                const isActive = ACTIVE_STATUSES.has(item.status);
+                return (
+                  <tr key={item.task_id} className={isActive ? "tpc-history-row--active" : ""}>
+                    <td className="tpc-history-date">
+                      {new Date(item.created_at).toLocaleString("ru-RU", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </td>
+                    <td className="tpc-history-project">{item.project}</td>
+                    <td className="tpc-history-file">{item.filename}</td>
+                    <td>
+                      <span className={`tpc-status ${STATUS_CLASS[item.status] ?? ""}`}>
+                        {isActive && <span className="tpc-status-pulse" />}
+                        {STATUS_LABELS[item.status] ?? item.status}
+                      </span>
+                    </td>
+                    <td>
+                      {item.status === "done" && (
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={() => onOpen(item.task_id)}
+                        >
+                          Открыть
+                        </button>
+                      )}
+                      {isActive && (
+                        <button
+                          className="btn btn-sm"
+                          onClick={() => onResume(item.task_id)}
+                        >
+                          Следить
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
