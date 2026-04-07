@@ -97,7 +97,7 @@ export interface Filters {
   status: IssueStatus | null;
 }
 
-export type TabId = "dashboard" | "projects" | "milestones" | "uptime" | "audit" | "ux-audit" | "pipeline" | "transcripts" | "research";
+export type TabId = "dashboard" | "projects" | "milestones" | "uptime" | "audit" | "ux-audit" | "pipeline" | "transcripts" | "research" | "specs";
 
 // ── Research / Discovery ──
 
@@ -320,4 +320,50 @@ export interface VerificationReport {
   /** Absent on legacy reports; treat undefined as 0. */
   not_a_bug_count?: number;
   results: VerificationResult[];
+}
+
+// ══════════════════════════════════════════
+// SPECS TRACKING TYPES
+// ══════════════════════════════════════════
+
+export type SpecStatus = "draft" | "spec_ready" | "in_development" | "completed";
+
+export interface EpicTask {
+  number: string;      // "01", "38", etc.
+  title: string;
+  dependencies: string;
+  size: string;        // S / M / L / XL
+  repo: string;
+}
+
+export interface EpicData {
+  id: string;          // "epic-003"
+  title: string;
+  prd: string;         // "PRD-003"
+  milestone: string;
+  deadline: string;
+  epicStatus: string;  // "planning", "in-progress", "completed"
+  priority: string;
+  overview: string;
+  tasks: EpicTask[];
+}
+
+export interface PrdData {
+  id: string;          // "PRD-003"
+  title: string;
+  status: string;      // "approved", "draft"
+  author: string;
+  date: string;
+  priority: string;
+}
+
+export interface SpecsProject {
+  prd: PrdData;
+  epics: EpicData[];
+  /** Computed from epic statuses and linked issue states */
+  computedStatus: SpecStatus;
+  /** Total tasks across all epics */
+  totalTasks: number;
+  /** Tasks with closed linked issues */
+  completedTasks: number;
 }
