@@ -4680,3 +4680,289 @@ body::after {
   margin-top: var(--sp-1);
   font-style: italic;
 }
+
+/* ── Specs Tracking Tab ── */
+
+.spc-summary {
+  display: flex;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+  flex-wrap: wrap;
+}
+
+.spc-summary-item {
+  background: var(--gray-100);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-3) var(--sp-4);
+  min-width: 100px;
+  text-align: center;
+}
+
+.spc-summary-value {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.spc-summary-label {
+  font-size: var(--text-xs);
+  color: var(--gray-400);
+  margin-top: var(--sp-1);
+}
+
+.spc-summary-dev .spc-summary-value { color: var(--blue-400); }
+.spc-summary-ready .spc-summary-value { color: var(--orange-400); }
+.spc-summary-done .spc-summary-value { color: var(--green-400); }
+
+.spc-projects {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.spc-project {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--gray-100);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.spc-project:hover { border-color: var(--gray-500); }
+.spc-project-expanded { border-color: var(--color-primary); }
+
+.spc-project-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-3) var(--sp-4);
+  cursor: pointer;
+  user-select: none;
+  gap: var(--sp-3);
+}
+
+.spc-project-left {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.spc-project-id {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-primary);
+  background: rgba(96, 165, 250, 0.1);
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.spc-project-title {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spc-project-right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+
+.spc-project-body {
+  padding: 0 var(--sp-4) var(--sp-4);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Badges */
+
+.spc-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.spc-status-draft { background: var(--gray-200); color: var(--gray-400); }
+.spc-status-ready { background: rgba(251, 191, 36, 0.15); color: var(--orange-400); }
+.spc-status-dev { background: rgba(96, 165, 250, 0.15); color: var(--blue-400); }
+.spc-status-done { background: rgba(52, 211, 153, 0.15); color: var(--green-400); }
+
+.spc-pri-p1 { background: rgba(239, 68, 68, 0.15); color: var(--red-400); }
+.spc-pri-p2 { background: rgba(251, 191, 36, 0.15); color: var(--orange-400); }
+.spc-pri-p3 { background: rgba(96, 165, 250, 0.15); color: var(--blue-400); }
+.spc-pri-default { background: var(--gray-200); color: var(--gray-400); }
+
+.spc-size-s { background: rgba(52, 211, 153, 0.15); color: var(--green-400); }
+.spc-size-m { background: rgba(96, 165, 250, 0.15); color: var(--blue-400); }
+.spc-size-l { background: rgba(251, 191, 36, 0.15); color: var(--orange-400); }
+.spc-size-xl { background: rgba(239, 68, 68, 0.15); color: var(--red-400); }
+
+.spc-stat {
+  font-size: var(--text-xs);
+  color: var(--gray-400);
+  background: var(--gray-200);
+  padding: 2px var(--sp-2);
+  border-radius: var(--radius-full);
+}
+
+/* Pipeline Flow */
+
+.spc-flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: var(--sp-4) 0;
+}
+
+.spc-flow-step {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.spc-flow-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--gray-600);
+  border: 2px solid var(--gray-500);
+  flex-shrink: 0;
+}
+
+.spc-flow-active {
+  background: var(--color-primary);
+  border-color: var(--blue-400);
+  box-shadow: 0 0 6px rgba(96, 165, 250, 0.4);
+}
+
+.spc-flow-label {
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  font-weight: 500;
+  margin-right: var(--sp-1);
+}
+
+.spc-flow-inactive {
+  color: var(--gray-600);
+}
+
+.spc-flow-line {
+  width: 32px;
+  height: 2px;
+  background: var(--gray-600);
+  margin: 0 var(--sp-1);
+}
+
+.spc-flow-line-active {
+  background: var(--blue-400);
+}
+
+/* PRD Meta */
+
+.spc-prd-meta {
+  display: flex;
+  gap: var(--sp-4);
+  font-size: var(--text-xs);
+  color: var(--gray-400);
+  margin-bottom: var(--sp-3);
+}
+
+/* Epics */
+
+.spc-epics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.spc-epic {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--gray-200);
+}
+
+.spc-epic-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  cursor: pointer;
+  user-select: none;
+}
+
+.spc-epic-id {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--gray-400);
+  flex-shrink: 0;
+}
+
+.spc-epic-title {
+  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spc-epic-meta {
+  display: flex;
+  gap: var(--sp-2);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.spc-epic-body {
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.spc-epic-overview {
+  font-size: var(--text-xs);
+  color: var(--gray-300);
+  margin: 0 0 var(--sp-2);
+  line-height: 1.5;
+}
+
+.spc-task-row td {
+  font-size: var(--text-xs);
+}
+
+.spc-task-num {
+  font-family: var(--font-mono);
+  color: var(--gray-400);
+}
+
+.spc-task-title {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.spc-task-deps {
+  color: var(--gray-500);
+}
+
+.spc-task-repo {
+  font-family: var(--font-mono);
+  color: var(--gray-400);
+  font-size: 10px;
+}
+
+.spc-no-epics {
+  font-size: var(--text-sm);
+  color: var(--gray-500);
+  text-align: center;
+  padding: var(--sp-4);
+  font-style: italic;
+}

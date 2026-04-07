@@ -62,8 +62,8 @@ function CompetitorMatrix({ research }: { research: ResearchData }) {
                   <td className="rsh-feature-name">{f}</td>
                   {headers.map((h) => {
                     const val = featureMatrix[f]?.[h] ?? "—";
-                    const isYes = /✅|yes|да|\+/i.test(val);
-                    const isNo = /❌|no|нет|−|-/i.test(val);
+                    const isYes = /✅|\byes\b|\bда\b|\+/i.test(val);
+                    const isNo = /❌|\bno\b|\bнет\b|^−$|^-$/i.test(val);
                     return (
                       <td key={h} className={isYes ? "rsh-cell-yes" : isNo ? "rsh-cell-no" : ""}>
                         {val}

@@ -34,13 +34,13 @@ function parseCompetitors(md: string): ResearchCompetitor[] {
       current = { name: stripped.slice(4).trim(), url: "", features: [], pricing: "", audience: "" };
     } else if (current) {
       if (lower.startsWith("- url:") || lower.startsWith("- сайт:")) {
-        current.url = stripped.split(":", 2).slice(1).join(":").trim();
+        current.url = stripped.slice(stripped.indexOf(":") + 1).trim();
       } else if (lower.startsWith("- pricing:") || lower.startsWith("- цена:")) {
-        current.pricing = stripped.split(":", 2).slice(1).join(":").trim();
+        current.pricing = stripped.slice(stripped.indexOf(":") + 1).trim();
       } else if (lower.startsWith("- audience:") || lower.startsWith("- аудитория:")) {
-        current.audience = stripped.split(":", 2).slice(1).join(":").trim();
+        current.audience = stripped.slice(stripped.indexOf(":") + 1).trim();
       } else if (lower.startsWith("- feature:") || lower.startsWith("- фича:")) {
-        current.features.push(stripped.split(":", 2).slice(1).join(":").trim());
+        current.features.push(stripped.slice(stripped.indexOf(":") + 1).trim());
       }
     }
   }
@@ -91,7 +91,7 @@ function parsePainPoints(md: string): ResearchPainPoint[] {
   for (const line of md.split("\n")) {
     const stripped = line.trim();
     const lower = stripped.toLowerCase();
-    if (lower.includes("pain point") || lower.includes("болевые точки") || lower.includes("проблемы пользователей")) {
+    if (stripped.startsWith("#") && (lower.includes("pain point") || lower.includes("болевые точки") || lower.includes("проблемы пользователей"))) {
       inSection = true;
       continue;
     }
@@ -110,7 +110,7 @@ function parseOpportunities(md: string): string[] {
   for (const line of md.split("\n")) {
     const stripped = line.trim();
     const lower = stripped.toLowerCase();
-    if (lower.includes("opportunit") || lower.includes("возможност")) { inSection = true; continue; }
+    if (stripped.startsWith("#") && (lower.includes("opportunit") || lower.includes("возможност"))) { inSection = true; continue; }
     if (inSection && stripped.startsWith("## ")) { inSection = false; continue; }
     if (inSection && stripped.startsWith("- ")) opps.push(stripped.slice(2).trim());
   }
@@ -124,7 +124,7 @@ function parseRegulatory(md: string): string[] {
   for (const line of md.split("\n")) {
     const stripped = line.trim();
     const lower = stripped.toLowerCase();
-    if (lower.includes("regulat") || lower.includes("нормативн") || lower.includes("регулиров")) { inSection = true; continue; }
+    if (stripped.startsWith("#") && (lower.includes("regulat") || lower.includes("нормативн") || lower.includes("регулиров"))) { inSection = true; continue; }
     if (inSection && stripped.startsWith("## ")) { inSection = false; continue; }
     if (inSection && stripped.startsWith("- ")) notes.push(stripped.slice(2).trim());
   }
@@ -191,12 +191,12 @@ function parseSuggestions(md: string): DiscoverySuggestion[] {
       const m = IMPACT_RE.exec(stripped);
       if (m) current.impact = m[1].toLowerCase();
     } else if (lower.startsWith("- evidence:") || lower.startsWith("- источник")) {
-      current.evidence = stripped.split(":").slice(1).join(":").trim();
+      current.evidence = stripped.slice(stripped.indexOf(":") + 1).trim();
     } else if (lower.startsWith("- category:") || lower.startsWith("- категори")) {
       const m = CATEGORY_RE.exec(stripped);
       if (m) current.category = normalizeCategory(m[1]);
     } else if (lower.startsWith("- description:") || lower.startsWith("- описани")) {
-      current.description = stripped.split(":").slice(1).join(":").trim();
+      current.description = stripped.slice(stripped.indexOf(":") + 1).trim();
     } else if (stripped.startsWith("- ") && !current.description) {
       current.description = stripped.slice(2).trim();
     }

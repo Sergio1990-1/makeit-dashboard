@@ -19,6 +19,7 @@ import { UXAuditTab } from "./components/UXAuditTab";
 import { PipelineControlPanel } from "./components/PipelineControlPanel";
 import { TranscriptsTab } from "./components/TranscriptsTab";
 import { ResearchTab } from "./components/ResearchTab";
+import { SpecsTab } from "./components/SpecsTab";
 import { useDashboard } from "./hooks/useDashboard";
 import { useMonitors } from "./hooks/useMonitors";
 import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH, PROJECTS } from "./utils/config";
@@ -106,6 +107,7 @@ function AppInner() {
               { id: "audit" as TabId, label: "Аудит" },
               { id: "ux-audit" as TabId, label: "UX Аудит" },
               { id: "research" as TabId, label: "Research" },
+              { id: "specs" as TabId, label: "Specs" },
             ]).map((t) => (
               <button
                 key={t.id}
@@ -304,6 +306,9 @@ function AppInner() {
           </div>
           <div className="bento-grid" style={{ display: tab === "research" ? undefined : "none" }}>
             {visitedTabs.has("research") && <ResearchTab repos={projects.map((p) => p.repo)} />}
+          </div>
+          <div className="bento-grid" style={{ display: tab === "specs" ? undefined : "none" }}>
+            {visitedTabs.has("specs") && <SpecsTab />}
           </div>
         </>
       )}
