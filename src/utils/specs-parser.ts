@@ -55,9 +55,8 @@ function parseTasksTable(md: string): EpicTask[] {
       continue;
     }
 
-    // Skip header row
+    // Skip header row (first row before separator)
     if (!headerPassed) {
-      headerPassed = false; // will be set on separator
       continue;
     }
 

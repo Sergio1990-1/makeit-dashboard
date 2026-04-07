@@ -55,7 +55,7 @@ export function useSpecs(): UseSpecsReturn {
       // 1. List all PRD files
       const prdFiles = await listRepoFiles(token, OWNER, PIPELINE_REPO, "docs/prds");
       const prdNames = prdFiles
-        .filter((f) => f.name.endsWith(".md"))
+        .filter((f) => f.type === "file" && f.name.endsWith(".md"))
         .map((f) => f.name.replace(".md", ""));
 
       // 2. List all epic files
