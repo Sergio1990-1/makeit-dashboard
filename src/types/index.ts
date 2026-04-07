@@ -97,7 +97,60 @@ export interface Filters {
   status: IssueStatus | null;
 }
 
-export type TabId = "dashboard" | "projects" | "milestones" | "uptime" | "audit" | "ux-audit" | "pipeline" | "transcripts";
+export type TabId = "dashboard" | "projects" | "milestones" | "uptime" | "audit" | "ux-audit" | "pipeline" | "transcripts" | "research";
+
+// ── Research / Discovery ──
+
+export interface ResearchCompetitor {
+  name: string;
+  url: string;
+  features: string[];
+  pricing: string;
+  audience: string;
+}
+
+export interface ResearchPainPoint {
+  theme: string;
+  frequency: string;
+  source: string;
+  description: string;
+}
+
+/** Parsed RESEARCH.md data */
+export interface ResearchData {
+  competitors: ResearchCompetitor[];
+  featureMatrix: Record<string, Record<string, string>>;
+  painPoints: ResearchPainPoint[];
+  opportunities: string[];
+  regulatoryNotes: string[];
+  rawMarkdown: string;
+}
+
+export interface DiscoverySuggestion {
+  name: string;
+  description: string;
+  effort: string;   // S / M / L / XL
+  impact: string;   // low / medium / high / critical
+  evidence: string;
+  category: string; // quick_win / strategic_bet / nice_to_have
+}
+
+/** Parsed DISCOVERY.md data */
+export interface DiscoveryData {
+  suggestions: DiscoverySuggestion[];
+  quickWins: DiscoverySuggestion[];
+  strategicBets: DiscoverySuggestion[];
+  niceToHaves: DiscoverySuggestion[];
+  rawMarkdown: string;
+}
+
+export interface ProjectResearch {
+  repo: string;
+  research: ResearchData | null;
+  discovery: DiscoveryData | null;
+  loading: boolean;
+  error: string | null;
+}
 
 export type MonitorStatus = "up" | "down" | "paused" | "pending";
 
