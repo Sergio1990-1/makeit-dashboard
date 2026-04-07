@@ -4351,3 +4351,332 @@ body::after {
   text-align: center;
   padding: var(--sp-4);
 }
+
+/* ── Research / Discovery Tab ── */
+
+.rsh-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-6);
+  color: var(--gray-400);
+  font-size: var(--text-sm);
+}
+
+.rsh-summary {
+  display: flex;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-5);
+}
+
+.rsh-summary-item {
+  background: var(--gray-100);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-3) var(--sp-4);
+  min-width: 120px;
+  text-align: center;
+}
+
+.rsh-summary-value {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.rsh-summary-label {
+  font-size: var(--text-xs);
+  color: var(--gray-400);
+  margin-top: var(--sp-1);
+}
+
+.rsh-summary-qw .rsh-summary-value {
+  color: var(--green-400);
+}
+
+.rsh-projects {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.rsh-project {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--gray-100);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.rsh-project:hover {
+  border-color: var(--gray-500);
+}
+
+.rsh-project-expanded {
+  border-color: var(--color-primary);
+}
+
+.rsh-project-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  cursor: pointer;
+  user-select: none;
+}
+
+.rsh-project-name {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.rsh-loading-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  animation: rsh-pulse 1s infinite;
+}
+
+@keyframes rsh-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.rsh-project-stats {
+  display: flex;
+  gap: var(--sp-2);
+  margin-left: auto;
+}
+
+.rsh-stat {
+  font-size: var(--text-xs);
+  color: var(--gray-400);
+  background: var(--gray-200);
+  padding: 2px var(--sp-2);
+  border-radius: var(--radius-full);
+}
+
+.rsh-stat-qw {
+  color: var(--green-400);
+  background: rgba(52, 211, 153, 0.1);
+}
+
+.rsh-stat-empty {
+  color: var(--gray-500);
+  background: none;
+  font-style: italic;
+}
+
+.rsh-chevron {
+  font-size: var(--text-xs);
+  color: var(--gray-500);
+  width: 16px;
+  text-align: center;
+}
+
+.rsh-project-body {
+  padding: 0 var(--sp-4) var(--sp-4);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Sections */
+
+.rsh-section {
+  margin-top: var(--sp-4);
+}
+
+.rsh-section-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--gray-300);
+  margin-bottom: var(--sp-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rsh-title-qw { color: var(--green-400); }
+.rsh-title-sb { color: var(--color-primary); }
+.rsh-title-nth { color: var(--gray-500); }
+
+/* Feature Matrix Table */
+
+.rsh-table-wrap {
+  overflow-x: auto;
+  margin-top: var(--sp-2);
+}
+
+.rsh-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+
+.rsh-table th,
+.rsh-table td {
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.rsh-table th {
+  background: var(--gray-200);
+  color: var(--gray-300);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.rsh-feature-name {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.rsh-cell-yes {
+  color: var(--green-400);
+}
+
+.rsh-cell-no {
+  color: var(--gray-600);
+}
+
+/* Competitor Cards */
+
+.rsh-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--sp-3);
+}
+
+.rsh-card {
+  background: var(--gray-200);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-3);
+}
+
+.rsh-card-title {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  margin-bottom: var(--sp-1);
+}
+
+.rsh-card-url {
+  font-size: var(--text-xs);
+  color: var(--color-primary);
+  margin-bottom: var(--sp-1);
+  word-break: break-all;
+}
+
+.rsh-card-meta {
+  font-size: var(--text-xs);
+  color: var(--gray-400);
+}
+
+.rsh-card-features {
+  margin: var(--sp-2) 0 0;
+  padding-left: var(--sp-4);
+  font-size: var(--text-xs);
+  color: var(--gray-300);
+}
+
+.rsh-card-features li {
+  margin-bottom: 2px;
+}
+
+/* Lists: Pain Points & Opportunities */
+
+.rsh-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.rsh-list-item {
+  font-size: var(--text-sm);
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 3px solid var(--color-border);
+  margin-bottom: var(--sp-1);
+  color: var(--gray-300);
+}
+
+.rsh-pain {
+  border-left-color: var(--color-danger);
+}
+
+.rsh-opp {
+  border-left-color: var(--green-400);
+}
+
+/* Discovery Suggestions */
+
+.rsh-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.rsh-suggestion {
+  background: var(--gray-200);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-3);
+}
+
+.rsh-suggestion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.rsh-suggestion-name {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+
+.rsh-suggestion-badges {
+  display: flex;
+  gap: var(--sp-1);
+  flex-shrink: 0;
+}
+
+.rsh-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rsh-effort-s { background: rgba(52, 211, 153, 0.15); color: var(--green-400); }
+.rsh-effort-m { background: rgba(96, 165, 250, 0.15); color: var(--blue-400); }
+.rsh-effort-l { background: rgba(251, 191, 36, 0.15); color: var(--orange-400); }
+.rsh-effort-xl { background: rgba(239, 68, 68, 0.15); color: var(--red-400); }
+
+.rsh-impact-critical { background: rgba(239, 68, 68, 0.15); color: var(--red-400); }
+.rsh-impact-high { background: rgba(251, 191, 36, 0.15); color: var(--orange-400); }
+.rsh-impact-medium { background: rgba(96, 165, 250, 0.15); color: var(--blue-400); }
+.rsh-impact-low { background: rgba(148, 163, 184, 0.15); color: var(--gray-400); }
+
+.rsh-suggestion-desc {
+  font-size: var(--text-xs);
+  color: var(--gray-300);
+  margin-top: var(--sp-1);
+}
+
+.rsh-suggestion-evidence {
+  font-size: var(--text-xs);
+  color: var(--gray-500);
+  margin-top: var(--sp-1);
+  font-style: italic;
+}
