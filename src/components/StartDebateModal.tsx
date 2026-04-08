@@ -122,7 +122,7 @@ export function StartDebateModal({ onClose, onStarted }: Props) {
 
   return (
     <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="sdm-title">
-      <div className="bento-panel modal-panel sdm-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-panel sdm-panel" onClick={(e) => e.stopPropagation()}>
         <div className="sdm-header">
           <h2 className="modal-title" id="sdm-title">Запустить дебат</h2>
           <button className="btn btn-sm" onClick={onClose} aria-label="Close dialog">✕</button>
