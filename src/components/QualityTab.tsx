@@ -1,4 +1,5 @@
 import { useQuality } from "../hooks/useQuality";
+import { QualityTrendsChart } from "./QualityTrendsChart";
 import type { QualitySnapshot } from "../types";
 
 /** Color class based on value + thresholds (green/yellow/red). */
@@ -92,6 +93,7 @@ export function QualityTab() {
     loading,
     error,
     snapshot,
+    trends,
     pendingChanges,
     retros,
     refresh,
@@ -164,6 +166,14 @@ export function QualityTab() {
           </div>
         )}
       </div>
+
+      {/* Trends chart */}
+      {trends && trends.snapshots.length > 0 && (
+        <div className="bento-panel span-12 panel-projects">
+          <div className="bento-panel-title">Тренды KPI</div>
+          <QualityTrendsChart trends={trends} />
+        </div>
+      )}
     </>
   );
 }
