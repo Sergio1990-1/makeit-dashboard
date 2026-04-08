@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { usePipeline } from "../hooks/usePipeline";
 import { GITHUB_OWNER, PROJECTS } from "../utils/config";
-import type { PipelineStageEntry, ComplexityFilter } from "../utils/pipeline";
+import type { PipelineStageEntry, ComplexityFilter, ComplexityLevel } from "../utils/pipeline";
 import type { ProjectData } from "../types";
 import { PipelineClosedChart } from "./PipelineClosedChart";
 
@@ -13,6 +13,39 @@ const COMPLEXITY_OPTIONS: { value: ComplexityFilter; label: string; hint: string
   { value: "auto", label: "Auto", hint: "Sonnet — простые" },
   { value: "assisted", label: "Assisted", hint: "Opus — сложные" },
 ];
+
+const COMPLEXITY_STYLE: Record<string, { label: string; color: string; bg: string }> = {
+  auto: { label: "AUTO", color: "var(--green-500)", bg: "rgba(16, 185, 129, 0.12)" },
+  assisted: { label: "ASSISTED", color: "var(--orange-500)", bg: "rgba(245, 158, 11, 0.12)" },
+  manual: { label: "MANUAL", color: "var(--red-500)", bg: "rgba(239, 68, 68, 0.12)" },
+};
+
+function ComplexityBadge({ complexity, model }: { complexity?: ComplexityLevel; model?: string }) {
+  if (!complexity) return null;
+  const style = COMPLEXITY_STYLE[complexity] ?? COMPLEXITY_STYLE.manual;
+  return (
+    <span
+      title={model ? `Model: ${model}` : undefined}
+      style={{
+        fontSize: "var(--text-xs)",
+        fontWeight: 700,
+        padding: "1px 6px",
+        borderRadius: 8,
+        background: style.bg,
+        color: style.color,
+        letterSpacing: "0.04em",
+        cursor: model ? "help" : undefined,
+      }}
+    >
+      {style.label}
+      {model && (
+        <span style={{ fontWeight: 400, marginLeft: 3, opacity: 0.8 }}>
+          {model}
+        </span>
+      )}
+    </span>
+  );
+}
 
 const STAGE_ORDER = ["dev", "review", "merge"] as const;
 
@@ -666,6 +699,9 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                   }}>
                     {STATUS_LABEL[r.status] ?? r.status}
                   </span>
+
+                  {/* Complexity badge */}
+                  <ComplexityBadge complexity={r.complexity} model={r.model_used} />
 
                   {/* Stage progress */}
                   <StageProgress stages={r.stages} compact />
