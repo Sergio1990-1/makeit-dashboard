@@ -1,8 +1,6 @@
 /** API client for the makeit-pipeline local server (port 8766). */
 
-const PIPELINE_BASE_URL =
-  (window as unknown as { __MAKEIT_CONFIG__?: { PIPELINE_URL?: string } }).__MAKEIT_CONFIG__?.PIPELINE_URL
-  ?? "http://127.0.0.1:8766";
+import { PIPELINE_BASE_URL } from "./config";
 
 export type ComplexityFilter = "auto" | "assisted" | "all";
 

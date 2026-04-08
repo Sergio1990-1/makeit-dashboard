@@ -4878,6 +4878,39 @@ body::after {
 
 /* ── Specs Tracking Tab ── */
 
+.spc-empty {
+  text-align: center;
+  padding: var(--sp-10) var(--sp-4);
+  color: var(--color-text-muted);
+}
+.spc-empty-icon {
+  margin-bottom: var(--sp-4);
+  color: var(--color-text-faint);
+}
+.spc-empty h3 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--sp-2);
+}
+.spc-empty p {
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.6;
+  font-size: var(--text-sm);
+}
+.spc-empty-hint {
+  margin-top: var(--sp-3);
+}
+.spc-empty-hint code {
+  padding: var(--sp-1) var(--sp-3);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-family: var(--font-mono, monospace);
+  color: var(--color-text-secondary);
+}
+
 .spc-summary {
   display: flex;
   gap: var(--sp-3);
