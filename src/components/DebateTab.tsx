@@ -12,7 +12,7 @@ function statusBadge(status: DebateListItem["status"]) {
     error: { label: "Error", cls: "badge-error", ariaLabel: "Status: error" },
   };
   const b = map[status] ?? { label: status, cls: "", ariaLabel: `Status: ${status}` };
-  return <span className={`debate-badge ${b.cls}`} role="status" aria-label={b.ariaLabel}>{b.label}</span>;
+  return <span className={`debate-badge ${b.cls}`} aria-label={b.ariaLabel}>{b.label}</span>;
 }
 
 function consensusBadge(level: DebateListItem["consensus_level"]) {

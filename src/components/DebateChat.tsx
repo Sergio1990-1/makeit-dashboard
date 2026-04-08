@@ -164,7 +164,7 @@ export function DebateChat({ debateId, onBack }: Props) {
               {debateId.slice(0, 8)}...
             </span>
             {status && (
-              <span className={`debate-badge badge-${status.status}`} role="status">
+              <span className={`debate-badge badge-${status.status}`}>
                 {status.status === "running" ? "Running" : status.status === "done" ? "Done" : status.status === "error" ? "Error" : "Queued"}
               </span>
             )}

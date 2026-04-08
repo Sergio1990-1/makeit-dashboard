@@ -6659,9 +6659,3 @@ body::after {
     min-width: 0;
   }
 }
-
-@media (min-width: 769px) {
-  .debate-cards {
-    display: none;
-  }
-}
