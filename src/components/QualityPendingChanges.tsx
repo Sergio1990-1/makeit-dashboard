@@ -92,7 +92,7 @@ export function PendingChangesList({
                   disabled={busy}
                   onClick={() => onReject(c.id)}
                 >
-                  Отклонить
+                  {busy ? "…" : "Отклонить"}
                 </button>
               </div>
             </div>

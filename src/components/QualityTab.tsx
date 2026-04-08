@@ -213,7 +213,7 @@ export function QualityTab() {
         <div className="bento-panel-title">
           AutoTuner
           {pendingChanges.length > 0 && (
-            <span className="qk-pending-badge" style={{ marginLeft: 8 }}>
+            <span className="qk-pending-badge qp-inline-badge">
               {pendingChanges.length} ожидает
             </span>
           )}

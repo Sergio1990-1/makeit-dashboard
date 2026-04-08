@@ -5486,6 +5486,10 @@ body::after {
    QUALITY PENDING CHANGES (AutoTuner)
    ══════════════════════════════════════════ */
 
+.qp-inline-badge {
+  margin-left: var(--sp-2);
+}
+
 .qp-empty {
   text-align: center;
   color: var(--gray-400);
