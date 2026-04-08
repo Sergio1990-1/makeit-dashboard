@@ -133,7 +133,7 @@ export function QualityTab() {
             Quality Dashboard
             <span className="audit-header-sub">Метрики качества pipeline-агента</span>
           </div>
-          <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
+          <div className="qk-header-actions">
             {pendingChanges.length > 0 && (
               <span className="qk-pending-badge">{pendingChanges.length} pending</span>
             )}
@@ -151,7 +151,7 @@ export function QualityTab() {
         {snapshot ? (
           <div className="qk-grid">
             {kpis.map((k) => (
-              <div key={k.label} className={`qk-card ${k.color}`}>
+              <div key={k.label} className={`qk-card ${k.color}`} role="group" aria-label={k.label}>
                 <div className="qk-card-value">{k.value}</div>
                 <div className="qk-card-label">{k.label}</div>
                 {k.sub && <div className="qk-card-sub">{k.sub}</div>}
