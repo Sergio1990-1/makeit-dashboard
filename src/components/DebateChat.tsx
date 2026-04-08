@@ -154,11 +154,11 @@ export function DebateChat({ debateId, onBack }: Props) {
   const isError = status?.status === "error";
 
   return (
-    <div className="dc-container">
+    <div className="dc-container" role="region" aria-label="Debate chat">
       {/* ── Header ── */}
       <div className="dc-header">
         <div className="dc-header-left">
-          <button className="btn btn-sm" onClick={onBack}>&larr; Назад</button>
+          <button className="btn btn-sm" onClick={onBack} aria-label="Back to debate list">&larr; Назад</button>
           <div className="dc-header-info">
             <span className="dc-header-id" title={debateId}>
               {debateId.slice(0, 8)}...
@@ -172,7 +172,7 @@ export function DebateChat({ debateId, onBack }: Props) {
         </div>
 
         {status && isRunning && (
-          <div className="dc-progress">
+          <div className="dc-progress" role="progressbar" aria-valuenow={status.progress} aria-valuemin={0} aria-valuemax={100} aria-label={`Debate progress: ${status.progress}%`}>
             <div className="dc-progress-bar">
               <div
                 className="dc-progress-fill"
@@ -193,18 +193,42 @@ export function DebateChat({ debateId, onBack }: Props) {
         )}
       </div>
 
-      {/* ── Loading / Error ── */}
+      {/* ── Loading skeleton ── */}
       {loading && (
-        <div className="dc-loading">Загрузка дебата...</div>
+        <div className="dc-skeleton" aria-busy="true" aria-label="Loading debate">
+          <div className="dc-skeleton-msg">
+            <div className="dc-skeleton-avatar" />
+            <div className="dc-skeleton-body">
+              <div className="dc-skeleton-bar dc-skeleton-name" />
+              <div className="dc-skeleton-bar dc-skeleton-text" />
+              <div className="dc-skeleton-bar dc-skeleton-text-short" />
+            </div>
+          </div>
+          <div className="dc-skeleton-msg">
+            <div className="dc-skeleton-avatar" />
+            <div className="dc-skeleton-body">
+              <div className="dc-skeleton-bar dc-skeleton-name" />
+              <div className="dc-skeleton-bar dc-skeleton-text" />
+            </div>
+          </div>
+          <div className="dc-skeleton-msg">
+            <div className="dc-skeleton-avatar" />
+            <div className="dc-skeleton-body">
+              <div className="dc-skeleton-bar dc-skeleton-name" />
+              <div className="dc-skeleton-bar dc-skeleton-text" />
+              <div className="dc-skeleton-bar dc-skeleton-text-short" />
+            </div>
+          </div>
+        </div>
       )}
-      {error && <div className="error-banner" style={{ margin: "0 16px" }}>{error}</div>}
+      {error && <div className="error-banner" role="alert" style={{ margin: "0 16px" }}>{error}</div>}
 
       {/* ── Chat Area ── */}
-      <div className="dc-chat-area" ref={chatAreaRef}>
+      <div className="dc-chat-area" ref={chatAreaRef} role="log" aria-label="Debate messages" aria-live="polite">
         {groupedMessages.map((group, gi) => (
-          <div key={gi}>
+          <div key={gi} className="dc-round-group">
             {group.roundKey && group.msgs[0].round != null && group.msgs[0].round_type && (
-              <div className="dc-round-divider">
+              <div className="dc-round-divider" role="separator">
                 <span>Round {group.msgs[0].round}: {ROUND_LABEL[group.msgs[0].round_type] ?? group.msgs[0].round_type}</span>
               </div>
             )}
@@ -258,11 +282,13 @@ export function DebateChat({ debateId, onBack }: Props) {
             onKeyDown={handleKeyDown}
             rows={1}
             disabled={sending}
+            aria-label="Moderator message"
           />
           <button
             className="btn btn-sm btn-primary"
             onClick={handleSend}
             disabled={!input.trim() || sending}
+            aria-label={sending ? "Sending message" : "Send message"}
           >
             {sending ? "..." : "Send"}
           </button>
