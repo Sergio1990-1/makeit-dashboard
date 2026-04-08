@@ -237,7 +237,9 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
     return Number(localStorage.getItem("pipeline_limit")) || 4;
   });
   const [complexityFilter, setComplexityFilter] = useState<ComplexityFilter>(() => {
-    return (localStorage.getItem("pipeline_complexity") as ComplexityFilter) || "all";
+    const stored = localStorage.getItem("pipeline_complexity");
+    const valid: ComplexityFilter[] = ["auto", "assisted", "all"];
+    return stored && valid.includes(stored as ComplexityFilter) ? (stored as ComplexityFilter) : "all";
   });
 
   useEffect(() => {
