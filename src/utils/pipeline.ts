@@ -201,6 +201,41 @@ export async function fetchResearchStatus(id: string): Promise<ResearchAgentStat
   return res.json() as Promise<ResearchAgentStatus>;
 }
 
+// ---------------------------------------------------------------------------
+// Complexity classification
+// ---------------------------------------------------------------------------
+
+export interface ClassifyResult {
+  number: number;
+  category: string;
+  score: number;
+  reason: string;
+}
+
+export interface ClassifyResponse {
+  classified: number;
+  results: ClassifyResult[];
+}
+
+export async function classifyIssues(
+  project: string,
+  issueNumbers?: number[],
+): Promise<ClassifyResponse> {
+  const body: Record<string, unknown> = { project };
+  if (issueNumbers?.length) body.issue_numbers = issueNumbers;
+
+  const res = await fetch(`${PIPELINE_BASE_URL}/pipeline/classify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+    throw new Error((err as { detail: string }).detail ?? `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<ClassifyResponse>;
+}
+
 export async function fetchResearchHistory(project: string): Promise<ResearchHistoryItem[]> {
   const res = await fetch(
     `${PIPELINE_BASE_URL}/research/history?project=${encodeURIComponent(project)}`,

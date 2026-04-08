@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { usePipeline } from "../hooks/usePipeline";
 import { GITHUB_OWNER, PROJECTS } from "../utils/config";
 import type { PipelineStageEntry, ComplexityFilter, ComplexityLevel } from "../utils/pipeline";
+import { classifyIssues } from "../utils/pipeline";
 import type { ProjectData } from "../types";
 import { PipelineClosedChart } from "./PipelineClosedChart";
 
@@ -301,6 +302,23 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
     );
   }
 
+  const [classifying, setClassifying] = useState(false);
+
+  async function handleClassify() {
+    if (!selectedProject || classifying) return;
+    setClassifying(true);
+    try {
+      const res = await classifyIssues(selectedProject);
+      if (res.classified > 0) {
+        void loadStats(selectedProject);
+      }
+    } catch (e) {
+      console.error("classify failed:", e);
+    } finally {
+      setClassifying(false);
+    }
+  }
+
   function handleStart() {
     void start({
       project: selectedProject || undefined,
@@ -487,6 +505,16 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
           <div style={{ flex: 1 }} />
 
           {/* Actions */}
+          {!isRunning && stats?.complexity_breakdown && stats.complexity_breakdown.unclassified > 0 && (
+            <button
+              className="btn"
+              style={{ padding: "6px 16px" }}
+              onClick={() => void handleClassify()}
+              disabled={classifying || !selectedProject}
+            >
+              {classifying ? "Классификация..." : `Classify ${stats.complexity_breakdown.unclassified}`}
+            </button>
+          )}
           {!isRunning && (
             <button className="btn btn-primary" style={{ padding: "6px 16px" }} onClick={handleStart} disabled={starting}>
               {starting ? "Запуск..." : "Запустить"}
