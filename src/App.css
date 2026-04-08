@@ -5282,3 +5282,202 @@ body::after {
     grid-template-columns: 1fr;
   }
 }
+
+/* ══════════════════════════════════════════
+   QUALITY RETROS
+   ══════════════════════════════════════════ */
+
+.qr-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--sp-3);
+}
+
+.qr-list-count {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.qr-empty {
+  text-align: center;
+  color: var(--gray-400);
+  font-size: var(--text-sm);
+  padding: var(--sp-6);
+}
+
+.qr-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.qr-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: inherit;
+  font: inherit;
+}
+
+.qr-item:hover {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 4%, transparent);
+}
+
+.qr-item-period {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  margin-bottom: 4px;
+}
+
+.qr-item-summary {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.qr-item-stats {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.qr-stat {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  background: color-mix(in srgb, var(--color-border) 40%, transparent);
+  padding: 1px 8px;
+  border-radius: var(--radius);
+}
+
+.qr-detail-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+.qr-detail-title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.qr-detail-section {
+  margin-bottom: var(--sp-4);
+}
+
+.qr-detail-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--sp-2);
+}
+
+.qr-detail-text {
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.qr-patterns {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.qr-pattern {
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.qr-pattern-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.qr-pattern-name {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.qr-pattern-count {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  padding: 1px 8px;
+  border-radius: var(--radius);
+}
+
+.qr-pattern-examples {
+  margin: 4px 0 0;
+  padding-left: var(--sp-4);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.qr-pattern-examples li {
+  margin-bottom: 2px;
+}
+
+.qr-recommendations {
+  margin: 0;
+  padding-left: var(--sp-4);
+  font-size: var(--text-sm);
+  line-height: 1.8;
+}
+
+.qr-rule-changes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.qr-rule-change {
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.qr-rule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.qr-rule-name {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.qr-rule-action {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.qr-rule-action--add { background: color-mix(in srgb, var(--color-success) 15%, transparent); color: var(--color-success); }
+.qr-rule-action--modify { background: color-mix(in srgb, var(--color-caution) 15%, transparent); color: var(--color-caution); }
+.qr-rule-action--remove { background: color-mix(in srgb, var(--color-danger) 15%, transparent); color: var(--color-danger); }
+
+.qr-rule-rationale {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
