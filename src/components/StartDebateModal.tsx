@@ -112,6 +112,7 @@ export function StartDebateModal({ onClose, onStarted }: Props) {
         context_files: contextFilesList.length > 0 ? contextFilesList : undefined,
         participants,
       });
+      setStarting(false);
       onStarted(result.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка запуска дебата");
