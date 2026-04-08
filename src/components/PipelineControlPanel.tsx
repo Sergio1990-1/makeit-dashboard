@@ -549,7 +549,10 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
       )}
 
       {/* ── Complexity analytics ── */}
-      {stats?.complexity_breakdown && (
+      {stats?.complexity_breakdown && (() => {
+        const breakdown = stats.complexity_breakdown;
+        const total = breakdown.auto + breakdown.assisted + breakdown.manual;
+        return (
         <div className="bento-panel span-6">
           <div className="bento-panel-title">Сложность</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
@@ -558,8 +561,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
               { key: "assisted" as const, label: "Assisted", color: "var(--orange-500)" },
               { key: "manual" as const, label: "Manual", color: "var(--red-500)" },
             ] as const).map((item) => {
-              const count = stats.complexity_breakdown![item.key];
-              const total = stats.complexity_breakdown!.auto + stats.complexity_breakdown!.assisted + stats.complexity_breakdown!.manual;
+              const count = breakdown[item.key];
               const pct = total > 0 ? Math.round((count / total) * 100) : 0;
               return (
                 <div key={item.key} style={{ textAlign: "center" }}>
@@ -604,7 +606,8 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
             </div>
           )}
         </div>
-      )}
+        );
+      })()}
 
       {/* ── Live tasks ── */}
       {isRunning && status && (
