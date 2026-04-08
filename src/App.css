@@ -5221,3 +5221,64 @@ body::after {
     gap: 4px;
   }
 }
+
+/* ══════════════════════════════════════════
+   QUALITY BAR CHARTS (Findings + Errors)
+   ══════════════════════════════════════════ */
+
+.qbc-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--sp-4);
+}
+
+.qbc-wrap {
+  padding: var(--sp-2) 0;
+}
+
+.qbc-svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.qbc-label {
+  font-size: 11px;
+  fill: var(--color-text-secondary);
+  text-anchor: end;
+  dominant-baseline: middle;
+}
+
+.qbc-bar-bg {
+  fill: color-mix(in srgb, var(--color-border) 30%, transparent);
+}
+
+.qbc-bar-fill {
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+
+.qbc-bar-fill:hover {
+  opacity: 1;
+}
+
+.qbc-value {
+  font-size: 11px;
+  fill: var(--color-text-secondary);
+  text-anchor: start;
+  dominant-baseline: middle;
+  font-weight: 600;
+}
+
+.qbc-empty {
+  text-align: center;
+  color: var(--gray-400);
+  font-size: var(--text-sm);
+  padding: var(--sp-4);
+}
+
+@media (max-width: 768px) {
+  .qbc-row {
+    grid-template-columns: 1fr;
+  }
+}
