@@ -222,6 +222,9 @@ export interface ClassifyProgress {
   done: number;
   total: number;
   current: string;
+  error?: string;
+  label_failed?: boolean;
+  breakdown: { auto: number; assisted: number; manual: number; errors: number };
 }
 
 export async function classifyIssues(
@@ -249,6 +252,7 @@ export async function classifyIssues(
   const decoder = new TextDecoder();
   let buffer = "";
   let finalResult: ClassifyResponse = { classified: 0, results: [] };
+  const breakdown = { auto: 0, assisted: 0, manual: 0, errors: 0 };
 
   for (;;) {
     const { done, value } = await reader.read();
@@ -260,9 +264,32 @@ export async function classifyIssues(
 
     for (const line of lines) {
       if (!line.trim()) continue;
-      const event = JSON.parse(line) as { type: string; done?: number; total?: number; current?: string; classified?: number; results?: ClassifyResult[] };
+      const event = JSON.parse(line) as {
+        type: string;
+        done?: number;
+        total?: number;
+        current?: string;
+        error?: string;
+        label_failed?: boolean;
+        classified?: number;
+        results?: ClassifyResult[];
+      };
       if (event.type === "progress" && onProgress) {
-        onProgress({ done: event.done!, total: event.total!, current: event.current! });
+        // Parse category from "current" field: "#450 → assisted"
+        const cat = event.current?.split("→")[1]?.trim();
+        if (cat === "auto") breakdown.auto++;
+        else if (cat === "assisted") breakdown.assisted++;
+        else if (cat === "manual") breakdown.manual++;
+        else if (cat === "error") breakdown.errors++;
+
+        onProgress({
+          done: event.done!,
+          total: event.total!,
+          current: event.current!,
+          error: event.error,
+          label_failed: event.label_failed,
+          breakdown: { ...breakdown },
+        });
       } else if (event.type === "done") {
         finalResult = { classified: event.classified!, results: event.results! };
       }

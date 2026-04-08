@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { usePipeline } from "../hooks/usePipeline";
 import { GITHUB_OWNER, PROJECTS } from "../utils/config";
-import type { PipelineStageEntry, ComplexityFilter, ComplexityLevel } from "../utils/pipeline";
+import type { PipelineStageEntry, ComplexityFilter, ComplexityLevel, ClassifyProgress, ClassifyResponse } from "../utils/pipeline";
 import { classifyIssues } from "../utils/pipeline";
 import type { ProjectData } from "../types";
 import { PipelineClosedChart } from "./PipelineClosedChart";
@@ -314,26 +314,39 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
     );
   }
 
+  const [classifyDialogOpen, setClassifyDialogOpen] = useState(false);
   const [classifying, setClassifying] = useState(false);
-  const [classifyProgress, setClassifyProgress] = useState<string | null>(null);
+  const [classifyProgress, setClassifyProgress] = useState<ClassifyProgress | null>(null);
+  const [classifyResult, setClassifyResult] = useState<ClassifyResponse | null>(null);
+  const [classifyError, setClassifyError] = useState<string | null>(null);
 
   async function handleClassify() {
     if (!selectedProject || classifying) return;
+    setClassifyDialogOpen(true);
     setClassifying(true);
-    setClassifyProgress("0/?");
+    setClassifyProgress(null);
+    setClassifyResult(null);
+    setClassifyError(null);
     try {
       const res = await classifyIssues(selectedProject, undefined, (p) => {
-        setClassifyProgress(`${p.done}/${p.total}`);
+        setClassifyProgress(p);
       });
+      setClassifyResult(res);
       if (res.classified > 0) {
         void loadStats(selectedProject);
       }
     } catch (e) {
-      console.error("classify failed:", e);
+      setClassifyError(e instanceof Error ? e.message : String(e));
     } finally {
       setClassifying(false);
-      setClassifyProgress(null);
     }
+  }
+
+  function closeClassifyDialog() {
+    setClassifyDialogOpen(false);
+    setClassifyProgress(null);
+    setClassifyResult(null);
+    setClassifyError(null);
   }
 
   function handleStart() {
@@ -529,9 +542,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
               onClick={() => void handleClassify()}
               disabled={classifying || !selectedProject}
             >
-              {classifying
-                ? `Classify ${classifyProgress ?? "..."}`
-                : `Classify ${stats.complexity_breakdown.unclassified}`}
+              Classify {stats.complexity_breakdown.unclassified}
             </button>
           )}
           {!isRunning && (
@@ -888,6 +899,106 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
           50% { opacity: 0.4; }
         }
       `}</style>
+
+      {/* Classify progress modal */}
+      {classifyDialogOpen && (
+        <div
+          className="dialog-overlay"
+          onClick={(e) => { if (e.target === e.currentTarget && !classifying) closeClassifyDialog(); }}
+        >
+          <div className="dialog" style={{ maxWidth: 480 }}>
+            <div className="dialog-header">
+              <h3 className="dialog-title">
+                {classifying && "Классификация issues..."}
+                {!classifying && classifyResult && "Классификация завершена"}
+                {!classifying && classifyError && "Ошибка классификации"}
+              </h3>
+              {!classifying && (
+                <button className="dialog-close" onClick={closeClassifyDialog}>✕</button>
+              )}
+            </div>
+
+            <div className="dialog-body">
+              {classifying && (
+                <div className="dialog-spinner-wrap">
+                  <div className="dialog-spinner" />
+                  {classifyProgress ? (
+                    <>
+                      <p className="dialog-hint">
+                        {classifyProgress.current}
+                      </p>
+                      <div className="dialog-progress-track" style={{ marginTop: 8 }}>
+                        <div
+                          className="dialog-progress-fill"
+                          style={{ width: `${(classifyProgress.done / Math.max(classifyProgress.total, 1)) * 100}%` }}
+                        />
+                      </div>
+                      <p className="dialog-hint" style={{ marginTop: 6, fontSize: 13 }}>
+                        {classifyProgress.done} / {classifyProgress.total} ({Math.round((classifyProgress.done / Math.max(classifyProgress.total, 1)) * 100)}%)
+                      </p>
+                      <p className="dialog-hint" style={{ marginTop: 12, fontSize: 13 }}>
+                        <span style={{ color: "var(--color-success)" }}>auto: {classifyProgress.breakdown.auto}</span>
+                        {" · "}
+                        <span style={{ color: "var(--color-primary)" }}>assisted: {classifyProgress.breakdown.assisted}</span>
+                        {" · "}
+                        <span style={{ color: "var(--color-danger)" }}>manual: {classifyProgress.breakdown.manual}</span>
+                        {classifyProgress.breakdown.errors > 0 && (
+                          <>
+                            {" · "}
+                            <span style={{ color: "var(--color-text-muted)" }}>errors: {classifyProgress.breakdown.errors}</span>
+                          </>
+                        )}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="dialog-hint">Загрузка issues...</p>
+                  )}
+                </div>
+              )}
+
+              {!classifying && classifyResult && (
+                <div>
+                  <div style={{ display: "flex", gap: 16, justifyContent: "center", marginBottom: 16 }}>
+                    {classifyProgress && (
+                      <>
+                        <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 28, fontWeight: 700, color: "var(--color-success)" }}>{classifyProgress.breakdown.auto}</div>
+                          <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Auto</div>
+                        </div>
+                        <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 28, fontWeight: 700, color: "var(--color-primary)" }}>{classifyProgress.breakdown.assisted}</div>
+                          <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Assisted</div>
+                        </div>
+                        <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 28, fontWeight: 700, color: "var(--color-danger)" }}>{classifyProgress.breakdown.manual}</div>
+                          <div style={{ fontSize: 12, color: "var(--color-text-muted)" }}>Manual</div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <p className="dialog-hint" style={{ textAlign: "center" }}>
+                    Классифицировано {classifyResult.classified} issues
+                  </p>
+                </div>
+              )}
+
+              {!classifying && classifyError && (
+                <div className="dialog-error" style={{ marginTop: 8 }}>
+                  {classifyError}
+                </div>
+              )}
+            </div>
+
+            <div className="dialog-footer dialog-footer--end">
+              {!classifying && (
+                <button className="btn btn-primary" onClick={closeClassifyDialog}>
+                  Закрыть
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
