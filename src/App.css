@@ -6367,6 +6367,107 @@ body::after {
 }
 
 /* ── Responsive ── */
+/* ── ADR Preview ── */
+.dc-adr {
+  margin-top: var(--sp-4);
+  padding: var(--sp-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.dc-adr-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+.dc-adr-toggle {
+  background: none;
+  border: none;
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: 0;
+}
+.dc-adr-toggle:hover {
+  color: var(--color-primary);
+}
+.dc-adr-actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+.dc-adr-content {
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  color: var(--color-text);
+}
+.dc-adr-content--collapsed {
+  max-height: 140px;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+}
+.dc-adr-content--expanded {
+  max-height: none;
+}
+.dc-adr-content h1,
+.dc-adr-content h2,
+.dc-adr-content h3 {
+  margin: var(--sp-3) 0 var(--sp-2);
+  color: var(--color-text);
+}
+.dc-adr-content h1 { font-size: 1.1rem; }
+.dc-adr-content h2 { font-size: 1rem; }
+.dc-adr-content h3 { font-size: var(--text-sm); }
+.dc-adr-content p {
+  margin: 0 0 var(--sp-2);
+}
+.dc-adr-content ul,
+.dc-adr-content ol {
+  margin: 0 0 var(--sp-2);
+  padding-left: var(--sp-5);
+}
+.dc-adr-content code {
+  padding: 1px 4px;
+  background: var(--color-bg);
+  border-radius: 3px;
+  font-size: 0.9em;
+  font-family: var(--font-mono, monospace);
+}
+.dc-adr-content pre {
+  padding: var(--sp-3);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  margin: 0 0 var(--sp-2);
+}
+.dc-adr-content pre code {
+  background: none;
+  padding: 0;
+}
+.dc-adr-content blockquote {
+  margin: 0 0 var(--sp-2);
+  padding-left: var(--sp-3);
+  border-left: 3px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+.dc-adr-expand {
+  display: block;
+  margin-top: var(--sp-2);
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  padding: 0;
+}
+.dc-adr-expand:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 768px) {
   .dc-header {
     flex-direction: column;
@@ -6378,5 +6479,9 @@ body::after {
   }
   .dc-progress-bar {
     flex: 1;
+  }
+  .dc-adr-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
