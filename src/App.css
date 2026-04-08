@@ -5820,10 +5820,12 @@ body::after {
 }
 
 .debate-row {
-  cursor: pointer;
   transition: background 0.15s;
 }
-.debate-row:hover {
+.debate-row.debate-row--clickable {
+  cursor: pointer;
+}
+.debate-row.debate-row--clickable:hover {
   background: var(--color-surface-hover);
 }
 
@@ -5896,4 +5898,109 @@ body::after {
   .debate-topic {
     max-width: 180px;
   }
+}
+
+/* ── Start Debate Modal ── */
+
+.sdm-panel {
+  max-width: 560px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.sdm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--sp-4);
+}
+.sdm-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-4);
+}
+.sdm-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+.sdm-required {
+  color: var(--color-danger);
+}
+.sdm-input,
+.sdm-select,
+.sdm-textarea {
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s;
+}
+.sdm-input:focus,
+.sdm-select:focus,
+.sdm-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+.sdm-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+.sdm-select-sm {
+  flex: 1;
+}
+.sdm-hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+.sdm-brief-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+.sdm-char-count {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+.sdm-char-warn {
+  font-size: var(--text-xs);
+  color: var(--color-warning);
+  font-weight: 600;
+}
+.sdm-participants {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.sdm-participant-row {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+}
+.sdm-remove-btn {
+  flex-shrink: 0;
+  width: 32px;
+  padding: 0;
+  text-align: center;
+}
+.sdm-validation {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-md);
+  padding: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+.sdm-validation-item {
+  font-size: var(--text-xs);
+  color: var(--color-danger);
+  padding: 2px 0;
 }
