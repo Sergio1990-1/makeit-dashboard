@@ -4,10 +4,13 @@ const PIPELINE_BASE_URL =
   (window as unknown as { __MAKEIT_CONFIG__?: { PIPELINE_URL?: string } }).__MAKEIT_CONFIG__?.PIPELINE_URL
   ?? "http://127.0.0.1:8766";
 
+export type ComplexityFilter = "auto" | "assisted" | "all";
+
 export interface PipelineStartRequest {
   project?: string;
   labels?: string[];
   limit?: number;
+  complexity_filter?: ComplexityFilter;
 }
 
 export interface PipelineStageEntry {
