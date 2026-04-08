@@ -1,4 +1,10 @@
-import type { RetroSummary, RetroDetail } from "../types";
+import type { RetroSummary, RetroDetail, RuleChangeAction } from "../types";
+
+const VALID_ACTIONS: RuleChangeAction[] = ["add", "modify", "remove"];
+
+function actionClass(action: RuleChangeAction): string {
+  return VALID_ACTIONS.includes(action) ? `qr-rule-action--${action}` : "";
+}
 
 // ── RetroList ───────────────────────────────────────────────────────
 
@@ -122,7 +128,7 @@ export function RetroDetailView({ detail, onBack }: RetroDetailProps) {
               <div key={i} className="qr-rule-change">
                 <div className="qr-rule-header">
                   <span className="qr-rule-name">{rc.rule}</span>
-                  <span className={`qr-rule-action qr-rule-action--${rc.action}`}>
+                  <span className={`qr-rule-action ${actionClass(rc.action)}`}>
                     {rc.action}
                   </span>
                 </div>
