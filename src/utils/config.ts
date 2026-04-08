@@ -113,6 +113,11 @@ export function clearAuth(): void {
   localStorage.removeItem(AUTH_KEY);
 }
 
+// Pipeline API base URL (shared by pipeline.ts, quality.ts, debate.ts, transcript.ts)
+export const PIPELINE_BASE_URL =
+  (window as unknown as { __MAKEIT_CONFIG__?: { PIPELINE_URL?: string } }).__MAKEIT_CONFIG__?.PIPELINE_URL
+  ?? "http://127.0.0.1:8766";
+
 // Map repo name → keywords to match against monitor name/url
 export const MONITOR_MATCH: Record<string, string[]> = {
   "Sewing-ERP": ["8001", "sewing"],

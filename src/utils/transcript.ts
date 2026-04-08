@@ -1,11 +1,6 @@
 /** API client for the makeit-pipeline transcript processor. */
 
-function getBaseUrl(): string {
-  return (
-    (window as unknown as { __MAKEIT_CONFIG__?: { PIPELINE_URL?: string } }).__MAKEIT_CONFIG__?.PIPELINE_URL
-    ?? "http://127.0.0.1:8766"
-  );
-}
+import { PIPELINE_BASE_URL } from "./config";
 
 export interface TranscriptUploadResponse {
   task_id: string;
@@ -51,7 +46,7 @@ function mapStatusToStage(status: string, backendStage?: string): TranscriptStag
 }
 
 export async function fetchTranscriptStatus(taskId: string): Promise<TranscriptStatus> {
-  const res = await fetch(`${getBaseUrl()}/transcript/status/${encodeURIComponent(taskId)}`, {
+  const res = await fetch(`${PIPELINE_BASE_URL}/transcript/status/${encodeURIComponent(taskId)}`, {
     cache: "no-store",
   });
   if (!res.ok) {
@@ -80,7 +75,7 @@ export interface TranscriptResult {
 }
 
 export async function fetchTranscriptResult(taskId: string): Promise<TranscriptResult> {
-  const res = await fetch(`${getBaseUrl()}/transcript/result/${encodeURIComponent(taskId)}`, {
+  const res = await fetch(`${PIPELINE_BASE_URL}/transcript/result/${encodeURIComponent(taskId)}`, {
     cache: "no-store",
   });
   if (!res.ok) {
@@ -107,7 +102,7 @@ export interface TranscriptListItem {
 }
 
 export async function fetchTranscriptList(): Promise<TranscriptListItem[]> {
-  const res = await fetch(`${getBaseUrl()}/transcript/list`, {
+  const res = await fetch(`${PIPELINE_BASE_URL}/transcript/list`, {
     cache: "no-store",
   });
   if (!res.ok) {
@@ -130,7 +125,7 @@ export async function saveTranscriptBrief(
   brief: string,
 ): Promise<void> {
   const res = await fetch(
-    `${getBaseUrl()}/transcript/result/${encodeURIComponent(taskId)}`,
+    `${PIPELINE_BASE_URL}/transcript/result/${encodeURIComponent(taskId)}`,
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -153,7 +148,7 @@ export async function uploadTranscript(
   form.append("project_context", project);
   form.append("transcription_model", transcriptionModel);
 
-  const res = await fetch(`${getBaseUrl()}/transcript/upload`, {
+  const res = await fetch(`${PIPELINE_BASE_URL}/transcript/upload`, {
     method: "POST",
     body: form,
   });
@@ -167,7 +162,7 @@ export async function uploadTranscript(
 
 export async function deleteTranscript(taskId: string): Promise<void> {
   const res = await fetch(
-    `${getBaseUrl()}/transcript/${encodeURIComponent(taskId)}`,
+    `${PIPELINE_BASE_URL}/transcript/${encodeURIComponent(taskId)}`,
     { method: "DELETE" },
   );
   if (!res.ok) {

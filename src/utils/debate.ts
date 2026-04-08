@@ -7,10 +7,7 @@ import type {
   DebateListItem,
   UserMessageRequest,
 } from "../types/debate";
-
-const PIPELINE_BASE_URL =
-  (window as unknown as { __MAKEIT_CONFIG__?: { PIPELINE_URL?: string } }).__MAKEIT_CONFIG__?.PIPELINE_URL
-  ?? "http://127.0.0.1:8766";
+import { PIPELINE_BASE_URL } from "./config";
 
 export async function startDebate(req: DebateStartRequest): Promise<{ id: string }> {
   const res = await fetch(`${PIPELINE_BASE_URL}/pipeline/debate/start`, {
