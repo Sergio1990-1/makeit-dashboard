@@ -192,7 +192,7 @@ export function QualityTab() {
 
       {/* Findings & Errors bar charts */}
       {(findings || errorsData) && (
-        <div className="qbc-row">
+        <div className="qbc-row span-12">
           {findings && Object.keys(findings.categories).length > 0 && (
             <div className="bento-panel span-6 panel-projects">
               <div className="bento-panel-title">Findings по категориям</div>
