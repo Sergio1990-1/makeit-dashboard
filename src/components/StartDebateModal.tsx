@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { startDebate } from "../utils/debate";
 import { GITHUB_OWNER, PROJECTS } from "../utils/config";
 import type { DebateParticipant } from "../types/debate";
@@ -120,7 +121,7 @@ export function StartDebateModal({ onClose, onStarted }: Props) {
     }
   };
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="sdm-title">
       <div className="modal-panel sdm-panel" onClick={(e) => e.stopPropagation()}>
         <div className="sdm-header">
@@ -276,6 +277,7 @@ export function StartDebateModal({ onClose, onStarted }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
