@@ -3,8 +3,13 @@ import type { QualitySnapshot, QualityTrends } from "../types";
 
 // ── KPI metric definitions ──────────────────────────────────────────
 
+/** Keys of QualitySnapshot that hold numeric (or nullable numeric) values. */
+type NumericSnapshotKey = {
+  [K in keyof QualitySnapshot]: QualitySnapshot[K] extends number | number | null ? K : never;
+}[keyof QualitySnapshot];
+
 interface MetricDef {
-  key: keyof QualitySnapshot;
+  key: NumericSnapshotKey;
   label: string;
   color: string;
   format: (v: number | null) => string;
