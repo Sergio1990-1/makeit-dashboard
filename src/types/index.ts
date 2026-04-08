@@ -97,7 +97,7 @@ export interface Filters {
   status: IssueStatus | null;
 }
 
-export type TabId = "dashboard" | "projects" | "milestones" | "uptime" | "audit" | "ux-audit" | "pipeline" | "transcripts" | "research" | "specs";
+export type TabId = "dashboard" | "projects" | "milestones" | "uptime" | "audit" | "ux-audit" | "pipeline" | "transcripts" | "research" | "specs" | "quality";
 
 // ── Research / Discovery ──
 
@@ -355,6 +355,113 @@ export interface PrdData {
   author: string;
   date: string;
   priority: string;
+}
+
+// ══════════════════════════════════════════
+// QUALITY DASHBOARD TYPES
+// ══════════════════════════════════════════
+
+export interface QualitySnapshot {
+  period_start: string;
+  period_end: string;
+  total_issues: number;
+  merged_count: number;
+  error_count: number;
+  first_pass_success_rate: number;
+  retry_rate: number;
+  avg_finding_density: number;
+  avg_duration_sec: number;
+  error_recovery_rate: number;
+  qa_pass_rate: number | null;
+  rollback_rate: number;
+  top_finding_categories: [string, number][];
+  top_error_classes: [string, number][];
+}
+
+export interface QualityTrends {
+  snapshots: QualitySnapshot[];
+  trends: Record<string, string>;
+}
+
+export interface QualityFindingsDistribution {
+  categories: Record<string, number>;
+  by_week: QualityFindingsWeek[];
+}
+
+export interface QualityFindingsWeek {
+  period_start: string;
+  categories: Record<string, number>;
+}
+
+export interface QualityErrorsDistribution {
+  classes: Record<string, number>;
+  by_week: QualityErrorsWeek[];
+}
+
+export interface QualityErrorsWeek {
+  period_start: string;
+  classes: Record<string, number>;
+}
+
+export type PendingChangeStatus = "pending" | "applied" | "rejected" | "rolled_back";
+
+export interface PendingChange {
+  id: string;
+  created_at: string;
+  retro_period: string;
+  tier: number;
+  target: string;
+  change_type: string;
+  content: string;
+  rationale: string;
+  confidence: number;
+  status: PendingChangeStatus;
+  applied_at: string | null;
+  backup_path: string | null;
+  pr_url: string | null;
+}
+
+export interface TuningApplyResult {
+  status: string;
+  pr_url: string | null;
+}
+
+export interface TuningActionResult {
+  status: string;
+}
+
+export interface RetroSummary {
+  period: string;
+  summary: string;
+  patterns_count: number;
+  recommendations_count: number;
+  rule_changes_count: number;
+}
+
+export interface RetroDetail {
+  period: string;
+  summary: string;
+  top_patterns: RetroPattern[];
+  recommendations: string[];
+  proposed_rule_changes: RetroRuleChange[];
+  [key: string]: unknown;
+}
+
+export interface RetroPattern {
+  pattern: string;
+  count: number;
+  examples: string[];
+}
+
+export interface RetroRuleChange {
+  rule: string;
+  action: string;
+  rationale: string;
+}
+
+export interface RetroRunResult {
+  status: string;
+  period: string;
 }
 
 export interface SpecsProject {
