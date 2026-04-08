@@ -378,9 +378,11 @@ export interface QualitySnapshot {
   top_error_classes: [string, number][];
 }
 
+export type TrendDirection = "up" | "down" | "flat";
+
 export interface QualityTrends {
   snapshots: QualitySnapshot[];
-  trends: Record<string, string>;
+  trends: Record<string, TrendDirection>;
 }
 
 export interface QualityFindingsDistribution {
