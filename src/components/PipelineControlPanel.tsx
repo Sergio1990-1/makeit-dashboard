@@ -63,7 +63,8 @@ const STATUS_LABEL: Record<string, string> = {
   in_review: "На ревью",
   retry: "Повтор",
   done: "Готово",
-  needs_human: "Ручное",
+  needs_human: "Нужен человек",
+  rolled_back: "Откат",
 };
 
 const VERDICT_STYLE: Record<string, { color: string; bg: string }> = {
@@ -84,33 +85,34 @@ function formatDuration(seconds: number): string {
 }
 
 function isTaskFinished(stages: PipelineStageEntry[]): boolean {
-  // Task is done when merge or dev/review reached completed/failed
-  return stages.some(
-    (s) => s.stage === "merge" && (s.status === "completed" || s.status === "failed"),
-  ) || stages.some(
-    (s) => s.status === "failed" && (s.stage === "dev" || s.stage === "review"),
-  );
+  // Task is done when merge completed/failed, or qa_verify/dev/review failed terminally
+  const last = stages[stages.length - 1];
+  if (!last) return false;
+  if (last.stage === "merge") return last.status === "completed" || last.status === "failed";
+  if (last.status === "failed" && ["dev", "review", "qa_verify"].includes(last.stage)) return true;
+  // needs_human is a terminal status
+  return false;
 }
 
-function getElapsedSeconds(stages: PipelineStageEntry[] | undefined): number | null {
-  if (!stages?.length) return null;
-  const first = stages[0];
-  // Find the max elapsed from any stage
-  if (isTaskFinished(stages)) {
-    let maxElapsed = 0;
-    for (const s of stages) {
-      if (s.elapsed != null && s.elapsed > maxElapsed) maxElapsed = s.elapsed;
-    }
-    return maxElapsed || (stages[stages.length - 1].ts - first.ts);
+function getMaxElapsed(stages: PipelineStageEntry[]): number {
+  let maxElapsed = 0;
+  for (const s of stages) {
+    if (s.elapsed != null && s.elapsed > maxElapsed) maxElapsed = s.elapsed;
   }
-  // Active task — compute from first timestamp
-  return (Date.now() / 1000) - first.ts;
+  return maxElapsed || (stages[stages.length - 1].ts - stages[0].ts);
 }
 
-function LiveTimer({ stages }: { stages?: PipelineStageEntry[] }) {
+function getElapsedSeconds(stages: PipelineStageEntry[] | undefined, finished?: boolean): number | null {
+  if (!stages?.length) return null;
+  if (finished || isTaskFinished(stages)) return getMaxElapsed(stages);
+  // Active task — compute from first timestamp
+  return (Date.now() / 1000) - stages[0].ts;
+}
+
+function LiveTimer({ stages, finished }: { stages?: PipelineStageEntry[]; finished?: boolean }) {
   const [, setTick] = useState(0);
-  const elapsed = getElapsedSeconds(stages);
-  const isActive = stages?.length ? !isTaskFinished(stages) : false;
+  const elapsed = getElapsedSeconds(stages, finished);
+  const isActive = finished ? false : (stages?.length ? !isTaskFinished(stages) : false);
 
   useEffect(() => {
     if (!isActive) return;
@@ -827,7 +829,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                   )}
 
                   {/* Duration */}
-                  <LiveTimer stages={r.stages} />
+                  <LiveTimer stages={r.stages} finished />
 
                   {/* Spacer */}
                   <div style={{ flex: 1 }} />
@@ -855,7 +857,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                     </a>
                   )}
 
-                  {/* Error tooltip */}
+                  {/* Error — short message */}
                   {r.error && (
                     <span
                       title={r.error}
@@ -863,9 +865,13 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                         fontSize: "var(--text-xs)",
                         color: "var(--red-500)",
                         cursor: "help",
+                        maxWidth: 200,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
                     >
-                      err
+                      {r.error.length > 40 ? r.error.slice(0, 37) + "…" : r.error}
                     </span>
                   )}
                 </div>
