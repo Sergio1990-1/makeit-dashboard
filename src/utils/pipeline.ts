@@ -135,3 +135,79 @@ export async function stopPipeline(): Promise<string> {
   const data = (await res.json()) as { message: string };
   return data.message;
 }
+
+/* ══════════════════════════════════════════
+   RESEARCH / DISCOVERY AGENTS
+   ══════════════════════════════════════════ */
+
+export interface ResearchStartRequest {
+  project: string;
+  product_description?: string;
+  region?: string;
+}
+
+export interface ResearchAgentStatus {
+  id: string;
+  agent: "research" | "discovery";
+  project: string;
+  status: "queued" | "running" | "done" | "error";
+  progress: number;
+  stage: string;
+  error?: string;
+  started_at: string;
+  finished_at?: string;
+}
+
+export interface ResearchHistoryItem {
+  id: string;
+  agent: "research" | "discovery";
+  project: string;
+  status: "done" | "error";
+  started_at: string;
+  finished_at: string;
+}
+
+export async function startResearchAgent(req: ResearchStartRequest): Promise<{ id: string }> {
+  const res = await fetch(`${PIPELINE_BASE_URL}/research/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    const err = (() => { try { return JSON.parse(body); } catch { return { detail: `HTTP ${res.status}` }; } })();
+    throw new Error((err as { detail: string }).detail ?? `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<{ id: string }>;
+}
+
+export async function startDiscoveryAgent(project: string): Promise<{ id: string }> {
+  const res = await fetch(`${PIPELINE_BASE_URL}/discovery/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ project }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    const err = (() => { try { return JSON.parse(body); } catch { return { detail: `HTTP ${res.status}` }; } })();
+    throw new Error((err as { detail: string }).detail ?? `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<{ id: string }>;
+}
+
+export async function fetchResearchStatus(id: string): Promise<ResearchAgentStatus> {
+  const res = await fetch(`${PIPELINE_BASE_URL}/research/status/${encodeURIComponent(id)}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json() as Promise<ResearchAgentStatus>;
+}
+
+export async function fetchResearchHistory(project: string): Promise<ResearchHistoryItem[]> {
+  const res = await fetch(
+    `${PIPELINE_BASE_URL}/research/history?project=${encodeURIComponent(project)}`,
+    { cache: "no-store" },
+  );
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json() as Promise<ResearchHistoryItem[]>;
+}

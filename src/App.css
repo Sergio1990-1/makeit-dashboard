@@ -4681,6 +4681,201 @@ body::after {
   font-style: italic;
 }
 
+/* ── Research: Project Actions ── */
+.rsh-project-actions {
+  display: flex;
+  gap: var(--sp-1);
+  margin-left: var(--sp-2);
+  flex-shrink: 0;
+}
+
+/* ── Research: Empty State ── */
+.rsh-empty {
+  text-align: center;
+  padding: var(--sp-10) var(--sp-4);
+  color: var(--color-text-muted);
+}
+.rsh-empty-icon {
+  margin-bottom: var(--sp-4);
+  color: var(--color-text-faint);
+}
+.rsh-empty h3 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--sp-2);
+}
+.rsh-empty p {
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.6;
+  font-size: var(--text-sm);
+}
+.rsh-empty-warning {
+  margin-top: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--color-warning);
+  display: inline-block;
+}
+
+/* ── Research: Pipeline Warning ── */
+.rsh-pipeline-warning {
+  padding: var(--sp-2) var(--sp-3);
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--color-warning);
+  margin-bottom: var(--sp-3);
+}
+
+/* ── Research: Agent Progress Bar ── */
+.rsh-agent-progress {
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+  background: rgba(139, 92, 246, 0.06);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: var(--radius-sm);
+}
+.rsh-agent-progress--done {
+  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.15);
+}
+.rsh-agent-progress--error {
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+.rsh-agent-progress-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.rsh-agent-progress-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.rsh-agent-progress-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--purple-500);
+  animation: rsh-pulse 1s infinite;
+}
+.rsh-agent-progress-stage {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-left: auto;
+}
+.rsh-agent-progress-bar {
+  height: 4px;
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-top: var(--sp-2);
+}
+.rsh-agent-progress-fill {
+  height: 100%;
+  background: var(--purple-500);
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease;
+}
+.rsh-agent-progress--done .rsh-agent-progress-fill {
+  background: var(--green-500);
+}
+.rsh-agent-progress--error .rsh-agent-progress-stage {
+  color: var(--color-danger);
+}
+
+/* ── Research: Start Modal ── */
+.srm-panel {
+  max-width: 500px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.srm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--sp-4);
+}
+.srm-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-4);
+}
+.srm-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+.srm-required {
+  color: var(--color-danger);
+}
+.srm-select,
+.srm-textarea {
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s;
+}
+.srm-select:focus,
+.srm-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+.srm-textarea {
+  resize: vertical;
+  min-height: 64px;
+}
+.srm-hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+.srm-info {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--sp-4);
+}
+
+@media (max-width: 768px) {
+  .rsh-project-header {
+    flex-wrap: wrap;
+  }
+  .rsh-project-actions {
+    width: 100%;
+    margin-left: 0;
+    margin-top: var(--sp-2);
+  }
+  .rsh-project-actions .btn {
+    flex: 1;
+  }
+  .srm-panel {
+    max-width: 100%;
+    margin: var(--sp-2);
+  }
+}
+
 /* ── Specs Tracking Tab ── */
 
 .spc-summary {

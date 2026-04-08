@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useResearch } from "../hooks/useResearch";
+import { useResearchAgent } from "../hooks/useResearchAgent";
+import { StartResearchModal } from "./StartResearchModal";
+import { GITHUB_OWNER } from "../utils/config";
 import type { ProjectResearch, ResearchData, DiscoveryData, DiscoverySuggestion } from "../types";
 
 interface Props {
@@ -192,11 +195,51 @@ function DiscoverySection({ discovery }: { discovery: DiscoveryData }) {
   );
 }
 
+// ── Agent Progress Bar ──
+
+function AgentProgressBar({ status, onDismiss }: {
+  status: { agent: string; status: string; progress: number; stage: string; error?: string };
+  onDismiss: () => void;
+}) {
+  const isDone = status.status === "done";
+  const isError = status.status === "error";
+  const isActive = !isDone && !isError;
+  const label = status.agent === "research" ? "Research" : "Discovery";
+
+  return (
+    <div className={`rsh-agent-progress ${isError ? "rsh-agent-progress--error" : isDone ? "rsh-agent-progress--done" : ""}`}>
+      <div className="rsh-agent-progress-header">
+        <span className="rsh-agent-progress-label">
+          {label} Agent
+          {isActive && <span className="rsh-agent-progress-dot" />}
+        </span>
+        <span className="rsh-agent-progress-stage">
+          {isError ? status.error ?? "Ошибка" : isDone ? "Завершён" : status.stage}
+        </span>
+        {(isDone || isError) && (
+          <button className="btn btn-sm" onClick={onDismiss}>✕</button>
+        )}
+      </div>
+      {isActive && (
+        <div className="rsh-agent-progress-bar" role="progressbar" aria-valuenow={status.progress} aria-valuemin={0} aria-valuemax={100}>
+          <div className="rsh-agent-progress-fill" style={{ width: `${status.progress}%` }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Project Panel ──
 
-function ProjectPanel({ pr }: { pr: ProjectResearch }) {
+function ProjectPanel({ pr, onLaunchResearch, onLaunchDiscovery, agentStarting }: {
+  pr: ProjectResearch;
+  onLaunchResearch: (repo: string) => void;
+  onLaunchDiscovery: (repo: string) => void;
+  agentStarting: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
   const hasData = pr.research || pr.discovery;
+  const hasResearch = !!pr.research;
 
   const stats = {
     competitors: pr.research?.competitors.length ?? 0,
@@ -224,6 +267,26 @@ function ProjectPanel({ pr }: { pr: ProjectResearch }) {
             <span className="rsh-stat rsh-stat-empty">{pr.error ?? "Нет данных"}</span>
           )}
         </div>
+        <div className="rsh-project-actions" onClick={(e) => e.stopPropagation()}>
+          <button
+            className="btn btn-sm"
+            onClick={() => onLaunchResearch(pr.repo)}
+            disabled={agentStarting}
+            title="Запустить Research агента"
+          >
+            Research
+          </button>
+          {hasResearch && (
+            <button
+              className="btn btn-sm"
+              onClick={() => onLaunchDiscovery(pr.repo)}
+              disabled={agentStarting}
+              title="Запустить Discovery агента (требует RESEARCH.md)"
+            >
+              Discovery
+            </button>
+          )}
+        </div>
         {hasData && (
           <span className="rsh-chevron">{expanded ? "▾" : "▸"}</span>
         )}
@@ -245,22 +308,85 @@ function ProjectPanel({ pr }: { pr: ProjectResearch }) {
   );
 }
 
+// ── Empty State ──
+
+function ResearchEmptyState({ pipelineAvailable, onLaunchResearch }: {
+  pipelineAvailable: boolean | null;
+  onLaunchResearch: () => void;
+}) {
+  return (
+    <div className="rsh-empty">
+      <div className="rsh-empty-icon" aria-hidden="true">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8" />
+          <path d="M21 21l-4.35-4.35" />
+          <path d="M11 8v6" />
+          <path d="M8 11h6" />
+        </svg>
+      </div>
+      <h3>Research & Discovery</h3>
+      <p>
+        Анализ рынка, конкурентов и болевых точек пользователей.
+        Research агент собирает данные и формирует RESEARCH.md,
+        Discovery агент на их основе генерирует рекомендации в DISCOVERY.md.
+      </p>
+      {pipelineAvailable === false && (
+        <div className="rsh-empty-warning">
+          Pipeline API недоступен. Проверьте что makeit-pipeline запущен.
+        </div>
+      )}
+      <button
+        className="btn btn-primary"
+        style={{ marginTop: "var(--sp-4)" }}
+        onClick={onLaunchResearch}
+        disabled={pipelineAvailable === false}
+      >
+        Запустить Research
+      </button>
+    </div>
+  );
+}
+
 // ── Main Tab ──
 
 export function ResearchTab({ repos }: Props) {
   const { projects, loading, refresh } = useResearch();
+  const agent = useResearchAgent();
   const loadedRef = useRef(false);
+  const [showModal, setShowModal] = useState(false);
+  const [modalRepo, setModalRepo] = useState<string | undefined>();
 
   useEffect(() => {
     if (!loadedRef.current && repos.length > 0) {
       loadedRef.current = true;
       refresh(repos);
+      agent.checkPipeline();
     }
-  }, [repos, refresh]);
+  }, [repos, refresh, agent]);
 
   const totalSuggestions = projects.reduce((n, p) => n + (p.discovery?.suggestions.length ?? 0), 0);
   const totalQuickWins = projects.reduce((n, p) => n + (p.discovery?.quickWins.length ?? 0), 0);
   const projectsWithData = projects.filter((p) => p.research || p.discovery).length;
+
+  const handleOpenModal = (repo?: string) => {
+    setModalRepo(repo);
+    setShowModal(true);
+  };
+
+  const handleStartResearch = async (project: string, description: string, region: string) => {
+    setShowModal(false);
+    await agent.launchResearch({
+      project,
+      product_description: description || undefined,
+      region: region || undefined,
+    });
+  };
+
+  const handleStartDiscovery = (repo: string) => {
+    agent.launchDiscovery(`${GITHUB_OWNER}/${repo}`);
+  };
+
+  const noDataAtAll = !loading && projects.length > 0 && projectsWithData === 0;
 
   return (
     <div className="bento-panel span-12 panel-projects">
@@ -269,10 +395,39 @@ export function ResearchTab({ repos }: Props) {
           Research / Discovery
           <span className="audit-header-sub">RESEARCH.md + DISCOVERY.md из репозиториев</span>
         </div>
-        <button className="btn btn-sm btn-primary" onClick={() => refresh(repos)} disabled={loading}>
-          {loading ? "Загрузка..." : "Обновить"}
-        </button>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button className="btn btn-sm" onClick={() => refresh(repos)} disabled={loading}>
+            {loading ? "Загрузка..." : "Обновить"}
+          </button>
+          <button
+            className="btn btn-sm btn-primary"
+            onClick={() => handleOpenModal()}
+            disabled={agent.pipelineAvailable === false}
+            title={agent.pipelineAvailable === false ? "Pipeline API недоступен" : "Запустить Research агента"}
+          >
+            Research
+          </button>
+        </div>
       </div>
+
+      {/* Agent error */}
+      {agent.error && (
+        <div className="error-banner" role="alert" style={{ marginBottom: "var(--sp-3)" }}>
+          {agent.error}
+        </div>
+      )}
+
+      {/* Active agent progress */}
+      {agent.activeRun && (
+        <AgentProgressBar status={agent.activeRun} onDismiss={agent.clearActiveRun} />
+      )}
+
+      {/* Pipeline unavailable warning */}
+      {agent.pipelineAvailable === false && projects.length > 0 && !noDataAtAll && (
+        <div className="rsh-pipeline-warning">
+          Pipeline API недоступен — запуск агентов невозможен
+        </div>
+      )}
 
       {loading && projects.length === 0 && (
         <div className="rsh-loading">
@@ -282,10 +437,20 @@ export function ResearchTab({ repos }: Props) {
       )}
 
       {!loading && projects.length === 0 && (
-        <div className="empty-state">Нажмите «Обновить» для загрузки данных</div>
+        <ResearchEmptyState
+          pipelineAvailable={agent.pipelineAvailable}
+          onLaunchResearch={() => handleOpenModal()}
+        />
       )}
 
-      {projects.length > 0 && (
+      {noDataAtAll && (
+        <ResearchEmptyState
+          pipelineAvailable={agent.pipelineAvailable}
+          onLaunchResearch={() => handleOpenModal()}
+        />
+      )}
+
+      {projects.length > 0 && !noDataAtAll && (
         <>
           <div className="rsh-summary">
             <div className="rsh-summary-item">
@@ -303,9 +468,26 @@ export function ResearchTab({ repos }: Props) {
           </div>
 
           <div className="rsh-projects">
-            {projects.map((pr) => <ProjectPanel key={pr.repo} pr={pr} />)}
+            {projects.map((pr) => (
+              <ProjectPanel
+                key={pr.repo}
+                pr={pr}
+                onLaunchResearch={(repo) => handleOpenModal(repo)}
+                onLaunchDiscovery={handleStartDiscovery}
+                agentStarting={agent.starting}
+              />
+            ))}
           </div>
         </>
+      )}
+
+      {showModal && (
+        <StartResearchModal
+          defaultRepo={modalRepo}
+          onClose={() => setShowModal(false)}
+          onStart={handleStartResearch}
+          starting={agent.starting}
+        />
       )}
     </div>
   );
