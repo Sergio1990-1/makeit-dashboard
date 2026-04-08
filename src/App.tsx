@@ -14,8 +14,7 @@ import { FinanceEditor } from "./components/FinanceEditor";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { UptimeBar } from "./components/UptimeBar";
 import { ClosedChart } from "./components/ClosedChart";
-import { AuditTab } from "./components/AuditTab";
-import { UXAuditTab } from "./components/UXAuditTab";
+import { AuditCombinedTab } from "./components/AuditCombinedTab";
 import { PipelineControlPanel } from "./components/PipelineControlPanel";
 import { TranscriptsTab } from "./components/TranscriptsTab";
 import { ResearchTab } from "./components/ResearchTab";
@@ -107,7 +106,6 @@ function AppInner() {
               { id: "pipeline" as TabId, label: "Pipeline" },
               { id: "transcripts" as TabId, label: "Транскрипты" },
               { id: "audit" as TabId, label: "Аудит" },
-              { id: "ux-audit" as TabId, label: "UX Аудит" },
               { id: "research" as TabId, label: "Research" },
               { id: "specs" as TabId, label: "Specs" },
               { id: "quality" as TabId, label: "Quality" },
@@ -297,10 +295,7 @@ function AppInner() {
 
           {/* Stateful tabs — mount lazily on first visit, keep alive via display:none */}
           <div className="bento-grid" style={{ display: tab === "audit" ? undefined : "none" }}>
-            {visitedTabs.has("audit") && <AuditTab dashboardProjects={projects} />}
-          </div>
-          <div className="bento-grid" style={{ display: tab === "ux-audit" ? undefined : "none" }}>
-            {visitedTabs.has("ux-audit") && <UXAuditTab />}
+            {visitedTabs.has("audit") && <AuditCombinedTab dashboardProjects={projects} />}
           </div>
           <div className="bento-grid" style={{ display: tab === "pipeline" ? undefined : "none" }}>
             {visitedTabs.has("pipeline") && <PipelineControlPanel projects={projects} />}
