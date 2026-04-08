@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   fetchQualitySnapshot,
   fetchQualityTrends,
@@ -47,6 +47,9 @@ export function useQuality() {
   // Action in-progress flags
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  // Cleanup ref for retro setTimeout
+  const retroTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const checkAvailability = useCallback(async () => {
     const ok = await isPipelineRunning();
     setAvailable(ok);
@@ -91,67 +94,54 @@ export function useQuality() {
 
   useEffect(() => {
     loadAll();
+    return () => {
+      if (retroTimerRef.current !== null) {
+        clearTimeout(retroTimerRef.current);
+      }
+    };
   }, [loadAll]);
+
+  // ── Shared tuning action helper ────────────────────────────────────
+
+  const tuningAction = useCallback(async (
+    changeId: string,
+    action: (id: string) => Promise<unknown>,
+    errorMsg: string,
+  ) => {
+    setActionLoading(changeId);
+    setError(null);
+    try {
+      await action(changeId);
+      const [pending, history] = await Promise.all([
+        fetchPendingChanges().catch(() => [] as PendingChange[]),
+        fetchTuningHistory().catch(() => [] as PendingChange[]),
+      ]);
+      setPendingChanges(pending);
+      setTuningHistory(history);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : errorMsg);
+      throw err;
+    } finally {
+      setActionLoading(null);
+    }
+  }, []);
 
   // ── Actions ────────────────────────────────────────────────────────
 
-  const approve = useCallback(async (changeId: string) => {
-    setActionLoading(changeId);
-    setError(null);
-    try {
-      await applyChange(changeId);
-      // Refresh pending + history
-      const [pending, history] = await Promise.all([
-        fetchPendingChanges().catch(() => [] as PendingChange[]),
-        fetchTuningHistory().catch(() => [] as PendingChange[]),
-      ]);
-      setPendingChanges(pending);
-      setTuningHistory(history);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to apply change");
-      throw err;
-    } finally {
-      setActionLoading(null);
-    }
-  }, []);
+  const approve = useCallback(
+    (changeId: string) => tuningAction(changeId, applyChange, "Failed to apply change"),
+    [tuningAction],
+  );
 
-  const reject = useCallback(async (changeId: string) => {
-    setActionLoading(changeId);
-    setError(null);
-    try {
-      await rejectChange(changeId);
-      const [pending, history] = await Promise.all([
-        fetchPendingChanges().catch(() => [] as PendingChange[]),
-        fetchTuningHistory().catch(() => [] as PendingChange[]),
-      ]);
-      setPendingChanges(pending);
-      setTuningHistory(history);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to reject change");
-      throw err;
-    } finally {
-      setActionLoading(null);
-    }
-  }, []);
+  const reject = useCallback(
+    (changeId: string) => tuningAction(changeId, rejectChange, "Failed to reject change"),
+    [tuningAction],
+  );
 
-  const rollback = useCallback(async (changeId: string) => {
-    setActionLoading(changeId);
-    setError(null);
-    try {
-      await rollbackChange(changeId);
-      const [pending, history] = await Promise.all([
-        fetchPendingChanges().catch(() => [] as PendingChange[]),
-        fetchTuningHistory().catch(() => [] as PendingChange[]),
-      ]);
-      setPendingChanges(pending);
-      setTuningHistory(history);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to rollback change");
-      throw err;
-    } finally {
-      setActionLoading(null);
-    }
-  }, []);
+  const rollback = useCallback(
+    (changeId: string) => tuningAction(changeId, rollbackChange, "Failed to rollback change"),
+    [tuningAction],
+  );
 
   const startRetro = useCallback(async (period?: string) => {
     setRetroRunning(true);
@@ -159,7 +149,8 @@ export function useQuality() {
     try {
       await runRetro(period);
       // Refresh retro list after a short delay (retro runs in background)
-      setTimeout(async () => {
+      retroTimerRef.current = setTimeout(async () => {
+        retroTimerRef.current = null;
         const retroList = await fetchRetroList().catch(() => [] as RetroSummary[]);
         setRetros(retroList);
         setRetroRunning(false);
