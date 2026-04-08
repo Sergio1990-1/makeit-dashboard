@@ -21,6 +21,7 @@ import { TranscriptsTab } from "./components/TranscriptsTab";
 import { ResearchTab } from "./components/ResearchTab";
 import { SpecsTab } from "./components/SpecsTab";
 import { QualityTab } from "./components/QualityTab";
+import { DebateTab } from "./components/DebateTab";
 import { useDashboard } from "./hooks/useDashboard";
 import { useMonitors } from "./hooks/useMonitors";
 import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH, PROJECTS } from "./utils/config";
@@ -110,6 +111,7 @@ function AppInner() {
               { id: "research" as TabId, label: "Research" },
               { id: "specs" as TabId, label: "Specs" },
               { id: "quality" as TabId, label: "Quality" },
+              { id: "debate" as TabId, label: "Debate" },
             ]).map((t) => (
               <button
                 key={t.id}
@@ -314,6 +316,9 @@ function AppInner() {
           </div>
           <div className="bento-grid" style={{ display: tab === "quality" ? undefined : "none" }}>
             {visitedTabs.has("quality") && <QualityTab />}
+          </div>
+          <div className="bento-grid" style={{ display: tab === "debate" ? undefined : "none" }}>
+            {visitedTabs.has("debate") && <DebateTab />}
           </div>
         </>
       )}
