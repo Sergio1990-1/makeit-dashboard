@@ -356,13 +356,14 @@ export function ResearchTab({ repos }: Props) {
   const [showModal, setShowModal] = useState(false);
   const [modalRepo, setModalRepo] = useState<string | undefined>();
 
+  const { checkPipeline } = agent;
   useEffect(() => {
     if (!loadedRef.current && repos.length > 0) {
       loadedRef.current = true;
       refresh(repos);
-      agent.checkPipeline();
+      checkPipeline();
     }
-  }, [repos, refresh, agent]);
+  }, [repos, refresh, checkPipeline]);
 
   const totalSuggestions = projects.reduce((n, p) => n + (p.discovery?.suggestions.length ?? 0), 0);
   const totalQuickWins = projects.reduce((n, p) => n + (p.discovery?.quickWins.length ?? 0), 0);
@@ -436,14 +437,7 @@ export function ResearchTab({ repos }: Props) {
         </div>
       )}
 
-      {!loading && projects.length === 0 && (
-        <ResearchEmptyState
-          pipelineAvailable={agent.pipelineAvailable}
-          onLaunchResearch={() => handleOpenModal()}
-        />
-      )}
-
-      {noDataAtAll && (
+      {!loading && (projects.length === 0 || noDataAtAll) && (
         <ResearchEmptyState
           pipelineAvailable={agent.pipelineAvailable}
           onLaunchResearch={() => handleOpenModal()}
