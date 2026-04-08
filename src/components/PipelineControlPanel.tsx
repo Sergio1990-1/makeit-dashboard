@@ -296,6 +296,15 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
     if (available && selectedProject) void loadStats(selectedProject);
   }, [available, selectedProject, loadStats]);
 
+  // Auto-refresh stats every 10s when pipeline is running
+  useEffect(() => {
+    if (!isRunning || !selectedProject) return;
+    const id = setInterval(() => {
+      void loadStats(selectedProject);
+    }, 10_000);
+    return () => clearInterval(id);
+  }, [isRunning, selectedProject, loadStats]);
+
   function toggleLabel(label: LabelOption) {
     setSelectedLabels((prev) =>
       prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
@@ -303,12 +312,16 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
   }
 
   const [classifying, setClassifying] = useState(false);
+  const [classifyProgress, setClassifyProgress] = useState<string | null>(null);
 
   async function handleClassify() {
     if (!selectedProject || classifying) return;
     setClassifying(true);
+    setClassifyProgress("0/?");
     try {
-      const res = await classifyIssues(selectedProject);
+      const res = await classifyIssues(selectedProject, undefined, (p) => {
+        setClassifyProgress(`${p.done}/${p.total}`);
+      });
       if (res.classified > 0) {
         void loadStats(selectedProject);
       }
@@ -316,6 +329,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
       console.error("classify failed:", e);
     } finally {
       setClassifying(false);
+      setClassifyProgress(null);
     }
   }
 
@@ -505,14 +519,16 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
           <div style={{ flex: 1 }} />
 
           {/* Actions */}
-          {!isRunning && stats?.complexity_breakdown && stats.complexity_breakdown.unclassified > 0 && (
+          {!isRunning && stats?.complexity_breakdown && (stats.complexity_breakdown.unclassified > 0 || classifying) && (
             <button
               className="btn"
               style={{ padding: "6px 16px" }}
               onClick={() => void handleClassify()}
               disabled={classifying || !selectedProject}
             >
-              {classifying ? "Классификация..." : `Classify ${stats.complexity_breakdown.unclassified}`}
+              {classifying
+                ? `Classify ${classifyProgress ?? "..."}`
+                : `Classify ${stats.complexity_breakdown.unclassified}`}
             </button>
           )}
           {!isRunning && (

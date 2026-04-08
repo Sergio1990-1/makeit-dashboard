@@ -218,9 +218,16 @@ export interface ClassifyResponse {
   results: ClassifyResult[];
 }
 
+export interface ClassifyProgress {
+  done: number;
+  total: number;
+  current: string;
+}
+
 export async function classifyIssues(
   project: string,
   issueNumbers?: number[],
+  onProgress?: (p: ClassifyProgress) => void,
 ): Promise<ClassifyResponse> {
   const body: Record<string, unknown> = { project };
   if (issueNumbers?.length) body.issue_numbers = issueNumbers;
@@ -234,7 +241,35 @@ export async function classifyIssues(
     const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
     throw new Error((err as { detail: string }).detail ?? `HTTP ${res.status}`);
   }
-  return res.json() as Promise<ClassifyResponse>;
+
+  // Parse NDJSON stream
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error("No response body");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finalResult: ClassifyResponse = { classified: 0, results: [] };
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const event = JSON.parse(line) as { type: string; done?: number; total?: number; current?: string; classified?: number; results?: ClassifyResult[] };
+      if (event.type === "progress" && onProgress) {
+        onProgress({ done: event.done!, total: event.total!, current: event.current! });
+      } else if (event.type === "done") {
+        finalResult = { classified: event.classified!, results: event.results! };
+      }
+    }
+  }
+
+  return finalResult;
 }
 
 export async function fetchResearchHistory(project: string): Promise<ResearchHistoryItem[]> {
