@@ -56,6 +56,7 @@ export interface ComplexityBreakdown {
   auto: number;
   assisted: number;
   manual: number;
+  unclassified: number;
 }
 
 export interface ModelUsage {
