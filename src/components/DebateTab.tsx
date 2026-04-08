@@ -5,24 +5,41 @@ import { DebateChat } from "./DebateChat";
 import type { DebateListItem } from "../types/debate";
 
 function statusBadge(status: DebateListItem["status"]) {
-  const map: Record<string, { label: string; cls: string }> = {
-    queued: { label: "Queued", cls: "badge-queued" },
-    running: { label: "Running", cls: "badge-running" },
-    done: { label: "Done", cls: "badge-done" },
-    error: { label: "Error", cls: "badge-error" },
+  const map: Record<string, { label: string; cls: string; ariaLabel: string }> = {
+    queued: { label: "Queued", cls: "badge-queued", ariaLabel: "Status: queued" },
+    running: { label: "Running", cls: "badge-running", ariaLabel: "Status: running" },
+    done: { label: "Done", cls: "badge-done", ariaLabel: "Status: done" },
+    error: { label: "Error", cls: "badge-error", ariaLabel: "Status: error" },
   };
-  const b = map[status] ?? { label: status, cls: "" };
-  return <span className={`debate-badge ${b.cls}`}>{b.label}</span>;
+  const b = map[status] ?? { label: status, cls: "", ariaLabel: `Status: ${status}` };
+  return <span className={`debate-badge ${b.cls}`} role="status" aria-label={b.ariaLabel}>{b.label}</span>;
 }
 
 function consensusBadge(level: DebateListItem["consensus_level"]) {
-  const map: Record<string, { label: string; cls: string }> = {
-    unanimous: { label: "Unanimous", cls: "badge-unanimous" },
-    majority: { label: "Majority", cls: "badge-majority" },
-    contested: { label: "Contested", cls: "badge-contested" },
+  const map: Record<string, { label: string; cls: string; ariaLabel: string }> = {
+    unanimous: { label: "Unanimous", cls: "badge-unanimous", ariaLabel: "Consensus: unanimous" },
+    majority: { label: "Majority", cls: "badge-majority", ariaLabel: "Consensus: majority" },
+    contested: { label: "Contested", cls: "badge-contested", ariaLabel: "Consensus: contested" },
   };
-  const b = map[level] ?? { label: level, cls: "" };
-  return <span className={`debate-badge ${b.cls}`}>{b.label}</span>;
+  const b = map[level] ?? { label: level, cls: "", ariaLabel: `Consensus: ${level}` };
+  return <span className={`debate-badge ${b.cls}`} aria-label={b.ariaLabel}>{b.label}</span>;
+}
+
+function DebateListSkeleton() {
+  return (
+    <div className="debate-skeleton" aria-busy="true" aria-label="Loading debates">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="debate-skeleton-row">
+          <div className="debate-skeleton-bar debate-skeleton-topic" />
+          <div className="debate-skeleton-bar debate-skeleton-short" />
+          <div className="debate-skeleton-bar debate-skeleton-badge" />
+          <div className="debate-skeleton-bar debate-skeleton-badge" />
+          <div className="debate-skeleton-bar debate-skeleton-short" />
+          <div className="debate-skeleton-bar debate-skeleton-short" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function relativeTime(iso: string): string {
@@ -62,7 +79,7 @@ export function DebateTab() {
 
   /* ── List view ── */
   return (
-    <div className="bento-panel span-12">
+    <div className="bento-panel span-12" role="region" aria-label="Debate Engine">
       <div className="bento-panel-title">
         <div>
           Debate Engine
@@ -73,23 +90,27 @@ export function DebateTab() {
             className="btn btn-sm"
             onClick={refresh}
             disabled={loading}
+            aria-label={loading ? "Loading debates" : "Refresh debate list"}
           >
             {loading ? "Загрузка..." : "Обновить"}
           </button>
           <button
             className="btn btn-sm btn-primary"
             onClick={() => setShowModal(true)}
+            aria-label="Start new debate"
           >
             Start Debate
           </button>
         </div>
       </div>
 
-      {error && <div className="error-banner">{error}</div>}
+      {error && <div className="error-banner" role="alert">{error}</div>}
+
+      {loading && debates.length === 0 && !error && <DebateListSkeleton />}
 
       {!loading && debates.length === 0 && !error && (
         <div className="debate-empty">
-          <div className="debate-empty-icon">
+          <div className="debate-empty-icon" aria-hidden="true">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               <path d="M8 9h8" />
@@ -114,15 +135,16 @@ export function DebateTab() {
 
       {sorted.length > 0 && (
         <div className="debate-list">
-          <table className="debate-table">
+          {/* Desktop table view */}
+          <table className="debate-table debate-table--desktop" aria-label="Debate history">
             <thead>
               <tr>
-                <th>Тема</th>
-                <th>Проект</th>
-                <th>Статус</th>
-                <th>Консенсус</th>
-                <th>Стоимость</th>
-                <th>Дата</th>
+                <th scope="col">Тема</th>
+                <th scope="col">Проект</th>
+                <th scope="col">Статус</th>
+                <th scope="col">Консенсус</th>
+                <th scope="col">Стоимость</th>
+                <th scope="col">Дата</th>
               </tr>
             </thead>
             <tbody>
@@ -131,6 +153,10 @@ export function DebateTab() {
                   key={d.id}
                   className="debate-row debate-row--clickable"
                   onClick={() => setSelectedId(d.id)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedId(d.id); } }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Open debate: ${d.topic}`}
                 >
                   <td className="debate-topic">{d.topic}</td>
                   <td className="debate-project">
@@ -146,6 +172,34 @@ export function DebateTab() {
               ))}
             </tbody>
           </table>
+
+          {/* Mobile card view */}
+          <div className="debate-cards" role="list" aria-label="Debate history">
+            {sorted.map((d) => (
+              <div
+                key={d.id}
+                className="debate-card"
+                onClick={() => setSelectedId(d.id)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedId(d.id); } }}
+                tabIndex={0}
+                role="listitem"
+                aria-label={`Open debate: ${d.topic}`}
+              >
+                <div className="debate-card-header">
+                  <span className="debate-card-topic">{d.topic}</span>
+                  {statusBadge(d.status)}
+                </div>
+                <div className="debate-card-meta">
+                  {d.project && (
+                    <span className="debate-card-project">{d.project.split("/").pop()}</span>
+                  )}
+                  {d.status === "done" && consensusBadge(d.consensus_level)}
+                  <span className="debate-card-cost">${d.total_cost.toFixed(2)}</span>
+                  <span className="debate-card-date">{relativeTime(d.created_at)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
