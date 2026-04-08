@@ -6,7 +6,7 @@ import type { DebateMessage, DebateParticipant, DebateResultResponse } from "../
 
 const PROVIDER_META: Record<string, { color: string; icon: string; label: string }> = {
   anthropic: { color: "#D97706", icon: "A", label: "Claude" },
-  openai:    { color: "#10A37F", icon: "G", label: "GPT-4o" },
+  openai:    { color: "#10A37F", icon: "O", label: "GPT-4o" },
   gemini:    { color: "#4285F4", icon: "G", label: "Gemini Pro" },
 };
 
@@ -398,7 +398,7 @@ function ConsensusBlock({ result }: { result: DebateResultResponse }) {
                 <span style={{ color: meta?.color ?? "inherit" }}>
                   {meta?.label ?? provider}
                 </span>
-                <span className="dc-cost-value">${(cost as number).toFixed(4)}</span>
+                <span className="dc-cost-value">${Number(cost).toFixed(4)}</span>
               </div>
             );
           })}
