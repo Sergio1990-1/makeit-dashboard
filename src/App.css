@@ -5820,10 +5820,12 @@ body::after {
 }
 
 .debate-row {
-  cursor: pointer;
   transition: background 0.15s;
 }
-.debate-row:hover {
+.debate-row.debate-row--clickable {
+  cursor: pointer;
+}
+.debate-row.debate-row--clickable:hover {
   background: var(--color-surface-hover);
 }
 

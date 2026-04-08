@@ -121,8 +121,8 @@ export function DebateTab({ onSelectDebate }: Props) {
               {sorted.map((d) => (
                 <tr
                   key={d.id}
-                  className="debate-row"
-                  onClick={() => onSelectDebate?.(d.id)}
+                  className={`debate-row${onSelectDebate ? " debate-row--clickable" : ""}`}
+                  onClick={onSelectDebate ? () => onSelectDebate(d.id) : undefined}
                 >
                   <td className="debate-topic">{d.topic}</td>
                   <td className="debate-project">
