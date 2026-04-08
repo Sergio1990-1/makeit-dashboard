@@ -297,13 +297,14 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
   }, [available, selectedProject, loadStats]);
 
   // Auto-refresh stats every 10s when pipeline is running
+  const running = status?.running ?? false;
   useEffect(() => {
-    if (!isRunning || !selectedProject) return;
+    if (!running || !selectedProject) return;
     const id = setInterval(() => {
       void loadStats(selectedProject);
     }, 10_000);
     return () => clearInterval(id);
-  }, [isRunning, selectedProject, loadStats]);
+  }, [running, selectedProject, loadStats]);
 
   function toggleLabel(label: LabelOption) {
     setSelectedLabels((prev) =>
