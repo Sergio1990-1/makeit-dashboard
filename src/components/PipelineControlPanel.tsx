@@ -548,6 +548,67 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
         </div>
       )}
 
+      {/* ── Complexity analytics ── */}
+      {stats?.complexity_breakdown && (() => {
+        const breakdown = stats.complexity_breakdown;
+        const total = breakdown.auto + breakdown.assisted + breakdown.manual;
+        return (
+        <div className="bento-panel span-6">
+          <div className="bento-panel-title">Сложность</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+            {([
+              { key: "auto" as const, label: "Auto", color: "var(--green-500)" },
+              { key: "assisted" as const, label: "Assisted", color: "var(--orange-500)" },
+              { key: "manual" as const, label: "Manual", color: "var(--red-500)" },
+            ] as const).map((item) => {
+              const count = breakdown[item.key];
+              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+              return (
+                <div key={item.key} style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "var(--text-data)", fontWeight: 700, color: item.color, lineHeight: 1.2 }}>
+                    {count}
+                  </div>
+                  <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
+                    {item.label}
+                    <span style={{ marginLeft: 4, opacity: 0.7 }}>{pct}%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {/* Model usage */}
+          {stats.model_usage && stats.model_usage.length > 0 && (
+            <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid var(--color-border)" }}>
+              <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", marginBottom: 6 }}>
+                Модели
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {stats.model_usage.map((m) => (
+                  <span
+                    key={m.model}
+                    style={{
+                      fontSize: "var(--text-xs)",
+                      fontWeight: 600,
+                      padding: "2px 8px",
+                      borderRadius: 10,
+                      background: "var(--color-surface)",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--color-text-secondary)",
+                    }}
+                  >
+                    {m.model}
+                    <span style={{ marginLeft: 4, fontWeight: 400, color: "var(--color-text-muted)" }}>
+                      ×{m.count}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        );
+      })()}
+
       {/* ── Live tasks ── */}
       {isRunning && status && (
         <div className="bento-panel span-6">

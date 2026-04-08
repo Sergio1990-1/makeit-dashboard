@@ -54,11 +54,24 @@ export interface PipelineStatus {
   issue_stages?: Record<number, PipelineStageEntry[]>;
 }
 
+export interface ComplexityBreakdown {
+  auto: number;
+  assisted: number;
+  manual: number;
+}
+
+export interface ModelUsage {
+  model: string;
+  count: number;
+}
+
 export interface PipelineStats {
   total_issues: number;
   closed_issues: number;
   agent_completed: number;
   manual_completed: number;
+  complexity_breakdown?: ComplexityBreakdown;
+  model_usage?: ModelUsage[];
 }
 
 export async function isPipelineRunning(): Promise<boolean> {
