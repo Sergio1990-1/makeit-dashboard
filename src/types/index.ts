@@ -97,7 +97,7 @@ export interface Filters {
   status: IssueStatus | null;
 }
 
-export type TabId = "dashboard" | "projects" | "milestones" | "uptime" | "audit" | "ux-audit" | "pipeline" | "transcripts" | "research" | "specs" | "quality";
+export type TabId = "dashboard" | "projects" | "milestones" | "uptime" | "audit" | "ux-audit" | "pipeline" | "transcripts" | "research" | "specs" | "quality" | "debate";
 
 // ── Research / Discovery ──
 
