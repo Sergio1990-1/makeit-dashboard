@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { useDebate } from "../hooks/useDebate";
+import { StartDebateModal } from "./StartDebateModal";
 import type { DebateListItem } from "../types/debate";
 
 function statusBadge(status: DebateListItem["status"]) {
@@ -39,10 +41,17 @@ interface Props {
 
 export function DebateTab({ onSelectDebate }: Props) {
   const { debates, loading, error, refresh } = useDebate();
+  const [showModal, setShowModal] = useState(false);
 
   const sorted = [...debates].sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   );
+
+  const handleStarted = (id: string) => {
+    setShowModal(false);
+    refresh();
+    onSelectDebate?.(id);
+  };
 
   return (
     <div className="bento-panel span-12">
@@ -53,11 +62,17 @@ export function DebateTab({ onSelectDebate }: Props) {
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
           <button
-            className="btn btn-sm btn-primary"
+            className="btn btn-sm"
             onClick={refresh}
             disabled={loading}
           >
             {loading ? "Загрузка..." : "Обновить"}
+          </button>
+          <button
+            className="btn btn-sm btn-primary"
+            onClick={() => setShowModal(true)}
+          >
+            Start Debate
           </button>
         </div>
       </div>
@@ -79,6 +94,13 @@ export function DebateTab({ onSelectDebate }: Props) {
             Несколько AI-экспертов обсуждают тему с разных позиций
             и формируют ADR (Architecture Decision Record).
           </p>
+          <button
+            className="btn btn-primary"
+            style={{ marginTop: "var(--sp-4)" }}
+            onClick={() => setShowModal(true)}
+          >
+            Запустить первый дебат
+          </button>
         </div>
       )}
 
@@ -117,6 +139,13 @@ export function DebateTab({ onSelectDebate }: Props) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {showModal && (
+        <StartDebateModal
+          onClose={() => setShowModal(false)}
+          onStarted={handleStarted}
+        />
       )}
     </div>
   );
