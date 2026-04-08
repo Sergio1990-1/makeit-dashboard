@@ -1,12 +1,18 @@
 import { useState, useEffect } from "react";
 import { usePipeline } from "../hooks/usePipeline";
 import { GITHUB_OWNER, PROJECTS } from "../utils/config";
-import type { PipelineStageEntry } from "../utils/pipeline";
+import type { PipelineStageEntry, ComplexityFilter } from "../utils/pipeline";
 import type { ProjectData } from "../types";
 import { PipelineClosedChart } from "./PipelineClosedChart";
 
 const LABEL_OPTIONS = ["P1-critical", "P2-high", "P3-medium"] as const;
 type LabelOption = (typeof LABEL_OPTIONS)[number];
+
+const COMPLEXITY_OPTIONS: { value: ComplexityFilter; label: string; hint: string }[] = [
+  { value: "all", label: "All", hint: "Все задачи" },
+  { value: "auto", label: "Auto", hint: "Sonnet — простые" },
+  { value: "assisted", label: "Assisted", hint: "Opus — сложные" },
+];
 
 const STAGE_ORDER = ["dev", "review", "merge"] as const;
 
@@ -230,6 +236,9 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
   const [limit, setLimit] = useState(() => {
     return Number(localStorage.getItem("pipeline_limit")) || 4;
   });
+  const [complexityFilter, setComplexityFilter] = useState<ComplexityFilter>(() => {
+    return (localStorage.getItem("pipeline_complexity") as ComplexityFilter) || "all";
+  });
 
   useEffect(() => {
     localStorage.setItem("pipeline_project", selectedProject);
@@ -242,6 +251,10 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
   useEffect(() => {
     localStorage.setItem("pipeline_limit", String(limit));
   }, [limit]);
+
+  useEffect(() => {
+    localStorage.setItem("pipeline_complexity", complexityFilter);
+  }, [complexityFilter]);
 
   useEffect(() => {
     if (available && selectedProject) void loadStats(selectedProject);
@@ -258,6 +271,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
       project: selectedProject || undefined,
       labels: selectedLabels.length > 0 ? selectedLabels : undefined,
       limit,
+      complexity_filter: complexityFilter !== "all" ? complexityFilter : undefined,
     });
   }
 
@@ -376,6 +390,44 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                   }}
                 >
                   {label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Complexity filter */}
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{
+              fontSize: "var(--text-xs)",
+              color: "var(--color-text-muted)",
+              borderLeft: "1px solid var(--color-border)",
+              paddingLeft: 8,
+              marginLeft: 4,
+            }}>
+              Сложность
+            </span>
+            {COMPLEXITY_OPTIONS.map((opt) => {
+              const active = complexityFilter === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => setComplexityFilter(opt.value)}
+                  disabled={isRunning}
+                  title={opt.hint}
+                  style={{
+                    padding: "2px 8px",
+                    fontSize: "var(--text-xs)",
+                    fontWeight: 600,
+                    borderRadius: 12,
+                    border: `1px solid ${active ? "var(--color-primary)" : "var(--color-border)"}`,
+                    background: active ? "rgba(76, 141, 255, 0.12)" : "transparent",
+                    color: active ? "var(--color-primary)" : "var(--color-text-muted)",
+                    cursor: isRunning ? "not-allowed" : "pointer",
+                    opacity: isRunning ? 0.5 : 1,
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {opt.label}
                 </button>
               );
             })}
