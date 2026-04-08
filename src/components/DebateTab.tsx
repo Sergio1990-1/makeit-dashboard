@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useDebate } from "../hooks/useDebate";
 import { StartDebateModal } from "./StartDebateModal";
+import { DebateChat } from "./DebateChat";
 import type { DebateListItem } from "../types/debate";
 
 function statusBadge(status: DebateListItem["status"]) {
@@ -35,13 +36,10 @@ function relativeTime(iso: string): string {
   return `${days}д назад`;
 }
 
-interface Props {
-  onSelectDebate?: (id: string) => void;
-}
-
-export function DebateTab({ onSelectDebate }: Props) {
+export function DebateTab() {
   const { debates, loading, error, refresh } = useDebate();
   const [showModal, setShowModal] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const sorted = [...debates].sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
@@ -50,9 +48,19 @@ export function DebateTab({ onSelectDebate }: Props) {
   const handleStarted = (id: string) => {
     setShowModal(false);
     refresh();
-    onSelectDebate?.(id);
+    setSelectedId(id);
   };
 
+  /* ── Chat view ── */
+  if (selectedId) {
+    return (
+      <div className="bento-panel span-12" style={{ padding: 0, overflow: "hidden" }}>
+        <DebateChat debateId={selectedId} onBack={() => setSelectedId(null)} />
+      </div>
+    );
+  }
+
+  /* ── List view ── */
   return (
     <div className="bento-panel span-12">
       <div className="bento-panel-title">
@@ -121,8 +129,8 @@ export function DebateTab({ onSelectDebate }: Props) {
               {sorted.map((d) => (
                 <tr
                   key={d.id}
-                  className={`debate-row${onSelectDebate ? " debate-row--clickable" : ""}`}
-                  onClick={onSelectDebate ? () => onSelectDebate(d.id) : undefined}
+                  className="debate-row debate-row--clickable"
+                  onClick={() => setSelectedId(d.id)}
                 >
                   <td className="debate-topic">{d.topic}</td>
                   <td className="debate-project">
