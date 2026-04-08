@@ -21,6 +21,8 @@ export interface PipelineStageEntry {
   elapsed?: number;
 }
 
+export type ComplexityLevel = "auto" | "assisted" | "manual";
+
 export interface PipelineResult {
   issue_number: number;
   status: string;
@@ -31,6 +33,8 @@ export interface PipelineResult {
   stages?: PipelineStageEntry[];
   review_verdict?: string;
   review_summary?: string;
+  complexity?: ComplexityLevel;
+  model_used?: string;
 }
 
 export interface PipelineQueueItem {
