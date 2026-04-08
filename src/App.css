@@ -5481,3 +5481,289 @@ body::after {
   color: var(--color-text-secondary);
   line-height: 1.5;
 }
+
+/* ══════════════════════════════════════════
+   QUALITY PENDING CHANGES (AutoTuner)
+   ══════════════════════════════════════════ */
+
+.qp-inline-badge {
+  margin-left: var(--sp-2);
+}
+
+.qp-empty {
+  text-align: center;
+  color: var(--gray-400);
+  font-size: var(--text-sm);
+  padding: var(--sp-6);
+}
+
+.qp-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.qp-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  transition: border-color 0.15s;
+}
+
+.qp-card:hover {
+  border-color: var(--gray-400);
+}
+
+.qp-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.qp-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.qp-target {
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.qp-change-type {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.qp-tier {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--color-border) 50%, transparent);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+/* Confidence bar */
+.qp-confidence {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 100px;
+}
+
+.qp-confidence-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.qp-confidence-fill {
+  height: 100%;
+  background: var(--color-success);
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+.qp-confidence-label {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  min-width: 32px;
+  text-align: right;
+}
+
+.qp-card-content {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  margin-bottom: var(--sp-2);
+  color: var(--color-text);
+}
+
+.qp-card-rationale {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--sp-3);
+}
+
+.qp-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.qp-card-date {
+  font-size: var(--text-xs);
+  color: var(--gray-400);
+}
+
+.qp-actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.qp-btn-approve {
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+  color: var(--color-success);
+  border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
+}
+
+.qp-btn-approve:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-success) 20%, transparent);
+}
+
+.qp-btn-reject {
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+  color: var(--color-danger);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 25%, transparent);
+}
+
+.qp-btn-reject:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-danger) 18%, transparent);
+}
+
+.qp-btn-rollback {
+  background: color-mix(in srgb, var(--color-caution) 10%, transparent);
+  color: var(--color-caution);
+  border: 1px solid color-mix(in srgb, var(--color-caution) 25%, transparent);
+  font-size: var(--text-xs);
+}
+
+.qp-btn-rollback:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-caution) 18%, transparent);
+}
+
+/* History */
+.qp-history-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin: var(--sp-4) 0 var(--sp-2);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.qp-history-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.qp-history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+  transition: background 0.1s;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+
+.qp-history-item:hover {
+  background: color-mix(in srgb, var(--color-border) 25%, transparent);
+}
+
+.qp-history-main {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.qp-status {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: var(--radius);
+  font-weight: 600;
+}
+
+.qp-status--applied { background: color-mix(in srgb, var(--color-success) 15%, transparent); color: var(--color-success); }
+.qp-status--rejected { background: color-mix(in srgb, var(--color-danger) 15%, transparent); color: var(--color-danger); }
+.qp-status--rolled_back { background: color-mix(in srgb, var(--color-caution) 15%, transparent); color: var(--color-caution); }
+.qp-status--pending { background: color-mix(in srgb, var(--color-primary) 15%, transparent); color: var(--color-primary); }
+
+.qp-history-target {
+  font-weight: 500;
+}
+
+.qp-history-type {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.qp-history-details {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.qp-history-date {
+  font-size: var(--text-xs);
+  color: var(--gray-400);
+}
+
+.qp-history-pr {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.qp-history-pr:hover {
+  background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.qp-show-more {
+  display: block;
+  margin: var(--sp-3) auto 0;
+  color: var(--color-primary);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .qp-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .qp-confidence {
+    width: 100%;
+  }
+
+  .qp-card-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .qp-actions {
+    width: 100%;
+  }
+
+  .qp-actions .btn {
+    flex: 1;
+  }
+
+  .qp-history-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

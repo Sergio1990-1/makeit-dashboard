@@ -1,6 +1,7 @@
 import { useQuality } from "../hooks/useQuality";
 import { QualityTrendsChart } from "./QualityTrendsChart";
 import { QualityFindingsChart, QualityErrorsChart } from "./QualityBarCharts";
+import { PendingChangesList, TuningHistory } from "./QualityPendingChanges";
 import { RetroList, RetroDetailView } from "./QualityRetros";
 import type { QualitySnapshot } from "../types";
 
@@ -99,10 +100,15 @@ export function QualityTab() {
     findings,
     errors: errorsData,
     pendingChanges,
+    tuningHistory,
     retros,
     selectedRetro,
     retroRunning,
+    actionLoading,
     refresh,
+    approve,
+    reject,
+    rollback,
     startRetro,
     loadRetroDetail,
     clearRetroDetail,
@@ -201,6 +207,34 @@ export function QualityTab() {
           )}
         </div>
       )}
+
+      {/* AutoTuner: Pending Changes + History */}
+      <div className="bento-panel span-12 panel-projects">
+        <div className="bento-panel-title">
+          AutoTuner
+          {pendingChanges.length > 0 && (
+            <span className="qk-pending-badge qp-inline-badge">
+              {pendingChanges.length} ожидает
+            </span>
+          )}
+        </div>
+        <PendingChangesList
+          changes={pendingChanges}
+          actionLoading={actionLoading}
+          onApprove={approve}
+          onReject={reject}
+        />
+        {tuningHistory.length > 0 && (
+          <>
+            <div className="qp-history-title">История изменений</div>
+            <TuningHistory
+              history={tuningHistory}
+              actionLoading={actionLoading}
+              onRollback={rollback}
+            />
+          </>
+        )}
+      </div>
 
       {/* Retrospectives */}
       <div className="bento-panel span-12 panel-projects">
