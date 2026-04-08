@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useDebateStatus } from "../hooks/useDebateStatus";
+import { renderMarkdownHtml } from "../utils/transcript-markdown";
 import type { DebateMessage, DebateParticipant, DebateResultResponse } from "../types/debate";
 
 /* ── Provider meta ── */
@@ -231,6 +232,11 @@ export function DebateChat({ debateId, onBack }: Props) {
           <ConsensusBlock result={result} />
         )}
 
+        {/* ── ADR Preview ── */}
+        {isDone && result?.adr_markdown && (
+          <AdrPreview markdown={result.adr_markdown} topic={status?.id ?? "adr"} />
+        )}
+
         {/* ── Error block ── */}
         {isError && (
           <div className="dc-error-block">
@@ -408,6 +414,76 @@ function ConsensusBlock({ result }: { result: DebateResultResponse }) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── AdrPreview ── */
+
+function AdrPreview({ markdown, topic }: { markdown: string; topic: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+
+  const renderedHtml = useMemo(() => renderMarkdownHtml(markdown), [markdown]);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(markdown);
+      setCopyState("copied");
+      setTimeout(() => setCopyState("idle"), 2000);
+    } catch {
+      setCopyState("failed");
+      setTimeout(() => setCopyState("idle"), 2000);
+    }
+  }, [markdown]);
+
+  const handleDownload = useCallback(() => {
+    const date = new Date().toISOString().slice(0, 10);
+    const slug = topic
+      .slice(0, 8)
+      .replace(/[^a-zA-Z0-9-]/g, "");
+    const filename = `${date}-${slug || "adr"}.md`;
+    const blob = new Blob([markdown], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [markdown, topic]);
+
+  return (
+    <div className="dc-adr">
+      <div className="dc-adr-header">
+        <button
+          className="dc-adr-toggle"
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? "▾" : "▸"} Architecture Decision Record
+        </button>
+        <div className="dc-adr-actions">
+          <button className="btn btn-sm" onClick={handleCopy}>
+            {copyState === "copied" ? "Copied!" : copyState === "failed" ? "Failed" : "Copy MD"}
+          </button>
+          <button className="btn btn-sm" onClick={handleDownload}>
+            Download .md
+          </button>
+        </div>
+      </div>
+
+      <div
+        className={`dc-adr-content ${expanded ? "dc-adr-content--expanded" : "dc-adr-content--collapsed"}`}
+        dangerouslySetInnerHTML={{ __html: renderedHtml }}
+      />
+
+      {!expanded && (
+        <button
+          className="dc-adr-expand"
+          onClick={() => setExpanded(true)}
+        >
+          Show full ADR...
+        </button>
+      )}
     </div>
   );
 }
