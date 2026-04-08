@@ -1,5 +1,6 @@
 import { useQuality } from "../hooks/useQuality";
 import { QualityTrendsChart } from "./QualityTrendsChart";
+import { QualityFindingsChart, QualityErrorsChart } from "./QualityBarCharts";
 import type { QualitySnapshot } from "../types";
 
 /** Color class based on value + thresholds (green/yellow/red). */
@@ -94,6 +95,8 @@ export function QualityTab() {
     error,
     snapshot,
     trends,
+    findings,
+    errors: errorsData,
     pendingChanges,
     retros,
     refresh,
@@ -172,6 +175,24 @@ export function QualityTab() {
         <div className="bento-panel span-12 panel-projects">
           <div className="bento-panel-title">Тренды KPI</div>
           <QualityTrendsChart trends={trends} />
+        </div>
+      )}
+
+      {/* Findings & Errors bar charts */}
+      {(findings || errorsData) && (
+        <div className="qbc-row">
+          {findings && Object.keys(findings.categories).length > 0 && (
+            <div className="bento-panel span-6 panel-projects">
+              <div className="bento-panel-title">Findings по категориям</div>
+              <QualityFindingsChart data={findings} />
+            </div>
+          )}
+          {errorsData && Object.keys(errorsData.classes).length > 0 && (
+            <div className="bento-panel span-6 panel-projects">
+              <div className="bento-panel-title">Ошибки по классам</div>
+              <QualityErrorsChart data={errorsData} />
+            </div>
+          )}
         </div>
       )}
     </>
