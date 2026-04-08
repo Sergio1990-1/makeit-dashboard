@@ -455,9 +455,11 @@ export interface RetroPattern {
   examples: string[];
 }
 
+export type RuleChangeAction = "add" | "modify" | "remove";
+
 export interface RetroRuleChange {
   rule: string;
-  action: string;
+  action: RuleChangeAction;
   rationale: string;
 }
 

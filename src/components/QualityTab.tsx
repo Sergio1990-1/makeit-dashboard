@@ -1,6 +1,7 @@
 import { useQuality } from "../hooks/useQuality";
 import { QualityTrendsChart } from "./QualityTrendsChart";
 import { QualityFindingsChart, QualityErrorsChart } from "./QualityBarCharts";
+import { RetroList, RetroDetailView } from "./QualityRetros";
 import type { QualitySnapshot } from "../types";
 
 /** Color class based on value + thresholds (green/yellow/red). */
@@ -99,7 +100,12 @@ export function QualityTab() {
     errors: errorsData,
     pendingChanges,
     retros,
+    selectedRetro,
+    retroRunning,
     refresh,
+    startRetro,
+    loadRetroDetail,
+    clearRetroDetail,
   } = useQuality();
 
   if (loading) {
@@ -195,6 +201,21 @@ export function QualityTab() {
           )}
         </div>
       )}
+
+      {/* Retrospectives */}
+      <div className="bento-panel span-12 panel-projects">
+        <div className="bento-panel-title">Ретроспективы</div>
+        {selectedRetro ? (
+          <RetroDetailView detail={selectedRetro} onBack={clearRetroDetail} />
+        ) : (
+          <RetroList
+            retros={retros}
+            retroRunning={retroRunning}
+            onSelect={loadRetroDetail}
+            onRunRetro={startRetro}
+          />
+        )}
+      </div>
     </>
   );
 }
