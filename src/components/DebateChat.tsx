@@ -7,7 +7,7 @@ import type { DebateMessage, DebateParticipant, DebateResultResponse } from "../
 
 const PROVIDER_META: Record<string, { color: string; icon: string; label: string }> = {
   anthropic: { color: "#D97706", icon: "A", label: "Claude" },
-  openai:    { color: "#10A37F", icon: "O", label: "GPT-4o" },
+  openai:    { color: "#10A37F", icon: "O", label: "GPT-5.4" },
   gemini:    { color: "#4285F4", icon: "G", label: "Gemini Pro" },
 };
 
@@ -25,24 +25,38 @@ const ROUND_LABEL: Record<string, string> = {
 
 /* ── Helpers ── */
 
+// Backend sends sender as plain string ("anthropic", "openai", "gemini", "user", "system").
+// Frontend type expects DebateParticipant object. Handle both.
+function _resolveProvider(sender: DebateMessage["sender"]): string {
+  if (typeof sender === "string") return sender;
+  return sender.provider;
+}
+
+function _resolveRole(sender: DebateMessage["sender"]): string | null {
+  if (typeof sender === "string") return null;
+  return sender.role;
+}
+
 function senderName(sender: DebateMessage["sender"]): string {
   if (sender === "user") return "You (Moderator)";
   if (sender === "system") return "System";
-  const meta = PROVIDER_META[sender.provider];
-  const role = ROLE_LABEL[sender.role] ?? sender.role;
-  return `${meta?.label ?? sender.provider} (${role})`;
+  const provider = _resolveProvider(sender);
+  const role = _resolveRole(sender);
+  const meta = PROVIDER_META[provider];
+  const label = meta?.label ?? provider;
+  return role ? `${label} (${ROLE_LABEL[role] ?? role})` : label;
 }
 
 function senderColor(sender: DebateMessage["sender"]): string {
   if (sender === "user") return "var(--color-text-secondary)";
   if (sender === "system") return "var(--color-text-muted)";
-  return PROVIDER_META[sender.provider]?.color ?? "var(--color-text)";
+  return PROVIDER_META[_resolveProvider(sender)]?.color ?? "var(--color-text)";
 }
 
 function senderAvatar(sender: DebateMessage["sender"]): { letter: string; bg: string } {
   if (sender === "user") return { letter: "U", bg: "var(--color-primary)" };
   if (sender === "system") return { letter: "S", bg: "var(--color-text-muted)" };
-  const meta = PROVIDER_META[sender.provider];
+  const meta = PROVIDER_META[_resolveProvider(sender)];
   return { letter: meta?.icon ?? "?", bg: meta?.color ?? "#666" };
 }
 
@@ -113,15 +127,15 @@ export function DebateChat({ debateId, onBack }: Props) {
   /* Group messages by round for dividers */
   const groupedMessages = useMemo(() => {
     const groups: { roundKey: string | null; msgs: DebateMessage[] }[] = [];
-    let currentRound: string | null = null;
+    let currentRound: string | undefined;
 
     for (const msg of messages) {
       const roundKey = msg.round != null && msg.round_type
         ? `${msg.round}-${msg.round_type}`
         : null;
 
-      if (roundKey !== currentRound) {
-        currentRound = roundKey;
+      if (roundKey !== currentRound || groups.length === 0) {
+        currentRound = roundKey ?? undefined;
         groups.push({ roundKey, msgs: [msg] });
       } else {
         groups[groups.length - 1].msgs.push(msg);
@@ -392,27 +406,27 @@ function ParticipantsBar({ currentSpeaker, messages }: { currentSpeaker: string;
 function ConsensusBlock({ result }: { result: DebateResultResponse }) {
   const [showDissent, setShowDissent] = useState(false);
   const dr = result.debate_result;
-  const costs = result.cost_summary;
+  const costs = result.cost_summary ?? { total_cost: 0, cost_per_provider: {} };
 
   return (
     <div className="dc-consensus">
       <div className="dc-consensus-header">Consensus</div>
       <div
         className="dc-consensus-text"
-        dangerouslySetInnerHTML={{ __html: simpleMarkdown(dr.consensus) }}
+        dangerouslySetInnerHTML={{ __html: simpleMarkdown(dr?.consensus ?? "") }}
       />
 
-      {dr.dissenting_opinions.length > 0 && (
+      {(dr?.dissenting_opinions?.length ?? 0) > 0 && (
         <div className="dc-dissent">
           <button
             className="dc-dissent-toggle"
             onClick={() => setShowDissent(!showDissent)}
           >
-            {showDissent ? "▾" : "▸"} Dissenting opinions ({dr.dissenting_opinions.length})
+            {showDissent ? "▾" : "▸"} Dissenting opinions ({dr!.dissenting_opinions.length})
           </button>
           {showDissent && (
             <div className="dc-dissent-list">
-              {dr.dissenting_opinions.map((d, i) => (
+              {dr!.dissenting_opinions.map((d, i) => (
                 <div key={i} className="dc-dissent-item" dangerouslySetInnerHTML={{ __html: simpleMarkdown(d) }} />
               ))}
             </div>
@@ -420,6 +434,7 @@ function ConsensusBlock({ result }: { result: DebateResultResponse }) {
         </div>
       )}
 
+      {costs.cost_per_provider && (
       <div className="dc-cost-summary">
         <div className="dc-cost-header">Cost breakdown</div>
         <div className="dc-cost-grid">
@@ -436,10 +451,11 @@ function ConsensusBlock({ result }: { result: DebateResultResponse }) {
           })}
           <div className="dc-cost-row dc-cost-total">
             <span>Total</span>
-            <span className="dc-cost-value">${costs.total_cost.toFixed(4)}</span>
+            <span className="dc-cost-value">${(costs.total_cost ?? 0).toFixed(4)}</span>
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDebate } from "../hooks/useDebate";
 import { StartDebateModal } from "./StartDebateModal";
 import { DebateChat } from "./DebateChat";
@@ -57,6 +57,14 @@ export function DebateTab() {
   const { debates, loading, error, refresh } = useDebate();
   const [showModal, setShowModal] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [manualBack, setManualBack] = useState(false);
+
+  // Auto-resume: if a debate is running on initial page load, auto-select it
+  useEffect(() => {
+    if (selectedId || manualBack) return;
+    const running = debates.find((d) => d.status === "running");
+    if (running) setSelectedId(running.id);
+  }, [debates, selectedId, manualBack]);
 
   const sorted = [...debates].sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
@@ -64,6 +72,7 @@ export function DebateTab() {
 
   const handleStarted = (id: string) => {
     setShowModal(false);
+    setManualBack(false);
     refresh();
     setSelectedId(id);
   };
@@ -72,7 +81,7 @@ export function DebateTab() {
   if (selectedId) {
     return (
       <div className="bento-panel span-12" style={{ padding: 0, overflow: "hidden" }}>
-        <DebateChat debateId={selectedId} onBack={() => setSelectedId(null)} />
+        <DebateChat debateId={selectedId} onBack={() => { setManualBack(true); setSelectedId(null); }} />
       </div>
     );
   }
@@ -152,7 +161,7 @@ export function DebateTab() {
                 <tr
                   key={d.id}
                   className="debate-row debate-row--clickable"
-                  onClick={() => setSelectedId(d.id)}
+                  onClick={() => { setManualBack(false); setSelectedId(d.id); }}
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedId(d.id); } }}
                   tabIndex={0}
                   role="button"
@@ -165,7 +174,7 @@ export function DebateTab() {
                   <td>{statusBadge(d.status)}</td>
                   <td>{d.status === "done" ? consensusBadge(d.consensus_level) : "—"}</td>
                   <td className="debate-cost">
-                    ${d.total_cost.toFixed(2)}
+                    ${(d.total_cost ?? 0).toFixed(2)}
                   </td>
                   <td className="debate-date">{relativeTime(d.created_at)}</td>
                 </tr>
@@ -179,7 +188,7 @@ export function DebateTab() {
               <div
                 key={d.id}
                 className="debate-card"
-                onClick={() => setSelectedId(d.id)}
+                onClick={() => { setManualBack(false); setSelectedId(d.id); }}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedId(d.id); } }}
                 tabIndex={0}
                 role="listitem"
@@ -194,7 +203,7 @@ export function DebateTab() {
                     <span className="debate-card-project">{d.project.split("/").pop()}</span>
                   )}
                   {d.status === "done" && consensusBadge(d.consensus_level)}
-                  <span className="debate-card-cost">${d.total_cost.toFixed(2)}</span>
+                  <span className="debate-card-cost">${(d.total_cost ?? 0).toFixed(2)}</span>
                   <span className="debate-card-date">{relativeTime(d.created_at)}</span>
                 </div>
               </div>

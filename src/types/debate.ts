@@ -17,9 +17,9 @@ export interface DebateStartRequest {
 
 export interface DebateMessage {
   id: string;
-  sender: "user" | "system" | DebateParticipant;
+  sender: "user" | "system" | string | DebateParticipant;
   round?: number;
-  round_type?: "proposal" | "critique" | "synthesis";
+  round_type?: "proposal" | "critique" | "final_position" | "synthesis";
   content: string;
   timestamp: string;
 }
