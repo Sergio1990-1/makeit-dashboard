@@ -211,11 +211,20 @@ function parseVerifyResponse(text: string): VerifyAgentResponse | null {
   for (let k = starts.length - 1; k >= 0; k--) {
     const candidate = text.slice(starts[k]);
     // Find the matching closing brace by tracking nesting depth.
+    // Skip braces inside JSON string literals to avoid false depth changes.
     let depth = 0;
     let end = -1;
+    let inString = false;
     for (let j = 0; j < candidate.length; j++) {
-      if (candidate[j] === "{") depth++;
-      else if (candidate[j] === "}") {
+      const ch = candidate[j];
+      if (inString) {
+        if (ch === "\\" ) { j++; continue; }
+        if (ch === '"') inString = false;
+        continue;
+      }
+      if (ch === '"') { inString = true; continue; }
+      if (ch === "{") depth++;
+      else if (ch === "}") {
         depth--;
         if (depth === 0) {
           end = j;
