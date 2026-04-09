@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { ProjectData, SummaryMetrics, Issue, AuditFinding, GeneratedIssue, Verdict } from "../types";
 import { GITHUB_OWNER, GITHUB_PROJECT_NUMBER, getToken } from "./config";
-import { VERIFICATION_TARGET_COUNT } from "./verification";
+import { selectFindingsForVerification } from "./verification";
 import {
   listRepoFiles,
   readRepoFile,
@@ -522,15 +522,9 @@ export async function generateIssuesFromFindings(
   verdictByIndex?: Map<number, Verdict>,
   originalIndexOf?: (f: AuditFinding) => number | undefined,
 ): Promise<GeneratedIssue[]> {
-  // Include critical + high; expand to medium until reaching the target.
-  // Must mirror selectFindingsForVerification so the same set is verified
+  // Use the same filter as verification so the same set is verified
   // and converted to issues.
-  let filtered = findings.filter((f) => f.severity === "critical" || f.severity === "high");
-  if (filtered.length < VERIFICATION_TARGET_COUNT) {
-    filtered = findings.filter(
-      (f) => f.severity === "critical" || f.severity === "high" || f.severity === "medium",
-    );
-  }
+  const filtered = selectFindingsForVerification(findings).map((s) => s.finding);
 
   const groups = groupFindingsByTheme(filtered);
   const client = new Anthropic({ apiKey: anthropicApiKey, dangerouslyAllowBrowser: true });

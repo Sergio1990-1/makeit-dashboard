@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { AuditFinding, Verdict, VerificationResult } from "../types";
 import { readRepoFile } from "./github-actions";
 
-const VERIFY_MODEL = "claude-sonnet-4-20250514";
+export const VERIFY_MODEL = "claude-sonnet-4-20250514";
 
 const VERIFY_SYSTEM_PROMPT = `You are a skeptical senior code reviewer verifying an automated audit finding.
 
@@ -193,31 +193,70 @@ interface VerifyAgentResponse {
   code_snippet: string | null;
 }
 
-/** Extract JSON object from Claude text response (tolerates surrounding prose). */
+/**
+ * Extract JSON object from Claude text response (tolerates surrounding prose).
+ * Uses a last-match approach: scans for every top-level `{...}` block and tries
+ * to parse from the last one backwards — the model's verdict JSON is typically
+ * the final object in the response, so this avoids false matches on code
+ * snippets containing braces earlier in the text.
+ */
 function parseVerifyResponse(text: string): VerifyAgentResponse | null {
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) return null;
-  try {
-    const parsed = JSON.parse(match[0]) as Record<string, unknown>;
-    const verdict = parsed.verdict;
-    const reason = parsed.reason;
-    if (
-      (verdict !== "CONFIRMED" &&
-        verdict !== "FALSE_POSITIVE" &&
-        verdict !== "UNCERTAIN" &&
-        verdict !== "NOT_A_BUG") ||
-      typeof reason !== "string"
-    ) {
-      return null;
-    }
-    return {
-      verdict,
-      reason,
-      code_snippet: typeof parsed.code_snippet === "string" ? parsed.code_snippet : null,
-    };
-  } catch {
-    return null;
+  // Collect start indices of all top-level '{' characters.
+  const starts: number[] = [];
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "{") starts.push(i);
   }
+
+  // Try from the last '{' backwards — first valid parse wins.
+  for (let k = starts.length - 1; k >= 0; k--) {
+    const candidate = text.slice(starts[k]);
+    // Find the matching closing brace by tracking nesting depth.
+    // Skip braces inside JSON string literals to avoid false depth changes.
+    let depth = 0;
+    let end = -1;
+    let inString = false;
+    for (let j = 0; j < candidate.length; j++) {
+      const ch = candidate[j];
+      if (inString) {
+        if (ch === "\\" ) { j++; continue; }
+        if (ch === '"') inString = false;
+        continue;
+      }
+      if (ch === '"') { inString = true; continue; }
+      if (ch === "{") depth++;
+      else if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          end = j;
+          break;
+        }
+      }
+    }
+    if (end === -1) continue;
+
+    try {
+      const parsed = JSON.parse(candidate.slice(0, end + 1)) as Record<string, unknown>;
+      const verdict = parsed.verdict;
+      const reason = parsed.reason;
+      if (
+        (verdict !== "CONFIRMED" &&
+          verdict !== "FALSE_POSITIVE" &&
+          verdict !== "UNCERTAIN" &&
+          verdict !== "NOT_A_BUG") ||
+        typeof reason !== "string"
+      ) {
+        continue;
+      }
+      return {
+        verdict,
+        reason,
+        code_snippet: typeof parsed.code_snippet === "string" ? parsed.code_snippet : null,
+      };
+    } catch {
+      continue;
+    }
+  }
+  return null;
 }
 
 /**

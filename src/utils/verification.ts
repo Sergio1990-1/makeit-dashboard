@@ -5,9 +5,7 @@ import type {
   VerificationReport,
   VerificationResult,
 } from "../types";
-import { createFileCache, verifyFinding } from "./verify-agent";
-
-const VERIFY_MODEL = "claude-sonnet-4-20250514";
+import { createFileCache, verifyFinding, VERIFY_MODEL } from "./verify-agent";
 
 // mypy error codes that represent tooling/environment noise rather than
 // code defects. Even though Phase A filters these at audit time, the
