@@ -298,13 +298,16 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
     if (available && selectedProject) void loadStats(selectedProject);
   }, [available, selectedProject, loadStats]);
 
-  // Auto-refresh stats every 10s when pipeline is running
+  // Auto-refresh stats: 10s when pipeline is running, 30s when idle
+  const STATS_INTERVAL_RUNNING_MS = 10_000;
+  const STATS_INTERVAL_IDLE_MS = 30_000;
   const running = status?.running ?? false;
   useEffect(() => {
-    if (!running || !selectedProject) return;
+    if (!selectedProject) return;
+    const interval = running ? STATS_INTERVAL_RUNNING_MS : STATS_INTERVAL_IDLE_MS;
     const id = setInterval(() => {
       void loadStats(selectedProject);
-    }, 10_000);
+    }, interval);
     return () => clearInterval(id);
   }, [running, selectedProject, loadStats]);
 
