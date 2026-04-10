@@ -11,8 +11,13 @@ const STAGES: { key: TranscriptStage; label: string; icon: string }[] = [
   { key: "done", label: "Готово", icon: "4" },
 ];
 
+/** Map stage to STAGES index. Stages not in the array (enrichment, synthesis)
+ *  are clamped to the nearest visible step until task-02 adds the full 6-step bar. */
 function stageIndex(stage: TranscriptStage): number {
-  return STAGES.findIndex((s) => s.key === stage);
+  const idx = STAGES.findIndex((s) => s.key === stage);
+  if (idx >= 0) return idx;
+  // enrichment/synthesis → show as "Обработка" (index 2) until 6-step bar lands
+  return 2;
 }
 
 function formatElapsed(seconds: number): string {
