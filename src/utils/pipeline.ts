@@ -94,6 +94,19 @@ export const STAGE_ORDER = [
   "in_review", "qa_verifying", "ready_to_merge", "merged",
 ] as const;
 
+/** Map pipeline API stage names to dashboard canonical names. */
+const STAGE_ALIAS: Record<string, string> = {
+  pr: "pr_opened",
+  review: "in_review",
+  qa_verify: "qa_verifying",
+  merge: "merged",
+};
+
+/** Normalize a stage name: resolve aliases to canonical dashboard names. */
+export function normalizeStage(stage: string): string {
+  return STAGE_ALIAS[stage] ?? stage;
+}
+
 export const STAGE_LABEL: Record<string, string> = {
   queued: "Очередь",
   dev: "Разработка",
@@ -104,6 +117,11 @@ export const STAGE_LABEL: Record<string, string> = {
   ready_to_merge: "К мержу",
   merged: "Замержен",
   needs_human: "Нужен человек",
+  // Aliases for pipeline API names (defense-in-depth)
+  pr: "PR создан",
+  review: "Ревью",
+  qa_verify: "QA",
+  merge: "Замержен",
 };
 
 export async function isPipelineRunning(): Promise<boolean> {
