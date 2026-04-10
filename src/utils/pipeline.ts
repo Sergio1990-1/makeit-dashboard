@@ -332,6 +332,32 @@ export async function classifyIssues(
   return finalResult;
 }
 
+/* ══════════════════════════════════════════
+   ISSUE TIMELINE
+   ══════════════════════════════════════════ */
+
+export interface TimelineEntry {
+  stage: string;
+  status: string;
+  ts: number;
+  detail?: string;
+  elapsed?: number;
+  cost_usd?: number;
+  duration_seconds?: number;
+}
+
+export async function fetchTimeline(
+  repo: string,
+  issue: number,
+): Promise<TimelineEntry[]> {
+  const res = await fetch(
+    `${PIPELINE_BASE_URL}/pipeline/timeline/${encodeURIComponent(repo)}/${issue}`,
+    { cache: "no-store" },
+  );
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json() as Promise<TimelineEntry[]>;
+}
+
 export async function fetchResearchHistory(project: string): Promise<ResearchHistoryItem[]> {
   const res = await fetch(
     `${PIPELINE_BASE_URL}/research/history?project=${encodeURIComponent(project)}`,
