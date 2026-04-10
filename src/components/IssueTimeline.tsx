@@ -1,20 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { fetchTimeline } from "../utils/pipeline";
+import { fetchTimeline, STAGE_LABEL } from "../utils/pipeline";
 import type { TimelineEntry } from "../utils/pipeline";
-
-/* ── Stage labels (reuse map from PipelineControlPanel) ── */
-
-const STAGE_LABEL: Record<string, string> = {
-  queued: "Очередь",
-  dev: "Разработка",
-  self_check: "Самопроверка",
-  pr_opened: "PR создан",
-  in_review: "Ревью",
-  qa_verifying: "QA",
-  ready_to_merge: "К мержу",
-  merged: "Замержен",
-  needs_human: "Нужен человек",
-};
 
 /* ── Helpers ── */
 
@@ -66,7 +52,7 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
     fetchTimeline(repo, issueNumber)
       .then((data) => {
         if (!cancelled) {
-          setEntries(data);
+          setEntries(Array.isArray(data) ? data : []);
           setLoading(false);
         }
       })
