@@ -794,6 +794,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                   <span
                     role="button"
                     tabIndex={0}
+                    aria-label={`Таймлайн issue #${r.issue_number}`}
                     onClick={() => setTimelineIssue(r.issue_number)}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setTimelineIssue(r.issue_number); }}
                     style={{
