@@ -3652,7 +3652,7 @@ body::after {
   flex-direction: column;
   align-items: center;
   gap: var(--sp-1);
-  min-width: 72px;
+  min-width: 56px;
 }
 .tpc-step-dot {
   width: 32px;
@@ -3701,6 +3701,16 @@ body::after {
 .tpc-step--done .tpc-step-label { color: var(--color-success); }
 .tpc-step--active .tpc-step-label { color: var(--color-primary); }
 .tpc-step--error .tpc-step-label { color: var(--color-danger); }
+
+.tpc-step-detail {
+  font-size: 10px;
+  color: var(--color-primary);
+  text-align: center;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .tpc-step-line {
   flex: 1;

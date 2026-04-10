@@ -4,20 +4,18 @@ import { fetchTranscriptStatus, type TranscriptStage, type TranscriptStatus } fr
 const POLL_INTERVAL = 2000;
 const MAX_POLL_FAILURES = 5;
 
-const STAGES: { key: TranscriptStage; label: string; icon: string }[] = [
-  { key: "intake", label: "Загрузка", icon: "1" },
-  { key: "stt", label: "Транскрипция", icon: "2" },
-  { key: "structuring", label: "Обработка", icon: "3" },
-  { key: "done", label: "Готово", icon: "4" },
+const STAGES: { key: TranscriptStage; label: string }[] = [
+  { key: "intake", label: "Приём" },
+  { key: "stt", label: "Транскрипция" },
+  { key: "enrichment", label: "Обогащение" },
+  { key: "structuring", label: "Структурирование" },
+  { key: "synthesis", label: "Синтез" },
+  { key: "done", label: "Готово" },
 ];
 
-/** Map stage to STAGES index. Stages not in the array (enrichment, synthesis)
- *  are clamped to the nearest visible step until task-02 adds the full 6-step bar. */
 function stageIndex(stage: TranscriptStage): number {
   const idx = STAGES.findIndex((s) => s.key === stage);
-  if (idx >= 0) return idx;
-  // enrichment/synthesis → show as "Обработка" (index 2) until 6-step bar lands
-  return 2;
+  return idx >= 0 ? idx : 0;
 }
 
 function formatElapsed(seconds: number): string {
@@ -142,18 +140,15 @@ export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
         </div>
       )}
 
-      {/* Current stage detail */}
-      {status?.stage_detail && !hasError && !isDone && (
-        <div className="tpc-progress-detail">
-          <div className="tpc-progress-detail-dot" />
-          <span>{status.stage_detail}</span>
-        </div>
-      )}
-
       {/* Stepper timeline */}
       <div className="tpc-stepper">
         {STAGES.map((s, i) => {
-          const stepDone = i < currentIdx || (i === currentIdx && isDone);
+          // Use stages_completed for precise state when available (new pipeline),
+          // otherwise fall back to index-based comparison (legacy)
+          const hasCompletedData = status && status.stages_completed.length > 0;
+          const stepDone = hasCompletedData
+            ? status.stages_completed.includes(s.key) || (s.key === "done" && isDone)
+            : i < currentIdx || (i === currentIdx && isDone);
           const isActive = i === currentIdx && !hasError && !isDone;
           const isFailed = i === currentIdx && hasError;
 
@@ -168,10 +163,13 @@ export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
                   ) : isFailed ? (
                     "!"
                   ) : (
-                    <span>{s.icon}</span>
+                    <span>{s.key === "done" ? "\u2713" : i + 1}</span>
                   )}
                 </div>
                 <span className="tpc-step-label">{s.label}</span>
+                {isActive && status?.stage_detail && (
+                  <span className="tpc-step-detail">{status.stage_detail}</span>
+                )}
               </div>
               {i < STAGES.length - 1 && (
                 <div className={`tpc-step-line${stepDone ? " tpc-step-line--done" : ""}`} />
@@ -214,14 +212,15 @@ export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
       )}
 
       {/* Error message */}
-      {hasError && (
+      {hasError && status && (
         <div className="tpc-progress-error">
-          <p>{status?.error}</p>
-          {status?.stage_detail && (
-            <p className="tpc-progress-error-context">
-              Этап: {status.stage_detail}
-            </p>
-          )}
+          <p>{status.error}</p>
+          <p className="tpc-progress-error-context">
+            Этап: {STAGES[currentIdx]?.label ?? status.stage_detail ?? status.stage}
+            {status.stage_detail && status.stage_detail !== STAGES[currentIdx]?.label && (
+              <> &mdash; {status.stage_detail}</>
+            )}
+          </p>
           <button className="btn btn-primary" onClick={onRetry}>
             Повторить
           </button>
