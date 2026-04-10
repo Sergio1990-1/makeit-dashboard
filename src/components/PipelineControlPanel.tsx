@@ -21,6 +21,61 @@ const COMPLEXITY_STYLE: Record<string, { label: string; color: string; bg: strin
   manual: { label: "MANUAL", color: "var(--red-500)", bg: "rgba(239, 68, 68, 0.12)" },
 };
 
+const RISK_STYLE: Record<string, { label: string; color: string; bg: string }> = {
+  low: { label: "auto", color: "var(--green-500)", bg: "rgba(16, 185, 129, 0.12)" },
+  medium: { label: "guarded", color: "var(--orange-500)", bg: "rgba(245, 158, 11, 0.12)" },
+  high: { label: "gated", color: "var(--red-500)", bg: "rgba(239, 68, 68, 0.12)" },
+};
+
+const POLICY_TOOLTIP: Record<string, string> = {
+  full_auto: "Автоматический merge",
+  guarded_auto: "Merge после подтверждения",
+  human_gated: "Останавливается на PR",
+};
+
+function RiskBadge({ riskLevel, executionPolicy }: { riskLevel?: string; executionPolicy?: string }) {
+  if (!riskLevel) return null;
+  const style = RISK_STYLE[riskLevel] ?? RISK_STYLE.high;
+  const tooltip = executionPolicy ? POLICY_TOOLTIP[executionPolicy] ?? executionPolicy : undefined;
+  return (
+    <span
+      title={tooltip}
+      style={{
+        fontSize: "var(--text-xs)",
+        fontWeight: 700,
+        padding: "1px 6px",
+        borderRadius: 8,
+        background: style.bg,
+        color: style.color,
+        letterSpacing: "0.04em",
+        textTransform: "uppercase",
+        cursor: tooltip ? "help" : undefined,
+      }}
+    >
+      {style.label}
+    </span>
+  );
+}
+
+function RiskDot({ riskLevel }: { riskLevel?: string }) {
+  if (!riskLevel) return null;
+  const style = RISK_STYLE[riskLevel];
+  if (!style) return null;
+  return (
+    <span
+      title={`Риск: ${style.label}`}
+      style={{
+        display: "inline-block",
+        width: 7,
+        height: 7,
+        borderRadius: "50%",
+        background: style.color,
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
 function ComplexityBadge({ complexity, model }: { complexity?: ComplexityLevel; model?: string }) {
   if (!complexity) return null;
   const style = COMPLEXITY_STYLE[complexity] ?? COMPLEXITY_STYLE.manual;
@@ -726,6 +781,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                       }}>
                         #{item.number}
                       </span>
+                      {"risk_level" in item && <RiskDot riskLevel={(item as unknown as { risk_level?: string }).risk_level} />}
                       <span style={{
                         flex: 1,
                         fontSize: "var(--text-sm)",
@@ -819,6 +875,9 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
 
                   {/* Complexity badge */}
                   <ComplexityBadge complexity={r.complexity} model={r.model_used} />
+
+                  {/* Risk badge */}
+                  <RiskBadge riskLevel={r.risk_level} executionPolicy={r.execution_policy} />
 
                   {/* Stage progress */}
                   <StageProgress stages={r.stages} compact />
