@@ -59,13 +59,9 @@ export function DebateTab() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [manualBack, setManualBack] = useState(false);
 
-  // Auto-resume: if a debate is running on initial page load, auto-select it
-  const autoResumeId = (!selectedId && !manualBack)
-    ? debates.find((d) => d.status === "running")?.id ?? null
-    : null;
-  useEffect(() => {
-    if (autoResumeId) setSelectedId(autoResumeId);
-  }, [autoResumeId]);
+  // Auto-resume: if no debate explicitly selected, pick the running one
+  const effectiveId = selectedId
+    ?? (manualBack ? null : debates.find((d) => d.status === "running")?.id ?? null);
 
   const sorted = [...debates].sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
@@ -79,10 +75,10 @@ export function DebateTab() {
   };
 
   /* ── Chat view ── */
-  if (selectedId) {
+  if (effectiveId) {
     return (
       <div className="bento-panel span-12" style={{ padding: 0, overflow: "hidden" }}>
-        <DebateChat debateId={selectedId} onBack={() => { setManualBack(true); setSelectedId(null); }} />
+        <DebateChat debateId={effectiveId} onBack={() => { setManualBack(true); setSelectedId(null); }} />
       </div>
     );
   }
