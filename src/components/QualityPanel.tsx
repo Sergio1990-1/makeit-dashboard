@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { fetchQualitySnapshot } from "../utils/quality";
 import type { QualitySnapshot } from "../types";
 
 function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${Math.floor(seconds)}с`;
   const m = Math.floor(seconds / 60);
-  if (m < 60) return `${m}м`;
+  const s = Math.floor(seconds % 60);
+  if (m < 60) return `${m}м ${s}с`;
   const h = Math.floor(m / 60);
   return `${h}ч ${m % 60}м`;
 }
@@ -65,7 +67,7 @@ export function QualityPanel({ project }: QualityPanelProps) {
 
   if (error || !snapshot) return null;
 
-  const rows: { label: string; value: React.ReactNode }[] = [
+  const rows: { label: string; value: ReactNode }[] = [
     {
       label: "First pass rate",
       value: pctBar(

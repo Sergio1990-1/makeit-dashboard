@@ -950,22 +950,29 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                   )}
 
                   {/* Attempts */}
-                  {r.attempt_number != null && r.max_attempts != null && (
-                    <span
-                      title={r.budget_remaining_usd != null ? `Остаток бюджета: $${r.budget_remaining_usd.toFixed(2)}` : undefined}
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "var(--text-xs)",
-                        color: r.budget_remaining_usd != null && r.budget_remaining_usd < 0.30
-                          ? "var(--orange-500)"
-                          : "var(--color-text-muted)",
-                        cursor: r.budget_remaining_usd != null ? "help" : undefined,
-                      }}
-                    >
-                      {r.attempt_number}/{r.max_attempts}
-                      {r.budget_remaining_usd != null && r.budget_remaining_usd < 0.30 && " ⚠"}
-                    </span>
-                  )}
+                  {r.attempt_number != null && r.max_attempts != null && (() => {
+                    const budgetLow = r.budget_remaining_usd != null && r.budget_remaining_usd < 0.30;
+                    const attemptsLow = r.attempt_number >= r.max_attempts - 1;
+                    const warn = budgetLow || attemptsLow;
+                    const tooltip = [
+                      r.budget_remaining_usd != null ? `Остаток бюджета: $${r.budget_remaining_usd.toFixed(2)}` : null,
+                      attemptsLow ? `Попытка ${r.attempt_number} из ${r.max_attempts}` : null,
+                    ].filter(Boolean).join(" | ") || undefined;
+                    return (
+                      <span
+                        title={tooltip}
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: "var(--text-xs)",
+                          color: warn ? "var(--orange-500)" : "var(--color-text-muted)",
+                          cursor: tooltip ? "help" : undefined,
+                        }}
+                      >
+                        {r.attempt_number}/{r.max_attempts}
+                        {warn && " ⚠"}
+                      </span>
+                    );
+                  })()}
 
                   {/* Risk badge */}
                   <RiskBadge riskLevel={r.risk_level} executionPolicy={r.execution_policy} />

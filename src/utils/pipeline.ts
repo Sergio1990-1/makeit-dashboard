@@ -82,7 +82,7 @@ export interface PipelineStats {
   manual_completed: number;
   complexity_breakdown?: ComplexityBreakdown;
   model_usage?: ModelUsage[];
-  first_pass_rate?: number;
+  first_pass_rate?: number;    // 0–100 (percentage, NOT fraction)
   avg_duration_seconds?: number;
   cost_per_task_usd?: number;
 }
