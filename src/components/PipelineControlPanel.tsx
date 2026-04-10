@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { usePipeline } from "../hooks/usePipeline";
 import { GITHUB_OWNER, PROJECTS } from "../utils/config";
 import type { PipelineStageEntry, ComplexityFilter, ComplexityLevel, ClassifyProgress, ClassifyResponse } from "../utils/pipeline";
-import { classifyIssues } from "../utils/pipeline";
+import { classifyIssues, STAGE_ORDER, STAGE_LABEL } from "../utils/pipeline";
 import type { ProjectData } from "../types";
 import { PipelineClosedChart } from "./PipelineClosedChart";
 
@@ -48,22 +48,7 @@ function ComplexityBadge({ complexity, model }: { complexity?: ComplexityLevel; 
   );
 }
 
-const STAGE_ORDER = [
-  "queued", "dev", "self_check", "pr_opened",
-  "in_review", "qa_verifying", "ready_to_merge", "merged",
-] as const;
-
-const STAGE_LABEL: Record<string, string> = {
-  queued: "Очередь",
-  dev: "Разработка",
-  self_check: "Самопроверка",
-  pr_opened: "PR создан",
-  in_review: "Ревью",
-  qa_verifying: "QA",
-  ready_to_merge: "К мержу",
-  merged: "Замержен",
-  needs_human: "Нужен человек",
-};
+/* STAGE_ORDER and STAGE_LABEL imported from ../utils/pipeline */
 
 const STATUS_LABEL: Record<string, string> = {
   queued: "В очереди",
@@ -227,7 +212,7 @@ function StageProgress({
                   }}
                 >
                   {STAGE_LABEL[name] ?? name}
-                  {detail && s === "completed" && (name === "review" || name === "in_review") && (
+                  {detail && s === "completed" && name === "in_review" && (
                     <span
                       style={{
                         marginLeft: 3,

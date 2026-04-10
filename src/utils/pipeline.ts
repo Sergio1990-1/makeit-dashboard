@@ -86,6 +86,25 @@ export interface PipelineStats {
   cost_per_task_usd?: number;
 }
 
+/* ── Shared stage constants ── */
+
+export const STAGE_ORDER = [
+  "queued", "dev", "self_check", "pr_opened",
+  "in_review", "qa_verifying", "ready_to_merge", "merged",
+] as const;
+
+export const STAGE_LABEL: Record<string, string> = {
+  queued: "Очередь",
+  dev: "Разработка",
+  self_check: "Самопроверка",
+  pr_opened: "PR создан",
+  in_review: "Ревью",
+  qa_verifying: "QA",
+  ready_to_merge: "К мержу",
+  merged: "Замержен",
+  needs_human: "Нужен человек",
+};
+
 export async function isPipelineRunning(): Promise<boolean> {
   try {
     const controller = new AbortController();
