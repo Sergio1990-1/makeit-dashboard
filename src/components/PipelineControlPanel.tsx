@@ -188,6 +188,10 @@ function LiveTimer({ stages, finished }: { stages?: PipelineStageEntry[]; finish
 
 /* ── Stage progress helpers ── */
 
+const COMPLETED_STATUSES = new Set([
+  "completed", "auto_pass", "opened", "skipped",
+]);
+
 function getStageStatus(
   stages: PipelineStageEntry[] | undefined,
   stageName: string,
@@ -196,7 +200,7 @@ function getStageStatus(
   const matching = stages.filter((s) => normalizeStage(s.stage) === stageName);
   if (!matching.length) return "pending";
   const last = matching[matching.length - 1];
-  if (last.status === "completed") return "completed";
+  if (COMPLETED_STATUSES.has(last.status)) return "completed";
   if (last.status === "failed") return "failed";
   return "started";
 }
