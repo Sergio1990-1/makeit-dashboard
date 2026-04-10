@@ -6,6 +6,7 @@ import { classifyIssues, STAGE_ORDER, STAGE_LABEL } from "../utils/pipeline";
 import type { ProjectData } from "../types";
 import { PipelineClosedChart } from "./PipelineClosedChart";
 import { IssueTimeline } from "./IssueTimeline";
+import { QualityPanel } from "./QualityPanel";
 
 const LABEL_OPTIONS = ["P1-critical", "P2-high", "P3-medium"] as const;
 type LabelOption = (typeof LABEL_OPTIONS)[number];
@@ -659,6 +660,48 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
               </div>
             ))}
           </div>
+          {/* Extended KPIs */}
+          {(stats.first_pass_rate != null || stats.avg_duration_seconds != null || stats.cost_per_task_usd != null) && (
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 8,
+              marginTop: 10,
+              paddingTop: 8,
+              borderTop: "1px solid var(--color-border)",
+            }}>
+              {stats.first_pass_rate != null && (
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "var(--text-data)", fontWeight: 700, color: stats.first_pass_rate >= 80 ? "var(--green-500)" : stats.first_pass_rate >= 60 ? "var(--orange-500)" : "var(--red-500)", lineHeight: 1.2 }}>
+                    {Math.round(stats.first_pass_rate)}%
+                  </div>
+                  <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
+                    First pass
+                  </div>
+                </div>
+              )}
+              {stats.avg_duration_seconds != null && (
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "var(--text-data)", fontWeight: 700, color: "var(--color-text)", lineHeight: 1.2 }}>
+                    {formatDuration(stats.avg_duration_seconds)}
+                  </div>
+                  <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
+                    Ср. время
+                  </div>
+                </div>
+              )}
+              {stats.cost_per_task_usd != null && (
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "var(--text-data)", fontWeight: 700, color: "var(--green-500)", lineHeight: 1.2 }}>
+                    ${stats.cost_per_task_usd.toFixed(2)}
+                  </div>
+                  <div style={{ fontSize: "var(--text-xs)", color: "var(--color-text-muted)", marginTop: 2 }}>
+                    $/задачу
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -722,6 +765,9 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
         </div>
         );
       })()}
+
+      {/* ── Quality KPI panel ── */}
+      {selectedProject && <QualityPanel project={selectedProject} />}
 
       {/* ── Live tasks ── */}
       {isRunning && status && (
@@ -891,6 +937,35 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
 
                   {/* Complexity badge */}
                   <ComplexityBadge complexity={r.complexity} model={r.model_used} />
+
+                  {/* Cost */}
+                  {r.cost_usd != null && (
+                    <span style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "var(--text-xs)",
+                      color: "var(--green-500)",
+                    }}>
+                      ${r.cost_usd.toFixed(2)}
+                    </span>
+                  )}
+
+                  {/* Attempts */}
+                  {r.attempt_number != null && r.max_attempts != null && (
+                    <span
+                      title={r.budget_remaining_usd != null ? `Остаток бюджета: $${r.budget_remaining_usd.toFixed(2)}` : undefined}
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "var(--text-xs)",
+                        color: r.budget_remaining_usd != null && r.budget_remaining_usd < 0.30
+                          ? "var(--orange-500)"
+                          : "var(--color-text-muted)",
+                        cursor: r.budget_remaining_usd != null ? "help" : undefined,
+                      }}
+                    >
+                      {r.attempt_number}/{r.max_attempts}
+                      {r.budget_remaining_usd != null && r.budget_remaining_usd < 0.30 && " ⚠"}
+                    </span>
+                  )}
 
                   {/* Risk badge */}
                   <RiskBadge riskLevel={r.risk_level} executionPolicy={r.execution_policy} />
