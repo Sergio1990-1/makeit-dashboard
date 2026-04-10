@@ -7,7 +7,8 @@ export interface TranscriptUploadResponse {
   status: string;
 }
 
-export type TranscriptStage = "upload" | "transcription" | "processing" | "done";
+/** 5 backend pipeline stages + done. */
+export type TranscriptStage = "intake" | "stt" | "enrichment" | "structuring" | "synthesis" | "done";
 
 export interface TranscriptStatus {
   task_id: string;
@@ -20,28 +21,40 @@ export interface TranscriptStatus {
   started_at: string | null;
   duration_seconds: number;
   speaker_count: number;
+  current_stage: string | null;
+  stages_completed: string[];
 }
 
-/** Map backend status string to frontend stage.
- *  For errors, use the backend `stage` field to determine where the failure occurred. */
-function mapStatusToStage(status: string, backendStage?: string): TranscriptStage {
+const VALID_STAGES = new Set<TranscriptStage>(["intake", "stt", "enrichment", "structuring", "synthesis", "done"]);
+
+/** Map backend status/current_stage to frontend TranscriptStage.
+ *  If `currentStage` is provided (new pipeline), use it directly.
+ *  Otherwise fall back to legacy status string mapping. */
+function mapStatusToStage(status: string, backendStage?: string, currentStage?: string): TranscriptStage {
+  // New pipeline: use current_stage directly if valid
+  if (currentStage && VALID_STAGES.has(currentStage as TranscriptStage)) {
+    return currentStage as TranscriptStage;
+  }
+
+  // Legacy fallback
   switch (status) {
     case "queued":
-      return "upload";
+      return "intake";
     case "transcribing":
-      return "transcription";
+      return "stt";
     case "processing":
-      return "processing";
+      return "structuring";
     case "done":
       return "done";
     case "error": {
-      // Determine which stage the error occurred in
       const s = (backendStage || "").toLowerCase();
-      if (s.includes("транскрипц")) return "transcription";
-      return "processing";
+      if (s.includes("транскрипц") || s.includes("stt")) return "stt";
+      if (s.includes("enrichment")) return "enrichment";
+      if (s.includes("synthesis")) return "synthesis";
+      return "structuring";
     }
     default:
-      return "upload";
+      return "intake";
   }
 }
 
@@ -56,7 +69,7 @@ export async function fetchTranscriptStatus(taskId: string): Promise<TranscriptS
   const data = await res.json();
   return {
     task_id: data.job_id,
-    stage: mapStatusToStage(data.status, data.stage),
+    stage: mapStatusToStage(data.status, data.stage, data.current_stage),
     stage_detail: data.stage_detail || data.stage || "",
     progress: data.progress ?? 0,
     error: data.error || null,
@@ -65,13 +78,30 @@ export async function fetchTranscriptStatus(taskId: string): Promise<TranscriptS
     started_at: data.started_at || null,
     duration_seconds: data.duration_seconds ?? 0,
     speaker_count: data.speaker_count ?? 0,
+    current_stage: data.current_stage || null,
+    stages_completed: Array.isArray(data.stages_completed) ? data.stages_completed : [],
   };
+}
+
+export type TranscriptQuality = "pass" | "warning" | "needs_review";
+
+export interface QualityCheck {
+  name: string;
+  status: "pass" | "warning" | "fail";
+  message: string;
+}
+
+export interface QualityReport {
+  checks: QualityCheck[];
+  score: number;
 }
 
 export interface TranscriptResult {
   task_id: string;
   brief: string;       // BRIEF.md content (markdown)
   transcript: string;  // cleaned transcript text
+  quality: TranscriptQuality | null;
+  quality_report: QualityReport | null;
 }
 
 export async function fetchTranscriptResult(taskId: string): Promise<TranscriptResult> {
@@ -87,6 +117,8 @@ export async function fetchTranscriptResult(taskId: string): Promise<TranscriptR
     task_id: data.job_id,
     brief: data.brief_content || "",
     transcript: data.transcript_text || "",
+    quality: data.quality || null,
+    quality_report: data.quality_report || null,
   };
 }
 
@@ -99,6 +131,7 @@ export interface TranscriptListItem {
   status: "done" | "queued" | "transcribing" | "processing" | "error";
   created_at: string; // ISO timestamp
   transcription_model?: TranscriptionModel;
+  quality?: TranscriptQuality;
 }
 
 export async function fetchTranscriptList(): Promise<TranscriptListItem[]> {
@@ -117,6 +150,7 @@ export async function fetchTranscriptList(): Promise<TranscriptListItem[]> {
     status: item.status as TranscriptListItem["status"],
     created_at: item.created_at || "",
     transcription_model: (item.transcription_model as TranscriptionModel) || undefined,
+    quality: (item.quality as TranscriptQuality) || undefined,
   }));
 }
 
@@ -142,11 +176,15 @@ export async function uploadTranscript(
   file: File,
   project: string,
   transcriptionModel: TranscriptionModel = "fast",
+  resumeJobId?: string,
 ): Promise<TranscriptUploadResponse> {
   const form = new FormData();
   form.append("file", file);
   form.append("project_context", project);
   form.append("transcription_model", transcriptionModel);
+  if (resumeJobId) {
+    form.append("resume", resumeJobId);
+  }
 
   const res = await fetch(`${PIPELINE_BASE_URL}/transcript/upload`, {
     method: "POST",
