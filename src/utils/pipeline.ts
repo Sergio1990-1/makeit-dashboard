@@ -50,6 +50,7 @@ export interface PipelineQueueItem {
   title: string;
   status: string;
   priority: number;
+  risk_level?: "low" | "medium" | "high";
 }
 
 export interface PipelineStatus {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { usePipeline } from "../hooks/usePipeline";
 import { GITHUB_OWNER, PROJECTS } from "../utils/config";
-import type { PipelineStageEntry, ComplexityFilter, ComplexityLevel, ClassifyProgress, ClassifyResponse } from "../utils/pipeline";
+import type { PipelineStageEntry, PipelineQueueItem, ComplexityFilter, ComplexityLevel, ClassifyProgress, ClassifyResponse } from "../utils/pipeline";
 import { classifyIssues, STAGE_ORDER, STAGE_LABEL } from "../utils/pipeline";
 import type { ProjectData } from "../types";
 import { PipelineClosedChart } from "./PipelineClosedChart";
@@ -20,6 +20,61 @@ const COMPLEXITY_STYLE: Record<string, { label: string; color: string; bg: strin
   assisted: { label: "ASSISTED", color: "var(--orange-500)", bg: "rgba(245, 158, 11, 0.12)" },
   manual: { label: "MANUAL", color: "var(--red-500)", bg: "rgba(239, 68, 68, 0.12)" },
 };
+
+const RISK_STYLE: Record<string, { label: string; color: string; bg: string }> = {
+  low: { label: "auto", color: "var(--green-500)", bg: "rgba(16, 185, 129, 0.12)" },
+  medium: { label: "guarded", color: "var(--orange-500)", bg: "rgba(245, 158, 11, 0.12)" },
+  high: { label: "gated", color: "var(--red-500)", bg: "rgba(239, 68, 68, 0.12)" },
+};
+
+const POLICY_TOOLTIP: Record<string, string> = {
+  full_auto: "Автоматический merge",
+  guarded_auto: "Merge после подтверждения",
+  human_gated: "Останавливается на PR",
+};
+
+function RiskBadge({ riskLevel, executionPolicy }: { riskLevel?: string; executionPolicy?: string }) {
+  if (!riskLevel) return null;
+  const style = RISK_STYLE[riskLevel] ?? RISK_STYLE.high;
+  const tooltip = executionPolicy ? POLICY_TOOLTIP[executionPolicy] ?? executionPolicy : undefined;
+  return (
+    <span
+      title={tooltip}
+      style={{
+        fontSize: "var(--text-xs)",
+        fontWeight: 700,
+        padding: "1px 6px",
+        borderRadius: 8,
+        background: style.bg,
+        color: style.color,
+        letterSpacing: "0.04em",
+        textTransform: "uppercase",
+        cursor: tooltip ? "help" : undefined,
+      }}
+    >
+      {style.label}
+    </span>
+  );
+}
+
+function RiskDot({ riskLevel }: { riskLevel?: string }) {
+  if (!riskLevel) return null;
+  const style = RISK_STYLE[riskLevel];
+  if (!style) return null;
+  return (
+    <span
+      title={`Риск: ${style.label}`}
+      style={{
+        display: "inline-block",
+        width: 7,
+        height: 7,
+        borderRadius: "50%",
+        background: style.color,
+        flexShrink: 0,
+      }}
+    />
+  );
+}
 
 function ComplexityBadge({ complexity, model }: { complexity?: ComplexityLevel; model?: string }) {
   if (!complexity) return null;
@@ -691,7 +746,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
             // Issues that have stages but aren't in queue (already running)
             const extraNums = stageIssueNums.filter((n) => !queueNums.has(n));
             const allItems = [
-              ...extraNums.map((n) => ({ number: n, title: `Issue #${n}`, status: "in_progress", priority: 0 })),
+              ...extraNums.map((n): PipelineQueueItem => ({ number: n, title: `Issue #${n}`, status: "in_progress", priority: 0 })),
               ...status.queue.filter((q) => !completedNums.has(q.number)),
             ];
             if (allItems.length === 0) {
@@ -726,6 +781,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                       }}>
                         #{item.number}
                       </span>
+                      <RiskDot riskLevel={item.risk_level} />
                       <span style={{
                         flex: 1,
                         fontSize: "var(--text-sm)",
@@ -819,6 +875,9 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
 
                   {/* Complexity badge */}
                   <ComplexityBadge complexity={r.complexity} model={r.model_used} />
+
+                  {/* Risk badge */}
+                  <RiskBadge riskLevel={r.risk_level} executionPolicy={r.execution_policy} />
 
                   {/* Stage progress */}
                   <StageProgress stages={r.stages} compact />
