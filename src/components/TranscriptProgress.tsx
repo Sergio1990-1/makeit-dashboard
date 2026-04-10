@@ -5,9 +5,9 @@ const POLL_INTERVAL = 2000;
 const MAX_POLL_FAILURES = 5;
 
 const STAGES: { key: TranscriptStage; label: string; icon: string }[] = [
-  { key: "upload", label: "Загрузка", icon: "1" },
-  { key: "transcription", label: "Транскрипция", icon: "2" },
-  { key: "processing", label: "Обработка", icon: "3" },
+  { key: "intake", label: "Загрузка", icon: "1" },
+  { key: "stt", label: "Транскрипция", icon: "2" },
+  { key: "structuring", label: "Обработка", icon: "3" },
   { key: "done", label: "Готово", icon: "4" },
 ];
 
