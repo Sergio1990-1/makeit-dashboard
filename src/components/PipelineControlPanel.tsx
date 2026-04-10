@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { usePipeline } from "../hooks/usePipeline";
 import { GITHUB_OWNER, PROJECTS } from "../utils/config";
 import type { PipelineStageEntry, PipelineQueueItem, ComplexityFilter, ComplexityLevel, ClassifyProgress, ClassifyResponse } from "../utils/pipeline";
-import { classifyIssues, STAGE_ORDER, STAGE_LABEL } from "../utils/pipeline";
+import { classifyIssues, STAGE_ORDER, STAGE_LABEL, normalizeStage } from "../utils/pipeline";
 import type { ProjectData } from "../types";
 import { PipelineClosedChart } from "./PipelineClosedChart";
 import { IssueTimeline } from "./IssueTimeline";
@@ -138,11 +138,10 @@ function formatDuration(seconds: number): string {
 function isTaskFinished(stages: PipelineStageEntry[]): boolean {
   const last = stages[stages.length - 1];
   if (!last) return false;
-  if (last.stage === "merged") return last.status === "completed" || last.status === "failed";
-  // Legacy: "merge" stage name
-  if (last.stage === "merge") return last.status === "completed" || last.status === "failed";
-  if (last.stage === "needs_human") return true;
-  if (last.status === "failed" && ["dev", "self_check", "in_review", "qa_verifying", "review", "qa_verify"].includes(last.stage)) return true;
+  const stage = normalizeStage(last.stage);
+  if (stage === "merged") return last.status === "completed" || last.status === "failed";
+  if (stage === "needs_human") return true;
+  if (last.status === "failed" && ["dev", "self_check", "in_review", "qa_verifying"].includes(stage)) return true;
   return false;
 }
 
@@ -194,7 +193,7 @@ function getStageStatus(
   stageName: string,
 ): "pending" | "started" | "completed" | "failed" {
   if (!stages?.length) return "pending";
-  const matching = stages.filter((s) => s.stage === stageName);
+  const matching = stages.filter((s) => normalizeStage(s.stage) === stageName);
   if (!matching.length) return "pending";
   const last = matching[matching.length - 1];
   if (last.status === "completed") return "completed";
@@ -207,7 +206,7 @@ function getStageDetail(
   stageName: string,
 ): string | undefined {
   if (!stages?.length) return undefined;
-  const matching = stages.filter((s) => s.stage === stageName);
+  const matching = stages.filter((s) => normalizeStage(s.stage) === stageName);
   const last = matching[matching.length - 1];
   return last?.detail;
 }
