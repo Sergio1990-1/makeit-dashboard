@@ -17,6 +17,8 @@ export interface PipelineStageEntry {
   ts: number;
   detail?: string;
   elapsed?: number;
+  cost_usd?: number;
+  duration_seconds?: number;
 }
 
 export type ComplexityLevel = "auto" | "assisted" | "manual";
@@ -33,6 +35,14 @@ export interface PipelineResult {
   review_summary?: string;
   complexity?: ComplexityLevel;
   model_used?: string;
+  cost_usd?: number;
+  phase_status?: string;
+  human_summary?: string;
+  attempt_number?: number;
+  max_attempts?: number;
+  budget_remaining_usd?: number;
+  risk_level?: "low" | "medium" | "high";
+  execution_policy?: string;
 }
 
 export interface PipelineQueueItem {
@@ -71,6 +81,9 @@ export interface PipelineStats {
   manual_completed: number;
   complexity_breakdown?: ComplexityBreakdown;
   model_usage?: ModelUsage[];
+  first_pass_rate?: number;
+  avg_duration_seconds?: number;
+  cost_per_task_usd?: number;
 }
 
 export async function isPipelineRunning(): Promise<boolean> {

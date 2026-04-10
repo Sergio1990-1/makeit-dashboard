@@ -48,12 +48,21 @@ function ComplexityBadge({ complexity, model }: { complexity?: ComplexityLevel; 
   );
 }
 
-const STAGE_ORDER = ["dev", "review", "merge"] as const;
+const STAGE_ORDER = [
+  "queued", "dev", "self_check", "pr_opened",
+  "in_review", "qa_verifying", "ready_to_merge", "merged",
+] as const;
 
 const STAGE_LABEL: Record<string, string> = {
-  dev: "Dev",
-  review: "Review",
-  merge: "Merge",
+  queued: "Очередь",
+  dev: "Разработка",
+  self_check: "Самопроверка",
+  pr_opened: "PR создан",
+  in_review: "Ревью",
+  qa_verifying: "QA",
+  ready_to_merge: "К мержу",
+  merged: "Замержен",
+  needs_human: "Нужен человек",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -85,12 +94,13 @@ function formatDuration(seconds: number): string {
 }
 
 function isTaskFinished(stages: PipelineStageEntry[]): boolean {
-  // Task is done when merge completed/failed, or qa_verify/dev/review failed terminally
   const last = stages[stages.length - 1];
   if (!last) return false;
+  if (last.stage === "merged") return last.status === "completed" || last.status === "failed";
+  // Legacy: "merge" stage name
   if (last.stage === "merge") return last.status === "completed" || last.status === "failed";
-  if (last.status === "failed" && ["dev", "review", "qa_verify"].includes(last.stage)) return true;
-  // needs_human is a terminal status
+  if (last.stage === "needs_human") return true;
+  if (last.status === "failed" && ["dev", "self_check", "in_review", "qa_verifying", "review", "qa_verify"].includes(last.stage)) return true;
   return false;
 }
 
@@ -217,7 +227,7 @@ function StageProgress({
                   }}
                 >
                   {STAGE_LABEL[name] ?? name}
-                  {detail && s === "completed" && name === "review" && (
+                  {detail && s === "completed" && (name === "review" || name === "in_review") && (
                     <span
                       style={{
                         marginLeft: 3,
