@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useDebate } from "../hooks/useDebate";
 import { StartDebateModal } from "./StartDebateModal";
 import { DebateChat } from "./DebateChat";
