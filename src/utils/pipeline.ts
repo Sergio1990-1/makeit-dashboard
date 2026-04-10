@@ -17,6 +17,8 @@ export interface PipelineStageEntry {
   ts: number;
   detail?: string;
   elapsed?: number;
+  cost_usd?: number;
+  duration_seconds?: number;
 }
 
 export type ComplexityLevel = "auto" | "assisted" | "manual";
@@ -33,6 +35,14 @@ export interface PipelineResult {
   review_summary?: string;
   complexity?: ComplexityLevel;
   model_used?: string;
+  cost_usd?: number;
+  phase_status?: string;
+  human_summary?: string;
+  attempt_number?: number;
+  max_attempts?: number;
+  budget_remaining_usd?: number;
+  risk_level?: "low" | "medium" | "high";
+  execution_policy?: string;
 }
 
 export interface PipelineQueueItem {
@@ -71,7 +81,29 @@ export interface PipelineStats {
   manual_completed: number;
   complexity_breakdown?: ComplexityBreakdown;
   model_usage?: ModelUsage[];
+  first_pass_rate?: number;
+  avg_duration_seconds?: number;
+  cost_per_task_usd?: number;
 }
+
+/* ── Shared stage constants ── */
+
+export const STAGE_ORDER = [
+  "queued", "dev", "self_check", "pr_opened",
+  "in_review", "qa_verifying", "ready_to_merge", "merged",
+] as const;
+
+export const STAGE_LABEL: Record<string, string> = {
+  queued: "Очередь",
+  dev: "Разработка",
+  self_check: "Самопроверка",
+  pr_opened: "PR создан",
+  in_review: "Ревью",
+  qa_verifying: "QA",
+  ready_to_merge: "К мержу",
+  merged: "Замержен",
+  needs_human: "Нужен человек",
+};
 
 export async function isPipelineRunning(): Promise<boolean> {
   try {

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { usePipeline } from "../hooks/usePipeline";
 import { GITHUB_OWNER, PROJECTS } from "../utils/config";
 import type { PipelineStageEntry, ComplexityFilter, ComplexityLevel, ClassifyProgress, ClassifyResponse } from "../utils/pipeline";
-import { classifyIssues } from "../utils/pipeline";
+import { classifyIssues, STAGE_ORDER, STAGE_LABEL } from "../utils/pipeline";
 import type { ProjectData } from "../types";
 import { PipelineClosedChart } from "./PipelineClosedChart";
 
@@ -48,13 +48,7 @@ function ComplexityBadge({ complexity, model }: { complexity?: ComplexityLevel; 
   );
 }
 
-const STAGE_ORDER = ["dev", "review", "merge"] as const;
-
-const STAGE_LABEL: Record<string, string> = {
-  dev: "Dev",
-  review: "Review",
-  merge: "Merge",
-};
+/* STAGE_ORDER and STAGE_LABEL imported from ../utils/pipeline */
 
 const STATUS_LABEL: Record<string, string> = {
   queued: "В очереди",
@@ -85,12 +79,13 @@ function formatDuration(seconds: number): string {
 }
 
 function isTaskFinished(stages: PipelineStageEntry[]): boolean {
-  // Task is done when merge completed/failed, or qa_verify/dev/review failed terminally
   const last = stages[stages.length - 1];
   if (!last) return false;
+  if (last.stage === "merged") return last.status === "completed" || last.status === "failed";
+  // Legacy: "merge" stage name
   if (last.stage === "merge") return last.status === "completed" || last.status === "failed";
-  if (last.status === "failed" && ["dev", "review", "qa_verify"].includes(last.stage)) return true;
-  // needs_human is a terminal status
+  if (last.stage === "needs_human") return true;
+  if (last.status === "failed" && ["dev", "self_check", "in_review", "qa_verifying", "review", "qa_verify"].includes(last.stage)) return true;
   return false;
 }
 
@@ -217,7 +212,7 @@ function StageProgress({
                   }}
                 >
                   {STAGE_LABEL[name] ?? name}
-                  {detail && s === "completed" && name === "review" && (
+                  {detail && s === "completed" && name === "in_review" && (
                     <span
                       style={{
                         marginLeft: 3,
