@@ -45,23 +45,21 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
-    setEntries(null);
-
-    fetchTimeline(repo, issueNumber)
-      .then((data) => {
+    const load = async () => {
+      try {
+        const data = await fetchTimeline(repo, issueNumber);
         if (!cancelled) {
           setEntries(Array.isArray(data) ? data : []);
           setLoading(false);
         }
-      })
-      .catch((e) => {
+      } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : String(e));
           setLoading(false);
         }
-      });
+      }
+    };
+    void load();
 
     return () => { cancelled = true; };
   }, [repo, issueNumber]);

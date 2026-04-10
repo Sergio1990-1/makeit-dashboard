@@ -58,10 +58,15 @@ export function QualityPanel({ project }: QualityPanelProps) {
 
   useEffect(() => {
     let cancelled = false;
-    setError(false);
-    fetchQualitySnapshot(project)
-      .then((data) => { if (!cancelled) setSnapshot(data); })
-      .catch(() => { if (!cancelled) setError(true); });
+    const load = async () => {
+      try {
+        const data = await fetchQualitySnapshot(project);
+        if (!cancelled) { setSnapshot(data); setError(false); }
+      } catch {
+        if (!cancelled) setError(true);
+      }
+    };
+    void load();
     return () => { cancelled = true; };
   }, [project]);
 

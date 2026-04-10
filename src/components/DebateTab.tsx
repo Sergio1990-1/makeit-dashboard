@@ -60,11 +60,12 @@ export function DebateTab() {
   const [manualBack, setManualBack] = useState(false);
 
   // Auto-resume: if a debate is running on initial page load, auto-select it
+  const autoResumeId = (!selectedId && !manualBack)
+    ? debates.find((d) => d.status === "running")?.id ?? null
+    : null;
   useEffect(() => {
-    if (selectedId || manualBack) return;
-    const running = debates.find((d) => d.status === "running");
-    if (running) setSelectedId(running.id);
-  }, [debates, selectedId, manualBack]);
+    if (autoResumeId) setSelectedId(autoResumeId);
+  }, [autoResumeId]);
 
   const sorted = [...debates].sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
