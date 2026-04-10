@@ -5,6 +5,7 @@ import type { PipelineStageEntry, ComplexityFilter, ComplexityLevel, ClassifyPro
 import { classifyIssues, STAGE_ORDER, STAGE_LABEL } from "../utils/pipeline";
 import type { ProjectData } from "../types";
 import { PipelineClosedChart } from "./PipelineClosedChart";
+import { IssueTimeline } from "./IssueTimeline";
 
 const LABEL_OPTIONS = ["P1-critical", "P2-high", "P3-medium"] as const;
 type LabelOption = (typeof LABEL_OPTIONS)[number];
@@ -311,6 +312,8 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
       prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
     );
   }
+
+  const [timelineIssue, setTimelineIssue] = useState<number | null>(null);
 
   const [classifyDialogOpen, setClassifyDialogOpen] = useState(false);
   const [classifying, setClassifying] = useState(false);
@@ -787,13 +790,25 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                     border: `1px solid ${isDone ? "rgba(16,185,129,0.2)" : isFailed ? "rgba(239,68,68,0.2)" : "var(--color-border)"}`,
                   }}
                 >
-                  {/* Issue number */}
-                  <span style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: "var(--text-xs)",
-                    color: "var(--color-text-muted)",
-                    minWidth: 36,
-                  }}>
+                  {/* Issue number — clickable for timeline */}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setTimelineIssue(r.issue_number)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setTimelineIssue(r.issue_number); }}
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "var(--text-xs)",
+                      color: "var(--color-primary)",
+                      minWidth: 36,
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                      textDecorationColor: "transparent",
+                      transition: "text-decoration-color 0.15s",
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.textDecorationColor = "var(--color-primary)"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.textDecorationColor = "transparent"; }}
+                  >
                     #{r.issue_number}
                   </span>
 
@@ -897,6 +912,15 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
           50% { opacity: 0.4; }
         }
       `}</style>
+
+      {/* Issue timeline modal */}
+      {timelineIssue !== null && selectedProject && (
+        <IssueTimeline
+          repo={selectedProject}
+          issueNumber={timelineIssue}
+          onClose={() => setTimelineIssue(null)}
+        />
+      )}
 
       {/* Classify progress modal */}
       {classifyDialogOpen && (
