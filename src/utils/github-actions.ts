@@ -67,6 +67,94 @@ export async function readRepoFile(
   throw new Error(`Cannot read file: ${path}`);
 }
 
+// ── Code Search ──
+
+export interface CodeSearchHit {
+  path: string;
+  fragment: string;
+}
+
+export class CodeSearchUnavailableError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "CodeSearchUnavailableError";
+    this.status = status;
+  }
+}
+
+export class CodeSearchRateLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CodeSearchRateLimitError";
+  }
+}
+
+/**
+ * Search for a Python symbol (class/function name) inside a repo using GitHub
+ * Code Search. Returns up to `perPage` hits with the first text-match fragment
+ * each. Uses the `symbol:` qualifier first, falling back to a bare-term query
+ * if that produces nothing.
+ *
+ * Throws CodeSearchRateLimitError (429) or CodeSearchUnavailableError (403
+ * with rate-limit body, 422 for not-indexed repos) so callers can fall back.
+ */
+export async function searchCodeSymbol(
+  token: string,
+  owner: string,
+  repo: string,
+  symbol: string,
+  perPage = 10
+): Promise<CodeSearchHit[]> {
+  const run = async (q: string): Promise<CodeSearchHit[] | null> => {
+    const url = `${GITHUB_REST}/search/code?q=${encodeURIComponent(q)}&per_page=${perPage}`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `bearer ${token}`,
+        Accept: "application/vnd.github.text-match+json",
+      },
+    });
+    if (res.status === 401) {
+      throw new Error("GitHub token истёк или недостаточно прав. Сбросьте токен и введите новый.");
+    }
+    if (res.status === 429) {
+      throw new CodeSearchRateLimitError("GitHub code search rate limited");
+    }
+    if (res.status === 403) {
+      const body = await res.text();
+      if (/rate limit/i.test(body)) {
+        throw new CodeSearchRateLimitError("GitHub code search rate limited");
+      }
+      throw new CodeSearchUnavailableError(`GitHub code search forbidden: ${body}`, 403);
+    }
+    if (res.status === 422) {
+      // Repo not indexed by code search.
+      throw new CodeSearchUnavailableError("Repository not indexed by GitHub code search", 422);
+    }
+    if (!res.ok) {
+      throw new Error(`GitHub code search error: ${res.status}`);
+    }
+    const json = (await res.json()) as {
+      items?: Array<{
+        path: string;
+        text_matches?: Array<{ fragment: string }>;
+      }>;
+    };
+    if (!json.items || json.items.length === 0) return null;
+    return json.items.map((item) => ({
+      path: item.path,
+      fragment: item.text_matches?.[0]?.fragment ?? "",
+    }));
+  };
+
+  const qualified = `symbol:${symbol} repo:${owner}/${repo} language:python`;
+  const fallback = `${symbol} repo:${owner}/${repo} language:python`;
+  const first = await run(qualified);
+  if (first) return first;
+  const second = await run(fallback);
+  return second ?? [];
+}
+
 // ── Issue management ──
 
 export async function createIssue(
