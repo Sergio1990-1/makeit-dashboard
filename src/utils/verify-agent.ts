@@ -45,17 +45,26 @@ exists elsewhere in the same file — you must search for it before giving up.
    d. Only after grep_file returns zero matches can you conclude the code doesn't
       exist in the file.
 
-3. If the finding references an external class or function (e.g. "QueueManager
-   logs the token" but the current file only imports QueueManager), use
-   find_symbol_definition(symbol, hint_file=current_file) to read the actual
-   implementation. You MUST check external implementations before returning
-   UNCERTAIN with reason "cannot locate X".
+3. If the finding's claim depends on a specific behaviour of an external class
+   or function (e.g. "QueueManager logs the token" but the current file only
+   imports QueueManager), use find_symbol_definition(symbol, hint_file=current_file)
+   to read the actual implementation. Use it ONLY when you actually need to see
+   that implementation to decide — do NOT call it speculatively on every imported
+   name. If the current file's code is enough to judge the finding, skip step 3.
 
 4. If the issue spans multiple functions or requires understanding the caller,
-   call read_code_at_location again on other relevant files/lines (max 5 reads
-   total across all tools).
+   call read_code_at_location again on other relevant files/lines.
 
 5. Decide whether the reported problem is real in CURRENT code.
+
+## Budget discipline
+You have a hard budget of ~8 tool calls per finding. Stay focused:
+- Do NOT call the same tool with the same arguments twice — the result will not
+  change, and it wastes your budget.
+- Prefer committing to a verdict over gathering one more piece of evidence when
+  you already have enough to judge. "Probably X" is a valid basis for a verdict.
+- If you hit the budget and still cannot decide, return UNCERTAIN with a
+  specific reason — not "needed more investigation".
 
 ## Default stance: SKEPTICAL
 Assume the finding MIGHT be a false positive. Look actively for mitigations:
@@ -89,9 +98,9 @@ UNCERTAIN — Cannot determine statically without runtime context, architectural
   Use when: you would need to know external inputs, when something is called,
   or what the author's intent was.
   DO NOT use UNCERTAIN just because the initial read_code_at_location didn't
-  find the described code — you MUST try grep_file and/or find_symbol_definition
-  first. "Cannot locate X" is a valid UNCERTAIN reason ONLY if you searched for
-  X with grep_file or find_symbol_definition and still didn't find it.
+  find the described code — try grep_file first. "Cannot locate X" is a valid
+  UNCERTAIN reason ONLY if you searched for X with grep_file (or tried
+  find_symbol_definition for external symbols) and still didn't find it.
 
 ## Output
 Reply with ONLY this JSON, no markdown, no prose:
@@ -579,7 +588,11 @@ Verify it now.`;
   // with the original reasoning preserved — after that we break and retry from
   // scratch. The iteration counter is the total tool-use loop budget across
   // all tools (read_code_at_location, grep_file, find_symbol_definition).
-  const MAX_ITERATIONS = 12;
+  //
+  // Raised 12 → 20 after observing 18/160 convergence failures on makeit-pipeline
+  // when the verifier used the new grep/symbol tools. 20 gives headroom without
+  // encouraging wasted loops (the dedupe guard below does the actual containment).
+  const MAX_ITERATIONS = 20;
   let lastError: string | null = null;
   for (let attempt = 0; attempt < 2; attempt++) {
     let currentMessages: Anthropic.MessageParam[] = [
@@ -587,6 +600,10 @@ Verify it now.`;
     ];
     let iterationDidFail = false;
     let jsonNudgeUsed = false;
+    // Track which (tool, input) pairs have already been called in this attempt,
+    // so we can short-circuit the model if it asks for the exact same thing twice.
+    // The result is deterministic — repeating a call only wastes iterations.
+    const seenToolCalls = new Set<string>();
 
     try {
       for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
@@ -609,6 +626,23 @@ Verify it now.`;
           const toolResults: Anthropic.ToolResultBlockParam[] = [];
           for (const block of response.content) {
             if (block.type !== "tool_use") continue;
+
+            // Dedupe guard: same (tool, input) pair twice in one attempt is
+            // almost always a sign the model is spinning. Return a stub error
+            // that nudges it to commit to a verdict.
+            const callKey = `${block.name}:${JSON.stringify(block.input)}`;
+            if (seenToolCalls.has(callKey)) {
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: block.id,
+                content:
+                  "ERROR: you already called this tool with these exact arguments — the result has not changed. Commit to a verdict with the evidence you have, or pick a DIFFERENT tool/argument combination.",
+                is_error: true,
+              });
+              continue;
+            }
+            seenToolCalls.add(callKey);
+
             let result: VerifyToolResult;
             switch (block.name) {
               case "read_code_at_location":
