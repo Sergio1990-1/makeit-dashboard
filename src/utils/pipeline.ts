@@ -109,8 +109,8 @@ export function normalizeStage(stage: string): string {
 
 export const STAGE_LABEL: Record<string, string> = {
   queued: "Очередь",
-  dev: "Разработка",
-  self_check: "Самопроверка",
+  dev: "Dev",
+  self_check: "Проверка",
   pr_opened: "PR создан",
   in_review: "Ревью",
   qa_verifying: "QA",
