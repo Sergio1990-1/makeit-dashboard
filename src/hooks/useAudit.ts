@@ -99,8 +99,35 @@ export function useAudit() {
   const startRun = async (projectName: string) => {
     try {
       await startAuditRun(projectName);
-      const status = await fetchAuditStatus(projectName);
-      setRunStatuses(prev => ({ ...prev, [projectName]: status }));
+      // Optimistically mark as running so the polling effect engages
+      // immediately. The backend worker may take a moment to flip its
+      // own state to "running"; without this, fetchAuditStatus can
+      // return the previous "idle"/"completed" state and polling never
+      // starts until the user manually reloads.
+      const optimistic: AuditRunStatus = {
+        state: "running",
+        stage: "Starting...",
+        progress: 0,
+        message: null,
+        started_at: new Date().toISOString(),
+        error: null,
+      };
+      setRunStatuses(prev => ({ ...prev, [projectName]: optimistic }));
+      // Fire-and-forget real status fetch; polling will keep it fresh.
+      fetchAuditStatus(projectName)
+        .then(status => {
+          setRunStatuses(prev => {
+            // Don't overwrite a "running" with a stale non-running reply.
+            const current = prev[projectName];
+            if (current?.state === "running" && status.state !== "running") {
+              return prev;
+            }
+            return { ...prev, [projectName]: status };
+          });
+        })
+        .catch(() => {
+          // ignore — polling will retry
+        });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       throw err;

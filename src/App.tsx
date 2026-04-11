@@ -41,13 +41,36 @@ function AppInner() {
 
   const { monitors, loading: monitorsLoading, error: monitorsError, refresh: refreshMonitors } = useMonitors();
 
-  const [tab, setTab] = useState<TabId>("dashboard");
+  const VALID_TABS: TabId[] = [
+    "dashboard", "projects", "milestones", "uptime", "audit",
+    "pipeline", "transcripts", "research", "specs", "quality", "debate",
+  ];
+  const ACTIVE_TAB_KEY = "makeit.activeTab";
+  const [tab, setTab] = useState<TabId>(() => {
+    try {
+      const stored = localStorage.getItem(ACTIVE_TAB_KEY);
+      if (stored && (VALID_TABS as string[]).includes(stored)) {
+        return stored as TabId;
+      }
+    } catch {
+      // ignore storage errors
+    }
+    return "dashboard";
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(ACTIVE_TAB_KEY, tab);
+    } catch {
+      // ignore storage errors
+    }
+  }, [tab]);
+
   const [msTab, setMsTab] = useState<"open" | "done">("open");
   const [chatOpen, setChatOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
 
   // Track visited tabs so stateful components mount lazily but stay alive
-  const [visitedTabs, setVisitedTabs] = useState<Set<TabId>>(new Set(["dashboard"]));
+  const [visitedTabs, setVisitedTabs] = useState<Set<TabId>>(() => new Set(["dashboard", tab]));
   useEffect(() => {
     setVisitedTabs((prev) => {
       if (prev.has(tab)) return prev;
