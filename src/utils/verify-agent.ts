@@ -325,7 +325,8 @@ async function executeGrepFileTool(
   const omitted = matchLines.length - shown.length;
   const header = `// ${result.resolvedPath} — ${matchLines.length} match${matchLines.length === 1 ? "" : "es"} for '${input.pattern}'`;
   const blocks = shown.map((ln) => renderGrepMatch(lines, ln));
-  let body = [header, ...blocks].join("\n\n---\n\n");
+  // Header sits directly above the first block; `---` separates consecutive blocks only.
+  let body = blocks.length > 0 ? `${header}\n${blocks.join("\n\n---\n\n")}` : header;
   if (omitted > 0) {
     body += `\n\n... ${omitted} more match${omitted === 1 ? "" : "es"} omitted`;
   }
