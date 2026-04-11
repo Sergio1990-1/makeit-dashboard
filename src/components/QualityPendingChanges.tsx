@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ApplyPreview, PendingChange, PendingChangeStatus } from "../types";
 import { QualityPendingChangePreview } from "./QualityPendingChangePreview";
 
@@ -59,6 +59,25 @@ export function PendingChangesList({
   const [previewChange, setPreviewChange] = useState<PendingChange | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
+
+  // Reconcile per-row state against the currently visible list. When a
+  // filter (tier / project) removes a row, drop it from selectedIds,
+  // expanded, and previewChange so the bulk toolbar cannot reject IDs
+  // the user can no longer see.
+  useEffect(() => {
+    const visibleIds = new Set(changes.map((c) => c.id));
+    setSelectedIds((prev) => {
+      const next = new Set<string>();
+      for (const id of prev) if (visibleIds.has(id)) next.add(id);
+      return next.size === prev.size ? prev : next;
+    });
+    setExpanded((prev) => {
+      const next = new Set<string>();
+      for (const id of prev) if (visibleIds.has(id)) next.add(id);
+      return next.size === prev.size ? prev : next;
+    });
+    setPreviewChange((prev) => (prev && visibleIds.has(prev.id) ? prev : null));
+  }, [changes]);
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {

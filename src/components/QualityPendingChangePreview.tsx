@@ -1,6 +1,6 @@
 /** Inline diff + metadata preview shown before confirming apply. */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ApplyPreview, PendingChange } from "../types";
 
 interface Props {
@@ -20,6 +20,11 @@ function Badge({
   return <span className={`qpp-badge qpp-badge-${kind}`}>{children}</span>;
 }
 
+// Stable id for aria-labelledby binding between the dialog container
+// and its title. Not globally unique but unique per modal instance is
+// enough since there is only ever one preview modal on screen.
+const TITLE_ID = "qpp-title";
+
 export function QualityPendingChangePreview({
   change,
   loadPreview,
@@ -29,6 +34,7 @@ export function QualityPendingChangePreview({
   const [preview, setPreview] = useState<ApplyPreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,15 +62,47 @@ export function QualityPendingChangePreview({
     };
   }, [change.id, loadPreview]);
 
+  // Accessibility: Escape closes the modal, initial focus lands on the
+  // close button so keyboard-only users can dismiss the dialog without
+  // tabbing through the underlying page.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onCancel();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    closeButtonRef.current?.focus();
+    return () => {
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onCancel]);
+
   const validationOk =
     preview?.validation === null || preview?.validation?.ok !== false;
+  const validationFailed = preview?.validation != null && validationOk === false;
 
   return (
-    <div className="qpp-backdrop" role="dialog" aria-modal="true" onClick={onCancel}>
-      <div className="qpp-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="qpp-backdrop" onClick={onCancel}>
+      <div
+        className="qpp-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={TITLE_ID}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="qpp-header">
-          <div className="qpp-title">Preview · {change.target}</div>
-          <button className="qpp-close" type="button" onClick={onCancel} aria-label="Закрыть">
+          <div className="qpp-title" id={TITLE_ID}>
+            Preview · {change.target}
+          </div>
+          <button
+            className="qpp-close"
+            type="button"
+            onClick={onCancel}
+            aria-label="Закрыть"
+            ref={closeButtonRef}
+          >
             ×
           </button>
         </div>
@@ -160,9 +198,20 @@ export function QualityPendingChangePreview({
           <button
             type="button"
             className="btn btn-primary"
-            disabled={loading || !!error || (preview?.dedup_hit ?? false)}
+            disabled={
+              loading ||
+              !!error ||
+              (preview?.dedup_hit ?? false) ||
+              validationFailed
+            }
             onClick={onConfirm}
-            title={preview?.dedup_hit ? "Нельзя применить duplicate" : undefined}
+            title={
+              preview?.dedup_hit
+                ? "Нельзя применить duplicate"
+                : validationFailed
+                  ? "Validation failed — сверьте цифры в lesson с metrics.jsonl"
+                  : undefined
+            }
           >
             Применить
           </button>
