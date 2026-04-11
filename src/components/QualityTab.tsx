@@ -1,9 +1,23 @@
+import { useEffect } from "react";
 import { useQuality } from "../hooks/useQuality";
 import { QualityTrendsChart } from "./QualityTrendsChart";
 import { QualityFindingsChart, QualityErrorsChart } from "./QualityBarCharts";
 import { PendingChangesList, TuningHistory } from "./QualityPendingChanges";
 import { RetroList, RetroDetailView } from "./QualityRetros";
+import { QualityAutoTunerConfig } from "./QualityAutoTunerConfig";
+import { QualityLessonsViewer } from "./QualityLessonsViewer";
 import type { QualitySnapshot } from "../types";
+
+// Project slug catalog — hardcoded to match the pipeline config. Keep in
+// sync with ~/.makeit-pipeline/config.yaml `projects[]`.
+const PROJECT_FILTER_OPTIONS = [
+  { value: null, label: "Все проекты" },
+  { value: "moliyakg", label: "moliyakg" },
+  { value: "mankassa-app", label: "mankassa-app" },
+  { value: "Sewing-ERP", label: "Sewing-ERP" },
+  { value: "solotax-kg", label: "solotax-kg" },
+  { value: "makeit-pipeline", label: "makeit-pipeline" },
+] as const;
 
 /** Color class based on value + thresholds (green/yellow/red). */
 function kpiColor(value: number | null, good: number, bad: number, higher_is_better = true): string {
@@ -105,6 +119,10 @@ export function QualityTab() {
     selectedRetro,
     retroRunning,
     actionLoading,
+    qualityConfig,
+    lessonsByProject,
+    projectFilter,
+    tierFilter,
     refresh,
     approve,
     reject,
@@ -112,7 +130,20 @@ export function QualityTab() {
     startRetro,
     loadRetroDetail,
     clearRetroDetail,
+    saveQualityConfig,
+    loadLessons,
+    previewChange,
+    bulkReject,
+    setProjectFilter,
+    setTierFilter,
   } = useQuality();
+
+  // Refetch whenever the project/tier filter changes so the list, history,
+  // config panel and lessons viewer all stay in sync.
+  useEffect(() => {
+    refresh(projectFilter ?? undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectFilter, tierFilter]);
 
   if (loading) {
     return (
@@ -151,6 +182,18 @@ export function QualityTab() {
             <span className="audit-header-sub">Метрики качества pipeline-агента</span>
           </div>
           <div className="qk-header-actions">
+            <select
+              className="qk-project-filter"
+              value={projectFilter ?? ""}
+              onChange={(e) => setProjectFilter(e.target.value || null)}
+              aria-label="Фильтр по проекту"
+            >
+              {PROJECT_FILTER_OPTIONS.map((opt) => (
+                <option key={opt.label} value={opt.value ?? ""}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
             {pendingChanges.length > 0 && (
               <span className="qk-pending-badge">{pendingChanges.length} pending</span>
             )}
@@ -208,6 +251,9 @@ export function QualityTab() {
         </div>
       )}
 
+      {/* Phase F2: AutoTuner config panel */}
+      <QualityAutoTunerConfig config={qualityConfig} onSave={saveQualityConfig} />
+
       {/* AutoTuner: Pending Changes + History */}
       <div className="bento-panel span-12 panel-projects">
         <div className="bento-panel-title">
@@ -223,6 +269,10 @@ export function QualityTab() {
           actionLoading={actionLoading}
           onApprove={approve}
           onReject={reject}
+          loadPreview={previewChange}
+          onBulkReject={bulkReject}
+          tierFilter={tierFilter}
+          onTierFilterChange={setTierFilter}
         />
         {tuningHistory.length > 0 && (
           <>
@@ -235,6 +285,13 @@ export function QualityTab() {
           </>
         )}
       </div>
+
+      {/* Phase F2: Lessons Viewer (shown when a project is filtered in) */}
+      <QualityLessonsViewer
+        projectSlug={projectFilter}
+        cache={lessonsByProject}
+        loadLessons={loadLessons}
+      />
 
       {/* Retrospectives */}
       <div className="bento-panel span-12 panel-projects">

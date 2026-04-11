@@ -421,6 +421,10 @@ export interface PendingChange {
   applied_at: string | null;
   backup_path: string | null;
   pr_url: string | null;
+  // Phase C/D audit fields (Phase F1 exposes them on the API response)
+  scoped_projects: string[] | null;
+  validation: Record<string, unknown> | null;
+  rejection_reason: string | null;
 }
 
 export interface TuningApplyResult {
@@ -430,6 +434,69 @@ export interface TuningApplyResult {
 
 export interface TuningActionResult {
   status: string;
+}
+
+// ── Phase F1 response types ──────────────────────────────────────────
+
+export interface QualityConfig {
+  retro_enabled: boolean;
+  retro_mode: "reporting" | "auto_apply";
+  auto_apply_lessons: boolean;
+  auto_apply_min_confidence: number;
+  auto_apply_cooldown_hours: number;
+  kpi_degradation_threshold: number;
+  retro_min_sample_size: number;
+  lessons_max_lines: number;
+  lessons_max_bytes: number;
+  lessons_ttl_days: number;
+  validate_numeric_claims: boolean;
+  validation_tolerance: number;
+  last_apply_at: string | null;
+  cooldown_active: boolean;
+  cooldown_remaining_hours: number;
+}
+
+export interface QualityConfigUpdate {
+  retro_mode?: "reporting" | "auto_apply";
+  auto_apply_lessons?: boolean;
+  auto_apply_min_confidence?: number;
+  auto_apply_cooldown_hours?: number;
+  kpi_degradation_threshold?: number;
+  lessons_max_lines?: number;
+  lessons_max_bytes?: number;
+  lessons_ttl_days?: number;
+  validate_numeric_claims?: boolean;
+  validation_tolerance?: number;
+}
+
+export interface LessonsFileEntry {
+  project: string;
+  filename: string;
+  content: string;
+  size_bytes: number;
+  line_count: number;
+  mtime: string | null;
+}
+
+export interface LessonsFileResponse {
+  project: string;
+  files: LessonsFileEntry[];
+}
+
+export interface ApplyPreview {
+  change_id: string;
+  targets: string[];
+  scoped_projects: string[] | null;
+  dedup_hit: boolean;
+  validation: Record<string, unknown> | null;
+  preview_diff: string;
+  would_rotate: boolean;
+  current_line_count: number;
+}
+
+export interface BulkRejectResult {
+  rejected: string[];
+  failed: Array<{ id: string; error: string }>;
 }
 
 export interface RetroSummary {

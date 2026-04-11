@@ -11,6 +11,11 @@ import type {
   RetroSummary,
   RetroDetail,
   RetroRunResult,
+  QualityConfig,
+  QualityConfigUpdate,
+  LessonsFileResponse,
+  ApplyPreview,
+  BulkRejectResult,
 } from "../types";
 import { PIPELINE_BASE_URL } from "./config";
 
@@ -74,9 +79,15 @@ export async function fetchQualityErrors(
 
 // ── AutoTuner (Pending Changes) ──────────────────────────────────────
 
-export async function fetchPendingChanges(): Promise<PendingChange[]> {
+export async function fetchPendingChanges(
+  opts: { project?: string; tier?: number } = {},
+): Promise<PendingChange[]> {
+  const params = new URLSearchParams();
+  if (opts.project) params.set("project", opts.project);
+  if (opts.tier !== undefined) params.set("tier", String(opts.tier));
+  const qs = params.toString();
   const res = await fetch(
-    `${PIPELINE_BASE_URL}/pipeline/quality/pending`,
+    `${PIPELINE_BASE_URL}/pipeline/quality/pending${qs ? `?${qs}` : ""}`,
     { cache: "no-store" },
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -122,8 +133,11 @@ export async function rollbackChange(changeId: string): Promise<TuningActionResu
 
 export async function fetchTuningHistory(
   limit = 50,
+  opts: { project?: string; tier?: number } = {},
 ): Promise<PendingChange[]> {
   const params = new URLSearchParams({ limit: String(limit) });
+  if (opts.project) params.set("project", opts.project);
+  if (opts.tier !== undefined) params.set("tier", String(opts.tier));
   const res = await fetch(
     `${PIPELINE_BASE_URL}/pipeline/quality/tuning-history?${params}`,
     { cache: "no-store" },
@@ -131,6 +145,71 @@ export async function fetchTuningHistory(
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data: { changes: PendingChange[] } = await res.json();
   return data.changes;
+}
+
+// ── Phase F1: quality config, lessons viewer, preview, bulk reject ──
+
+export async function fetchQualityConfig(): Promise<QualityConfig> {
+  const res = await fetch(`${PIPELINE_BASE_URL}/pipeline/quality/config`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+export async function updateQualityConfig(
+  update: QualityConfigUpdate,
+): Promise<QualityConfig> {
+  const res = await fetch(`${PIPELINE_BASE_URL}/pipeline/quality/config`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(update),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+    throw new Error((err as { detail: string }).detail ?? `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchLessons(projectSlug: string): Promise<LessonsFileResponse> {
+  const res = await fetch(
+    `${PIPELINE_BASE_URL}/pipeline/quality/lessons/${encodeURIComponent(projectSlug)}`,
+    { cache: "no-store" },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+    throw new Error((err as { detail: string }).detail ?? `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function previewPendingChange(changeId: string): Promise<ApplyPreview> {
+  const res = await fetch(
+    `${PIPELINE_BASE_URL}/pipeline/quality/pending/${encodeURIComponent(changeId)}/preview`,
+    { method: "POST" },
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+    throw new Error((err as { detail: string }).detail ?? `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function bulkRejectChanges(
+  ids: string[],
+  reason = "bulk_manual",
+): Promise<BulkRejectResult> {
+  const res = await fetch(`${PIPELINE_BASE_URL}/pipeline/quality/bulk-reject`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ ids, reason }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+    throw new Error((err as { detail: string }).detail ?? `HTTP ${res.status}`);
+  }
+  return res.json();
 }
 
 // ── Retrospectives ───────────────────────────────────────────────────

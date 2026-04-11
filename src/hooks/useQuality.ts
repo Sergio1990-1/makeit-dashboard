@@ -12,6 +12,11 @@ import {
   rejectChange,
   rollbackChange,
   runRetro,
+  fetchQualityConfig,
+  updateQualityConfig,
+  fetchLessons,
+  previewPendingChange,
+  bulkRejectChanges,
 } from "../utils/quality";
 import { isPipelineRunning } from "../utils/pipeline";
 import type {
@@ -22,6 +27,10 @@ import type {
   PendingChange,
   RetroSummary,
   RetroDetail,
+  QualityConfig,
+  QualityConfigUpdate,
+  LessonsFileResponse,
+  ApplyPreview,
 } from "../types";
 
 export function useQuality() {
@@ -47,6 +56,14 @@ export function useQuality() {
   // Action in-progress flags
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  // Phase F2: config panel + lessons viewer + filters + preview
+  const [qualityConfig, setQualityConfig] = useState<QualityConfig | null>(null);
+  const [lessonsByProject, setLessonsByProject] = useState<
+    Record<string, LessonsFileResponse>
+  >({});
+  const [projectFilter, setProjectFilter] = useState<string | null>(null);
+  const [tierFilter, setTierFilter] = useState<number | null>(null);
+
   // Cleanup ref for retro setTimeout
   const retroTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -56,41 +73,61 @@ export function useQuality() {
     return ok;
   }, []);
 
-  const loadAll = useCallback(async (project?: string) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const loadAll = useCallback(
+    async (project?: string) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const ok = await checkAvailability();
-      if (!ok) {
-        setLoading(false);
-        return;
-      }
+        const ok = await checkAvailability();
+        if (!ok) {
+          setLoading(false);
+          return;
+        }
 
-      const [snap, trendData, findingsData, errorsData, pending, history, retroList] =
-        await Promise.all([
-          fetchQualitySnapshot(project).catch(() => null),
-          fetchQualityTrends(12, project).catch(() => null),
-          fetchQualityFindings(4, project).catch(() => null),
-          fetchQualityErrors(4, project).catch(() => null),
-          fetchPendingChanges().catch(() => [] as PendingChange[]),
-          fetchTuningHistory().catch(() => [] as PendingChange[]),
+        const effectiveProject = project ?? projectFilter ?? undefined;
+        const effectiveTier = tierFilter ?? undefined;
+
+        const [
+          snap,
+          trendData,
+          findingsData,
+          errorsData,
+          pending,
+          history,
+          retroList,
+          cfg,
+        ] = await Promise.all([
+          fetchQualitySnapshot(effectiveProject).catch(() => null),
+          fetchQualityTrends(12, effectiveProject).catch(() => null),
+          fetchQualityFindings(4, effectiveProject).catch(() => null),
+          fetchQualityErrors(4, effectiveProject).catch(() => null),
+          fetchPendingChanges({ project: effectiveProject, tier: effectiveTier }).catch(
+            () => [] as PendingChange[],
+          ),
+          fetchTuningHistory(50, { project: effectiveProject, tier: effectiveTier }).catch(
+            () => [] as PendingChange[],
+          ),
           fetchRetroList().catch(() => [] as RetroSummary[]),
+          fetchQualityConfig().catch(() => null),
         ]);
 
-      setSnapshot(snap);
-      setTrends(trendData);
-      setFindings(findingsData);
-      setErrors(errorsData);
-      setPendingChanges(pending);
-      setTuningHistory(history);
-      setRetros(retroList);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load quality data");
-    } finally {
-      setLoading(false);
-    }
-  }, [checkAvailability]);
+        setSnapshot(snap);
+        setTrends(trendData);
+        setFindings(findingsData);
+        setErrors(errorsData);
+        setPendingChanges(pending);
+        setTuningHistory(history);
+        setRetros(retroList);
+        setQualityConfig(cfg);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load quality data");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [checkAvailability, projectFilter, tierFilter],
+  );
 
   useEffect(() => {
     loadAll();
@@ -177,6 +214,65 @@ export function useQuality() {
     setSelectedRetro(null);
   }, []);
 
+  // ── Phase F2: config, lessons, preview, bulk, filters ────────────────
+
+  const saveQualityConfig = useCallback(
+    async (update: QualityConfigUpdate) => {
+      setError(null);
+      try {
+        const cfg = await updateQualityConfig(update);
+        setQualityConfig(cfg);
+        return cfg;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to update quality config");
+        throw err;
+      }
+    },
+    [],
+  );
+
+  const loadLessons = useCallback(async (projectSlug: string) => {
+    setError(null);
+    try {
+      const data = await fetchLessons(projectSlug);
+      setLessonsByProject((prev) => ({ ...prev, [projectSlug]: data }));
+      return data;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load lessons");
+      throw err;
+    }
+  }, []);
+
+  const previewChange = useCallback(async (changeId: string): Promise<ApplyPreview> => {
+    return previewPendingChange(changeId);
+  }, []);
+
+  const bulkReject = useCallback(
+    async (ids: string[], reason = "bulk_manual") => {
+      setError(null);
+      try {
+        const result = await bulkRejectChanges(ids, reason);
+        const [pending, history] = await Promise.all([
+          fetchPendingChanges({
+            project: projectFilter ?? undefined,
+            tier: tierFilter ?? undefined,
+          }).catch(() => [] as PendingChange[]),
+          fetchTuningHistory(50, {
+            project: projectFilter ?? undefined,
+            tier: tierFilter ?? undefined,
+          }).catch(() => [] as PendingChange[]),
+        ]);
+        setPendingChanges(pending);
+        setTuningHistory(history);
+        return result;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to bulk reject");
+        throw err;
+      }
+    },
+    [projectFilter, tierFilter],
+  );
+
   return {
     // State
     available,
@@ -192,6 +288,10 @@ export function useQuality() {
     selectedRetro,
     retroRunning,
     actionLoading,
+    qualityConfig,
+    lessonsByProject,
+    projectFilter,
+    tierFilter,
 
     // Actions
     refresh: loadAll,
@@ -201,5 +301,11 @@ export function useQuality() {
     startRetro,
     loadRetroDetail,
     clearRetroDetail,
+    saveQualityConfig,
+    loadLessons,
+    previewChange,
+    bulkReject,
+    setProjectFilter,
+    setTierFilter,
   };
 }
