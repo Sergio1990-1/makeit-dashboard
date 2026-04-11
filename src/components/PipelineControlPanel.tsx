@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePipeline } from "../hooks/usePipeline";
 import { GITHUB_OWNER, PROJECTS } from "../utils/config";
 import type { PipelineStageEntry, PipelineQueueItem, ComplexityFilter, ComplexityLevel, ClassifyProgress, ClassifyResponse } from "../utils/pipeline";
@@ -153,17 +153,36 @@ function getMaxElapsed(stages: PipelineStageEntry[]): number {
   return maxElapsed || (stages[stages.length - 1].ts - stages[0].ts);
 }
 
-function getElapsedSeconds(stages: PipelineStageEntry[] | undefined, finished?: boolean): number | null {
-  if (!stages?.length) return null;
+function getElapsedSeconds(
+  stages: PipelineStageEntry[] | undefined,
+  finished?: boolean,
+  fallbackStartMs?: number,
+): number | null {
+  if (!stages?.length) {
+    if (fallbackStartMs != null) return (Date.now() - fallbackStartMs) / 1000;
+    return null;
+  }
   if (finished || isTaskFinished(stages)) return getMaxElapsed(stages);
   // Active task — compute from first timestamp
   return (Date.now() / 1000) - stages[0].ts;
 }
 
-function LiveTimer({ stages, finished }: { stages?: PipelineStageEntry[]; finished?: boolean }) {
+function LiveTimer({
+  stages,
+  finished,
+  fallbackStartMs,
+}: {
+  stages?: PipelineStageEntry[];
+  finished?: boolean;
+  fallbackStartMs?: number;
+}) {
   const [, setTick] = useState(0);
-  const elapsed = getElapsedSeconds(stages, finished);
-  const isActive = finished ? false : (stages?.length ? !isTaskFinished(stages) : false);
+  const elapsed = getElapsedSeconds(stages, finished, fallbackStartMs);
+  const isActive = finished
+    ? false
+    : stages?.length
+      ? !isTaskFinished(stages)
+      : fallbackStartMs != null;
 
   useEffect(() => {
     if (!isActive) return;
@@ -373,6 +392,13 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
   }
 
   const [timelineIssue, setTimelineIssue] = useState<number | null>(null);
+
+  // Fallback timer source: remember when each active task was first seen in
+  // the dashboard, so we can show a live timer even if the backend's
+  // issue_stages is empty (or lags behind). In-memory only — reloads reset
+  // fallback timers to zero, which is fine because the real timer kicks in
+  // as soon as backend stages arrive.
+  const taskSeenAtRef = useRef<Map<number, number>>(new Map());
 
   const [classifyDialogOpen, setClassifyDialogOpen] = useState(false);
   const [classifying, setClassifying] = useState(false);
@@ -801,6 +827,20 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
               ...extraNums.map((n): PipelineQueueItem => ({ number: n, title: `Issue #${n}`, status: "in_progress", priority: 0 })),
               ...status.queue.filter((q) => !completedNums.has(q.number)),
             ];
+
+            // Update the fallback timer map: record first-seen time for every
+            // currently-active task, and drop entries that are no longer active.
+            const seen = taskSeenAtRef.current;
+            const activeNums = new Set<number>(allItems.map((i) => i.number));
+            const now = Date.now();
+            activeNums.forEach((n) => {
+              if (!seen.has(n)) seen.set(n, now);
+            });
+            // Forget anything no longer in the active list (completed, removed, etc.)
+            Array.from(seen.keys()).forEach((n) => {
+              if (!activeNums.has(n) || completedNums.has(n)) seen.delete(n);
+            });
+
             if (allItems.length === 0) {
               return (
                 <div style={{ color: "var(--color-text-muted)", fontSize: "var(--text-sm)" }}>
@@ -812,6 +852,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {allItems.slice(0, 10).map((item) => {
                   const liveStages = issueStages[item.number];
+                  const fallbackStartMs = seen.get(item.number);
                   return (
                     <div
                       key={item.number}
@@ -845,10 +886,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                         {item.title}
                       </span>
                       {liveStages ? (
-                        <>
-                          <StageProgress stages={liveStages} />
-                          <LiveTimer stages={liveStages} />
-                        </>
+                        <StageProgress stages={liveStages} />
                       ) : (
                         <span style={{
                           fontSize: "var(--text-xs)",
@@ -860,6 +898,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                           {STATUS_LABEL[item.status] ?? item.status}
                         </span>
                       )}
+                      <LiveTimer stages={liveStages} fallbackStartMs={fallbackStartMs} />
                     </div>
                   );
                 })}
