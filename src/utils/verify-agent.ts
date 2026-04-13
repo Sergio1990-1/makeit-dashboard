@@ -215,13 +215,28 @@ function renderCodeWindow(
 }
 
 /** Strip common prefixes that auditor may add but don't exist in repo path. */
-function candidatePaths(path: string): string[] {
-  const candidates = new Set<string>([path]);
+function candidatePaths(path: string, repoName?: string): string[] {
+  let normalized = path;
+
+  // Handle absolute paths: strip up to and including /<repoName>/
+  // e.g. /Users/sergey/Desktop/Новые проекты Кристина/mankassa-app/backend/foo.py
+  //   → backend/foo.py
+  if (normalized.startsWith("/") && repoName) {
+    const marker = `/${repoName}/`;
+    const idx = normalized.indexOf(marker);
+    if (idx !== -1) {
+      normalized = normalized.slice(idx + marker.length);
+    }
+  }
+
+  const candidates = new Set<string>([normalized]);
+  // Keep original as fallback if we normalized
+  if (normalized !== path) candidates.add(path);
   // Strip ./ prefix
-  if (path.startsWith("./")) candidates.add(path.slice(2));
+  if (normalized.startsWith("./")) candidates.add(normalized.slice(2));
   // Try without common top-level dirs
   for (const prefix of ["backend/", "frontend/", "src/"]) {
-    if (path.startsWith(prefix)) candidates.add(path.slice(prefix.length));
+    if (normalized.startsWith(prefix)) candidates.add(normalized.slice(prefix.length));
   }
   return Array.from(candidates);
 }
@@ -242,7 +257,7 @@ async function fetchFileWithCache(
   path: string,
   cache: FileCache,
 ): Promise<{ content: string; resolvedPath: string } | null> {
-  for (const candidate of candidatePaths(path)) {
+  for (const candidate of candidatePaths(path, repo)) {
     const key = `${owner}/${repo}:${candidate}`;
     const cached = cache.files.get(key);
     if (cached !== undefined) {
@@ -572,8 +587,17 @@ export async function verifyFinding(
     model: VERIFY_MODEL,
   };
 
+  // Normalize absolute paths to repo-relative for the prompt so Claude
+  // requests the correct path via read_code_at_location.
+  let displayFile = finding.file;
+  if (displayFile.startsWith("/")) {
+    const marker = `/${repo}/`;
+    const idx = displayFile.indexOf(marker);
+    if (idx !== -1) displayFile = displayFile.slice(idx + marker.length);
+  }
+
   const userMessage = `Finding to verify:
-File: ${finding.file}
+File: ${displayFile}
 Line: ${finding.line ?? "(unknown)"}
 Severity: ${finding.severity}
 Tool: ${finding.tool}
