@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MakeIT — BPMN Карта бизнес-процессов</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg2: #161b22;
+  --bg3: #1c2128;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text2: #8b949e;
+  --blue: #58a6ff;
+  --green: #3fb950;
+  --orange: #d29922;
+  --red: #f85149;
+  --purple: #bc8cff;
+  --cyan: #39d2c0;
+  --pink: #f778ba;
+  --yellow: #e3b341;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); }
+.page { max-width: 1500px; margin: 0 auto; padding: 24px; }
+h1 { font-size: 26px; margin-bottom: 4px; }
+.subtitle { color: var(--text2); font-size: 14px; margin-bottom: 24px; }
+h2 { font-size: 20px; margin: 32px 0 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+h3 { font-size: 15px; margin: 20px 0 8px; color: var(--text2); }
+
+/* Nav */
+.nav { display: flex; gap: 4px; margin-bottom: 20px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 4px; overflow-x: auto; }
+.nav button { padding: 7px 14px; border: none; background: none; color: var(--text2); font-size: 13px; cursor: pointer; border-radius: 6px; white-space: nowrap; }
+.nav button:hover { background: var(--bg3); color: var(--text); }
+.nav button.on { background: var(--blue); color: #fff; }
+.tab { display: none; }
+.tab.on { display: block; }
+
+/* BPMN diagram container */
+.bpmn-wrap { overflow-x: auto; overflow-y: visible; border: 1px solid var(--border); border-radius: 10px; background: #0b0e13; margin: 12px 0; }
+.bpmn-wrap svg { display: block; min-width: 100%; }
+
+/* Legend */
+.legend { display: flex; gap: 20px; flex-wrap: wrap; padding: 14px 18px; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 20px; font-size: 13px; color: var(--text2); }
+.legend-item { display: flex; align-items: center; gap: 7px; }
+.legend-dot { width: 24px; height: 16px; border-radius: 3px; flex-shrink: 0; }
+
+/* Cards grid */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px,1fr)); gap: 14px; }
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+.card:hover { border-color: var(--blue); }
+.card h4 { font-size: 15px; margin-bottom: 6px; }
+.card p { font-size: 13px; color: var(--text2); line-height: 1.5; }
+.card .tag { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 4px; margin-top: 8px; margin-right: 4px; }
+
+.tag-gap { background: rgba(248,81,73,.12); color: var(--red); border: 1px solid rgba(248,81,73,.25); }
+.tag-ok { background: rgba(63,185,80,.12); color: var(--green); border: 1px solid rgba(63,185,80,.25); }
+.tag-idea { background: rgba(188,140,255,.12); color: var(--purple); border: 1px solid rgba(188,140,255,.25); }
+
+/* Flow text list */
+.flow-list { list-style: none; padding: 0; counter-reset: step; }
+.flow-list li { position: relative; padding: 8px 0 8px 40px; font-size: 13px; color: var(--text); border-left: 2px solid var(--border); margin-left: 14px; }
+.flow-list li::before { counter-increment: step; content: counter(step); position: absolute; left: -13px; top: 8px; width: 24px; height: 24px; background: var(--bg2); border: 2px solid var(--border); border-radius: 50%; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; color: var(--text2); }
+.flow-list li.human::before { border-color: var(--blue); color: var(--blue); }
+.flow-list li.ai::before { border-color: var(--green); color: var(--green); }
+.flow-list li.gate::before { border-color: var(--orange); color: var(--orange); content: "◆"; font-size: 10px; }
+.flow-list li:last-child { border-left-color: transparent; }
+.flow-list .role { font-size: 11px; font-weight: 600; margin-right: 6px; padding: 1px 6px; border-radius: 3px; }
+.role-human { background: rgba(88,166,255,.12); color: var(--blue); }
+.role-cc { background: rgba(247,120,186,.12); color: var(--pink); }
+.role-dash { background: rgba(57,210,192,.12); color: var(--cyan); }
+.role-pipe { background: rgba(63,185,80,.12); color: var(--green); }
+.role-audit { background: rgba(210,153,34,.12); color: var(--orange); }
+.artifact { font-family: monospace; font-size: 12px; color: var(--cyan); }
+
+/* Responsive */
+@media (max-width: 800px) { .cards { grid-template-columns: 1fr; } .legend { flex-direction: column; gap: 6px; } }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>MakeIT — Карта бизнес-процессов</h1>
+<p class="subtitle">BPMN-диаграмма рабочего процесса соло-разработчика с AI-агентами. Как система работает от звонка клиенту до production.</p>
+
+<nav class="nav">
+  <button class="on" onclick="tab('main')">Главный процесс</button>
+  <button onclick="tab('flows')">Все потоки (текст)</button>
+  <button onclick="tab('learning')">Самообучение</button>
+  <button onclick="tab('gaps')">Gap-анализ</button>
+  <button onclick="tab('improve')">Предложения</button>
+  <button onclick="tab('agent')">BP Agent (концепт)</button>
+</nav>
+
+<!-- ============ MAIN BPMN ============ -->
+<div id="main" class="tab on">
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(88,166,255,.15);border:2px solid #58a6ff"></div> PM (Я) — встречи, решения</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(247,120,186,.15);border:2px solid #f778ba"></div> Разработчик (Я → Claude Code)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(57,210,192,.15);border:2px solid #39d2c0"></div> Dashboard (браузер)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(63,185,80,.15);border:2px solid #3fb950"></div> Автомат (Pipeline / Auditor)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:rgba(227,179,65,.12);border:2px solid #e3b341;border-radius:50%"></div> Решение (гейт)</div>
+  <div class="legend-item"><svg width="24" height="16"><rect x="1" y="1" width="22" height="14" rx="2" fill="none" stroke="#8b949e" stroke-dasharray="3,2"/></svg> Артефакт</div>
+  <div class="legend-item"><span style="font-size:11px;color:var(--text2)">⚡ = Я даю команду, Claude Code выполняет (инструмент)</span></div>
+</div>
+
+<h3>Процесс: от нового проекта до production (end-to-end)</h3>
+<p style="color:var(--text2);font-size:12px;margin-bottom:8px">PM (Я) управляет процессом. Разработчик (Я) использует Claude Code как инструмент (⚡). Pipeline и Auditor работают автоматически.</p>
+
+<div class="bpmn-wrap">
+<svg viewBox="0 0 2550 720" width="2550" height="720" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+<defs>
+  <marker id="a" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#6e7681"/></marker>
+  <marker id="ab" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#58a6ff"/></marker>
+  <marker id="ag" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#3fb950"/></marker>
+  <marker id="ar" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#f85149"/></marker>
+  <marker id="ap" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#f778ba"/></marker>
+</defs>
+
+<!-- ===== SWIM LANES (6 lanes, clean spacing) ===== -->
+<!-- Lane 1: Клиент -->
+<rect x="0" y="0" width="2550" height="70" fill="#0d1117" stroke="#21262d"/>
+<rect x="0" y="0" width="95" height="70" fill="#161b22" stroke="#21262d"/>
+<text x="48" y="40" text-anchor="middle" fill="#8b949e" font-size="11" font-weight="600">Клиент</text>
+
+<!-- Lane 2: PM (Я) -->
+<rect x="0" y="70" width="2550" height="110" fill="#0f1318" stroke="#21262d"/>
+<rect x="0" y="70" width="95" height="110" fill="#161b22" stroke="#21262d"/>
+<text x="48" y="118" text-anchor="middle" fill="#58a6ff" font-size="11" font-weight="600">PM (Я)</text>
+<text x="48" y="132" text-anchor="middle" fill="#58a6ff" font-size="9">менеджер</text>
+
+<!-- Lane 3: Разработчик (Я → Claude Code) -->
+<rect x="0" y="180" width="2550" height="130" fill="#0d1117" stroke="#21262d"/>
+<rect x="0" y="180" width="95" height="130" fill="#161b22" stroke="#21262d"/>
+<text x="48" y="230" text-anchor="middle" fill="#f778ba" font-size="11" font-weight="600">Разработчик</text>
+<text x="48" y="244" text-anchor="middle" fill="#f778ba" font-size="9">(Я → Claude</text>
+<text x="48" y="256" text-anchor="middle" fill="#f778ba" font-size="9">Code ⚡)</text>
+
+<!-- Lane 4: Dashboard -->
+<rect x="0" y="310" width="2550" height="100" fill="#0f1318" stroke="#21262d"/>
+<rect x="0" y="310" width="95" height="100" fill="#161b22" stroke="#21262d"/>
+<text x="48" y="355" text-anchor="middle" fill="#39d2c0" font-size="11" font-weight="600">Dashboard</text>
+<text x="48" y="369" text-anchor="middle" fill="#39d2c0" font-size="9">(Browser)</text>
+
+<!-- Lane 5: Pipeline -->
+<rect x="0" y="410" width="2550" height="100" fill="#0d1117" stroke="#21262d"/>
+<rect x="0" y="410" width="95" height="100" fill="#161b22" stroke="#21262d"/>
+<text x="48" y="455" text-anchor="middle" fill="#3fb950" font-size="11" font-weight="600">Pipeline</text>
+<text x="48" y="469" text-anchor="middle" fill="#3fb950" font-size="9">(автомат)</text>
+
+<!-- Lane 6: Auditor -->
+<rect x="0" y="510" width="2550" height="100" fill="#0f1318" stroke="#21262d"/>
+<rect x="0" y="510" width="95" height="100" fill="#161b22" stroke="#21262d"/>
+<text x="48" y="555" text-anchor="middle" fill="#d29922" font-size="11" font-weight="600">Auditor</text>
+<text x="48" y="569" text-anchor="middle" fill="#d29922" font-size="9">(автомат)</text>
+
+<!-- Phase labels (bottom) -->
+<rect x="105" y="625" width="340" height="26" rx="4" fill="#161b22" stroke="#21262d"/>
+<text x="275" y="642" text-anchor="middle" fill="#6e7681" font-size="10" font-weight="600">ФАЗА 1: Инициация</text>
+<rect x="465" y="625" width="340" height="26" rx="4" fill="#161b22" stroke="#21262d"/>
+<text x="635" y="642" text-anchor="middle" fill="#6e7681" font-size="10" font-weight="600">ФАЗА 2: Планирование</text>
+<rect x="825" y="625" width="430" height="26" rx="4" fill="#161b22" stroke="#21262d"/>
+<text x="1040" y="642" text-anchor="middle" fill="#6e7681" font-size="10" font-weight="600">ФАЗА 3: Разработка (цикл)</text>
+<rect x="1275" y="625" width="410" height="26" rx="4" fill="#161b22" stroke="#21262d"/>
+<text x="1480" y="642" text-anchor="middle" fill="#6e7681" font-size="10" font-weight="600">ФАЗА 4: Аудит</text>
+<rect x="1705" y="625" width="400" height="26" rx="4" fill="#161b22" stroke="#21262d"/>
+<text x="1905" y="642" text-anchor="middle" fill="#6e7681" font-size="10" font-weight="600">ФАЗА 5: Деплой</text>
+
+<!-- ========== PHASE 1: INITIATION ========== -->
+
+<!-- Start event (Клиент) -->
+<circle cx="125" cy="35" r="13" fill="#1e3a1e" stroke="#3fb950" stroke-width="2.5"/>
+<text x="125" y="60" text-anchor="middle" fill="#6e7681" font-size="8">Новый проект</text>
+
+<line x1="138" y1="35" x2="165" y2="35" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- Клиент: Обращение -->
+<rect x="167" y="17" width="120" height="36" rx="6" fill="rgba(139,148,158,.06)" stroke="#6e7681" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="227" y="32" text-anchor="middle" fill="#e6edf3" font-size="10">Обращение /</text>
+<text x="227" y="44" text-anchor="middle" fill="#e6edf3" font-size="10">звонок клиента</text>
+
+<!-- Arrow: client → PM -->
+<line x1="227" y1="53" x2="227" y2="100" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- PM: Встреча -->
+<rect x="167" y="103" width="120" height="38" rx="8" fill="rgba(88,166,255,.1)" stroke="#58a6ff" stroke-width="1.5"/>
+<text x="227" y="120" text-anchor="middle" fill="#e6edf3" font-size="10">Встреча / созвон</text>
+<text x="227" y="133" text-anchor="middle" fill="#e6edf3" font-size="10">с клиентом</text>
+
+<line x1="287" y1="122" x2="325" y2="122" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- PM: Аудиозапись -->
+<rect x="327" y="103" width="115" height="38" rx="8" fill="rgba(88,166,255,.1)" stroke="#58a6ff" stroke-width="1.5"/>
+<text x="384" y="120" text-anchor="middle" fill="#e6edf3" font-size="10">Аудиозапись</text>
+<text x="384" y="133" text-anchor="middle" fill="#e6edf3" font-size="10">встречи 🎤</text>
+
+<!-- PM → Dashboard (vertical, goes between blocks) -->
+<line x1="384" y1="141" x2="384" y2="334" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#ab)"/>
+<text x="395" y="270" fill="#58a6ff" font-size="8" transform="rotate(90 395 270)">загрузка</text>
+
+<!-- Dashboard: Загрузить аудио -->
+<rect x="318" y="337" width="133" height="36" rx="8" fill="rgba(57,210,192,.1)" stroke="#39d2c0" stroke-width="1.5"/>
+<text x="384" y="353" text-anchor="middle" fill="#e6edf3" font-size="10">Загрузить аудио</text>
+<text x="384" y="365" text-anchor="middle" fill="#e6edf3" font-size="10">в Транскрипты</text>
+
+<!-- Dashboard → Pipeline (processing) -->
+<line x1="384" y1="373" x2="384" y2="432" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- Pipeline: STT обработка (автомат) -->
+<rect x="305" y="435" width="158" height="40" rx="8" fill="rgba(63,185,80,.06)" stroke="#3fb950" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="384" y="452" text-anchor="middle" fill="#3fb950" font-size="9">intake → stt → enrichment</text>
+<text x="384" y="464" text-anchor="middle" fill="#3fb950" font-size="9">→ structuring → synthesis</text>
+
+<!-- Artifact: BRIEF.md (in Dashboard lane) -->
+<rect x="300" y="380" width="80" height="22" rx="3" fill="rgba(57,210,192,.08)" stroke="#39d2c0" stroke-width="1.5"/>
+<text x="340" y="395" text-anchor="middle" fill="#39d2c0" font-size="9" font-weight="600">BRIEF.md</text>
+<!-- arrow from pipeline up to brief -->
+<path d="M 345 435 L 340 400" fill="none" stroke="#3fb950" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#ag)"/>
+
+<!-- BRIEF → Developer lane (init) -->
+<path d="M 380 380 Q 490 330 520 275" fill="none" stroke="#f778ba" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#ap)"/>
+<text x="460" y="315" fill="#f778ba" font-size="8">BRIEF передаётся</text>
+
+<!-- ========== PHASE 2: PLANNING ========== -->
+
+<!-- Dev: /makeit-init  (Я → Claude Code) -->
+<rect x="500" y="217" width="150" height="52" rx="8" fill="rgba(247,120,186,.08)" stroke="#f778ba" stroke-width="1.5"/>
+<text x="575" y="233" text-anchor="middle" fill="#f778ba" font-size="10" font-weight="600">⚡ /makeit-init</text>
+<text x="575" y="248" text-anchor="middle" fill="#e6edf3" font-size="10">Инициализация</text>
+<text x="575" y="261" text-anchor="middle" fill="#8b949e" font-size="8">repo, docs, CI, labels</text>
+<!-- "Я" badge -->
+<rect x="502" y="219" width="18" height="13" rx="3" fill="#58a6ff"/>
+<text x="511" y="228" text-anchor="middle" fill="#fff" font-size="7" font-weight="700">Я</text>
+
+<line x1="650" y1="243" x2="690" y2="243" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- Dev: /makeit-plan (Я → Claude Code) -->
+<rect x="692" y="217" width="155" height="52" rx="8" fill="rgba(247,120,186,.08)" stroke="#f778ba" stroke-width="1.5"/>
+<text x="769" y="233" text-anchor="middle" fill="#f778ba" font-size="10" font-weight="600">⚡ /makeit-plan</text>
+<text x="769" y="248" text-anchor="middle" fill="#e6edf3" font-size="10">SPEC → PRD → Epic</text>
+<text x="769" y="261" text-anchor="middle" fill="#8b949e" font-size="8">→ Issues + Milestone</text>
+<rect x="694" y="219" width="18" height="13" rx="3" fill="#58a6ff"/>
+<text x="703" y="228" text-anchor="middle" fill="#fff" font-size="7" font-weight="700">Я</text>
+
+<!-- Artifacts above plan -->
+<rect x="695" y="195" width="42" height="16" rx="3" fill="none" stroke="#6e7681" stroke-dasharray="3,2"/>
+<text x="716" y="206" text-anchor="middle" fill="#6e7681" font-size="7">SPEC</text>
+<rect x="741" y="195" width="38" height="16" rx="3" fill="none" stroke="#6e7681" stroke-dasharray="3,2"/>
+<text x="760" y="206" text-anchor="middle" fill="#6e7681" font-size="7">PRD</text>
+<rect x="783" y="195" width="45" height="16" rx="3" fill="none" stroke="#6e7681" stroke-dasharray="3,2"/>
+<text x="806" y="206" text-anchor="middle" fill="#6e7681" font-size="7">Issues</text>
+
+<line x1="847" y1="243" x2="885" y2="243" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- ========== PHASE 3: DEVELOPMENT CYCLE ========== -->
+
+<!-- Gateway: Complexity -->
+<rect x="887" y="223" width="36" height="36" rx="4" fill="rgba(227,179,65,.08)" stroke="#e3b341" stroke-width="2" transform="rotate(45 905 241)"/>
+<text x="905" y="245" text-anchor="middle" fill="#e3b341" font-size="8" font-weight="600">?</text>
+<text x="905" y="275" text-anchor="middle" fill="#e3b341" font-size="8">Сложность</text>
+
+<!-- Gateway → auto (Pipeline, straight down) -->
+<line x1="905" y1="263" x2="905" y2="432" stroke="#3fb950" stroke-width="1.5" marker-end="url(#ag)"/>
+<text x="916" y="380" fill="#3fb950" font-size="8">auto</text>
+
+<!-- Pipeline: Auto execution -->
+<rect x="840" y="435" width="130" height="40" rx="8" fill="rgba(63,185,80,.1)" stroke="#3fb950" stroke-width="1.5"/>
+<text x="905" y="452" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">Pipeline auto</text>
+<text x="905" y="465" text-anchor="middle" fill="#e6edf3" font-size="9">dev→PR→review→QA→merge</text>
+
+<!-- Pipeline → Merged -->
+<line x1="970" y1="455" x2="1095" y2="455" stroke="#3fb950" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#ag)"/>
+<rect x="1097" y="441" width="70" height="28" rx="6" fill="rgba(63,185,80,.06)" stroke="#3fb950" stroke-width="1" stroke-dasharray="3,2"/>
+<text x="1132" y="459" text-anchor="middle" fill="#3fb950" font-size="9">Merged ✅</text>
+
+<!-- Gateway → manual/assisted (right) -->
+<line x1="928" y1="241" x2="972" y2="241" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="950" y="234" fill="#f778ba" font-size="8">manual</text>
+
+<!-- Dev: /makeit-dev (Я → Claude Code) -->
+<rect x="974" y="217" width="140" height="52" rx="8" fill="rgba(247,120,186,.08)" stroke="#f778ba" stroke-width="1.5"/>
+<text x="1044" y="233" text-anchor="middle" fill="#f778ba" font-size="10" font-weight="600">⚡ /makeit-dev</text>
+<text x="1044" y="248" text-anchor="middle" fill="#e6edf3" font-size="10">Код + тесты + PR</text>
+<text x="1044" y="261" text-anchor="middle" fill="#8b949e" font-size="8">branch, commit, push</text>
+<rect x="976" y="219" width="18" height="13" rx="3" fill="#58a6ff"/>
+<text x="985" y="228" text-anchor="middle" fill="#fff" font-size="7" font-weight="700">Я</text>
+
+<line x1="1114" y1="241" x2="1148" y2="241" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- Dev: /makeit-codereview (Я → Claude Code) -->
+<rect x="1150" y="217" width="140" height="52" rx="8" fill="rgba(247,120,186,.08)" stroke="#f778ba" stroke-width="1.5"/>
+<text x="1220" y="233" text-anchor="middle" fill="#f778ba" font-size="10" font-weight="600">⚡ /makeit-codereview</text>
+<text x="1220" y="248" text-anchor="middle" fill="#e6edf3" font-size="10">Ревью PR</text>
+<text x="1220" y="261" text-anchor="middle" fill="#8b949e" font-size="8">diff-first, evidence</text>
+<rect x="1152" y="219" width="18" height="13" rx="3" fill="#58a6ff"/>
+<text x="1161" y="228" text-anchor="middle" fill="#fff" font-size="7" font-weight="700">Я</text>
+
+<line x1="1290" y1="241" x2="1320" y2="241" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- Gateway: Review OK? -->
+<rect x="1322" y="221" width="36" height="36" rx="4" fill="rgba(227,179,65,.08)" stroke="#e3b341" stroke-width="2" transform="rotate(45 1340 239)"/>
+<text x="1340" y="243" text-anchor="middle" fill="#e3b341" font-size="8" font-weight="600">?</text>
+
+<!-- NOK → back to dev (arc above the blocks, clean routing) -->
+<path d="M 1340 219 L 1340 198 L 1044 198 L 1044 217" fill="none" stroke="#f85149" stroke-width="1.5" marker-end="url(#ar)"/>
+<text x="1192" y="193" text-anchor="middle" fill="#f85149" font-size="8">Нет → доработка</text>
+
+<!-- OK → PM Merge (up) -->
+<line x1="1362" y1="239" x2="1400" y2="239" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="1380" y="233" fill="#3fb950" font-size="8">Да</text>
+
+<!-- PM: Merge PR -->
+<rect x="1402" y="103" width="110" height="38" rx="8" fill="rgba(88,166,255,.1)" stroke="#58a6ff" stroke-width="1.5"/>
+<text x="1457" y="120" text-anchor="middle" fill="#e6edf3" font-size="10">Merge PR</text>
+<text x="1457" y="133" text-anchor="middle" fill="#8b949e" font-size="9">в main</text>
+<!-- arrow from gateway area up to PM merge -->
+<line x1="1410" y1="239" x2="1410" y2="141" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- dashed line: Pipeline merged → PM merge (association) -->
+<path d="M 1132 441 L 1457 141" fill="none" stroke="#3fb950" stroke-width="1" stroke-dasharray="3,3"/>
+
+<!-- ========== PHASE 4: AUDIT ========== -->
+
+<line x1="1512" y1="122" x2="1555" y2="122" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- PM: Запуск аудита -->
+<rect x="1557" y="103" width="120" height="38" rx="8" fill="rgba(88,166,255,.1)" stroke="#58a6ff" stroke-width="1.5"/>
+<text x="1617" y="120" text-anchor="middle" fill="#e6edf3" font-size="10">Запуск аудита</text>
+<text x="1617" y="133" text-anchor="middle" fill="#8b949e" font-size="9">(в Dashboard)</text>
+
+<!-- PM → Dashboard (vertical line, routed to avoid overlap) -->
+<line x1="1617" y1="141" x2="1617" y2="334" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#ab)"/>
+
+<!-- Dashboard: Audit UI -->
+<rect x="1555" y="337" width="125" height="36" rx="8" fill="rgba(57,210,192,.1)" stroke="#39d2c0" stroke-width="1.5"/>
+<text x="1617" y="353" text-anchor="middle" fill="#e6edf3" font-size="10">Аудит проекта</text>
+<text x="1617" y="365" text-anchor="middle" fill="#8b949e" font-size="9">запуск</text>
+
+<!-- Dashboard → Auditor -->
+<line x1="1617" y1="373" x2="1617" y2="535" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- Auditor: L1→L4 -->
+<rect x="1535" y="538" width="165" height="44" rx="8" fill="rgba(210,153,34,.1)" stroke="#d29922" stroke-width="1.5"/>
+<text x="1617" y="555" text-anchor="middle" fill="#d29922" font-size="10" font-weight="600">Audit L1→L2→L3→L4</text>
+<text x="1617" y="569" text-anchor="middle" fill="#e6edf3" font-size="9">ruff, mypy, LLM (GPU)</text>
+<text x="1617" y="579" text-anchor="middle" fill="#8b949e" font-size="7">Qwen3-Coder, RunPod</text>
+
+<!-- Auditor → Findings (right) -->
+<line x1="1700" y1="560" x2="1740" y2="560" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- Artifact: Findings -->
+<rect x="1742" y="548" width="78" height="24" rx="4" fill="rgba(210,153,34,.08)" stroke="#d29922" stroke-width="1.5"/>
+<text x="1781" y="564" text-anchor="middle" fill="#d29922" font-size="9" font-weight="600">Findings</text>
+
+<!-- Findings up to Dashboard verify (clean vertical) -->
+<line x1="1781" y1="548" x2="1781" y2="373" stroke="#39d2c0" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#a)"/>
+
+<!-- Dashboard: Верификация -->
+<rect x="1718" y="337" width="125" height="36" rx="8" fill="rgba(57,210,192,.1)" stroke="#39d2c0" stroke-width="1.5"/>
+<text x="1781" y="353" text-anchor="middle" fill="#e6edf3" font-size="10">Верификация</text>
+<text x="1781" y="365" text-anchor="middle" fill="#8b949e" font-size="9">Claude → вердикты</text>
+
+<line x1="1843" y1="355" x2="1878" y2="355" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- Dashboard: Create issues -->
+<rect x="1880" y="337" width="120" height="36" rx="8" fill="rgba(57,210,192,.1)" stroke="#39d2c0" stroke-width="1.5"/>
+<text x="1940" y="353" text-anchor="middle" fill="#e6edf3" font-size="10">Создание</text>
+<text x="1940" y="365" text-anchor="middle" fill="#8b949e" font-size="9">GitHub Issues</text>
+
+<!-- Issues → gateway (up to Dev lane) -->
+<line x1="1940" y1="337" x2="1940" y2="264" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- Gateway: back to dev cycle -->
+<rect x="1922" y="224" width="36" height="36" rx="4" fill="rgba(227,179,65,.08)" stroke="#e3b341" stroke-width="2" transform="rotate(45 1940 242)"/>
+<text x="1940" y="246" text-anchor="middle" fill="#e3b341" font-size="8" font-weight="600">?</text>
+
+<!-- Gateway → manual (back to /makeit-dev, clean horizontal line ABOVE the dev blocks) -->
+<path d="M 1922 242 L 1870 242 L 1870 192 L 1050 192 L 1050 217" fill="none" stroke="#f778ba" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#ap)"/>
+<text x="1460" y="187" text-anchor="middle" fill="#f778ba" font-size="8">manual → вернуться к /makeit-dev</text>
+
+<!-- Gateway → auto (down to Pipeline) -->
+<path d="M 1940 264 L 1940 455 L 970 455" fill="none" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#ag)"/>
+<text x="1950" y="390" fill="#3fb950" font-size="8">auto</text>
+
+<!-- ========== PHASE 5: DEPLOY ========== -->
+
+<!-- From PM Merge → eventually deploy -->
+<path d="M 1457 103 Q 1457 88 1472 88 L 2075 88 Q 2090 88 2090 103" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="1770" y="83" text-anchor="middle" fill="#6e7681" font-size="8">когда всё готово</text>
+
+<!-- PM: Решение о деплое -->
+<rect x="2035" y="105" width="112" height="35" rx="8" fill="rgba(88,166,255,.1)" stroke="#58a6ff" stroke-width="1.5"/>
+<text x="2091" y="121" text-anchor="middle" fill="#e6edf3" font-size="10">Решение</text>
+<text x="2091" y="133" text-anchor="middle" fill="#8b949e" font-size="9">о деплое</text>
+
+<line x1="2091" y1="140" x2="2091" y2="217" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- Dev: /makeit-deploy (Я → Claude Code) -->
+<rect x="2016" y="219" width="150" height="48" rx="8" fill="rgba(247,120,186,.08)" stroke="#f778ba" stroke-width="1.5"/>
+<text x="2091" y="235" text-anchor="middle" fill="#f778ba" font-size="10" font-weight="600">⚡ /makeit-deploy</text>
+<text x="2091" y="250" text-anchor="middle" fill="#e6edf3" font-size="10">Pre-flight → Deploy</text>
+<text x="2091" y="262" text-anchor="middle" fill="#8b949e" font-size="8">backup, health check</text>
+<rect x="2018" y="221" width="18" height="13" rx="3" fill="#58a6ff"/>
+<text x="2027" y="230" text-anchor="middle" fill="#fff" font-size="7" font-weight="700">Я</text>
+
+<line x1="2166" y1="243" x2="2205" y2="243" stroke="#6e7681" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- End event -->
+<circle cx="2230" cy="243" r="14" fill="#3d1515" stroke="#f85149" stroke-width="3"/>
+<text x="2230" y="270" text-anchor="middle" fill="#6e7681" font-size="9">Production 🚀</text>
+
+<!-- ========== FEEDBACK LOOP ========== -->
+
+<circle cx="2330" cy="35" r="13" fill="none" stroke="#58a6ff" stroke-width="2.5"/>
+<circle cx="2330" cy="35" r="9" fill="none" stroke="#58a6ff" stroke-width="1.5"/>
+<text x="2390" y="32" fill="#58a6ff" font-size="9">Обратная связь</text>
+<text x="2390" y="43" fill="#58a6ff" font-size="9">клиента</text>
+
+<!-- Feedback: loop back along bottom, outside all lanes -->
+<path d="M 2317 35 L 2310 35 Q 2300 35 2300 45 L 2300 660 Q 2300 670 2290 670 L 250 670 Q 240 670 240 660 L 240 145 Q 240 138 250 138 L 327 138" fill="none" stroke="#58a6ff" stroke-width="1.5" stroke-dasharray="8,4" marker-end="url(#ab)"/>
+<text x="1250" y="666" text-anchor="middle" fill="#58a6ff" font-size="9">↩ Фидбек → аудиозапись → новый BRIEF → /makeit-plan → Dev цикл</text>
+
+<!-- GitHub data store (in PM lane, near Merge) -->
+<ellipse cx="1457" cy="87" rx="28" ry="5" fill="none" stroke="#6e7681" stroke-width="1"/>
+<rect x="1429" y="78" width="56" height="11" fill="#0f1318" stroke="#6e7681" stroke-width="1"/>
+<ellipse cx="1457" cy="78" rx="28" ry="5" fill="#0f1318" stroke="#6e7681" stroke-width="1"/>
+<text x="1457" y="82" text-anchor="middle" fill="#6e7681" font-size="7">GitHub</text>
+
+</svg>
+</div>
+
+<p style="color:var(--text2);font-size:12px;margin-top:4px">← Прокрутите диаграмму горизонтально →</p>
+
+</div>
+
+<!-- ============ ALL FLOWS (TEXT) ============ -->
+<div id="flows" class="tab">
+
+<h2>Поток A: Новый проект (end-to-end)</h2>
+<ol class="flow-list">
+  <li class="human"><span class="role role-human">Клиент</span> Обращение клиента — звонок, встреча, ТЗ</li>
+  <li class="human"><span class="role role-human">Я</span> Провожу встречу / созвон → делаю <strong>аудиозапись</strong></li>
+  <li class="human"><span class="role role-dash">Dashboard</span> Загружаю аудио в <strong>Транскрипты</strong> → intake → STT (Whisper) → enrichment → structuring → synthesis</li>
+  <li class="ai"><span class="role role-dash">Dashboard</span> Получаю <span class="artifact">BRIEF.md</span> — структурированный документ с решениями и требованиями</li>
+  <li class="human"><span class="role role-cc">Claude Code</span> Запускаю <strong>/makeit-init</strong> — создаётся repo, docs, CI, labels, .env, Dockerfile, pre-commit</li>
+  <li class="ai"><span class="role role-cc">Claude Code</span> Запускаю <strong>/makeit-plan</strong> с BRIEF → SPEC → PRD → Epic → GitHub Issues + Milestone с дедлайном</li>
+  <li class="gate">Решение по каждому Issue: <strong>auto</strong> (Pipeline) или <strong>manual/assisted</strong> (Claude Code)?</li>
+  <li class="ai"><span class="role role-pipe">Pipeline</span> Auto-задачи → queued → dev → self_check → PR → review → QA → merge (полностью автоматически)</li>
+  <li class="human"><span class="role role-cc">Claude Code</span> Manual-задачи → <strong>/makeit-dev</strong> → код + тесты + PR</li>
+  <li class="human"><span class="role role-cc">Claude Code</span> <strong>/makeit-codereview</strong> → ревью PR (diff-first, evidence-based)</li>
+  <li class="gate">Ревью пройдено? <strong>Да</strong> → Merge. <strong>Нет</strong> → обратно на /makeit-dev</li>
+  <li class="human"><span class="role role-human">Я</span> Merge PR в main</li>
+  <li class="human"><span class="role role-dash">Dashboard</span> Запускаю <strong>аудит проекта</strong></li>
+  <li class="ai"><span class="role role-audit">Auditor</span> L1 (ruff, mypy, semgrep, eslint) → L2 (AST indexing) → L3 (LLM на GPU, Qwen3-Coder) → L4 (Reports)</li>
+  <li class="ai"><span class="role role-dash">Dashboard</span> <strong>Верификация findings</strong> → Claude читает код → CONFIRMED / FALSE_POSITIVE / UNCERTAIN</li>
+  <li class="ai"><span class="role role-dash">Dashboard</span> Создание <strong>GitHub Issues</strong> из верифицированных findings (1-5 issues по темам)</li>
+  <li class="gate">Issues из аудита: <strong>auto</strong> → Pipeline, <strong>manual</strong> → Claude Code dev цикл</li>
+  <li class="human"><span class="role role-cc">Claude Code</span> <strong>/makeit-deploy</strong> → pre-flight (9 проверок) → backup → deploy → health check → tag release</li>
+  <li class="ai"><span class="role role-cc">Claude Code</span> Если health check fail → <strong>автоматический rollback</strong></li>
+</ol>
+
+<h2>Поток B: Обратная связь клиента</h2>
+<ol class="flow-list">
+  <li class="human"><span class="role role-human">Клиент</span> Обратная связь: баг-репорт, запрос фичи, изменение требований</li>
+  <li class="human"><span class="role role-human">Я</span> Аудиозапись / текстовые заметки</li>
+  <li class="human"><span class="role role-dash">Dashboard</span> Загрузка в Транскрипты → <span class="artifact">BRIEF.md</span></li>
+  <li class="ai"><span class="role role-cc">Claude Code</span> <strong>/makeit-plan</strong> → Issues (добавляются к существующему Milestone)</li>
+  <li class="gate">→ Подключение к основному dev-циклу (шаг 7 Потока A)</li>
+</ol>
+
+<h2>Поток C: Периодический аудит (quality gate)</h2>
+<ol class="flow-list">
+  <li class="human"><span class="role role-dash">Dashboard</span> Запуск аудита проекта</li>
+  <li class="ai"><span class="role role-audit">Auditor</span> L1→L2→L3→L4 → Findings</li>
+  <li class="ai"><span class="role role-dash">Dashboard</span> Верификация → Issues</li>
+  <li class="gate">→ Issues → Dev цикл (авто или ручной)</li>
+</ol>
+
+<h2>Поток D: Research & Discovery (планирование фич)</h2>
+<ol class="flow-list">
+  <li class="human"><span class="role role-dash">Dashboard</span> Запуск Research Agent (product_description, region)</li>
+  <li class="ai"><span class="role role-pipe">Pipeline</span> Research Agent → <span class="artifact">RESEARCH.md</span> (рынок, конкуренты)</li>
+  <li class="human"><span class="role role-dash">Dashboard</span> Запуск Discovery Agent (на основе research)</li>
+  <li class="ai"><span class="role role-pipe">Pipeline</span> Discovery Agent → <span class="artifact">DISCOVERY.md</span> (gap matrix, фичи)</li>
+  <li class="gate">→ /makeit-plan → Issues → Dev цикл</li>
+</ol>
+
+<h2>Поток E: Debate (архитектурное решение)</h2>
+<ol class="flow-list">
+  <li class="human"><span class="role role-dash">Dashboard</span> Создание дебата: тема + позиции</li>
+  <li class="ai"><span class="role role-pipe">Pipeline</span> Proposal → Critique ×N → Final Position → Synthesis (Opus)</li>
+  <li class="human"><span class="role role-human">Я</span> Опционально: вмешательство в раунде</li>
+  <li class="ai"><span class="role role-pipe">Pipeline</span> → <span class="artifact">ADR</span> (Architecture Decision Record)</li>
+  <li class="gate">→ Решение принято → может привести к /makeit-plan для новых задач</li>
+</ol>
+
+</div>
+
+<!-- ============ SELF-LEARNING SYSTEM ============ -->
+<div id="learning" class="tab">
+
+<h2>Система самообучения MakeIT</h2>
+<p style="color:var(--text2);margin-bottom:16px">Замкнутый цикл: каждая задача → метрики → ретроспектива → предложения → автоприменение → мониторинг KPI → rollback при деградации.</p>
+
+<h3>Цикл самообучения</h3>
+<div class="bpmn-wrap">
+<svg viewBox="0 0 1400 420" width="1400" height="420" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+<defs>
+  <marker id="la" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#8b949e"/></marker>
+  <marker id="lr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#f85149"/></marker>
+</defs>
+
+<!-- Background -->
+<rect x="0" y="0" width="1400" height="420" rx="10" fill="#0b0e13"/>
+
+<!-- Step 1: Task execution -->
+<rect x="40" y="40" width="160" height="55" rx="8" fill="rgba(63,185,80,.1)" stroke="#3fb950" stroke-width="1.5"/>
+<text x="120" y="62" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">Pipeline Execution</text>
+<text x="120" y="78" text-anchor="middle" fill="#e6edf3" font-size="10">Задача → dev → PR</text>
+<text x="120" y="90" text-anchor="middle" fill="#8b949e" font-size="9">→ review → QA → merge</text>
+
+<!-- Arrow 1→2 -->
+<line x1="200" y1="67" x2="240" y2="67" stroke="#8b949e" stroke-width="1.5" marker-end="url(#la)"/>
+
+<!-- Step 2: Metrics collection -->
+<rect x="242" y="40" width="160" height="55" rx="8" fill="rgba(63,185,80,.06)" stroke="#3fb950" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="322" y="58" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">Сбор метрик</text>
+<text x="322" y="74" text-anchor="middle" fill="#e6edf3" font-size="10">→ metrics.jsonl</text>
+<text x="322" y="88" text-anchor="middle" fill="#8b949e" font-size="9">result, retries, cost, errors</text>
+
+<!-- Arrow 2→3 -->
+<line x1="402" y1="67" x2="442" y2="67" stroke="#8b949e" stroke-width="1.5" marker-end="url(#la)"/>
+
+<!-- Step 3: Retro analysis -->
+<rect x="444" y="40" width="175" height="55" rx="8" fill="rgba(247,120,186,.1)" stroke="#f778ba" stroke-width="1.5"/>
+<text x="531" y="58" text-anchor="middle" fill="#f778ba" font-size="10" font-weight="600">Ретроспектива (weekly)</text>
+<text x="531" y="74" text-anchor="middle" fill="#e6edf3" font-size="10">Claude API анализ</text>
+<text x="531" y="88" text-anchor="middle" fill="#8b949e" font-size="9">паттерны, тренды, рекомендации</text>
+
+<!-- Arrow 3→4 -->
+<line x1="619" y1="67" x2="660" y2="67" stroke="#8b949e" stroke-width="1.5" marker-end="url(#la)"/>
+
+<!-- Step 4: AutoTuner staging -->
+<rect x="662" y="40" width="160" height="55" rx="8" fill="rgba(210,153,34,.1)" stroke="#d29922" stroke-width="1.5"/>
+<text x="742" y="58" text-anchor="middle" fill="#d29922" font-size="10" font-weight="600">AutoTuner</text>
+<text x="742" y="74" text-anchor="middle" fill="#e6edf3" font-size="10">Staging изменений</text>
+<text x="742" y="88" text-anchor="middle" fill="#8b949e" font-size="9">Tier 1/2/3 классификация</text>
+
+<!-- Arrow 4→ gateway -->
+<line x1="822" y1="67" x2="870" y2="67" stroke="#8b949e" stroke-width="1.5" marker-end="url(#la)"/>
+
+<!-- Gateway: Tier -->
+<rect x="872" y="47" width="36" height="36" rx="4" fill="rgba(227,179,65,.1)" stroke="#e3b341" stroke-width="2" transform="rotate(45 890 65)"/>
+<text x="890" y="69" text-anchor="middle" fill="#e3b341" font-size="9" font-weight="600">T?</text>
+<text x="890" y="100" text-anchor="middle" fill="#e3b341" font-size="9">Tier</text>
+
+<!-- Tier 1: Auto-apply (down) -->
+<line x1="890" y1="90" x2="890" y2="150" stroke="#3fb950" stroke-width="1.5" marker-end="url(#la)"/>
+<text x="910" y="130" fill="#3fb950" font-size="9">Tier 1</text>
+
+<rect x="810" y="155" width="160" height="50" rx="8" fill="rgba(63,185,80,.1)" stroke="#3fb950" stroke-width="1.5"/>
+<text x="890" y="174" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">Auto-apply</text>
+<text x="890" y="190" text-anchor="middle" fill="#e6edf3" font-size="10">lessons, skip_keywords</text>
+<text x="890" y="200" text-anchor="middle" fill="#8b949e" font-size="8">cooldown 24h</text>
+
+<!-- Tier 2: PR (right) -->
+<line x1="912" y1="65" x2="990" y2="65" stroke="#d29922" stroke-width="1.5" marker-end="url(#la)"/>
+<text x="950" y="58" fill="#d29922" font-size="9">Tier 2</text>
+
+<rect x="992" y="40" width="155" height="55" rx="8" fill="rgba(210,153,34,.1)" stroke="#d29922" stroke-width="1.5"/>
+<text x="1069" y="58" text-anchor="middle" fill="#d29922" font-size="10" font-weight="600">PR через Claude</text>
+<text x="1069" y="74" text-anchor="middle" fill="#e6edf3" font-size="10">pipeline rules, prompts</text>
+<text x="1069" y="88" text-anchor="middle" fill="#8b949e" font-size="9">→ review человеком</text>
+
+<!-- Tier 3: Manual (right-right) -->
+<line x1="1147" y1="67" x2="1190" y2="67" stroke="#f85149" stroke-width="1.5" marker-end="url(#la)"/>
+<text x="1165" y="58" fill="#f85149" font-size="9">Tier 3</text>
+
+<rect x="1192" y="40" width="155" height="55" rx="8" fill="rgba(88,166,255,.1)" stroke="#58a6ff" stroke-width="1.5"/>
+<text x="1269" y="58" text-anchor="middle" fill="#58a6ff" font-size="10" font-weight="600">Ручной review</text>
+<text x="1269" y="74" text-anchor="middle" fill="#e6edf3" font-size="10">config.yaml, major</text>
+<text x="1269" y="88" text-anchor="middle" fill="#8b949e" font-size="9">только человек</text>
+
+<!-- KPI Monitoring (below auto-apply) -->
+<line x1="890" y1="205" x2="890" y2="250" stroke="#8b949e" stroke-width="1.5" marker-end="url(#la)"/>
+
+<rect x="800" y="255" width="180" height="50" rx="8" fill="rgba(188,140,255,.1)" stroke="#bc8cff" stroke-width="1.5"/>
+<text x="890" y="274" text-anchor="middle" fill="#bc8cff" font-size="10" font-weight="600">KPI Мониторинг</text>
+<text x="890" y="290" text-anchor="middle" fill="#e6edf3" font-size="10">before/after snapshot</text>
+<text x="890" y="300" text-anchor="middle" fill="#8b949e" font-size="8">success_rate, cost, retry_rate</text>
+
+<!-- Gateway: degradation? -->
+<line x1="890" y1="305" x2="890" y2="340" stroke="#8b949e" stroke-width="1.5" marker-end="url(#la)"/>
+<rect x="872" y="342" width="36" height="36" rx="4" fill="rgba(227,179,65,.1)" stroke="#e3b341" stroke-width="2" transform="rotate(45 890 360)"/>
+<text x="890" y="364" text-anchor="middle" fill="#e3b341" font-size="9" font-weight="600">?</text>
+
+<!-- OK → back to pipeline -->
+<path d="M 872 360 L 120 360 L 120 95" fill="none" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#la)"/>
+<text x="500" y="355" text-anchor="middle" fill="#3fb950" font-size="10">✅ KPI OK → продолжаем с новыми правилами</text>
+
+<!-- Degradation → rollback -->
+<line x1="912" y1="360" x2="1060" y2="360" stroke="#f85149" stroke-width="1.5" marker-end="url(#lr)"/>
+<rect x="1062" y="340" width="140" height="40" rx="8" fill="rgba(248,81,73,.1)" stroke="#f85149" stroke-width="1.5"/>
+<text x="1132" y="358" text-anchor="middle" fill="#f85149" font-size="10" font-weight="600">Rollback ↩</text>
+<text x="1132" y="372" text-anchor="middle" fill="#e6edf3" font-size="10">KPI деградация >10%</text>
+
+<!-- Lessons (side panel) -->
+<rect x="40" y="150" width="200" height="90" rx="8" fill="rgba(188,140,255,.06)" stroke="#bc8cff" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="140" y="170" text-anchor="middle" fill="#bc8cff" font-size="10" font-weight="600">📝 Lessons Learned</text>
+<text x="140" y="186" text-anchor="middle" fill="#e6edf3" font-size="10">{project}/.makeit/</text>
+<text x="140" y="200" text-anchor="middle" fill="#e6edf3" font-size="10">lessons-learned.md</text>
+<text x="140" y="216" text-anchor="middle" fill="#8b949e" font-size="9">Инжектируется в агентов</text>
+<text x="140" y="228" text-anchor="middle" fill="#8b949e" font-size="9">при следующем запуске</text>
+
+<line x1="240" y1="195" x2="444" y2="67" stroke="#bc8cff" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#la)"/>
+
+</svg>
+</div>
+
+<h3>KPI метрики (что отслеживается)</h3>
+<div class="cards" style="grid-template-columns: repeat(auto-fit, minmax(200px,1fr))">
+  <div class="card"><h4 style="color:var(--green)">success_rate</h4><p>% задач успешно замерженных</p></div>
+  <div class="card"><h4 style="color:var(--green)">first_pass_rate</h4><p>% задач без retry</p></div>
+  <div class="card"><h4 style="color:var(--red)">retry_rate</h4><p>% задач с повторными попытками</p></div>
+  <div class="card"><h4 style="color:var(--orange)">avg_cost</h4><p>Средняя стоимость задачи ($)</p></div>
+  <div class="card"><h4 style="color:var(--cyan)">qa_pass_rate</h4><p>% задач прошедших QA</p></div>
+  <div class="card"><h4 style="color:var(--purple)">finding_density</h4><p>Среднее findings на задачу</p></div>
+</div>
+
+<h3>Что обучается, а что НЕТ</h3>
+<div class="cards">
+  <div class="card">
+    <h4>✅ Обучается</h4>
+    <p>• Pipeline code generation (dev agent quality)<br>
+    • Pipeline rules (review/testing rules)<br>
+    • Pre-triage config (skip keywords)<br>
+    • Project-local lessons-learned</p>
+    <span class="tag tag-ok">Работает</span>
+  </div>
+  <div class="card">
+    <h4>❌ НЕ обучается</h4>
+    <p>• Auditor (false positive tuning passive)<br>
+    • Транскрипты (нет feedback loop)<br>
+    • /makeit-plan (нет метрик качества планов)<br>
+    • Research/Discovery (нет оценки)<br>
+    • Бизнес-процессы (нет BP Agent)</p>
+    <span class="tag tag-gap">GAP</span>
+  </div>
+</div>
+
+</div>
+
+<!-- ============ IMPROVEMENT PROPOSALS ============ -->
+<div id="improve" class="tab">
+
+<h2>Предложения по улучшению системы</h2>
+<p style="color:var(--text2);margin-bottom:16px">Приоритизированные предложения для повышения качества и скорости разработки.</p>
+
+<h3>🔴 Критические (high impact, нужно в первую очередь)</h3>
+<div class="cards">
+  <div class="card">
+    <h4>1. Business Process Agent</h4>
+    <p><strong>Скиллы:</strong> <code>/makeit-process</code> + <code>/makeit-bp-audit</code></p>
+    <p style="margin-top:6px"><strong>Зачем:</strong> Знание о бизнес-процессах живёт в голове. Нет агента, который проверяет, что код соответствует описанным процессам.</p>
+    <p style="margin-top:6px"><strong>Где в цепочке:</strong><br>
+    BRIEF → <span style="color:var(--purple)">BP Agent</span> → PROCESSES.md → /makeit-plan<br>
+    Code Audit → <span style="color:var(--purple)">BP Audit</span> → BP Findings → Issues</p>
+    <span class="tag tag-gap">GAP — новый агент</span>
+  </div>
+
+  <div class="card">
+    <h4>2. Workflow Engine (/makeit-next)</h4>
+    <p><strong>Скилл:</strong> <code>/makeit-next</code></p>
+    <p style="margin-top:6px"><strong>Зачем:</strong> Ты помнишь порядок шагов в голове. Система должна сама говорить: «следующий шаг для проекта X — аудит, 8 PR замержены».</p>
+    <p style="margin-top:6px"><strong>Как:</strong> Отслеживает project state machine:<br>
+    <code>init → plan → dev → review → audit → bp-audit → deploy</code><br>
+    Показывает: текущая фаза, что дальше, blocker'ы.</p>
+    <span class="tag tag-gap">GAP — новый скилл</span>
+  </div>
+
+  <div class="card">
+    <h4>3. Расширение самообучения</h4>
+    <p><strong>Что добавить:</strong></p>
+    <p style="margin-top:6px">• <strong>Audit FP Tuner:</strong> анализ false_positives.jsonl → автоматическая коррекция min_confidence<br>
+    • <strong>Plan Quality Metrics:</strong> после закрытия Milestone → ретроспектива планирования (STALE issues, переформулировки)<br>
+    • <strong>Transcript Feedback:</strong> оценка BRIEF quality → тюнинг промптов Whisper/Claude</p>
+    <span class="tag tag-gap">GAP — расширение</span>
+  </div>
+</div>
+
+<h3>🟡 Средние (medium impact)</h3>
+<div class="cards">
+  <div class="card">
+    <h4>4. Auto-Audit Trigger</h4>
+    <p>Автоматический аудит после N мержей или по расписанию. Не нужно помнить «пора запустить аудит».</p>
+    <p style="margin-top:6px"><strong>Реализация:</strong> Pipeline отслеживает merge count → POST /api/audit/{project}/run</p>
+    <span class="tag tag-idea">Автоматизация</span>
+  </div>
+
+  <div class="card">
+    <h4>5. Research → Plan Bridge</h4>
+    <p>Discovery findings → автоматический /makeit-plan для найденных gaps. Сейчас читается вручную.</p>
+    <span class="tag tag-idea">Интеграция</span>
+  </div>
+
+  <div class="card">
+    <h4>6. Client Report Agent</h4>
+    <p>После deploy → автоматический отчёт для клиента: что сделано, что дальше. Экономит 30-60 мин/неделю.</p>
+    <p style="margin-top:6px"><strong>Вход:</strong> closed Issues + merged PRs + Milestone progress<br>
+    <strong>Выход:</strong> CLIENT_REPORT.md (на русском)</p>
+    <span class="tag tag-idea">Новый агент</span>
+  </div>
+
+  <div class="card">
+    <h4>7. Cross-Project Knowledge Hub</h4>
+    <p>Lessons из проекта A → автоматически появляются в проекте B (если совпадает стек/домен).</p>
+    <p style="margin-top:6px"><strong>Пример:</strong> «Decimal для денег» в mankassa → автоматически в Sewing-ERP</p>
+    <span class="tag tag-idea">Knowledge</span>
+  </div>
+</div>
+
+<h3>🟢 Тактические (quick wins)</h3>
+<div class="cards">
+  <div class="card">
+    <h4>8. BRIEF → Init Bridge</h4>
+    <p>Dashboard кнопка: BRIEF готов → запустить /makeit-init с этим BRIEF. Убирает ручное копирование.</p>
+    <span class="tag tag-ok">Quick win</span>
+  </div>
+
+  <div class="card">
+    <h4>9. Audit FP Auto-Tuner</h4>
+    <p>false_positives.jsonl уже копится. Добавить: если >30% FP по category → auto-increase min_confidence.</p>
+    <span class="tag tag-ok">Quick win</span>
+  </div>
+
+  <div class="card">
+    <h4>10. Pipeline → Audit chain</h4>
+    <p>Pipeline мержит PR → автоматически вызывает Auditor verify. Уже частично есть (qa_client), но не для полного аудита.</p>
+    <span class="tag tag-ok">Quick win</span>
+  </div>
+</div>
+
+<h3>Обновлённая цепочка (полная, с агентами)</h3>
+<ol class="flow-list">
+  <li class="human"><span class="role role-human">Я</span> Встреча с клиентом → аудиозапись</li>
+  <li class="ai"><span class="role role-dash">Dashboard</span> Транскрипт → <span class="artifact">BRIEF.md</span> (агент: <strong>Whisper</strong> + <strong>Claude Sonnet</strong>)</li>
+  <li class="ai"><span class="role role-cc">Claude Code</span> <strong>/makeit-init</strong> → проект инициализирован (агент: <strong>Claude Sonnet</strong>)</li>
+  <li class="ai" style="border-left-color:var(--purple)"><span class="role" style="background:rgba(188,140,255,.12);color:var(--purple)">BP Agent 🆕</span> <strong>/makeit-process</strong> → <span class="artifact">PROCESSES.md</span> (агент: <strong>Claude Opus</strong>)</li>
+  <li class="ai"><span class="role role-cc">Claude Code</span> <strong>/makeit-plan</strong> → SPEC → PRD → Issues + Milestone (агент: <strong>Claude Sonnet</strong>)</li>
+  <li class="gate">Решение: <strong>auto</strong> → Pipeline, <strong>manual</strong> → Claude Code</li>
+  <li class="ai"><span class="role role-pipe">Pipeline</span> Auto-задачи: dev → self_check → PR → review → QA → merge (агент: <strong>Claude Sonnet/Opus</strong> через CLI)</li>
+  <li class="human"><span class="role role-cc">Claude Code</span> Manual: <strong>/makeit-dev</strong> → код + тесты + PR (агент: <strong>Claude Sonnet</strong>)</li>
+  <li class="human"><span class="role role-cc">Claude Code</span> <strong>/makeit-codereview</strong> → ревью PR (агент: <strong>code-reviewer</strong>)</li>
+  <li class="human"><span class="role role-human">Я</span> Merge PR в main</li>
+  <li class="ai"><span class="role role-audit">Auditor</span> Code Audit L1→L4 (агенты: <strong>ruff, mypy, semgrep</strong> + <strong>Qwen3-Coder</strong> на GPU)</li>
+  <li class="ai"><span class="role role-dash">Dashboard</span> Верификация findings (агент: <strong>Claude Sonnet</strong> + GitHub code read)</li>
+  <li class="ai" style="border-left-color:var(--purple)"><span class="role" style="background:rgba(188,140,255,.12);color:var(--purple)">BP Agent 🆕</span> <strong>/makeit-bp-audit</strong> — код vs бизнес-процессы (агент: <strong>Claude Opus</strong>)</li>
+  <li class="ai"><span class="role role-cc">Claude Code</span> <strong>/makeit-deploy</strong> → pre-flight → deploy → health check (агент: <strong>Claude Sonnet</strong>)</li>
+  <li class="ai" style="border-left-color:var(--cyan)"><span class="role" style="background:rgba(57,210,192,.12);color:var(--cyan)">Client Agent 🆕</span> Автоотчёт для клиента (агент: <strong>Claude Sonnet</strong>)</li>
+  <li class="ai" style="border-left-color:var(--green)"><span class="role role-pipe">Pipeline</span> <strong>Ретроспектива</strong> (weekly) → patterns → rule changes (агент: <strong>Claude Sonnet API</strong>)</li>
+  <li class="ai" style="border-left-color:var(--orange)"><span class="role" style="background:rgba(210,153,34,.12);color:var(--orange)">AutoTuner</span> Staging → Tier 1 auto-apply → KPI мониторинг → rollback при деградации</li>
+  <li class="human"><span class="role role-human">Клиент</span> Фидбек → новый BRIEF → BP Agent impact analysis → /makeit-plan → цикл</li>
+</ol>
+
+</div>
+
+<!-- ============ GAP ANALYSIS ============ -->
+<div id="gaps" class="tab">
+
+<h2>Gap-анализ: что отсутствует в процессах</h2>
+<p style="color:var(--text2);margin-bottom:16px">Обнаруженные пробелы в текущей системе MakeIT — по результатам анализа кода и описания рабочего процесса.</p>
+
+<div class="cards">
+
+  <div class="card">
+    <h4>🔴 Агент по бизнес-процессам</h4>
+    <p>Сейчас нет агента, который по BRIEF/спецификации сам выстраивает цепочку бизнес-процессов. Человек (ты) вручную определяет порядок шагов: «сначала init, потом plan, потом dev...». Это знание живёт в голове, а не в системе.</p>
+    <p style="margin-top:8px"><strong>Нужно:</strong> Агент, аналогичный Auditor, но для бизнес-процессов — проверяет, что все шаги учтены, что бизнес-логика не нарушена, что артефакты связаны.</p>
+    <span class="tag tag-gap">GAP — критический</span>
+  </div>
+
+  <div class="card">
+    <h4>🔴 Скилл для встраивания фичи в процесс</h4>
+    <p>Есть /makeit-plan (новая фича → Issues), но нет скилла, который анализирует СУЩЕСТВУЮЩИЕ бизнес-процессы проекта и показывает, как новая фича в них встраивается. Пример: если клиент просит «добавить возврат товара» — нужно видеть, как это влияет на заказ → оплату → доставку.</p>
+    <span class="tag tag-gap">GAP — высокий</span>
+  </div>
+
+  <div class="card">
+    <h4>🟡 Нет автоматического триггера аудита</h4>
+    <p>Аудит запускается вручную. Нет автоматического запуска после N мержей или по расписанию. Pipeline делает QA-verify для отдельных PR, но полный аудит проекта — только вручную.</p>
+    <span class="tag tag-gap">GAP — средний</span>
+  </div>
+
+  <div class="card">
+    <h4>🟡 Разрыв между BRIEF и /makeit-init</h4>
+    <p>BRIEF генерируется в Dashboard (браузер), а /makeit-init запускается в Claude Code (терминал). Нет автоматической передачи BRIEF в инициализацию — копируется вручную.</p>
+    <span class="tag tag-gap">GAP — средний</span>
+  </div>
+
+  <div class="card">
+    <h4>🟡 Нет единого статуса «где проект сейчас»</h4>
+    <p>Dashboard показывает Issues/PRs/Milestones, но нет высокоуровневого состояния: «проект на стадии планирования» → «в разработке» → «на аудите» → «готов к деплою». Нет workflow-engine.</p>
+    <span class="tag tag-gap">GAP — средний</span>
+  </div>
+
+  <div class="card">
+    <h4>🟢 Knowledge используется пассивно</h4>
+    <p>makeit-knowledge содержит правила и скиллы, но агенты читают их только при запуске. Нет механизма проактивного применения: «в этом проекте используется Decimal для денег — проверь, что новый код не использует float».</p>
+    <span class="tag tag-idea">IDEA — улучшение</span>
+  </div>
+
+  <div class="card">
+    <h4>🟢 Нет связи Research → Plan</h4>
+    <p>Research и Discovery генерируют RESEARCH.md / DISCOVERY.md, но нет автоматической конвертации их findings в /makeit-plan задачи. Результаты просматриваются вручную.</p>
+    <span class="tag tag-idea">IDEA — улучшение</span>
+  </div>
+
+  <div class="card">
+    <h4>🟢 AutoTuner → только Pipeline rules</h4>
+    <p>AutoTuner предлагает изменения в pipeline rules/prompts, но не анализирует бизнес-процессы. Ретроспективы фокусируются на код-качестве, а не на процессных bottlenecks.</p>
+    <span class="tag tag-idea">IDEA — улучшение</span>
+  </div>
+
+</div>
+</div>
+
+<!-- ============ BP AGENT CONCEPT ============ -->
+<div id="agent" class="tab">
+
+<h2>Концепт: Business Process Agent</h2>
+<p style="color:var(--text2);margin-bottom:20px">Агент, который отвечает за бизнес-процессы — как Auditor отвечает за код. Анализирует, валидирует, предлагает.</p>
+
+<div class="cards">
+
+<div class="card" style="grid-column: 1 / -1;">
+  <h4>Зачем нужен?</h4>
+  <p>Сейчас: ты описываешь бизнес-процесс словами → Claude пытается интерпретировать → результат непредсказуемый. Знание о процессах живёт в твоей голове.</p>
+  <p style="margin-top:8px">С BP Agent: процессы описаны как данные (BPMN/YAML/DSL) → агент проверяет их, находит пробелы, предлагает оптимизации.</p>
+</div>
+
+<div class="card">
+  <h4>1. Формализация процессов</h4>
+  <p>Каждый проект получает <code>docs/PROCESSES.md</code> или <code>docs/processes/*.yaml</code> — описание бизнес-процессов в структурированном виде:</p>
+  <p style="margin-top:8px;font-family:monospace;font-size:12px;color:var(--cyan)">
+    process: order_fulfillment<br>
+    &nbsp;&nbsp;trigger: client.creates_order<br>
+    &nbsp;&nbsp;stages:<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;- validate_order → check_inventory<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;- check_inventory → [available: reserve, unavailable: notify_client]<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;- reserve → payment<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;- payment → [success: deliver, failure: cancel]<br>
+    &nbsp;&nbsp;invariants:<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;- "order.total == sum(items.price * items.qty)"<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;- "payment.amount == order.total"<br>
+    &nbsp;&nbsp;artifacts: [Order, Invoice, DeliveryNote]
+  </p>
+</div>
+
+<div class="card">
+  <h4>2. BP Audit (аналог Code Audit)</h4>
+  <p>Проверяет:</p>
+  <p style="margin-top:4px">• Все ли пути имеют завершение (нет deadlocks)<br>
+  • Все ли состояния достижимы<br>
+  • Есть ли обработка ошибок на каждом шаге<br>
+  • Не нарушаются ли инварианты<br>
+  • Совпадает ли код с описанным процессом<br>
+  • Есть ли у каждого артефакта creator и consumer</p>
+  <span class="tag tag-idea">Как Auditor, но для процессов</span>
+</div>
+
+<div class="card">
+  <h4>3. BP from BRIEF (генерация)</h4>
+  <p>По BRIEF.md агент автоматически:</p>
+  <p style="margin-top:4px">• Определяет какие бизнес-процессы затронуты<br>
+  • Строит flow: trigger → stages → artifacts → end<br>
+  • Предлагает state machine (draft → active → completed → archived)<br>
+  • Показывает impact на существующие процессы<br>
+  • Генерирует PROCESSES.md</p>
+  <span class="tag tag-idea">Новый скилл: /makeit-process</span>
+</div>
+
+<div class="card">
+  <h4>4. Интеграция в pipeline</h4>
+  <p>Где BP Agent встраивается в текущий workflow:</p>
+  <p style="margin-top:4px"><strong>После BRIEF → до /makeit-plan:</strong><br>
+  BRIEF → BP Agent → PROCESSES.md → /makeit-plan (учитывает процессы)</p>
+  <p style="margin-top:4px"><strong>После Code Audit:</strong><br>
+  Code Audit findings → BP Agent проверяет: «этот баг нарушает бизнес-процесс X на шаге Y»</p>
+  <p style="margin-top:4px"><strong>При добавлении фичи:</strong><br>
+  /makeit-plan → BP Agent: «эта фича влияет на процессы A, B, нужно обновить шаги 3, 5»</p>
+</div>
+
+<div class="card">
+  <h4>5. Визуализация</h4>
+  <p>BP Agent генерирует интерактивные BPMN-диаграммы (как эта страница) автоматически из PROCESSES.md. Диаграммы обновляются при изменении процессов.</p>
+  <p style="margin-top:8px">Dashboard получает новую вкладку «Процессы» → визуализация всех бизнес-процессов каждого проекта.</p>
+</div>
+
+<div class="card">
+  <h4>6. Проверка по запуску</h4>
+  <p><strong>Автоматический режим:</strong> после каждого /makeit-plan — BP Agent проверяет, что новые issues не нарушают существующие процессы.</p>
+  <p style="margin-top:4px"><strong>Ручной режим:</strong> запуск из Dashboard или Claude Code: <code>/makeit-bp-audit</code> — полный аудит бизнес-процессов проекта.</p>
+  <p style="margin-top:4px"><strong>Findings:</strong> аналогично Code Audit — severity (critical/high/medium), описание, рекомендация. Можно создать Issues.</p>
+</div>
+
+</div>
+
+<h3 style="margin-top:24px">Обновлённый workflow с BP Agent</h3>
+<ol class="flow-list">
+  <li class="human"><span class="role role-human">Я</span> Встреча с клиентом → аудиозапись</li>
+  <li class="ai"><span class="role role-dash">Dashboard</span> Транскрипт → <span class="artifact">BRIEF.md</span></li>
+  <li class="ai"><span class="role role-cc">Claude Code</span> <strong>/makeit-init</strong> → проект инициализирован</li>
+  <li class="ai" style="border-left-color:var(--purple)"><span class="role" style="background:rgba(188,140,255,.12);color:var(--purple)">BP Agent</span> <strong>/makeit-process</strong> → анализ BRIEF → <span class="artifact">PROCESSES.md</span> (бизнес-процессы, state machines, инварианты)</li>
+  <li class="ai"><span class="role role-cc">Claude Code</span> <strong>/makeit-plan</strong> (с учётом PROCESSES.md) → SPEC → PRD → Issues</li>
+  <li class="gate">Dev цикл: /makeit-dev → /makeit-codereview → Merge</li>
+  <li class="ai"><span class="role role-audit">Auditor</span> Code Audit → Findings</li>
+  <li class="ai" style="border-left-color:var(--purple)"><span class="role" style="background:rgba(188,140,255,.12);color:var(--purple)">BP Agent</span> <strong>/makeit-bp-audit</strong> → проверка: код соответствует бизнес-процессам? инварианты не нарушены?</li>
+  <li class="ai"><span class="role role-cc">Claude Code</span> <strong>/makeit-deploy</strong> → production</li>
+  <li class="human"><span class="role role-human">Клиент</span> Фидбек → новый BRIEF → BP Agent анализирует impact на текущие процессы → /makeit-plan</li>
+</ol>
+
+</div>
+
+</div>
+
+<script>
+function tab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  // activate the right button
+  const tabs = ['main','flows','learning','gaps','improve','agent'];
+  const idx = tabs.indexOf(id);
+  if (idx >= 0) document.querySelectorAll('.nav button')[idx].classList.add('on');
+  window.scrollTo(0, 0);
+}
+</script>
+
+</body>
+</html>
