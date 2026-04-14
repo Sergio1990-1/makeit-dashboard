@@ -238,7 +238,7 @@ export async function fetchAllProjectItems(token: string): Promise<Issue[]> {
   let hasNext = true;
   let page = 0;
 
-  const MAX_PAGES = 20; // 20 × 100 items = 2000 max
+  const MAX_PAGES = 30; // 30 × 100 items = 3000 max
   while (hasNext && page < MAX_PAGES) {
     const data: ProjectItemsResponse = await graphql<ProjectItemsResponse>(token, PROJECT_ITEMS_QUERY, {
       owner: GITHUB_OWNER,
