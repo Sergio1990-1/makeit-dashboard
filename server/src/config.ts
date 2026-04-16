@@ -22,4 +22,5 @@ export const PROJECTS: ProjectConfig[] = [
   { repo: "MyMoney", client: "Свой проект", owner: GITHUB_OWNER },
   { repo: "makeit-auditor", client: "Свой проект", owner: GITHUB_OWNER },
   { repo: "makeit-pipeline", client: "Свой проект", owner: GITHUB_OWNER },
+  { repo: "makeit-dashboard", client: "Свой проект", owner: GITHUB_OWNER },
 ];
