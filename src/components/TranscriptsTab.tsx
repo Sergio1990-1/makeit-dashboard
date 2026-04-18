@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { uploadTranscript, fetchTranscriptResult, type TranscriptResult, type TranscriptionModel } from "../utils/transcript";
+import { uploadTranscript, retryTranscript, fetchTranscriptResult, type TranscriptResult, type TranscriptionModel } from "../utils/transcript";
 import { TranscriptProgress } from "./TranscriptProgress";
 import { TranscriptBrief } from "./TranscriptBrief";
 import { TranscriptEditor } from "./TranscriptEditor";
@@ -256,6 +256,22 @@ export function TranscriptsTab({ projects }: Props) {
     setActiveTaskId(taskId);
   }, []);
 
+  const onRetryFromHistory = useCallback(
+    async (taskId: string, originalModel: TranscriptionModel | undefined) => {
+      setBriefResult(null);
+      setEditing(false);
+      setResult(null);
+      try {
+        const res = await retryTranscript(taskId, originalModel ?? "fast");
+        setActiveTaskId(res.task_id);
+        setHistoryRefreshKey((k) => k + 1);
+      } catch (err) {
+        setResult({ ok: false, message: `Не удалось повторить: ${err}` });
+      }
+    },
+    [],
+  );
+
   const onEditSave = useCallback((updatedBrief: string) => {
     setBriefResult((prev) => prev ? { ...prev, brief: updatedBrief } : prev);
     setEditing(false);
@@ -499,7 +515,12 @@ export function TranscriptsTab({ projects }: Props) {
 
       {/* History table (hidden when BRIEF is shown or loading) */}
       {!briefResult && !activeTaskId && !loadingBrief && (
-        <TranscriptHistory onOpen={onOpenFromHistory} onResume={onResumeFromHistory} refreshKey={historyRefreshKey} />
+        <TranscriptHistory
+          onOpen={onOpenFromHistory}
+          onResume={onResumeFromHistory}
+          onRetry={onRetryFromHistory}
+          refreshKey={historyRefreshKey}
+        />
       )}
     </div>
   );
