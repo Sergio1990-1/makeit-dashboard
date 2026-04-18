@@ -3865,6 +3865,16 @@ body::after {
 }
 .tpc-quality-badge--static { cursor: default; }
 .tpc-quality-badge--static:hover { filter: none; }
+.tpc-quality-badge--sm {
+  font-size: var(--text-xs);
+  padding: 1px 6px;
+}
+.tpc-status-stage {
+  font-weight: 400;
+  opacity: 0.75;
+  margin-left: 2px;
+}
+.tpc-history-quality { white-space: nowrap; }
 .tpc-quality-badge--pass {
   background: color-mix(in srgb, var(--color-success) 15%, transparent);
   color: var(--color-success);
