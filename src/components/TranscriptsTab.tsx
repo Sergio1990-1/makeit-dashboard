@@ -256,18 +256,21 @@ export function TranscriptsTab({ projects }: Props) {
     setActiveTaskId(taskId);
   }, []);
 
-  const onRetryFromHistory = useCallback(async (taskId: string) => {
-    setBriefResult(null);
-    setEditing(false);
-    setResult(null);
-    try {
-      const res = await retryTranscript(taskId);
-      setActiveTaskId(res.task_id);
-      setHistoryRefreshKey((k) => k + 1);
-    } catch (err) {
-      setResult({ ok: false, message: `Не удалось повторить: ${err}` });
-    }
-  }, []);
+  const onRetryFromHistory = useCallback(
+    async (taskId: string, originalModel: TranscriptionModel | undefined) => {
+      setBriefResult(null);
+      setEditing(false);
+      setResult(null);
+      try {
+        const res = await retryTranscript(taskId, originalModel ?? "fast");
+        setActiveTaskId(res.task_id);
+        setHistoryRefreshKey((k) => k + 1);
+      } catch (err) {
+        setResult({ ok: false, message: `Не удалось повторить: ${err}` });
+      }
+    },
+    [],
+  );
 
   const onEditSave = useCallback((updatedBrief: string) => {
     setBriefResult((prev) => prev ? { ...prev, brief: updatedBrief } : prev);

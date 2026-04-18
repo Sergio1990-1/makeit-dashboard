@@ -4140,6 +4140,7 @@ body::after {
   font-weight: 600;
   padding: 2px 8px;
   border-radius: var(--radius-sm);
+  white-space: nowrap;
 }
 .tpc-status--done {
   background: color-mix(in srgb, var(--color-success) 15%, transparent);

@@ -202,13 +202,17 @@ export async function uploadTranscript(
 
 /** Retry a failed transcript job. Backend resumes from saved state by job id;
  *  the empty file blob is a multipart placeholder — backend uses the original
- *  file already on disk. */
-export async function retryTranscript(jobId: string): Promise<TranscriptUploadResponse> {
+ *  file already on disk. The original model is passed through so backend can
+ *  honour it if its resume path doesn't override from saved state. */
+export async function retryTranscript(
+  jobId: string,
+  transcriptionModel: TranscriptionModel = "fast",
+): Promise<TranscriptUploadResponse> {
   const form = new FormData();
   form.append("resume", jobId);
   form.append("file", new Blob([], { type: "application/octet-stream" }), "retry");
   form.append("project_context", "");
-  form.append("transcription_model", "fast");
+  form.append("transcription_model", transcriptionModel);
 
   const res = await fetch(`${PIPELINE_BASE_URL}/transcript/upload`, {
     method: "POST",

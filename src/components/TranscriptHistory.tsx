@@ -4,12 +4,13 @@ import {
   deleteTranscript,
   type TranscriptListItem,
   type TranscriptQuality,
+  type TranscriptionModel,
 } from "../utils/transcript";
 
 interface Props {
   onOpen: (taskId: string) => void;
   onResume: (taskId: string) => void;
-  onRetry: (taskId: string) => void;
+  onRetry: (taskId: string, transcriptionModel: TranscriptionModel | undefined) => Promise<void>;
   refreshKey: number; // increment to trigger refresh
 }
 
@@ -56,6 +57,7 @@ export function TranscriptHistory({ onOpen, onResume, onRetry, refreshKey }: Pro
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterProject, setFilterProject] = useState("");
+  const [retryingIds, setRetryingIds] = useState<Set<string>>(new Set());
   const prevRefreshKey = useRef(refreshKey);
   const autoRefreshRef = useRef<ReturnType<typeof setInterval>>(null);
 
@@ -101,6 +103,23 @@ export function TranscriptHistory({ onOpen, onResume, onRetry, refreshKey }: Pro
       }
     };
   }, [hasActive, load]);
+
+  const handleRetry = useCallback(
+    async (taskId: string, model: TranscriptionModel | undefined) => {
+      if (retryingIds.has(taskId)) return;
+      setRetryingIds((prev) => new Set(prev).add(taskId));
+      try {
+        await onRetry(taskId, model);
+      } finally {
+        setRetryingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(taskId);
+          return next;
+        });
+      }
+    },
+    [onRetry, retryingIds],
+  );
 
   const handleDelete = useCallback(async (taskId: string, filename: string) => {
     if (!window.confirm(`Удалить транскрипцию ${filename}?`)) return;
@@ -250,10 +269,11 @@ export function TranscriptHistory({ onOpen, onResume, onRetry, refreshKey }: Pro
                       {item.status === "error" && (
                         <button
                           className="btn btn-sm"
-                          onClick={() => onRetry(item.task_id)}
+                          onClick={() => handleRetry(item.task_id, item.transcription_model)}
+                          disabled={retryingIds.has(item.task_id)}
                           title="Повторить с момента сбоя"
                         >
-                          ↻ Повторить
+                          {retryingIds.has(item.task_id) ? "Запуск..." : "↻ Повторить"}
                         </button>
                       )}
                       {(item.status === "done" || item.status === "error") && (
