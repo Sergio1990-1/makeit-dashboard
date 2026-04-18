@@ -1,12 +1,30 @@
 import { useCallback, useMemo, useState } from "react";
 import { renderBriefHtml, renderMarkdownHtml } from "../utils/transcript-markdown";
-import type { TranscriptResult } from "../utils/transcript";
+import type { QualityCheck, TranscriptQuality, TranscriptResult } from "../utils/transcript";
 
 interface Props {
   result: TranscriptResult;
   onNewUpload: () => void;
   onEdit: () => void;
 }
+
+const QUALITY_LABEL: Record<TranscriptQuality, string> = {
+  pass: "✓ Качество ОК",
+  warning: "⚠ Есть замечания",
+  needs_review: "✗ Требуется проверка",
+};
+
+const QUALITY_CLASS: Record<TranscriptQuality, string> = {
+  pass: "pass",
+  warning: "warning",
+  needs_review: "needs-review",
+};
+
+const CHECK_ICON: Record<QualityCheck["status"], string> = {
+  pass: "✓",
+  warning: "⚠",
+  fail: "✗",
+};
 
 /** Russian plural forms: 1, 2-4, 5+ */
 function plural(n: number, one: string, few: string, many: string): string {
@@ -25,6 +43,7 @@ function countMarkers(text: string, tag: string): number {
 
 export function TranscriptBrief({ result, onNewUpload, onEdit }: Props) {
   const [accordionOpen, setAccordionOpen] = useState(false);
+  const [qualityOpen, setQualityOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const unclearCount = useMemo(() => countMarkers(result.brief, "неразборчиво"), [result.brief]);
@@ -69,6 +88,23 @@ export function TranscriptBrief({ result, onNewUpload, onEdit }: Props) {
       {/* Header with counters */}
       <div className="tpc-brief-header">
         <div className="tpc-brief-counters">
+          {result.quality && (
+            result.quality_report ? (
+              <button
+                type="button"
+                className={`tpc-quality-badge tpc-quality-badge--${QUALITY_CLASS[result.quality]}`}
+                aria-expanded={qualityOpen}
+                aria-controls="tpc-quality-report"
+                onClick={() => setQualityOpen((v) => !v)}
+              >
+                {QUALITY_LABEL[result.quality]}
+              </button>
+            ) : (
+              <span className={`tpc-quality-badge tpc-quality-badge--${QUALITY_CLASS[result.quality]} tpc-quality-badge--static`}>
+                {QUALITY_LABEL[result.quality]}
+              </span>
+            )
+          )}
           {unclearCount > 0 && (
             <span className="tpc-counter tpc-counter--unclear">
               {unclearCount} {plural(unclearCount, "неразборчивое место", "неразборчивых места", "неразборчивых мест")}
@@ -98,6 +134,29 @@ export function TranscriptBrief({ result, onNewUpload, onEdit }: Props) {
           </button>
         </div>
       </div>
+
+      {/* Quality report (expandable) — always mounted so aria-controls reference is valid */}
+      {result.quality && result.quality_report && (
+        <div id="tpc-quality-report" className="tpc-quality-report" hidden={!qualityOpen}>
+          <div className="tpc-quality-report-header">
+            <span className="tpc-quality-report-title">Отчёт о качестве</span>
+            <span className="tpc-quality-report-score">
+              Score: {result.quality_report.score}
+            </span>
+          </div>
+          <ul className="tpc-quality-report-checks">
+            {result.quality_report.checks.map((check) => (
+              <li key={check.name} className={`tpc-quality-check tpc-quality-check--${check.status}`}>
+                <span className="tpc-quality-check-icon" aria-hidden="true">
+                  {CHECK_ICON[check.status]}
+                </span>
+                <span className="tpc-quality-check-name">{check.name}</span>
+                <span className="tpc-quality-check-message">{check.message}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* BRIEF content */}
       <div
