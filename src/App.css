@@ -3875,7 +3875,7 @@ body::after {
   color: var(--color-warning);
   border-color: color-mix(in srgb, var(--color-warning) 35%, transparent);
 }
-.tpc-quality-badge--needs_review {
+.tpc-quality-badge--needs-review {
   background: color-mix(in srgb, var(--color-danger) 15%, transparent);
   color: var(--color-danger);
   border-color: color-mix(in srgb, var(--color-danger) 35%, transparent);

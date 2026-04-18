@@ -14,6 +14,12 @@ const QUALITY_LABEL: Record<TranscriptQuality, string> = {
   needs_review: "✗ Требуется проверка",
 };
 
+const QUALITY_CLASS: Record<TranscriptQuality, string> = {
+  pass: "pass",
+  warning: "warning",
+  needs_review: "needs-review",
+};
+
 const CHECK_ICON: Record<QualityCheck["status"], string> = {
   pass: "✓",
   warning: "⚠",
@@ -86,7 +92,7 @@ export function TranscriptBrief({ result, onNewUpload, onEdit }: Props) {
             result.quality_report ? (
               <button
                 type="button"
-                className={`tpc-quality-badge tpc-quality-badge--${result.quality}`}
+                className={`tpc-quality-badge tpc-quality-badge--${QUALITY_CLASS[result.quality]}`}
                 aria-expanded={qualityOpen}
                 aria-controls="tpc-quality-report"
                 onClick={() => setQualityOpen((v) => !v)}
@@ -94,7 +100,7 @@ export function TranscriptBrief({ result, onNewUpload, onEdit }: Props) {
                 {QUALITY_LABEL[result.quality]}
               </button>
             ) : (
-              <span className={`tpc-quality-badge tpc-quality-badge--${result.quality} tpc-quality-badge--static`}>
+              <span className={`tpc-quality-badge tpc-quality-badge--${QUALITY_CLASS[result.quality]} tpc-quality-badge--static`}>
                 {QUALITY_LABEL[result.quality]}
               </span>
             )
@@ -129,9 +135,9 @@ export function TranscriptBrief({ result, onNewUpload, onEdit }: Props) {
         </div>
       </div>
 
-      {/* Quality report (expandable) */}
-      {qualityOpen && result.quality && result.quality_report && (
-        <div id="tpc-quality-report" className="tpc-quality-report">
+      {/* Quality report (expandable) — always mounted so aria-controls reference is valid */}
+      {result.quality && result.quality_report && (
+        <div id="tpc-quality-report" className="tpc-quality-report" hidden={!qualityOpen}>
           <div className="tpc-quality-report-header">
             <span className="tpc-quality-report-title">Отчёт о качестве</span>
             <span className="tpc-quality-report-score">
@@ -139,8 +145,8 @@ export function TranscriptBrief({ result, onNewUpload, onEdit }: Props) {
             </span>
           </div>
           <ul className="tpc-quality-report-checks">
-            {result.quality_report.checks.map((check, i) => (
-              <li key={i} className={`tpc-quality-check tpc-quality-check--${check.status}`}>
+            {result.quality_report.checks.map((check) => (
+              <li key={check.name} className={`tpc-quality-check tpc-quality-check--${check.status}`}>
                 <span className="tpc-quality-check-icon" aria-hidden="true">
                   {CHECK_ICON[check.status]}
                 </span>
