@@ -68,16 +68,6 @@ function formatTime(iso: string): string {
   }
 }
 
-function simpleMarkdown(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\n/g, "<br/>");
-}
-
 function stageLabel(stage: string): string {
   const map: Record<string, string> = {
     context_gathering: "Context Gathering",
@@ -333,7 +323,7 @@ function ChatMessage({ message, isCurrentSpeaker }: { message: DebateMessage; is
         </div>
         <div
           className="dc-content"
-          dangerouslySetInnerHTML={{ __html: simpleMarkdown(message.content) }}
+          dangerouslySetInnerHTML={{ __html: renderMarkdownHtml(message.content) }}
         />
       </div>
     </div>
@@ -413,7 +403,7 @@ function ConsensusBlock({ result }: { result: DebateResultResponse }) {
       <div className="dc-consensus-header">Consensus</div>
       <div
         className="dc-consensus-text"
-        dangerouslySetInnerHTML={{ __html: simpleMarkdown(dr?.consensus ?? "") }}
+        dangerouslySetInnerHTML={{ __html: renderMarkdownHtml(dr?.consensus ?? "") }}
       />
 
       {(dr?.dissenting_opinions?.length ?? 0) > 0 && (
@@ -427,7 +417,7 @@ function ConsensusBlock({ result }: { result: DebateResultResponse }) {
           {showDissent && (
             <div className="dc-dissent-list">
               {dr!.dissenting_opinions.map((d, i) => (
-                <div key={i} className="dc-dissent-item" dangerouslySetInnerHTML={{ __html: simpleMarkdown(d) }} />
+                <div key={i} className="dc-dissent-item" dangerouslySetInnerHTML={{ __html: renderMarkdownHtml(d) }} />
               ))}
             </div>
           )}

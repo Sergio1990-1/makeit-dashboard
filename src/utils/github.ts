@@ -292,6 +292,10 @@ export async function fetchAllProjectItems(token: string): Promise<Issue[]> {
     cursor = items.pageInfo.endCursor;
   }
 
+  if (hasNext) {
+    console.warn(`[Dashboard] Pagination limit hit: showed ${page * 100} items but more remain. Bump MAX_PAGES.`);
+  }
+
   console.log(`[Dashboard] Total fetched: ${issues.length}`);
 
   // Show breakdown by repo

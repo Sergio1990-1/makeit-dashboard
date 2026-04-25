@@ -394,7 +394,8 @@ function guessSymbolPaths(symbol: string, hintFile?: string): string[] {
 function findDefinitionLine(content: string, symbol: string): number {
   const lines = content.split("\n");
   // Match `class <sym>`, `def <sym>`, `async def <sym>` followed by ( or :  or space.
-  const re = new RegExp(`^(\\s*)(class|def|async\\s+def)\\s+${symbol}\\b`);
+  const escaped = symbol.replace(/[-\\^$*+?.()|[\]{}]/g, "\\$&");
+  const re = new RegExp(`^(\\s*)(class|def|async\\s+def)\\s+${escaped}\\b`);
   for (let i = 0; i < lines.length; i++) {
     if (re.test(lines[i])) return i + 1;
   }

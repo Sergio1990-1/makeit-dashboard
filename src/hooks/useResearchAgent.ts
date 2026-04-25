@@ -77,6 +77,7 @@ export function useResearchAgent(): UseResearchAgentReturn {
   }, []);
 
   const launchResearch = useCallback(async (req: ResearchStartRequest) => {
+    stopPolling();
     setStarting(true);
     setError(null);
     try {
@@ -89,9 +90,10 @@ export function useResearchAgent(): UseResearchAgentReturn {
     } finally {
       setStarting(false);
     }
-  }, [startPolling]);
+  }, [startPolling, stopPolling]);
 
   const launchDiscovery = useCallback(async (project: string) => {
+    stopPolling();
     setStarting(true);
     setError(null);
     try {
@@ -104,7 +106,7 @@ export function useResearchAgent(): UseResearchAgentReturn {
     } finally {
       setStarting(false);
     }
-  }, [startPolling]);
+  }, [startPolling, stopPolling]);
 
   const loadHistory = useCallback(async (project: string) => {
     try {
