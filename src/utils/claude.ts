@@ -596,7 +596,7 @@ export async function generateIssuesFromFindings(
 
     try {
       const response = await client.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         max_tokens: 4096,
         system: _AUDIT_BATCH_PROMPT,
         messages: [
@@ -664,7 +664,7 @@ export async function sendChatMessage(
   // Tool use loop — max 20 iterations
   for (let i = 0; i < 20; i++) {
     const response = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-sonnet-4-6",
       max_tokens: 4096,
       system: [
         { type: "text", text: SYSTEM_RULES, cache_control: { type: "ephemeral" } },
