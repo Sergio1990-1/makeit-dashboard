@@ -7,7 +7,7 @@ import {
   searchCodeSymbol,
 } from "./github-actions";
 
-export const VERIFY_MODEL = "claude-sonnet-4-20250514";
+export const VERIFY_MODEL = "claude-sonnet-4-6";
 
 const VERIFY_SYSTEM_PROMPT = `You are a skeptical senior code reviewer verifying an automated audit finding.
 
