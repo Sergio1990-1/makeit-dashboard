@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { usePipeline } from "../hooks/usePipeline";
 import { GITHUB_OWNER, PROJECTS } from "../utils/config";
-import type { PipelineStageEntry, PipelineQueueItem, ComplexityFilter, ComplexityLevel, ClassifyProgress, ClassifyResponse } from "../utils/pipeline";
-import { classifyIssues, STAGE_ORDER, STAGE_LABEL, normalizeStage } from "../utils/pipeline";
+import type { PipelineStageEntry, PipelineQueueItem, ComplexityFilter, ComplexityLevel, ClassifyProgress, ClassifyResponse, EscalationCategory } from "../utils/pipeline";
+import { classifyIssues, PHASE_ORDER, PHASE_LABEL } from "../utils/pipeline";
 import type { ProjectData } from "../types";
 import { PipelineClosedChart } from "./PipelineClosedChart";
 import { IssueTimeline } from "./IssueTimeline";
@@ -135,68 +135,37 @@ function formatDuration(seconds: number): string {
   return `${h}ч ${m % 60}м`;
 }
 
-function isTaskFinished(stages: PipelineStageEntry[]): boolean {
-  const last = stages[stages.length - 1];
-  if (!last) return false;
-  const stage = normalizeStage(last.stage);
-  if (stage === "merged") return last.status === "completed" || last.status === "failed";
-  if (stage === "needs_human") return true;
-  if (last.status === "failed" && ["dev", "self_check", "in_review", "qa_verifying"].includes(stage)) return true;
-  return false;
+function getElapsedSinceMs(startMs: number | undefined): number | null {
+  if (startMs == null) return null;
+  return (Date.now() - startMs) / 1000;
 }
 
-function getMaxElapsed(stages: PipelineStageEntry[]): number {
-  let maxElapsed = 0;
-  for (const s of stages) {
-    if (s.elapsed != null && s.elapsed > maxElapsed) maxElapsed = s.elapsed;
-  }
-  return maxElapsed || (stages[stages.length - 1].ts - stages[0].ts);
-}
-
-function getElapsedSeconds(
-  stages: PipelineStageEntry[] | undefined,
-  finished?: boolean,
-  fallbackStartMs?: number,
-): number | null {
-  if (!stages?.length) {
-    if (fallbackStartMs != null) return (Date.now() - fallbackStartMs) / 1000;
-    return null;
-  }
-  if (finished || isTaskFinished(stages)) return getMaxElapsed(stages);
-  // Active task — compute from first timestamp
-  return (Date.now() / 1000) - stages[0].ts;
-}
-
+// LiveTimer is for in-flight tasks only — it always renders the active-blue
+// color and ticks every second. Caller is responsible for unmounting it (or
+// passing fallbackStartMs=undefined) when the task finishes. Currently used
+// only by the "Активные задачи" panel, where taskSeenAtRef.current.delete(n)
+// removes the entry on completion.
 function LiveTimer({
-  stages,
-  finished,
   fallbackStartMs,
 }: {
-  stages?: PipelineStageEntry[];
-  finished?: boolean;
   fallbackStartMs?: number;
 }) {
   const [, setTick] = useState(0);
-  const elapsed = getElapsedSeconds(stages, finished, fallbackStartMs);
-  const isActive = finished
-    ? false
-    : stages?.length
-      ? !isTaskFinished(stages)
-      : fallbackStartMs != null;
 
   useEffect(() => {
-    if (!isActive) return;
+    if (fallbackStartMs == null) return;
     const id = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(id);
-  }, [isActive]);
+  }, [fallbackStartMs]);
 
+  const elapsed = getElapsedSinceMs(fallbackStartMs);
   if (elapsed === null) return null;
 
   return (
     <span style={{
       fontFamily: "var(--font-mono)",
       fontSize: "var(--text-xs)",
-      color: isActive ? "var(--blue-500)" : "var(--color-text-muted)",
+      color: "var(--blue-500)",
       minWidth: 42,
       textAlign: "right",
     }}>
@@ -205,33 +174,49 @@ function LiveTimer({
   );
 }
 
-/* ── Stage progress helpers ── */
+/* ── Phase progress helpers (new /pipeline/status format) ── */
 
-const COMPLETED_STATUSES = new Set([
-  "completed", "auto_pass", "opened", "skipped",
-]);
+type PhaseState =
+  | { kind: "pending" }
+  | { kind: "running"; entry: PipelineStageEntry; index: number }
+  | { kind: "success" | "partial" | "failure" | "terminal_failure"; entry: PipelineStageEntry; index: number };
 
-function getStageStatus(
+function getPhaseState(
   stages: PipelineStageEntry[] | undefined,
-  stageName: string,
-): "pending" | "started" | "completed" | "failed" {
-  if (!stages?.length) return "pending";
-  const matching = stages.filter((s) => normalizeStage(s.stage) === stageName);
-  if (!matching.length) return "pending";
-  const last = matching[matching.length - 1];
-  if (COMPLETED_STATUSES.has(last.status)) return "completed";
-  if (last.status === "failed") return "failed";
-  return "started";
+  phase: string,
+): PhaseState {
+  if (!stages?.length) return { kind: "pending" };
+  let last: PipelineStageEntry | undefined;
+  let lastIdx = -1;
+  for (let i = 0; i < stages.length; i++) {
+    if (stages[i].phase === phase) {
+      last = stages[i];
+      lastIdx = i;
+    }
+  }
+  if (!last) return { kind: "pending" };
+  return { kind: last.status, entry: last, index: lastIdx };
 }
 
-function getStageDetail(
-  stages: PipelineStageEntry[] | undefined,
-  stageName: string,
-): string | undefined {
-  if (!stages?.length) return undefined;
-  const matching = stages.filter((s) => normalizeStage(s.stage) === stageName);
-  const last = matching[matching.length - 1];
-  return last?.detail;
+// Surface backend phases not in PHASE_ORDER instead of dropping them silently
+// (e.g. if backend renames or adds a phase, dashboard otherwise looks "stuck").
+const warnedUnknownPhases = new Set<string>();
+
+function buildPhaseList(stages: PipelineStageEntry[] | undefined): string[] {
+  if (!stages?.length) return [...PHASE_ORDER];
+  const known = new Set<string>(PHASE_ORDER);
+  const unknown: string[] = [];
+  const seen = new Set<string>();
+  for (const s of stages) {
+    if (known.has(s.phase) || seen.has(s.phase)) continue;
+    seen.add(s.phase);
+    unknown.push(s.phase);
+    if (!warnedUnknownPhases.has(s.phase)) {
+      warnedUnknownPhases.add(s.phase);
+      console.warn(`[pipeline] unknown phase '${s.phase}' — append to PHASE_ORDER in src/utils/pipeline.ts`);
+    }
+  }
+  return unknown.length ? [...PHASE_ORDER, ...unknown] : [...PHASE_ORDER];
 }
 
 function StageProgress({
@@ -241,30 +226,54 @@ function StageProgress({
   stages?: PipelineStageEntry[];
   compact?: boolean;
 }) {
+  const phases = buildPhaseList(stages);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: compact ? 4 : 6 }}>
-      {STAGE_ORDER.map((name, i) => {
-        const s = getStageStatus(stages, name);
-        const detail = getStageDetail(stages, name);
+      {phases.map((phase, i) => {
+        const state = getPhaseState(stages, phase);
         const dotSize = compact ? 8 : 10;
-        const dotColor =
-          s === "completed"
-            ? "var(--green-500)"
-            : s === "failed"
-              ? "var(--red-500)"
-              : s === "started"
-                ? "var(--blue-500)"
-                : "var(--gray-400)";
+        const isPending = state.kind === "pending";
+        const isRunning = state.kind === "running";
+        const isSuccess = state.kind === "success" || state.kind === "partial";
+        const isFailed = state.kind === "failure" || state.kind === "terminal_failure";
+
+        const dotColor = isSuccess
+          ? "var(--green-500)"
+          : isFailed
+            ? "var(--red-500)"
+            : isRunning
+              ? "var(--blue-500)"
+              : "var(--gray-400)";
+
+        // Tooltip: phase + duration + summary
+        let tooltip: string | undefined;
+        if (!isPending) {
+          const e = state.entry;
+          const parts: string[] = [PHASE_LABEL[phase] ?? phase];
+          if (e.duration_seconds > 0) parts.push(formatDuration(e.duration_seconds));
+          if (e.cost_usd > 0) parts.push(`$${e.cost_usd.toFixed(2)}`);
+          if (e.summary) parts.push(e.summary);
+          tooltip = parts.join(" · ");
+        }
+
         return (
-          <div key={name} style={{ display: "flex", alignItems: "center", gap: compact ? 3 : 5 }}>
+          <div
+            key={phase}
+            title={tooltip}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: compact ? 3 : 5,
+              cursor: tooltip ? "help" : undefined,
+            }}
+          >
             {i > 0 && (
               <div
                 style={{
                   width: compact ? 10 : 16,
                   height: 1,
-                  background:
-                    s === "pending" ? "var(--gray-300)" : dotColor,
-                  opacity: s === "pending" ? 0.5 : 0.6,
+                  background: isPending ? "var(--gray-300)" : dotColor,
+                  opacity: isPending ? 0.5 : 0.6,
                 }}
               />
             )}
@@ -275,33 +284,42 @@ function StageProgress({
                   height: dotSize,
                   borderRadius: "50%",
                   background: dotColor,
-                  boxShadow: s === "started" ? `0 0 6px ${dotColor}` : undefined,
-                  animation: s === "started" ? "pulse 1.5s ease-in-out infinite" : undefined,
+                  boxShadow: isRunning ? `0 0 6px ${dotColor}` : undefined,
+                  animation: isRunning ? "pulse 1.5s ease-in-out infinite" : undefined,
                 }}
               />
               {!compact && (
                 <span
                   style={{
                     fontSize: "var(--text-xs)",
-                    color:
-                      s === "pending"
-                        ? "var(--color-text-faint)"
-                        : "var(--color-text-secondary)",
+                    color: isPending
+                      ? "var(--color-text-faint)"
+                      : "var(--color-text-secondary)",
                     letterSpacing: "0.02em",
                   }}
                 >
-                  {STAGE_LABEL[name] ?? name}
-                  {detail && s === "completed" && name === "in_review" && (
-                    <span
-                      style={{
-                        marginLeft: 3,
-                        fontSize: "var(--text-xs)",
-                        color: VERDICT_STYLE[detail]?.color ?? "var(--color-text-muted)",
-                      }}
-                    >
-                      ({detail})
-                    </span>
-                  )}
+                  {PHASE_LABEL[phase] ?? phase}
+                  {phase === "review" && isSuccess && (() => {
+                    // Surface review verdict from event name (review_approved / review_changes_requested)
+                    const ev = state.entry.event;
+                    const verdict = ev === "review_approved"
+                      ? "APPROVED"
+                      : ev === "review_changes_requested"
+                        ? "CHANGES_REQUESTED"
+                        : null;
+                    if (!verdict) return null;
+                    return (
+                      <span
+                        style={{
+                          marginLeft: 3,
+                          fontSize: "var(--text-xs)",
+                          color: VERDICT_STYLE[verdict]?.color ?? "var(--color-text-muted)",
+                        }}
+                      >
+                        ({verdict})
+                      </span>
+                    );
+                  })()}
                 </span>
               )}
             </div>
@@ -309,6 +327,34 @@ function StageProgress({
         );
       })}
     </div>
+  );
+}
+
+/* ── Escalation reason badge (Task 2) ── */
+
+const CATEGORY_STYLE: Record<EscalationCategory, { bg: string; color: string; label: string }> = {
+  ci_failed:         { bg: "#3a1f1f", color: "#f85149", label: "CI упал" },
+  ci_infra_blocked:  { bg: "#3a3128", color: "#f0883e", label: "CI не запущен (billing)" },
+  review_unfixable:  { bg: "#3a1f1f", color: "#f85149", label: "Review: unfixable" },
+  timeout:           { bg: "#2d2628", color: "#a371f7", label: "Timeout" },
+  parse_failure:     { bg: "#2d2628", color: "#a371f7", label: "Parse error" },
+  other:             { bg: "#21262d", color: "#7d8590", label: "Другое" },
+};
+
+function CategoryBadge({ category }: { category: EscalationCategory }) {
+  const style = CATEGORY_STYLE[category] ?? CATEGORY_STYLE.other;
+  return (
+    <span style={{
+      fontSize: "var(--text-xs)",
+      fontWeight: 600,
+      padding: "1px 8px",
+      borderRadius: 10,
+      background: style.bg,
+      color: style.color,
+      whiteSpace: "nowrap",
+    }}>
+      {style.label}
+    </span>
   );
 }
 
@@ -898,7 +944,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                           {STATUS_LABEL[item.status] ?? item.status}
                         </span>
                       )}
-                      <LiveTimer stages={liveStages} fallbackStartMs={fallbackStartMs} />
+                      <LiveTimer fallbackStartMs={fallbackStartMs} />
                     </div>
                   );
                 })}
@@ -926,14 +972,15 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                   key={r.issue_number}
                   style={{
                     display: "flex",
-                    alignItems: "center",
-                    gap: 10,
+                    flexDirection: "column",
+                    gap: 4,
                     padding: "8px 10px",
                     borderRadius: "var(--radius-sm)",
                     background: "var(--color-bg)",
                     border: `1px solid ${isDone ? "rgba(16,185,129,0.2)" : isFailed ? "rgba(239,68,68,0.2)" : "var(--color-border)"}`,
                   }}
                 >
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   {/* Issue number — clickable for timeline */}
                   <span
                     role="button"
@@ -1019,8 +1066,10 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                   {/* Risk badge */}
                   <RiskBadge riskLevel={r.risk_level} executionPolicy={r.execution_policy} />
 
-                  {/* Stage progress */}
-                  <StageProgress stages={r.stages} compact />
+                  {/* Escalation reason category (Task 2) */}
+                  {r.escalation_reason && (
+                    <CategoryBadge category={r.escalation_reason.category} />
+                  )}
 
                   {/* Review verdict */}
                   {r.review_verdict && (
@@ -1036,8 +1085,32 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                     </span>
                   )}
 
-                  {/* Duration */}
-                  <LiveTimer stages={r.stages} finished />
+                  {/* Duration (from total_duration_seconds) */}
+                  {r.total_duration_seconds != null && r.total_duration_seconds > 0 && (
+                    <span style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "var(--text-xs)",
+                      color: "var(--color-text-muted)",
+                      minWidth: 42,
+                      textAlign: "right",
+                    }}>
+                      {formatDuration(r.total_duration_seconds)}
+                    </span>
+                  )}
+
+                  {/* QA findings (if QA failed) */}
+                  {r.qa_passed === false && r.qa_findings_count != null && r.qa_findings_count > 0 && (
+                    <span
+                      title={`QA нашёл ${r.qa_findings_count} проблем`}
+                      style={{
+                        fontSize: "var(--text-xs)",
+                        color: "var(--orange-500)",
+                        cursor: "help",
+                      }}
+                    >
+                      QA: {r.qa_findings_count}
+                    </span>
+                  )}
 
                   {/* Spacer */}
                   <div style={{ flex: 1 }} />
@@ -1065,8 +1138,8 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                     </a>
                   )}
 
-                  {/* Error — short message */}
-                  {r.error && (
+                  {/* Error — short message (only when no human_summary) */}
+                  {r.error && !r.human_summary && (
                     <span
                       title={r.error}
                       style={{
@@ -1081,6 +1154,19 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                     >
                       {r.error.length > 40 ? r.error.slice(0, 37) + "…" : r.error}
                     </span>
+                  )}
+                  </div>
+
+                  {/* Human-readable escalation summary (Task 2) */}
+                  {r.human_summary && (
+                    <div style={{
+                      fontSize: 12,
+                      color: "#7d8590",
+                      lineHeight: 1.4,
+                      paddingLeft: 2,
+                    }}>
+                      {r.human_summary}
+                    </div>
                   )}
                 </div>
               );
