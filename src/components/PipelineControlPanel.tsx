@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { usePipeline } from "../hooks/usePipeline";
 import { GITHUB_OWNER, PROJECTS } from "../utils/config";
-import type { PipelineStageEntry, PipelineQueueItem, ComplexityFilter, ComplexityLevel, ClassifyProgress, ClassifyResponse, EscalationCategory } from "../utils/pipeline";
+import type { PipelineStageEntry, PipelineQueueItem, ComplexityFilter, ComplexityLevel, ClassifyProgress, ClassifyResponse, EscalationCategory, Outcome } from "../utils/pipeline";
 import { classifyIssues, PHASE_ORDER, PHASE_LABEL } from "../utils/pipeline";
 import type { ProjectData } from "../types";
 import { PipelineClosedChart } from "./PipelineClosedChart";
@@ -334,10 +334,10 @@ function StageProgress({
 
 const CATEGORY_STYLE: Record<EscalationCategory, { bg: string; color: string; label: string }> = {
   ci_failed:         { bg: "#3a1f1f", color: "#f85149", label: "CI упал" },
-  ci_infra_blocked:  { bg: "#3a3128", color: "#f0883e", label: "CI не запущен (billing)" },
-  review_unfixable:  { bg: "#3a1f1f", color: "#f85149", label: "Review: unfixable" },
-  timeout:           { bg: "#2d2628", color: "#a371f7", label: "Timeout" },
-  parse_failure:     { bg: "#2d2628", color: "#a371f7", label: "Parse error" },
+  ci_infra_blocked:  { bg: "#3a3128", color: "#f0883e", label: "CI заблокирован (billing)" },
+  review_unfixable:  { bg: "#3a1f1f", color: "#f85149", label: "Review: блокирующие замечания" },
+  timeout:           { bg: "#2d2628", color: "#a371f7", label: "Таймаут" },
+  parse_failure:     { bg: "#2d2628", color: "#a371f7", label: "Ошибка парсинга" },
   other:             { bg: "#21262d", color: "#7d8590", label: "Другое" },
 };
 
@@ -347,6 +347,32 @@ function CategoryBadge({ category }: { category: EscalationCategory }) {
     <span style={{
       fontSize: "var(--text-xs)",
       fontWeight: 600,
+      padding: "1px 8px",
+      borderRadius: 10,
+      background: style.bg,
+      color: style.color,
+      whiteSpace: "nowrap",
+    }}>
+      {style.label}
+    </span>
+  );
+}
+
+/* ── Outcome badge: did the change actually reach main? ── */
+
+const OUTCOME_STYLE: Record<Outcome, { bg: string; color: string; label: string }> = {
+  merged_clean:         { bg: "rgba(63, 185, 80, 0.15)", color: "#3fb950", label: "✓ Сделано" },
+  merged_with_followup: { bg: "rgba(240, 136, 62, 0.15)", color: "#f0883e", label: "⚙ Код на main, нужен ops" },
+  not_merged:           { bg: "rgba(248, 81, 73, 0.15)", color: "#f85149", label: "✗ Не доехало до main" },
+};
+
+function OutcomeBadge({ outcome }: { outcome: Outcome }) {
+  const style = OUTCOME_STYLE[outcome];
+  if (!style) return null;
+  return (
+    <span style={{
+      fontSize: "var(--text-xs)",
+      fontWeight: 700,
       padding: "1px 8px",
       borderRadius: 10,
       background: style.bg,
@@ -1066,7 +1092,10 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                   {/* Risk badge */}
                   <RiskBadge riskLevel={r.risk_level} executionPolicy={r.execution_policy} />
 
-                  {/* Escalation reason category (Task 2) */}
+                  {/* Outcome — did the change reach main? (UX-critical) */}
+                  {r.outcome && <OutcomeBadge outcome={r.outcome} />}
+
+                  {/* Escalation reason category */}
                   {r.escalation_reason && (
                     <CategoryBadge category={r.escalation_reason.category} />
                   )}

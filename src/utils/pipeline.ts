@@ -42,6 +42,15 @@ export interface EscalationReason {
   category: EscalationCategory;
 }
 
+/**
+ * UX-critical: tells the user whether the change actually reached `main`.
+ *  - merged_clean         → done, CI green
+ *  - merged_with_followup → on main, but post-merge phase (CI/billing) failed → ops, not engineering
+ *  - not_merged           → never made it to main → engineering rework
+ *  - null                 → legacy record (pre 2026-04-26) → fall back to phase_status
+ */
+export type Outcome = "merged_clean" | "merged_with_followup" | "not_merged";
+
 export type ComplexityLevel = "auto" | "assisted" | "manual";
 
 export interface PipelineResult {
@@ -60,6 +69,7 @@ export interface PipelineResult {
   phase_status?: string;
   human_summary?: string | null;
   escalation_reason?: EscalationReason | null;
+  outcome?: Outcome | null;
   dev_model?: string | null;
   workflow_type?: string | null;
   qa_passed?: boolean | null;
