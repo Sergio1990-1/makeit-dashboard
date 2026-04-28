@@ -259,6 +259,13 @@ export interface VerificationResult {
   verified_at: string;
   model: string;
   error: string | null;
+  /**
+   * Stable hash of the finding's description (first 64 chars). Used by
+   * the verification cache so a new bug at the same file:line as a
+   * fixed/different prior bug does not silently inherit its verdict.
+   * Absent on legacy reports — those fall back to file|line matching.
+   */
+  description_hash?: string;
 }
 
 // ══════════════════════════════════════════
