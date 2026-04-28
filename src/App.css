@@ -938,7 +938,7 @@ body::after {
 .stale-feed {
   display: flex;
   flex-direction: column;
-  max-height: 360px;
+  max-height: 280px;
   overflow-y: auto;
 }
 
@@ -1840,12 +1840,13 @@ body::after {
 }
 /* Cap the list height so a long blocked-issues list (13+ rows) doesn't
    stretch its grid row and force the rowspan-2 "Активные проекты"
-   panel beside it to grow into a near-empty stretch of whitespace. */
+   panel beside it to grow into a near-empty stretch of whitespace.
+   280px ≈ 6 rows; longer lists scroll inside the panel. */
 .blocked-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 360px;
+  max-height: 280px;
   overflow-y: auto;
 }
 .blocked-item {
