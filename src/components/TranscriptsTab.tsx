@@ -50,6 +50,10 @@ export function TranscriptsTab({ projects }: Props) {
   const [batchFiles, setBatchFiles] = useState<BatchFile[]>([]);
   const [batchActive, setBatchActive] = useState(false);
   const abortRef = useRef(false);
+  // Synchronous guard for retryFromHistory so two fast clicks on
+  // different rows can't spawn two concurrent retry tasks (orphans
+  // the first task — only the second task_id survives in activeTaskId).
+  const retryInProgressRef = useRef(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -258,6 +262,8 @@ export function TranscriptsTab({ projects }: Props) {
 
   const onRetryFromHistory = useCallback(
     async (taskId: string, originalModel: TranscriptionModel | undefined) => {
+      if (retryInProgressRef.current) return;
+      retryInProgressRef.current = true;
       setBriefResult(null);
       setEditing(false);
       setResult(null);
@@ -267,6 +273,8 @@ export function TranscriptsTab({ projects }: Props) {
         setHistoryRefreshKey((k) => k + 1);
       } catch (err) {
         setResult({ ok: false, message: `Не удалось повторить: ${err}` });
+      } finally {
+        retryInProgressRef.current = false;
       }
     },
     [],

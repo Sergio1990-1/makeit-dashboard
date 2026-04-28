@@ -22,7 +22,7 @@ function parseCompetitors(md: string): ResearchCompetitor[] {
     const stripped = line.trim();
     const lower = stripped.toLowerCase();
 
-    if (stripped.startsWith("## ") && (lower.includes("конкурент") || lower.includes("competitor"))) {
+    if (!inSection && stripped.startsWith("## ") && (lower.includes("конкурент") || lower.includes("competitor"))) {
       inSection = true;
       continue;
     }
@@ -258,28 +258,29 @@ function categorizeSuggestions(suggestions: DiscoverySuggestion[]): DiscoveryDat
   const strategicBets: DiscoverySuggestion[] = [];
   const niceToHaves: DiscoverySuggestion[] = [];
 
-  for (const s of suggestions) {
-    if (s.category === "quick_win") {
-      quickWins.push(s);
-    } else if (s.category === "strategic_bet") {
-      strategicBets.push(s);
-    } else if (s.category === "nice_to_have" || s.category === "deprioritized") {
-      niceToHaves.push(s);
-    } else {
-      // Auto-categorize by effort/impact
-      if ((s.effort === "S" || s.effort === "M") && (s.impact === "high" || s.impact === "critical")) {
-        s.category = "quick_win";
-        quickWins.push(s);
-      } else if ((s.effort === "L" || s.effort === "XL") && (s.impact === "high" || s.impact === "critical")) {
-        s.category = "strategic_bet";
-        strategicBets.push(s);
-      } else {
-        s.category = "nice_to_have";
-        niceToHaves.push(s);
-      }
+  // Build a parallel list with auto-assigned categories without mutating
+  // the inputs. The same object reference must end up in both `suggestions`
+  // and the bucket arrays so callers iterating either list see the same
+  // category.
+  const finalized: DiscoverySuggestion[] = suggestions.map((s) => {
+    if (s.category === "quick_win") return { ...s };
+    if (s.category === "strategic_bet") return { ...s };
+    if (s.category === "nice_to_have" || s.category === "deprioritized") return { ...s };
+    if ((s.effort === "S" || s.effort === "M") && (s.impact === "high" || s.impact === "critical")) {
+      return { ...s, category: "quick_win" };
     }
+    if ((s.effort === "L" || s.effort === "XL") && (s.impact === "high" || s.impact === "critical")) {
+      return { ...s, category: "strategic_bet" };
+    }
+    return { ...s, category: "nice_to_have" };
+  });
+
+  for (const s of finalized) {
+    if (s.category === "quick_win") quickWins.push(s);
+    else if (s.category === "strategic_bet") strategicBets.push(s);
+    else niceToHaves.push(s);
   }
-  return { suggestions, quickWins, strategicBets, niceToHaves, rawMarkdown: "" };
+  return { suggestions: finalized, quickWins, strategicBets, niceToHaves, rawMarkdown: "" };
 }
 
 export function parseDiscoveryMd(md: string): DiscoveryData {

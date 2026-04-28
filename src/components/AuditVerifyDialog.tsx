@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { AuditProjectStatus, VerificationReport } from "../types";
+import type { AuditFinding, AuditProjectStatus, VerificationReport } from "../types";
 import { fetchAuditFindings, fetchAuditVerification, postAuditVerification } from "../utils/auditor";
 import { verifyFindings, buildSkippedVerification, type VerifyProgress } from "../utils/verification";
 import { getToken, getClaudeKey, GITHUB_OWNER } from "../utils/config";
@@ -42,6 +42,13 @@ export function AuditVerifyDialog({ project, onClose, onComplete }: Props) {
   const [progress, setProgress] = useState<VerifyProgress | null>(null);
   const [report, setReport] = useState<VerificationReport | null>(null);
   const [activeTab, setActiveTab] = useState<VerdictTab>("CONFIRMED");
+  // Cache the findings loaded for this dialog so handleSkip / handleRetryFailed
+  // operate on the exact set the user saw verified — not a fresh re-fetch
+  // which can drift if the audit re-runs in the background.
+  const [loadedFindings, setLoadedFindings] = useState<{
+    findings: AuditFinding[];
+    timestamp: string;
+  } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const repoOwner = project.repo.split("/")[0] || GITHUB_OWNER;
@@ -61,6 +68,7 @@ export function AuditVerifyDialog({ project, onClose, onComplete }: Props) {
 
         const findings = await fetchAuditFindings(project.name);
         if (cancelled) return;
+        setLoadedFindings({ findings: findings.findings, timestamp: findings.timestamp });
 
         // Reuse verdicts from a prior verification run if one exists.
         let priorReport: VerificationReport | null = null;
@@ -131,7 +139,14 @@ export function AuditVerifyDialog({ project, onClose, onComplete }: Props) {
 
   async function handleSkip() {
     try {
-      const findings = await fetchAuditFindings(project.name);
+      // Prefer the findings we already loaded so total_findings on the
+      // saved report matches the count the user just confirmed they want
+      // to skip. Fall back to a fresh fetch if for some reason we never
+      // populated state (shouldn't happen, but defensive).
+      const cached = loadedFindings;
+      const findings = cached
+        ? { findings: cached.findings, timestamp: cached.timestamp }
+        : await fetchAuditFindings(project.name);
       const skipped = buildSkippedVerification(findings.findings, project.name, findings.timestamp);
       setState("saving");
       await postAuditVerification(project.name, stripProject(skipped));
@@ -151,12 +166,26 @@ export function AuditVerifyDialog({ project, onClose, onComplete }: Props) {
       setState("error");
       return;
     }
+    // Abort any still-running batch from a previous run before kicking off
+    // a fresh one. Without this, two concurrent verifyFindings() calls
+    // can race and the slower one's postAuditVerification overwrites the
+    // newer report.
+    abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
     setState("verifying");
     setProgress(null);
     try {
-      const findings = await fetchAuditFindings(project.name);
+      // Reuse the findings we loaded in the initial run rather than
+      // re-fetching — keeps total_findings consistent and avoids races
+      // with a fresh audit produced in the background.
+      let findings: { findings: AuditFinding[]; timestamp: string };
+      if (loadedFindings) {
+        findings = loadedFindings;
+      } else {
+        const f = await fetchAuditFindings(project.name);
+        findings = { findings: f.findings, timestamp: f.timestamp };
+      }
       // Build a synthetic priorReport seeded with ONLY the non-error results
       // so verifyFindings will re-run the error cases and reuse the rest.
       const priorReport: VerificationReport = {

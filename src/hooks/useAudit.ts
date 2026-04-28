@@ -1,12 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
-import { 
-  fetchAuditProjects, 
-  fetchAuditStatus, 
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  fetchAuditProjects,
+  fetchAuditStatus,
   isAuditorRunning,
   startAuditRun,
-  cancelAuditRun 
+  cancelAuditRun,
 } from "../utils/auditor";
 import type { AuditProjectStatus, AuditRunStatus } from "../types";
+import { usePolling } from "./usePolling";
+
+const POLL_INTERVAL_MS = 3000;
 
 export function useAudit() {
   const [projects, setProjects] = useState<AuditProjectStatus[]>([]);
@@ -15,86 +18,109 @@ export function useAudit() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const mountedRef = useRef(true);
+  // Keep latest runStatuses readable from poll callback without re-creating it
+  const runStatusesRef = useRef(runStatuses);
+  runStatusesRef.current = runStatuses;
+  // Avoid stacking concurrent loadProjects() invocations when several
+  // projects finish in the same tick.
+  const loadingProjectsRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const checkAvailability = useCallback(async () => {
     const isRunning = await isAuditorRunning();
-    setAuditorAvailable(isRunning);
+    if (mountedRef.current) setAuditorAvailable(isRunning);
     return isRunning;
   }, []);
 
   const loadProjects = useCallback(async () => {
+    if (loadingProjectsRef.current) return;
+    loadingProjectsRef.current = true;
     try {
-      setLoading(true);
-      setError(null);
-      
+      if (mountedRef.current) {
+        setLoading(true);
+        setError(null);
+      }
+
       const available = await checkAvailability();
       if (!available) {
-        setLoading(false);
+        if (mountedRef.current) setLoading(false);
         return;
       }
-      
+
       const data = await fetchAuditProjects();
+      if (!mountedRef.current) return;
       setProjects(data);
-      
-      // Load initial statuses
+
       const initialStatuses: Record<string, AuditRunStatus> = {};
       for (const p of data) {
-         try {
-           const status = await fetchAuditStatus(p.name);
-           initialStatuses[p.name] = status;
-         } catch {
-            // ignore individual status failures
-         }
+        try {
+          initialStatuses[p.name] = await fetchAuditStatus(p.name);
+        } catch {
+          // ignore individual status failures
+        }
       }
-      setRunStatuses(initialStatuses);
-      
+      if (mountedRef.current) setRunStatuses(initialStatuses);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load projects");
+      if (mountedRef.current) {
+        setError(err instanceof Error ? err.message : "Failed to load projects");
+      }
     } finally {
-      setLoading(false);
+      loadingProjectsRef.current = false;
+      if (mountedRef.current) setLoading(false);
     }
   }, [checkAvailability]);
 
+  const loadProjectsRef = useRef(loadProjects);
+  loadProjectsRef.current = loadProjects;
+
   // Initial load
   useEffect(() => {
-    loadProjects();
+    void loadProjects();
   }, [loadProjects]);
 
-  // Phase 2: Polling logic
-  useEffect(() => {
-    const activeProjects = Object.entries(runStatuses)
-      .filter(([, status]) => status.state === "running")
-      .map(([name]) => name);
+  // Polling — single ref-based interval; callback reads latest state via ref
+  // and writes via functional updater.
+  const poll = useCallback(async () => {
+    const running = Object.entries(runStatusesRef.current)
+      .filter(([, s]) => s.state === "running")
+      .map(([n]) => n);
 
-    if (activeProjects.length === 0) return;
+    if (running.length === 0) return;
 
-    const interval = setInterval(async () => {
-      const newStatuses = { ...runStatuses };
-      let changed = false;
-
-      for (const name of activeProjects) {
-        try {
-          const status = await fetchAuditStatus(name);
-          if (JSON.stringify(status) !== JSON.stringify(runStatuses[name])) {
-            newStatuses[name] = status;
-            changed = true;
-            
-            // If finished, refresh projects to get the new report summary
-            if (status.state === "completed" || status.state === "failed") {
-               loadProjects();
-            }
-          }
-        } catch (e) {
-          console.error(`Status check failed for ${name}:`, e);
+    let needProjectReload = false;
+    for (const name of running) {
+      try {
+        const status = await fetchAuditStatus(name);
+        if (!mountedRef.current) return;
+        setRunStatuses((prev) => {
+          const cur = prev[name];
+          if (cur && JSON.stringify(cur) === JSON.stringify(status)) return prev;
+          return { ...prev, [name]: status };
+        });
+        if (status.state === "completed" || status.state === "failed") {
+          needProjectReload = true;
         }
+      } catch (e) {
+        console.error(`Status check failed for ${name}:`, e);
       }
+    }
+    if (needProjectReload && mountedRef.current) {
+      void loadProjectsRef.current();
+    }
+  }, []);
 
-      if (changed) {
-        setRunStatuses(newStatuses);
-      }
-    }, 3000);
+  const { start: startPoll, stop: stopPoll } = usePolling(poll, POLL_INTERVAL_MS);
 
-    return () => clearInterval(interval);
-  }, [runStatuses, loadProjects]);
+  useEffect(() => {
+    const anyRunning = Object.values(runStatuses).some((s) => s.state === "running");
+    if (anyRunning) startPoll();
+    else stopPoll();
+  }, [runStatuses, startPoll, stopPoll]);
 
   const startRun = async (projectName: string) => {
     try {
@@ -112,11 +138,12 @@ export function useAudit() {
         started_at: new Date().toISOString(),
         error: null,
       };
-      setRunStatuses(prev => ({ ...prev, [projectName]: optimistic }));
+      setRunStatuses((prev) => ({ ...prev, [projectName]: optimistic }));
       // Fire-and-forget real status fetch; polling will keep it fresh.
       fetchAuditStatus(projectName)
-        .then(status => {
-          setRunStatuses(prev => {
+        .then((status) => {
+          if (!mountedRef.current) return;
+          setRunStatuses((prev) => {
             // Don't overwrite a "running" with a stale non-running reply.
             const current = prev[projectName];
             if (current?.state === "running" && status.state !== "running") {
@@ -138,13 +165,14 @@ export function useAudit() {
     try {
       await cancelAuditRun(projectName);
       const status = await fetchAuditStatus(projectName);
-      setRunStatuses(prev => ({ ...prev, [projectName]: status }));
+      if (!mountedRef.current) return;
+      setRunStatuses((prev) => ({ ...prev, [projectName]: status }));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       throw err;
     }
   };
-  
+
   return {
     projects,
     runStatuses,

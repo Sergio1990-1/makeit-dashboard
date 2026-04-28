@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react";
 import type { CommitActivity } from "../types";
 
 interface Props {
@@ -6,6 +7,7 @@ interface Props {
 
 const WEEKS = 12;
 const DAYS = 7;
+const TOTAL_DAYS = WEEKS * DAYS;
 
 function getColor(count: number): string {
   if (count === 0) return "var(--heatmap-0, #161b22)";
@@ -15,17 +17,19 @@ function getColor(count: number): string {
   return "var(--heatmap-4, #39d353)";
 }
 
-export function CommitHeatmap({ activity }: Props) {
-  // Build grid: 12 weeks × 7 days, newest day = bottom-right
-  const cells: { date: string; count: number }[] = [];
-  const now = new Date();
-  // Align to today's weekday so the grid ends on today
-  const totalDays = WEEKS * DAYS;
-  for (let i = totalDays - 1; i >= 0; i--) {
-    const d = new Date(now.getTime() - i * 86400000);
-    const date = d.toISOString().split("T")[0];
-    cells.push({ date, count: activity.byDate[date] ?? 0 });
-  }
+function CommitHeatmapImpl({ activity }: Props) {
+  // Recompute the 84-cell grid only when activity changes — was being
+  // rebuilt on every parent render before.
+  const cells = useMemo(() => {
+    const out: { date: string; count: number }[] = [];
+    const now = new Date();
+    for (let i = TOTAL_DAYS - 1; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 86400000);
+      const date = d.toISOString().split("T")[0];
+      out.push({ date, count: activity.byDate[date] ?? 0 });
+    }
+    return out;
+  }, [activity.byDate]);
 
   return (
     <div className="commit-heatmap">
@@ -64,3 +68,5 @@ export function CommitHeatmap({ activity }: Props) {
     </div>
   );
 }
+
+export const CommitHeatmap = memo(CommitHeatmapImpl);

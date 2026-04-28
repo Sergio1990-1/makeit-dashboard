@@ -104,21 +104,22 @@ export function TranscriptHistory({ onOpen, onResume, onRetry, refreshKey }: Pro
     };
   }, [hasActive, load]);
 
+  // In-flight retries tracked in a ref so handleRetry's identity stays
+  // stable; setRetryingIds is mirrored from the ref so the UI updates.
+  const inflightRetriesRef = useRef<Set<string>>(new Set());
   const handleRetry = useCallback(
     async (taskId: string, model: TranscriptionModel | undefined) => {
-      if (retryingIds.has(taskId)) return;
-      setRetryingIds((prev) => new Set(prev).add(taskId));
+      if (inflightRetriesRef.current.has(taskId)) return;
+      inflightRetriesRef.current.add(taskId);
+      setRetryingIds(new Set(inflightRetriesRef.current));
       try {
         await onRetry(taskId, model);
       } finally {
-        setRetryingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(taskId);
-          return next;
-        });
+        inflightRetriesRef.current.delete(taskId);
+        setRetryingIds(new Set(inflightRetriesRef.current));
       }
     },
-    [onRetry, retryingIds],
+    [onRetry],
   );
 
   const handleDelete = useCallback(async (taskId: string, filename: string) => {

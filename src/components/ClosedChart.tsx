@@ -1,32 +1,8 @@
 import type { ProjectData } from "../types";
+import { toLocalDay, getLast7Days, formatDay } from "../utils/date";
 
 interface Props {
   projects: ProjectData[];
-}
-
-function toLocalDay(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function getLast7Days(): string[] {
-  const days: string[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    days.push(toLocalDay(d));
-  }
-  return days;
-}
-
-function formatDay(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  const weekday = d.toLocaleDateString("ru-RU", { weekday: "short" });
-  const day = d.getDate();
-  const month = d.toLocaleDateString("ru-RU", { month: "short" });
-  return `${weekday}, ${day} ${month}`;
 }
 
 const PIPELINE_LABEL = "agent-completed";

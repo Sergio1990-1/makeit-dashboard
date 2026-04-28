@@ -64,7 +64,10 @@ export function selectFindingsForVerification(
         f.finding.severity === "medium",
     );
   }
-  return filtered;
+  // Hard cap: never exceed VERIFICATION_TARGET_COUNT regardless of how
+  // many critical+high findings the auditor produced. Without this cap
+  // unusually noisy audits silently inflate Claude API spend.
+  return filtered.slice(0, VERIFICATION_TARGET_COUNT);
 }
 
 /** Return true when a finding describes mypy environment noise. */
@@ -112,23 +115,34 @@ function makeSyntheticResult(
     verified_at: verifiedAt,
     model,
     error: null,
+    description_hash: descriptionHash(finding.description),
   };
 }
 
 /**
- * Cache key for reusing prior verdicts across runs. We key only on
- * `file|line` because the prior VerificationResult does not store the
- * original finding description — indices and descriptions can shift when
- * the auditor is re-run (cross-file dedup reorders findings). Keying by
- * location alone accepts that if the auditor now reports a different
- * problem at the same file:line, we'll reuse the stale verdict; in
- * practice the common case (retry-failed-only, same-audit re-run) has
- * identical content and this is a safe trade-off. Findings without a
- * line number are not cached (key is unstable otherwise).
+ * Stable non-cryptographic hash (djb2 over the first 64 chars of the
+ * description). Used to detect when a new finding at the same file:line
+ * has different content from a cached prior verdict.
+ */
+function descriptionHash(desc: string): string {
+  let h = 5381;
+  const slice = (desc ?? "").slice(0, 64);
+  for (let i = 0; i < slice.length; i++) {
+    h = (((h << 5) + h) ^ slice.charCodeAt(i)) | 0;
+  }
+  return (h >>> 0).toString(36);
+}
+
+/**
+ * Cache key for reusing prior verdicts across runs. Composed of
+ * `file|line|description_hash` so a new finding at the same line — but
+ * with different content (e.g. the old SQL injection was fixed and a
+ * missing auth check now lives at the same line) — does not inherit the
+ * stale verdict. Findings without a line number are not cached.
  */
 function cacheKey(f: AuditFinding): string | null {
   if (f.line == null) return null;
-  return `${f.file}|${f.line}`;
+  return `${f.file}|${f.line}|${descriptionHash(f.description)}`;
 }
 
 /**
@@ -165,14 +179,17 @@ export async function verifyFindings(
   const verifiedAt0 = new Date().toISOString();
 
   // Build prior-verdict cache from an optional previous report. Key is
-  // `file|line` (see cacheKey docstring) — resilient to finding-index shifts
-  // caused by auditor re-runs. Only successful results populate the cache.
+  // `file|line|description_hash`. Legacy results without a description_hash
+  // are skipped — better to lose one run's cache than silently inherit a
+  // verdict for a now-different bug at the same location. Only successful
+  // results populate the cache.
   const priorCache = new Map<string, VerificationResult>();
   if (priorReport?.results) {
     for (const r of priorReport.results) {
       if (r.error) continue;
       if (r.line == null) continue;
-      priorCache.set(`${r.file}|${r.line}`, r);
+      if (!r.description_hash) continue;
+      priorCache.set(`${r.file}|${r.line}|${r.description_hash}`, r);
     }
   }
 
@@ -301,6 +318,11 @@ export async function verifyFindings(
     for (let j = 0; j < batchResults.length; j++) {
       const r = batchResults[j];
       const rep = batch[j];
+      // Stamp description_hash so the next run's prior-cache can match
+      // by content, not just file:line.
+      if (!r.description_hash) {
+        r.description_hash = descriptionHash(rep.finding.description);
+      }
       results.push(r);
       // Mutually exclusive tally: errored findings count as `errors` only,
       // not also as `uncertain`, so the verify-summary panel's category sum
@@ -328,6 +350,7 @@ export async function verifyFindings(
               verified_at: inferredAt,
               model: `${r.model}+inferred`,
               error: r.error,
+              description_hash: descriptionHash(sib.finding.description),
             };
             results.push(sibResult);
             errors++;
@@ -343,6 +366,7 @@ export async function verifyFindings(
             verified_at: inferredAt,
             model: `${r.model}+inferred`,
             error: null,
+            description_hash: descriptionHash(sib.finding.description),
           };
           results.push(sibResult);
           tallyVerdict(r.verdict);
@@ -391,6 +415,7 @@ export function buildSkippedVerification(
     verified_at: now,
     model: "skipped",
     error: null,
+    description_hash: descriptionHash(finding.description),
   }));
   return {
     project,

@@ -34,10 +34,19 @@ export function useDashboard() {
           const cached = sessionStorage.getItem("makeit_dashboard_cache");
           if (cached) {
             const entry = JSON.parse(cached);
-            setProjects(entry.data);
-            setError("Rate limit — показаны кэшированные данные");
-            setLastUpdated(new Date(entry.timestamp));
-            return;
+            // Defensive: cache schema may have changed across versions.
+            // Only use it if the basic shape matches ProjectData[].
+            if (
+              entry &&
+              Array.isArray(entry.data) &&
+              (entry.data.length === 0 ||
+                (typeof entry.data[0] === "object" && entry.data[0] !== null && "repo" in entry.data[0]))
+            ) {
+              setProjects(entry.data);
+              setError("Rate limit — показаны кэшированные данные");
+              setLastUpdated(new Date(entry.timestamp));
+              return;
+            }
           }
         } catch { /* no cache */ }
       }

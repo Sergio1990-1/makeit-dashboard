@@ -52,8 +52,8 @@ export function useResearchAgent(): UseResearchAgentReturn {
     }
   }, []);
 
-  // Cleanup on unmount
-  useEffect(() => stopPolling, [stopPolling]);
+  // Cleanup on unmount.
+  useEffect(() => () => stopPolling(), [stopPolling]);
 
   const startPolling = useCallback((id: string) => {
     stopPolling();

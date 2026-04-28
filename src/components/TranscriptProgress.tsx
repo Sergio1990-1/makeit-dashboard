@@ -3,6 +3,11 @@ import { fetchTranscriptStatus, type TranscriptStage, type TranscriptStatus } fr
 
 const POLL_INTERVAL = 2000;
 const MAX_POLL_FAILURES = 5;
+// Hard ceiling on how long we keep showing the progress UI for a single
+// task. The backend can hang silently (no error, no progress); without
+// this ceiling the user is locked in a spinner forever. 30 minutes is
+// well above any expected job duration.
+const MAX_POLL_DURATION_MS = 30 * 60 * 1000;
 
 const STAGES: { key: TranscriptStage; label: string }[] = [
   { key: "intake", label: "Приём" },
@@ -42,11 +47,25 @@ export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
   const [status, setStatus] = useState<TranscriptStatus | null>(null);
   const [pollError, setPollError] = useState<string | null>(null);
   const [pollExhausted, setPollExhausted] = useState(false);
+  const [stuck, setStuck] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval>>(null);
   const elapsedRef = useRef<ReturnType<typeof setInterval>>(null);
   const startedAtRef = useRef<number | null>(null);
   const failCountRef = useRef(0);
+  const pollStartedAtRef = useRef<number | null>(null);
+  // Reset stuck flag when taskId changes (React idiomatic
+  // "during-render reset" — https://react.dev/reference/react/useState).
+  // The eslint disables suppress react-hooks/refs (false positive: this
+  // pattern is explicitly recommended in the React docs for resetting
+  // state when an identity-bearing prop changes).
+  const lastTaskIdRef = useRef(taskId);
+  // eslint-disable-next-line react-hooks/refs
+  if (lastTaskIdRef.current !== taskId) {
+    // eslint-disable-next-line react-hooks/refs
+    lastTaskIdRef.current = taskId;
+    setStuck(false);
+  }
 
   const stopPolling = useCallback(() => {
     if (timerRef.current) {
@@ -60,6 +79,17 @@ export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
   }, []);
 
   const poll = useCallback(async () => {
+    // Bail out if we've been polling longer than the hard ceiling — the
+    // task is most likely stuck on the backend.
+    const polledMs = pollStartedAtRef.current
+      ? Date.now() - pollStartedAtRef.current
+      : 0;
+    if (polledMs > MAX_POLL_DURATION_MS) {
+      stopPolling();
+      setStuck(true);
+      return;
+    }
+
     try {
       const s = await fetchTranscriptStatus(taskId);
       setStatus(s);
@@ -88,6 +118,7 @@ export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
   useEffect(() => {
     failCountRef.current = 0;
     startedAtRef.current = null;
+    pollStartedAtRef.current = Date.now();
     const initial = setTimeout(poll, 0);
     timerRef.current = setInterval(poll, POLL_INTERVAL);
     elapsedRef.current = setInterval(() => {
@@ -236,6 +267,16 @@ export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
               Повторить
             </button>
           )}
+        </div>
+      )}
+
+      {/* Stuck task — backend never reported done/error within budget */}
+      {stuck && !hasError && (
+        <div className="tpc-progress-error tpc-progress-error--network">
+          <p>Задача висит дольше 30 минут. Возможно, она зависла на бэкенде.</p>
+          <button className="btn btn-primary" onClick={onRetry}>
+            Считать зависшей и закрыть
+          </button>
         </div>
       )}
     </div>
