@@ -1,15 +1,8 @@
 import type { Milestone } from "../types";
+import { daysUntil, formatShortDate } from "../utils/date";
 
 interface Props {
   milestones: Milestone[];
-}
-
-function daysUntil(dueOn: string): number {
-  return Math.ceil((new Date(dueOn).getTime() - Date.now()) / 86400000);
-}
-
-function formatDate(d: string): string {
-  return new Date(d).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
 }
 
 interface GroupedItem {
@@ -51,7 +44,7 @@ export function UrgentDeadlines({ milestones }: Props) {
               <div className="dl-badges">
                 {isOverdue && <span className={`badge badge-${badgeClass}`}>ПРОСРОЧЕНО ({Math.abs(item.days)}д)</span>}
                 {isToday && <span className={`badge badge-${badgeClass}`}>СЕГОДНЯ</span>}
-                {!isOverdue && !isToday && <span className={`badge badge-${badgeClass}`}>{item.days}д — {formatDate(m.dueOn!)}</span>}
+                {!isOverdue && !isToday && <span className={`badge badge-${badgeClass}`}>{item.days}д — {formatShortDate(m.dueOn!)}</span>}
               </div>
             </div>
           );

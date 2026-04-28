@@ -1,13 +1,7 @@
+import { daysUntil, formatShortDate } from "../utils/date";
+
 interface Props {
   dueOn: string | null;
-}
-
-function daysUntil(dueOn: string): number {
-  return Math.ceil((new Date(dueOn).getTime() - Date.now()) / 86400000);
-}
-
-function formatDate(d: string): string {
-  return new Date(d).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
 }
 
 export function DeadlineBadge({ dueOn }: Props) {
@@ -22,7 +16,7 @@ export function DeadlineBadge({ dueOn }: Props) {
     return <span className="deadline-badge warning">{days}д осталось</span>;
   }
   if (days <= 14) {
-    return <span className="deadline-badge info">{days}д — {formatDate(dueOn)}</span>;
+    return <span className="deadline-badge info">{days}д — {formatShortDate(dueOn)}</span>;
   }
-  return <span className="deadline-badge neutral">{formatDate(dueOn)}</span>;
+  return <span className="deadline-badge neutral">{formatShortDate(dueOn)}</span>;
 }

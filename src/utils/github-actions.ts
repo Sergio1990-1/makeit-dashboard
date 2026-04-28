@@ -30,8 +30,15 @@ async function rest(token: string, path: string, method = "GET", body?: unknown)
     throw new Error("GitHub token истёк или недостаточно прав. Сбросьте токен и введите новый.");
   }
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`GitHub API ${res.status}: ${text}`);
+    // Log the full body to console for diagnostics, but don't surface it
+    // through the thrown Error — error messages bubble up to the chat
+    // tool-call output and we don't want raw GitHub response payloads
+    // (which can include private repo metadata) ending up there.
+    if (import.meta.env.DEV) {
+      const text = await res.text().catch(() => "");
+      console.error(`[github-actions] HTTP ${res.status}:`, text);
+    }
+    throw new Error(`GitHub API ${res.status}`);
   }
   return res.json();
 }

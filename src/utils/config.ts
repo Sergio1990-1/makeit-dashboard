@@ -101,13 +101,33 @@ export function clearWorkerUrl(): void {
 
 // SPA authentication
 const AUTH_KEY = "makeit_auth";
+// 8 hours feels like a reasonable session length for an internal tool —
+// long enough not to nag during a workday, short enough that walking away
+// from a shared device for a day forces re-auth.
+const AUTH_TTL_MS = 8 * 60 * 60 * 1000;
 
 export function getAuth(): boolean {
-  return localStorage.getItem(AUTH_KEY) === "authenticated";
+  const raw = localStorage.getItem(AUTH_KEY);
+  if (!raw) return false;
+  // Legacy plaintext value — treat as authenticated and migrate on next setAuth.
+  if (raw === "authenticated") return true;
+  try {
+    const parsed = JSON.parse(raw) as { v?: string; exp?: number };
+    if (parsed.v === "authenticated" && typeof parsed.exp === "number" && parsed.exp > Date.now()) {
+      return true;
+    }
+  } catch {
+    // Corrupted entry — fall through to clear.
+  }
+  localStorage.removeItem(AUTH_KEY);
+  return false;
 }
 
 export function setAuth(): void {
-  localStorage.setItem(AUTH_KEY, "authenticated");
+  localStorage.setItem(
+    AUTH_KEY,
+    JSON.stringify({ v: "authenticated", exp: Date.now() + AUTH_TTL_MS }),
+  );
 }
 
 export function clearAuth(): void {
