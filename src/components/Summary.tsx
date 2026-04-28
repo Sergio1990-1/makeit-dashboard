@@ -52,7 +52,12 @@ export function Summary({ metrics, onFinanceClick }: Props) {
       </div>
 
       {hasFinances && (
-        <div className="summary-footer" onClick={onFinanceClick}>
+        <button
+          type="button"
+          className="summary-footer summary-footer--button"
+          onClick={onFinanceClick}
+          aria-label="Открыть редактор финансов"
+        >
           <div className="finance-row">
             <div className="finance-block">
               <div className="finance-icon-box"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a2 2 0 0 0 0 4h15a1 1 0 0 0 1-1v-2"/></svg></div>
@@ -76,7 +81,7 @@ export function Summary({ metrics, onFinanceClick }: Props) {
               </div>
             </div>
           </div>
-        </div>
+        </button>
       )}
     </div>
   );

@@ -62,6 +62,15 @@ export function ChatPanel({ open, onClose, projects, summary, blockedIssues, onD
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
+
   const resetTextarea = useCallback(() => {
     if (textareaRef.current) textareaRef.current.style.height = "auto";
   }, []);
@@ -153,8 +162,8 @@ export function ChatPanel({ open, onClose, projects, summary, blockedIssues, onD
                 </div>
               </div>
             )}
-            {messages.map((msg, i) => (
-              <MessageBubble key={i} msg={msg} />
+            {messages.map((msg) => (
+              <MessageBubble key={msg.id} msg={msg} />
             ))}
             {loading && (
               <div className="chat-loading">

@@ -154,6 +154,7 @@ function AppInner() {
                 disabled={loading}
                 className="header-icon-btn"
                 title="Обновить"
+                aria-label="Обновить данные"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={loading ? "spin" : ""}>
                   <path d="M21 12a9 9 0 1 1-6.22-8.56" />
@@ -164,6 +165,7 @@ function AppInner() {
                 onClick={() => { clearAuth(); clearToken(); clearClaudeKey(); window.location.reload(); }}
                 className="header-icon-btn header-icon-btn--subtle"
                 title="Выйти"
+                aria-label="Выйти и очистить токены"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="3" />
@@ -205,9 +207,14 @@ function AppInner() {
                   <div className="bento-panel span-8 panel-projects" style={{ gridRow: "span 2", display: 'flex', flexDirection: 'column' }}>
                     <div className="bento-panel-title">
                       Активные проекты
-                      <span onClick={() => setTab("projects")} style={{ color: "var(--color-primary)", cursor: "pointer", fontSize: "var(--text-sm)", fontWeight: "normal" }}>
+                      <button
+                        type="button"
+                        onClick={() => setTab("projects")}
+                        className="link-button"
+                        style={{ color: "var(--color-primary)", fontSize: "var(--text-sm)", fontWeight: "normal" }}
+                      >
                         Все проекты →
-                      </span>
+                      </button>
                     </div>
                     <section className="projects-grid">
                       {[...projects]
@@ -294,8 +301,8 @@ function AppInner() {
                         <div key={repo} className="milestone-group">
                           <h3 className="milestone-group-title">{repo} <span className="milestone-group-count">({milestones.length})</span></h3>
                           <div className="milestones-grid">
-                            {milestones.map((m, i) => (
-                              <MilestoneCard key={`${m.repo}-${m.title}-${i}`} milestone={m} />
+                            {milestones.map((m) => (
+                              <MilestoneCard key={m.url} milestone={m} />
                             ))}
                           </div>
                         </div>
@@ -318,27 +325,61 @@ function AppInner() {
 
           {/* Stateful tabs — mount lazily on first visit, keep alive via display:none */}
           <div className="bento-grid" style={{ display: tab === "audit" ? undefined : "none" }}>
-            {visitedTabs.has("audit") && <AuditCombinedTab dashboardProjects={projects} />}
+            {visitedTabs.has("audit") && (
+              <ErrorBoundary fallback="Ошибка вкладки Аудит">
+                <AuditCombinedTab dashboardProjects={projects} />
+              </ErrorBoundary>
+            )}
           </div>
           <div className="bento-grid" style={{ display: tab === "pipeline" ? undefined : "none" }}>
-            {visitedTabs.has("pipeline") && <PipelineControlPanel projects={projects} />}
+            {visitedTabs.has("pipeline") && (
+              <ErrorBoundary fallback="Ошибка вкладки Pipeline">
+                <PipelineControlPanel projects={projects} />
+              </ErrorBoundary>
+            )}
           </div>
           <div className="bento-grid" style={{ display: tab === "transcripts" ? undefined : "none" }}>
-            {visitedTabs.has("transcripts") && <TranscriptsTab projects={PROJECTS} />}
+            {visitedTabs.has("transcripts") && (
+              <ErrorBoundary fallback="Ошибка вкладки Транскрипты">
+                <TranscriptsTab projects={PROJECTS} />
+              </ErrorBoundary>
+            )}
           </div>
           <div className="bento-grid" style={{ display: tab === "research" ? undefined : "none" }}>
-            {visitedTabs.has("research") && <ResearchTab repos={projects.map((p) => p.repo)} />}
+            {visitedTabs.has("research") && (
+              <ErrorBoundary fallback="Ошибка вкладки Research">
+                <ResearchTab repos={projects.map((p) => p.repo)} />
+              </ErrorBoundary>
+            )}
           </div>
           <div className="bento-grid" style={{ display: tab === "specs" ? undefined : "none" }}>
-            {visitedTabs.has("specs") && <SpecsTab />}
+            {visitedTabs.has("specs") && (
+              <ErrorBoundary fallback="Ошибка вкладки Specs">
+                <SpecsTab />
+              </ErrorBoundary>
+            )}
           </div>
           <div className="bento-grid" style={{ display: tab === "quality" ? undefined : "none" }}>
-            {visitedTabs.has("quality") && <QualityTab />}
+            {visitedTabs.has("quality") && (
+              <ErrorBoundary fallback="Ошибка вкладки Quality">
+                <QualityTab />
+              </ErrorBoundary>
+            )}
           </div>
           <div className="bento-grid" style={{ display: tab === "debate" ? undefined : "none" }}>
-            {visitedTabs.has("debate") && <DebateTab />}
+            {visitedTabs.has("debate") && (
+              <ErrorBoundary fallback="Ошибка вкладки Debate">
+                <DebateTab />
+              </ErrorBoundary>
+            )}
           </div>
         </>
+      )}
+
+      {hasToken && loading && projects.length === 0 && (
+        <div className="empty-state">
+          <p>Загрузка данных…</p>
+        </div>
       )}
 
       {hasToken && !loading && projects.length === 0 && !error && (

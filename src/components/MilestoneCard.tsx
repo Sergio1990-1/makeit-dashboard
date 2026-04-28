@@ -21,7 +21,17 @@ export function MilestoneCard({ milestone }: Props) {
   return (
     <div
       className={`milestone-card ${isDone ? "milestone-done" : ""} ${expanded ? "milestone-expanded" : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-expanded={expanded}
+      aria-label={`Milestone ${milestone.title}, ${milestone.closedIssues} из ${total} задач закрыто. ${expanded ? "Свернуть" : "Раскрыть"} список.`}
       onClick={() => setExpanded(!expanded)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setExpanded(!expanded);
+        }
+      }}
       style={{ cursor: "pointer" }}
     >
       <div className="milestone-top">
