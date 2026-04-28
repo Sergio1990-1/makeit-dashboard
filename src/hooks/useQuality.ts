@@ -66,15 +66,20 @@ export function useQuality() {
 
   // Cleanup ref for retro setTimeout
   const retroTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const checkAvailability = useCallback(async () => {
     const ok = await isPipelineRunning();
-    setAvailable(ok);
+    if (mountedRef.current) setAvailable(ok);
     return ok;
   }, []);
 
   const loadAll = useCallback(
-    async (project?: string) => {
+    async () => {
       try {
         setLoading(true);
         setError(null);
@@ -85,7 +90,7 @@ export function useQuality() {
           return;
         }
 
-        const effectiveProject = project ?? projectFilter ?? undefined;
+        const effectiveProject = projectFilter ?? undefined;
         const effectiveTier = tierFilter ?? undefined;
 
         const [
@@ -185,15 +190,26 @@ export function useQuality() {
     setError(null);
     try {
       await runRetro(period);
-      // Refresh retro list after a short delay (retro runs in background)
+      if (!mountedRef.current) return;
+      // Refresh retro list after a short delay (retro runs in background).
+      // Clear any prior timer to avoid stacking; check mount state inside
+      // the callback so we don't setState on an unmounted component.
+      if (retroTimerRef.current !== null) {
+        clearTimeout(retroTimerRef.current);
+      }
       retroTimerRef.current = setTimeout(async () => {
         retroTimerRef.current = null;
-        const retroList = await fetchRetroList().catch(() => [] as RetroSummary[]);
-        setRetros(retroList);
-        setRetroRunning(false);
+        try {
+          const retroList = await fetchRetroList().catch(() => [] as RetroSummary[]);
+          if (!mountedRef.current) return;
+          setRetros(retroList);
+          setRetroRunning(false);
+        } catch {
+          if (mountedRef.current) setRetroRunning(false);
+        }
       }, 2000);
     } catch (err) {
-      setRetroRunning(false);
+      if (mountedRef.current) setRetroRunning(false);
       setError(err instanceof Error ? err.message : "Failed to start retro");
       throw err;
     }

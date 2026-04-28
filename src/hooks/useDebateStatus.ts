@@ -87,16 +87,26 @@ export function useDebateStatus(id: string | null) {
     };
   }, [id, stopPolling]);
 
+  // Track the active debate id so async callbacks can detect when it
+  // changes mid-flight (user navigated to a different debate).
+  const idRef = useRef<string | null>(id);
+  idRef.current = id;
+
   const sendMessage = useCallback(
     async (content: string) => {
       if (!id) return;
+      const debateId = id; // capture; do not let later closure read fresh id
       sendingRef.current = true;
       try {
-        await sendDebateMessage(id, { content });
-        const s = await getDebateStatus(id);
+        await sendDebateMessage(debateId, { content });
+        const s = await getDebateStatus(debateId);
+        // If the user switched to a different debate while we were awaiting,
+        // discard this stale reply so it doesn't bleed into the new session.
+        if (idRef.current !== debateId) return;
         setStatus(s);
         setMessages(s.messages);
       } catch (err) {
+        if (idRef.current !== debateId) return;
         setError(err instanceof Error ? err.message : "Ошибка отправки сообщения");
       } finally {
         sendingRef.current = false;
