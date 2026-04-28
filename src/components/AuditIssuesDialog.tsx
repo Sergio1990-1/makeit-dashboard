@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AuditProjectStatus, GeneratedIssue, Verdict } from "../types";
 import { fetchAuditFindings, fetchAuditVerification } from "../utils/auditor";
 import { generateIssuesFromFindings } from "../utils/claude";
@@ -35,6 +35,10 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
   const [creatingIndex, setCreatingIndex] = useState(0);
   const [creatingTitle, setCreatingTitle] = useState("");
   const [genProgress, setGenProgress] = useState<{ current: number; total: number; label: string } | null>(null);
+  // Synchronous guard against double-clicks: setState("creating") is async,
+  // so without this a fast second click can re-enter handleCreate and post
+  // every selected issue twice.
+  const creatingRef = useRef(false);
 
   const repoOwner = project.repo.split("/")[0] || GITHUB_OWNER;
   const repoName = project.repo.split("/")[1] || project.name;
@@ -116,68 +120,74 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
   }
 
   async function handleCreate() {
-    const token = getToken();
-    if (!token) {
-      setError("GitHub token не настроен.");
-      setState("error");
-      return;
-    }
+    if (creatingRef.current) return;
+    creatingRef.current = true;
+    try {
+      const token = getToken();
+      if (!token) {
+        setError("GitHub token не настроен.");
+        setState("error");
+        return;
+      }
 
-    const selectedIssues = issues.filter((_, i) => selected.has(i));
-    setState("creating");
-    setCreatingIndex(0);
+      const selectedIssues = issues.filter((_, i) => selected.has(i));
+      setState("creating");
+      setCreatingIndex(0);
 
-    const urls: string[] = [];
-    const failures: { title: string; error: string }[] = [];
-    for (let i = 0; i < selectedIssues.length; i++) {
-      const issue = selectedIssues[i];
-      setCreatingIndex(i);
-      setCreatingTitle(issue.title);
-      try {
-        const created = await createIssue(
-          token,
-          repoOwner,
-          repoName,
-          issue.title,
-          issue.body,
-          issue.labels,
-        );
-        urls.push(created.url);
+      const urls: string[] = [];
+      const failures: { title: string; error: string }[] = [];
+      for (let i = 0; i < selectedIssues.length; i++) {
+        const issue = selectedIssues[i];
+        setCreatingIndex(i);
+        setCreatingTitle(issue.title);
         try {
-          await addIssueToProject(token, repoOwner, repoName, created.number, GITHUB_PROJECT_NUMBER);
-        } catch { /* non-fatal — issue exists even if project board add fails */ }
-      } catch (e) {
-        urls.push("");
-        failures.push({
-          title: issue.title,
-          error: e instanceof Error ? e.message : String(e),
-        });
+          const created = await createIssue(
+            token,
+            repoOwner,
+            repoName,
+            issue.title,
+            issue.body,
+            issue.labels,
+          );
+          urls.push(created.url);
+          try {
+            await addIssueToProject(token, repoOwner, repoName, created.number, GITHUB_PROJECT_NUMBER);
+          } catch { /* non-fatal — issue exists even if project board add fails */ }
+        } catch (e) {
+          urls.push("");
+          failures.push({
+            title: issue.title,
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
+        if (i < selectedIssues.length - 1) {
+          await new Promise((r) => setTimeout(r, 200));
+        }
       }
-      if (i < selectedIssues.length - 1) {
-        await new Promise((r) => setTimeout(r, 200));
+
+      const successUrls = urls.filter(Boolean);
+
+      // If every attempt failed, surface the errors instead of closing silently.
+      if (successUrls.length === 0 && failures.length > 0) {
+        const preview = failures
+          .slice(0, 3)
+          .map((f) => `• ${f.title}: ${f.error}`)
+          .join("\n");
+        const more = failures.length > 3 ? `\n(и ещё ${failures.length - 3})` : "";
+        setError(`Не удалось создать ни одного issue (${failures.length} ошибок):\n${preview}${more}`);
+        setState("error");
+        return;
       }
+
+      // Partial failure — log and continue; successes get saved.
+      if (failures.length > 0) {
+        console.warn(`${failures.length} issue(s) failed to create:`, failures);
+      }
+
+      onComplete(successUrls.length, successUrls);
+    } finally {
+      creatingRef.current = false;
     }
-
-    const successUrls = urls.filter(Boolean);
-
-    // If every attempt failed, surface the errors instead of closing silently.
-    if (successUrls.length === 0 && failures.length > 0) {
-      const preview = failures
-        .slice(0, 3)
-        .map((f) => `• ${f.title}: ${f.error}`)
-        .join("\n");
-      const more = failures.length > 3 ? `\n(и ещё ${failures.length - 3})` : "";
-      setError(`Не удалось создать ни одного issue (${failures.length} ошибок):\n${preview}${more}`);
-      setState("error");
-      return;
-    }
-
-    // Partial failure — log and continue; successes get saved.
-    if (failures.length > 0) {
-      console.warn(`${failures.length} issue(s) failed to create:`, failures);
-    }
-
-    onComplete(successUrls.length, successUrls);
   }
 
   return (

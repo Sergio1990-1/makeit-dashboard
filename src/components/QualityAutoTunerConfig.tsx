@@ -33,18 +33,19 @@ export function QualityAutoTunerConfig({ config, onSave }: Props) {
   const hasChanges = Object.keys(draft).length > 0;
 
   async function save(updatesOverride?: QualityConfigUpdate) {
-    // Always include any pending draft (slider edits) alongside an
-    // explicit override so toggling a switch does not silently discard
-    // in-progress slider changes.
-    const update: QualityConfigUpdate = updatesOverride
-      ? { ...draft, ...updatesOverride }
-      : draft;
+    // Toggle paths should NOT commit slider draft — that would silently
+    // ship unreviewed changes whenever the user clicks a switch. Only the
+    // explicit "Сохранить" button (which calls save() with no arg) merges
+    // the draft.
+    const update: QualityConfigUpdate = updatesOverride ?? draft;
     if (Object.keys(update).length === 0) return;
     setSaving(true);
     setLocalError(null);
     try {
       await onSave(update);
-      setDraft({});
+      // Clear draft only when the explicit save was invoked. Toggle saves
+      // leave draft slider edits intact for the user to review.
+      if (updatesOverride === undefined) setDraft({});
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : "Ошибка сохранения");
     } finally {

@@ -12,6 +12,15 @@ export interface RiskResult {
   factors: RiskFactor[];
 }
 
+// Risk-bucket thresholds. Calibrated empirically against existing MakeIT
+// projects: a healthy active repo scores < 15; one with a single P1 or
+// stale-week scores 15–35; multiple risk factors push 35–60; a downed
+// service or 3+ P1s with no activity hits 60+. Revisit after major
+// portfolio shifts (e.g., +10 projects) or when monitoring policy changes.
+const LOW_THRESHOLD = 15;
+const MEDIUM_THRESHOLD = 35;
+const HIGH_THRESHOLD = 60;
+
 export function calcRiskScore(project: ProjectData, monitor?: Monitor): RiskResult {
   let score = 0;
   const factors: RiskFactor[] = [];
@@ -46,6 +55,11 @@ export function calcRiskScore(project: ProjectData, monitor?: Monitor): RiskResu
   }
 
   // Open bug ratio (0–15)
+  // Caveat: `bugs` is computed from `project.issues` which only contains the
+  // currently-paginated set. When `project.issues.length < project.openCount`
+  // (large repos beyond the GraphQL page), this ratio under-estimates true
+  // bug density. Acceptable trade-off — the dashboard's pagination usually
+  // covers the meaningful subset.
   const bugs = project.issues.filter(
     (i) => i.labels.some((l) => l.toLowerCase() === "bug") && i.status !== "Done"
   ).length;
@@ -76,9 +90,9 @@ export function calcRiskScore(project: ProjectData, monitor?: Monitor): RiskResu
 
   let level: RiskResult["level"];
   let label: string;
-  if (score >= 60) { level = "critical"; label = "Критичный"; }
-  else if (score >= 35) { level = "high"; label = "Высокий"; }
-  else if (score >= 15) { level = "medium"; label = "Средний"; }
+  if (score >= HIGH_THRESHOLD) { level = "critical"; label = "Критичный"; }
+  else if (score >= MEDIUM_THRESHOLD) { level = "high"; label = "Высокий"; }
+  else if (score >= LOW_THRESHOLD) { level = "medium"; label = "Средний"; }
   else { level = "low"; label = "Низкий"; }
 
   return { score, level, label, factors };
