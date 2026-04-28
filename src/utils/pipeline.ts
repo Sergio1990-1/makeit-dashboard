@@ -11,15 +11,45 @@ export interface PipelineStartRequest {
   complexity_filter?: ComplexityFilter;
 }
 
+export type PhaseStatus =
+  | "running"
+  | "success"
+  | "partial"
+  | "failure"
+  | "terminal_failure";
+
 export interface PipelineStageEntry {
-  stage: string;
-  status: string;
-  ts: number;
-  detail?: string;
-  elapsed?: number;
-  cost_usd?: number;
-  duration_seconds?: number;
+  phase: string;
+  status: PhaseStatus;
+  event: string;
+  duration_seconds: number;
+  cost_usd: number;
+  summary: string;
 }
+
+export type EscalationCategory =
+  | "ci_failed"
+  | "ci_infra_blocked"
+  | "review_unfixable"
+  | "timeout"
+  | "parse_failure"
+  | "other";
+
+export interface EscalationReason {
+  phase: string;
+  event: string;
+  error: string | null;
+  category: EscalationCategory;
+}
+
+/**
+ * UX-critical: tells the user whether the change actually reached `main`.
+ *  - merged_clean         → done, CI green
+ *  - merged_with_followup → on main, but post-merge phase (CI/billing) failed → ops, not engineering
+ *  - not_merged           → never made it to main → engineering rework
+ *  - null                 → legacy record (pre 2026-04-26) → fall back to phase_status
+ */
+export type Outcome = "merged_clean" | "merged_with_followup" | "not_merged";
 
 export type ComplexityLevel = "auto" | "assisted" | "manual";
 
@@ -37,7 +67,14 @@ export interface PipelineResult {
   model_used?: string;
   cost_usd?: number;
   phase_status?: string;
-  human_summary?: string;
+  human_summary?: string | null;
+  escalation_reason?: EscalationReason | null;
+  outcome?: Outcome | null;
+  dev_model?: string | null;
+  workflow_type?: string | null;
+  qa_passed?: boolean | null;
+  qa_findings_count?: number | null;
+  total_duration_seconds?: number | null;
   attempt_number?: number;
   max_attempts?: number;
   budget_remaining_usd?: number;
@@ -87,7 +124,21 @@ export interface PipelineStats {
   cost_per_task_usd?: number;
 }
 
-/* ── Shared stage constants ── */
+/* ── Live phase constants (new /pipeline/status format) ── */
+
+export const PHASE_ORDER = [
+  "dev", "review", "qa_verify", "merge", "ci_monitor",
+] as const;
+
+export const PHASE_LABEL: Record<string, string> = {
+  dev: "Разработка",
+  review: "Ревью",
+  qa_verify: "QA",
+  merge: "Мердж",
+  ci_monitor: "CI",
+};
+
+/* ── Legacy timeline stage constants (used by IssueTimeline) ── */
 
 export const STAGE_ORDER = [
   "queued", "dev", "self_check", "pr_opened",
@@ -122,6 +173,7 @@ export const STAGE_LABEL: Record<string, string> = {
   review: "Ревью",
   qa_verify: "QA",
   merge: "Замержен",
+  ci_monitor: "CI",
 };
 
 export async function isPipelineRunning(): Promise<boolean> {
