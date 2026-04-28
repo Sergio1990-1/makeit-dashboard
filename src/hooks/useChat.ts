@@ -68,7 +68,7 @@ export function useChat(context: ChatContext) {
       if (sendingRef.current) return;
       sendingRef.current = true;
 
-      const userMsg: ChatMessage = { role: "user", content: text, timestamp: new Date() };
+      const userMsg: ChatMessage = { id: `u-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, role: "user", content: text, timestamp: new Date() };
       messagesRef.current = [...messagesRef.current, userMsg];
       setMessages(messagesRef.current);
       setLoading(true);
@@ -87,7 +87,7 @@ export function useChat(context: ChatContext) {
           if (DATA_MUTATING_TOOLS.has(toolName)) dataMutated = true;
         });
 
-        const assistantMsg: ChatMessage = { role: "assistant", content: response, timestamp: new Date() };
+        const assistantMsg: ChatMessage = { id: `a-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, role: "assistant", content: response, timestamp: new Date() };
         messagesRef.current = [...messagesRef.current, assistantMsg];
         setMessages(messagesRef.current);
 

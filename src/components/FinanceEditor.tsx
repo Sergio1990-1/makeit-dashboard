@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ProjectData } from "../types";
 import { updateProjectFinance } from "../utils/config";
 
@@ -12,6 +12,14 @@ export function FinanceEditor({ projects, onSave, onClose }: Props) {
   const [values, setValues] = useState(
     projects.map((p) => ({ repo: p.repo, client: p.client, budget: p.budget, paid: p.paid }))
   );
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   const update = (i: number, field: "budget" | "paid", val: string) => {
     const num = parseFloat(val) || 0;

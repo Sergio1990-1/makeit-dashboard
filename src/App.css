@@ -451,6 +451,40 @@ body::after {
   background: var(--color-neutral-tint-3);
 }
 
+/* Reset native button styles when summary footer is rendered as <button> */
+.summary-footer--button {
+  display: block;
+  width: calc(100% + 32px);
+  border: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.summary-footer--button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+/* Inline link-style button for use inside panel titles */
+.link-button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.link-button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 .finance-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -2075,6 +2109,10 @@ body::after {
   -webkit-tap-highlight-color: transparent;
 }
 .milestone-card:active { border-color: var(--color-text-faint); }
+.milestone-card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -1px;
+}
 .milestone-card.milestone-done {
   border-left-color: var(--color-success);
   opacity: 0.6;
