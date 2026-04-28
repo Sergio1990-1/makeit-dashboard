@@ -56,8 +56,9 @@ export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
   const pollStartedAtRef = useRef<number | null>(null);
   // Reset stuck flag when taskId changes (React idiomatic
   // "during-render reset" — https://react.dev/reference/react/useState).
-  // eslint-disables cover false positives: this pattern is explicitly
-  // recommended in the React docs.
+  // The eslint disables suppress react-hooks/refs (false positive: this
+  // pattern is explicitly recommended in the React docs for resetting
+  // state when an identity-bearing prop changes).
   const lastTaskIdRef = useRef(taskId);
   // eslint-disable-next-line react-hooks/refs
   if (lastTaskIdRef.current !== taskId) {

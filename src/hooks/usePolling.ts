@@ -11,6 +11,10 @@ import { useCallback, useEffect, useRef } from "react";
  * interval would resolve and overwrite freshly-set state. Routing the
  * callback through a ref keeps the closure always current while the
  * interval itself lives in a stable ref.
+ *
+ * Contract: `intervalMs` is read once at start() time. Changes to it
+ * after polling has begun are NOT honoured until stop() + start() is
+ * invoked. All current callers pass a module-level constant.
  */
 export function usePolling(
   callback: () => void | Promise<void>,
@@ -33,7 +37,7 @@ export function usePolling(
   }, []);
 
   const start = useCallback(() => {
-    if (intervalRef.current !== null) return; // already running
+    if (intervalRef.current !== null) return; // already running — see "Contract"
     intervalRef.current = setInterval(() => {
       void cbRef.current();
     }, intervalMs);

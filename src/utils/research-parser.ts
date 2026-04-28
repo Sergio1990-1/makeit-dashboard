@@ -22,21 +22,11 @@ function parseCompetitors(md: string): ResearchCompetitor[] {
     const stripped = line.trim();
     const lower = stripped.toLowerCase();
 
-    if (stripped.startsWith("## ") && (lower.includes("конкурент") || lower.includes("competitor"))) {
+    if (!inSection && stripped.startsWith("## ") && (lower.includes("конкурент") || lower.includes("competitor"))) {
       inSection = true;
       continue;
     }
-    // Exit only when we hit a sibling H2 that is NOT a competitor section.
-    // Tolerates LLM output that occasionally uses `## CompetitorName` instead
-    // of `### CompetitorName` — without this we'd silently drop the rest.
-    if (
-      inSection &&
-      stripped.startsWith("## ") &&
-      !lower.includes("конкурент") &&
-      !lower.includes("competitor")
-    ) {
-      break;
-    }
+    if (inSection && stripped.startsWith("## ")) break;
     if (!inSection) continue;
 
     if (stripped.startsWith("### ")) {
