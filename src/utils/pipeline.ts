@@ -143,7 +143,9 @@ export async function isPipelineRunning(): Promise<boolean> {
 export async function fetchPipelineStatus(): Promise<PipelineStatus> {
   const res = await fetch(`${PIPELINE_BASE_URL}/pipeline/status`, { cache: "no-store" });
   if (!res.ok) {
-    console.error("[pipeline] status failed:", res.status, await res.text().catch(() => ""));
+    if (import.meta.env.DEV) {
+      console.error("[pipeline] status failed:", res.status, await res.text().catch(() => ""));
+    }
     throw new Error(`HTTP ${res.status}`);
   }
   return res.json() as Promise<PipelineStatus>;
@@ -167,7 +169,9 @@ export async function startPipeline(req: PipelineStartRequest): Promise<string> 
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    console.error("[pipeline] start failed:", res.status, body);
+    if (import.meta.env.DEV) {
+      console.error("[pipeline] start failed:", res.status, body);
+    }
     const err = (() => { try { return JSON.parse(body); } catch { return { detail: `HTTP ${res.status}` }; } })();
     throw new Error((err as { detail: string }).detail ?? `HTTP ${res.status}`);
   }
