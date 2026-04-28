@@ -146,6 +146,7 @@ function isTaskFinished(stages: PipelineStageEntry[]): boolean {
 }
 
 function getMaxElapsed(stages: PipelineStageEntry[]): number {
+  if (!stages.length) return 0;
   let maxElapsed = 0;
   for (const s of stages) {
     if (s.elapsed != null && s.elapsed > maxElapsed) maxElapsed = s.elapsed;
