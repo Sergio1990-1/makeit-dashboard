@@ -241,7 +241,13 @@ export async function fetchAllProjectItems(): Promise<Issue[]> {
   let hasNext = true;
   let page = 0;
 
-  const MAX_PAGES = 20;
+  // Hard ceiling guards against runaway tracker pagination. Project V2
+  // returns items in insertion order (oldest first). When the cap was
+  // 20, the most recently added 1400+ items (including freshly
+  // pipeline-closed ones from today) were silently dropped — the
+  // dashboard then showed empty "Закрытые pipeline за неделю". Bumped
+  // well above the current ~3444 items with headroom.
+  const MAX_PAGES = 60;
   while (hasNext && page < MAX_PAGES) {
     const data: ProjectItemsResponse = await graphql<ProjectItemsResponse>(PROJECT_ITEMS_QUERY, {
       owner: GITHUB_OWNER,
@@ -288,6 +294,10 @@ export async function fetchAllProjectItems(): Promise<Issue[]> {
 
     hasNext = items.pageInfo.hasNextPage;
     cursor = items.pageInfo.endCursor;
+  }
+
+  if (hasNext) {
+    console.warn(`[Cache] Pagination limit hit: fetched ${issues.length} items but more remain. Bump MAX_PAGES.`);
   }
 
   console.log(`[Cache] Total fetched: ${issues.length} items`);
