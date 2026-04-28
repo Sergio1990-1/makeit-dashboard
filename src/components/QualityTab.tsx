@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useQuality } from "../hooks/useQuality";
 import { QualityTrendsChart } from "./QualityTrendsChart";
 import { QualityFindingsChart, QualityErrorsChart } from "./QualityBarCharts";
@@ -138,12 +137,9 @@ export function QualityTab() {
     setTierFilter,
   } = useQuality();
 
-  // Refetch whenever the project/tier filter changes so the list, history,
-  // config panel and lessons viewer all stay in sync.
-  useEffect(() => {
-    refresh(projectFilter ?? undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectFilter, tierFilter]);
+  // Note: useQuality's internal effect already re-fetches when projectFilter
+  // or tierFilter change (loadAll captures them in its deps). No extra
+  // refresh trigger needed here.
 
   if (loading) {
     return (

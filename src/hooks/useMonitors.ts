@@ -40,6 +40,7 @@ export function useMonitors(): UseMonitorsResult {
 
   useEffect(() => {
     if (!getWorkerUrl()) return;
+    void refresh(); // immediate load — don't wait for first interval tick
     intervalRef.current = setInterval(refresh, REFRESH_INTERVAL_MS);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
