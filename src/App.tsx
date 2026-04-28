@@ -200,11 +200,27 @@ function AppInner() {
                     <ClosedChart projects={projects} />
                   </ErrorBoundary>
 
-                  <ErrorBoundary fallback="Ошибка в дедлайнах">
-                    <UrgentDeadlines milestones={allMilestones} />
+                  {/*
+                    Dashboard layout (12-col grid):
+                      Row 1: Summary (1-4)   | ClosedChart (5-12)
+                      Row 2: Stale (1-4)     | ActiveProjects (5-12, rowspan=2)
+                      Row 3: Blocked (1-4)   | (active cont.)
+                      Row 4: Urgent? (1-4)   | StackedChart (5-12)
+                    panel-projects gets an explicit `gridColumnStart: 5` so
+                    auto-flow keeps the left column for Stale/Blocked/Urgent
+                    rather than letting span-4 items slide into the right
+                    half. StackedChart's right alignment is enforced via CSS
+                    (.dashboard-grid > .bento-panel.span-8:last-child).
+                  */}
+
+                  <ErrorBoundary fallback="Ошибка в мониторинге">
+                    <StaleAlert projects={projects} />
                   </ErrorBoundary>
 
-                  <div className="bento-panel span-8 panel-projects" style={{ gridRow: "span 2", display: 'flex', flexDirection: 'column' }}>
+                  <div
+                    className="bento-panel span-8 panel-projects"
+                    style={{ gridColumnStart: 5, gridRow: 'span 2', display: 'flex', flexDirection: 'column' }}
+                  >
                     <div className="bento-panel-title">
                       Активные проекты
                       <button
@@ -231,12 +247,12 @@ function AppInner() {
                     </section>
                   </div>
 
-                  <ErrorBoundary fallback="Ошибка в мониторинге">
-                    <StaleAlert projects={projects} />
-                  </ErrorBoundary>
-
                   <ErrorBoundary fallback="Ошибка в blocked items">
                     <BlockedItems issues={blockedIssues} />
+                  </ErrorBoundary>
+
+                  <ErrorBoundary fallback="Ошибка в дедлайнах">
+                    <UrgentDeadlines milestones={allMilestones} />
                   </ErrorBoundary>
 
                   <ErrorBoundary fallback="Ошибка в диаграмме">

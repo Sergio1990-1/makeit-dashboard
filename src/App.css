@@ -242,6 +242,14 @@ body::after {
   align-content: start; /* Prevent overall grid stretching to page height */
 }
 
+/* StackedChart (Распределение задач) is the last bento-panel in the dashboard
+   and must sit in the right column — same x-axis as Активные проекты above
+   it. Without this, the span-8 chart auto-flows into the leftmost free slot
+   (col 1-8) and ends up under the Stale/Blocked column. */
+.dashboard-grid > .bento-panel.span-8:last-child {
+  grid-column-start: 5;
+}
+
 @media (max-width: 1024px) {
   .bento-grid {
     display: flex;
