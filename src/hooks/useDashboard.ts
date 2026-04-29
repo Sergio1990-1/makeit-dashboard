@@ -86,7 +86,7 @@ export function useDashboard() {
   }), [projects]);
 
   const blockedIssues: Issue[] = useMemo(() =>
-    projects.flatMap((p) => p.issues.filter((i) => i.isBlocked)),
+    projects.flatMap((p) => p.issues.filter((i) => i.isBlocked && i.status !== "Done")),
     [projects]
   );
 
