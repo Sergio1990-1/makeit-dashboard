@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { TokenForm } from "./components/TokenForm";
-import { MilestoneCard } from "./components/MilestoneCard";
 import { ChatPanel } from "./components/ChatPanel";
 import { ChatButton } from "./components/ChatButton";
 import { FinanceEditor } from "./components/FinanceEditor";
@@ -17,6 +16,7 @@ import { Sidebar } from "./components/v4/Sidebar";
 import { Topbar } from "./components/v4/Topbar";
 import { DashboardView } from "./components/v4/DashboardView";
 import { ProjectsView } from "./components/v4/ProjectsView";
+import { MilestonesView } from "./components/v4/milestones/MilestonesView";
 import { useDashboard } from "./hooks/useDashboard";
 import { useMonitors } from "./hooks/useMonitors";
 import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH, PROJECTS } from "./utils/config";
@@ -76,19 +76,23 @@ function AppInner() {
     }
   }, [tab]);
 
-  const [msTab, setMsTab] = useState<"open" | "done">("open");
   const [chatOpen, setChatOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
   const [sideOpen, setSideOpen] = useState(false);
 
-  // Track visited tabs so stateful components mount lazily but stay alive
+  // Track visited tabs so stateful components mount lazily but stay alive.
+  // Uses the React-recommended "setState during render" pattern for derived
+  // state — see https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  // (avoids the cascading re-render of doing this in a useEffect).
   const [visitedTabs, setVisitedTabs] = useState<Set<TabId>>(() => new Set(["dashboard", tab]));
-  useEffect(() => {
+  if (!visitedTabs.has(tab)) {
     setVisitedTabs((prev) => {
       if (prev.has(tab)) return prev;
-      return new Set(prev).add(tab);
+      const next = new Set(prev);
+      next.add(tab);
+      return next;
     });
-  }, [tab]);
+  }
 
   useEffect(() => {
     document.body.classList.add("v4");
@@ -120,11 +124,6 @@ function AppInner() {
   const hasToken = !!getToken();
 
   const allMilestones = projects.flatMap((p) => p.milestones);
-  // Milestone считается завершённым если GitHub закрыл его (CLOSED) ИЛИ все issues закрыты
-  const isMilestoneDone = (m: { state: string; openIssues: number; closedIssues: number }) =>
-    m.state === "CLOSED" || (m.openIssues === 0 && m.closedIssues > 0);
-  const openMilestones = allMilestones.filter((m) => !isMilestoneDone(m));
-  const doneMilestones = allMilestones.filter((m) => isMilestoneDone(m));
 
   // Token-form gate: classic experience until token is set
   if (!hasToken) {
@@ -221,62 +220,11 @@ function AppInner() {
           </ErrorBoundary>
         )}
 
-        {projects.length > 0 && tab === "milestones" && (() => {
-          const list = msTab === "open" ? openMilestones : doneMilestones;
-          const sorted = msTab === "open"
-            ? [...list].sort((a, b) => {
-                if (a.dueOn && b.dueOn) return new Date(a.dueOn).getTime() - new Date(b.dueOn).getTime();
-                return a.dueOn ? -1 : b.dueOn ? 1 : 0;
-              })
-            : list;
-          const grouped = Object.entries(
-            sorted.reduce<Record<string, typeof list>>((acc, m) => {
-              (acc[m.repo] ??= []).push(m);
-              return acc;
-            }, {})
-          );
-          return (
-            <div className="v4-legacy-frame">
-              <div className="bento-grid">
-                <div className="bento-panel span-12">
-                  <div className="milestones-sub-tabs">
-                    <button
-                      className={`milestones-sub-tab ${msTab === "open" ? "milestones-sub-tab-active" : ""}`}
-                      onClick={() => setMsTab("open")}
-                    >
-                      Открытые <span className="milestones-sub-tab-count">{openMilestones.length}</span>
-                    </button>
-                    <button
-                      className={`milestones-sub-tab ${msTab === "done" ? "milestones-sub-tab-active" : ""}`}
-                      onClick={() => setMsTab("done")}
-                    >
-                      Завершённые <span className="milestones-sub-tab-count">{doneMilestones.length}</span>
-                    </button>
-                  </div>
-                  {list.length === 0 && (
-                    <div className="empty-state">
-                      {msTab === "open" ? "Нет открытых milestones" : "Пока нет завершённых milestones"}
-                    </div>
-                  )}
-                  <div className="milestones-grouped" style={{ padding: 0 }}>
-                    {grouped.map(([repo, milestones]) => (
-                      <div key={repo} className="milestone-group">
-                        <h3 className="milestone-group-title">
-                          {repo} <span className="milestone-group-count">({milestones.length})</span>
-                        </h3>
-                        <div className="milestones-grid">
-                          {milestones.map((m) => (
-                            <MilestoneCard key={m.url} milestone={m} />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+        {projects.length > 0 && tab === "milestones" && (
+          <ErrorBoundary fallback="Ошибка вкладки Milestones">
+            <MilestonesView milestones={allMilestones} lastUpdated={lastUpdated} />
+          </ErrorBoundary>
+        )}
 
         {projects.length > 0 && tab === "uptime" && (
           <div className="v4-legacy-frame">
