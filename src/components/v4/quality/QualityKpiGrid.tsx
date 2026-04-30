@@ -26,12 +26,12 @@ interface KpiDef {
 }
 
 const KPIS: KpiDef[] = [
-  { key: "first_pass_success_rate", label: "First Pass", sub: "успех с первой попытки", good: 0.8, bad: 0.6, higherIsBetter: true, isPercent: true },
-  { key: "retry_rate", label: "Retry Rate", sub: "повторные попытки", good: 0.1, bad: 0.25, higherIsBetter: false, isPercent: true },
-  { key: "error_recovery_rate", label: "Recovery", sub: "восстановление после ошибок", good: 0.7, bad: 0.4, higherIsBetter: true, isPercent: true },
-  { key: "qa_pass_rate", label: "QA Pass", sub: "прохождение QA", good: 0.9, bad: 0.7, higherIsBetter: true, isPercent: true },
-  { key: "rollback_rate", label: "Rollback", sub: "частота откатов", good: 0.05, bad: 0.15, higherIsBetter: false, isPercent: true },
-  { key: "avg_finding_density", label: "Finding Density", sub: "ср. findings/задачу", good: 1.0, bad: 3.0, higherIsBetter: false, isPercent: false },
+  { key: "first_pass_success_rate", label: "С первой попытки", sub: "успех с первой попытки", good: 0.8, bad: 0.6, higherIsBetter: true, isPercent: true },
+  { key: "retry_rate", label: "Повторы", sub: "повторные попытки", good: 0.1, bad: 0.25, higherIsBetter: false, isPercent: true },
+  { key: "error_recovery_rate", label: "Восстановление", sub: "успех после ошибок", good: 0.7, bad: 0.4, higherIsBetter: true, isPercent: true },
+  { key: "qa_pass_rate", label: "Прохождение QA", sub: "пройдено проверок QA", good: 0.9, bad: 0.7, higherIsBetter: true, isPercent: true },
+  { key: "rollback_rate", label: "Откаты", sub: "частота откатов", good: 0.05, bad: 0.15, higherIsBetter: false, isPercent: true },
+  { key: "avg_finding_density", label: "Находки", sub: "ср. находок на задачу", good: 1.0, bad: 3.0, higherIsBetter: false, isPercent: false },
 ];
 
 const SPARK_W = 88;
@@ -117,13 +117,13 @@ export function QualityKpiGrid({ snapshot, trends }: Props) {
       {/* Always-shown 7th tile for avg_duration (purely informational, no health) */}
       <div className="v4-qa-kpi v4-qa-kpi--neutral">
         <div className="v4-qa-kpi-h">
-          <span className="v4-qa-kpi-label">Avg Duration</span>
+          <span className="v4-qa-kpi-label">Среднее время</span>
         </div>
         <div className="v4-qa-kpi-val">{duration(snapshot.avg_duration_sec)}</div>
-        <div className="v4-qa-kpi-sub">среднее время выполнения</div>
+        <div className="v4-qa-kpi-sub">время выполнения задачи</div>
         <div className="v4-qa-kpi-foot">
           <span className="v4-pl-mono v4-qa-kpi-delta v4-qa-kpi-delta--mute">
-            {snapshot.merged_count}/{snapshot.total_issues} merged
+            {snapshot.merged_count}/{snapshot.total_issues} замержено
           </span>
         </div>
       </div>

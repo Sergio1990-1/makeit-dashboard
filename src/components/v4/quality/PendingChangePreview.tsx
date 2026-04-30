@@ -88,7 +88,7 @@ export function PendingChangePreviewV4({ change, loadPreview, onConfirm, onCance
         onClick={(e) => e.stopPropagation()}
       >
         <div className="v4-qa-modal-h">
-          <div id={TITLE_ID} className="v4-qa-modal-t">Preview · {change.target}</div>
+          <div id={TITLE_ID} className="v4-qa-modal-t">Просмотр · {change.target}</div>
           <button
             type="button"
             ref={closeButtonRef}
@@ -100,52 +100,52 @@ export function PendingChangePreviewV4({ change, loadPreview, onConfirm, onCance
 
         <div className="v4-qa-modal-body">
           <div className="v4-qa-modal-section">
-            <div className="v4-qa-modal-label">Content</div>
+            <div className="v4-qa-modal-label">Содержимое</div>
             <div className="v4-qa-modal-content">{change.content}</div>
           </div>
 
           <div className="v4-qa-modal-meta">
-            <div><span className="v4-qa-modal-meta-l">Tier</span><span>{change.tier}</span></div>
-            <div><span className="v4-qa-modal-meta-l">Confidence</span><span>{(change.confidence * 100).toFixed(0)}%</span></div>
-            <div><span className="v4-qa-modal-meta-l">Retro</span><span>{change.retro_period}</span></div>
+            <div><span className="v4-qa-modal-meta-l">Уровень</span><span>{change.tier}</span></div>
+            <div><span className="v4-qa-modal-meta-l">Уверенность</span><span>{(change.confidence * 100).toFixed(0)}%</span></div>
+            <div><span className="v4-qa-modal-meta-l">Ретроспектива</span><span>{change.retro_period}</span></div>
           </div>
 
           {loading ? (
-            <div className="v4-empty">Загрузка preview…</div>
+            <div className="v4-empty">Загрузка предпросмотра…</div>
           ) : error ? (
             <div className="v4-error">{error}</div>
           ) : preview ? (
             <>
               <div className="v4-qa-modal-badges">
                 {preview.dedup_hit ? (
-                  <span className="v4-tag v4-tag--warn">⚠ Duplicate</span>
+                  <span className="v4-tag v4-tag--warn">⚠ Дубликат</span>
                 ) : (
-                  <span className="v4-tag v4-tag--ok">✓ Not a duplicate</span>
+                  <span className="v4-tag v4-tag--ok">✓ Не дубликат</span>
                 )}
-                {preview.would_rotate && <span className="v4-tag">⟳ Would rotate file</span>}
+                {preview.would_rotate && <span className="v4-tag">⟳ Файл будет ротирован</span>}
                 {preview.validation !== null && (
                   validationOk ? (
-                    <span className="v4-tag v4-tag--ok">✓ Validation OK</span>
+                    <span className="v4-tag v4-tag--ok">✓ Проверка пройдена</span>
                   ) : (
                     <span className="v4-tag v4-tag--danger">
-                      ⚠ {String((preview.validation as { reason?: string }).reason ?? "validation failed")}
+                      ⚠ {String((preview.validation as { reason?: string }).reason ?? "проверка не пройдена")}
                     </span>
                   )
                 )}
                 {preview.scoped_projects && preview.scoped_projects.length > 0 ? (
-                  <span className="v4-tag">scope: {preview.scoped_projects.join(", ")}</span>
+                  <span className="v4-tag">проекты: {preview.scoped_projects.join(", ")}</span>
                 ) : (
-                  <span className="v4-tag">scope: all projects</span>
+                  <span className="v4-tag">все проекты</span>
                 )}
               </div>
 
               <div className="v4-qa-modal-section">
                 <div className="v4-qa-modal-label">
-                  Targets · {preview.targets.length} {preview.targets.length === 1 ? "файл" : "файлов"}
+                  Целевые файлы · {preview.targets.length} {preview.targets.length === 1 ? "файл" : "файлов"}
                 </div>
                 <div className="v4-qa-modal-targets">
                   {preview.targets.length === 0 ? (
-                    <span className="v4-qa-text-muted">нет resolved targets</span>
+                    <span className="v4-qa-text-muted">не найдены</span>
                   ) : (
                     preview.targets.map((t) => (
                       <code key={t} className="v4-qa-modal-target">{t}</code>
@@ -156,10 +156,10 @@ export function PendingChangePreviewV4({ change, loadPreview, onConfirm, onCance
 
               <div className="v4-qa-modal-section">
                 <div className="v4-qa-modal-label">
-                  Diff · current lines: {preview.current_line_count}
+                  Diff · текущих строк: {preview.current_line_count}
                 </div>
                 <pre className="v4-qa-modal-diff">
-                  {preview.preview_diff || "(no diff — file would be empty)"}
+                  {preview.preview_diff || "(diff пустой — файл будет создан)"}
                 </pre>
               </div>
             </>
@@ -175,9 +175,9 @@ export function PendingChangePreviewV4({ change, loadPreview, onConfirm, onCance
             onClick={onConfirm}
             title={
               preview?.dedup_hit
-                ? "Нельзя применить duplicate"
+                ? "Нельзя применить дубликат"
                 : validationFailed
-                  ? "Validation failed — сверьте цифры в lesson с metrics.jsonl"
+                  ? "Проверка не пройдена — сверьте цифры в уроке с metrics.jsonl"
                   : undefined
             }
           >

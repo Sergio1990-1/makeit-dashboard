@@ -29,7 +29,7 @@ export function QualityKpiStrip({ snapshot, pendingChanges, retros }: Props) {
           <div className="v4-projects-agg-n num">
             {snapshot ? duration(snapshot.avg_duration_sec) : "—"}
           </div>
-          <div className="v4-projects-agg-l">avg duration</div>
+          <div className="v4-projects-agg-l">ср. время</div>
         </div>
         <div
           className="v4-projects-agg-cell"
@@ -41,25 +41,25 @@ export function QualityKpiStrip({ snapshot, pendingChanges, retros }: Props) {
           >
             {pendingCount}
           </div>
-          <div className="v4-projects-agg-l">pending changes</div>
+          <div className="v4-projects-agg-l">в очереди</div>
         </div>
         <div className="v4-projects-agg-cell" title="Проведённые ретроспективы">
           <div className="v4-projects-agg-n num">{retrosCount}</div>
-          <div className="v4-projects-agg-l">retros всего</div>
+          <div className="v4-projects-agg-l">ретроспектив</div>
         </div>
         <div
           className="v4-projects-agg-cell"
-          title={lastRetro ? `Последний retro: ${lastRetro.period}` : "Ретроспективы не проводились"}
+          title={lastRetro ? `Последняя ретроспектива: ${lastRetro.period}` : "Ретроспективы не проводились"}
         >
           <div className="v4-projects-agg-n num">
             {lastRetro?.period ?? "—"}
           </div>
-          <div className="v4-projects-agg-l">last retro</div>
+          <div className="v4-projects-agg-l">последняя</div>
         </div>
         {snapshot?.period_end && (
           <div className="v4-projects-agg-cell" title={`Период: ${snapshot.period_start} — ${snapshot.period_end}`}>
             <div className="v4-projects-agg-n num">{fmtAge(snapshot.period_end)}</div>
-            <div className="v4-projects-agg-l">snapshot age</div>
+            <div className="v4-projects-agg-l">возраст данных</div>
           </div>
         )}
       </div>

@@ -9,9 +9,9 @@ interface Props {
 }
 
 const FILE_LABELS: Record<string, string> = {
-  "lessons-retro.md": "Retro lessons (autotuner)",
-  "lessons-review.md": "Review lessons (per-PR)",
-  "lessons-learned.md": "Legacy",
+  "lessons-retro.md": "Уроки от ретроспектив (AutoTuner)",
+  "lessons-review.md": "Уроки от ревью (по PR)",
+  "lessons-learned.md": "Старый формат (legacy)",
 };
 
 const FILE_ORDER = ["lessons-retro.md", "lessons-review.md", "lessons-learned.md"] as const;
@@ -90,10 +90,10 @@ export function LessonsViewer({ projectSlug, cache, loadLessons }: Props) {
     return (
       <div className="v4-panel">
         <div className="v4-panel-h">
-          <div className="v4-panel-t">Lessons Viewer</div>
+          <div className="v4-panel-t">Файлы уроков</div>
         </div>
         <div className="v4-empty">
-          Выберите проект в фильтре «Все проекты», чтобы просмотреть lessons-файлы.
+          Выберите проект в фильтре «Все проекты», чтобы просмотреть файлы уроков.
         </div>
       </div>
     );
@@ -106,7 +106,7 @@ export function LessonsViewer({ projectSlug, cache, loadLessons }: Props) {
     <div className="v4-panel">
       <div className="v4-panel-h">
         <div className="v4-panel-t">
-          Lessons · <span className="v4-pl-mono">{projectSlug}</span>
+          Уроки · <span className="v4-pl-mono">{projectSlug}</span>
           {loading && <span className="v4-pl-mono v4-qa-text-muted" style={{ marginLeft: 8 }}>загрузка…</span>}
         </div>
       </div>
@@ -116,7 +116,7 @@ export function LessonsViewer({ projectSlug, cache, loadLessons }: Props) {
       <div
         className="v4-qa-lessons-tabs"
         role="tablist"
-        aria-label="Lessons файлы"
+        aria-label="Файлы уроков"
         onKeyDown={onTabsKeyDown}
       >
         {FILE_ORDER.map((fname) => {
@@ -158,9 +158,9 @@ export function LessonsViewer({ projectSlug, cache, loadLessons }: Props) {
             <pre className="v4-qa-lessons-pre">{activeFile.content || "(пустой файл)"}</pre>
           </>
         ) : loading ? (
-          <div className="v4-empty">Загрузка lessons-файлов…</div>
+          <div className="v4-empty">Загрузка файлов уроков…</div>
         ) : (
-          <div className="v4-empty">В этом проекте пока нет lessons файлов.</div>
+          <div className="v4-empty">В этом проекте пока нет файлов уроков.</div>
         )}
       </div>
     </div>

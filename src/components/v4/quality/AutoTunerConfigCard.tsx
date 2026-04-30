@@ -22,9 +22,9 @@ export function AutoTunerConfigCard({ config, onSave }: Props) {
     return (
       <div className="v4-panel">
         <div className="v4-panel-h">
-          <div className="v4-panel-t">AutoTuner · Config</div>
+          <div className="v4-panel-t">AutoTuner · параметры</div>
         </div>
-        <div className="v4-empty">Config недоступен (pipeline API offline?)</div>
+        <div className="v4-empty">Параметры недоступны (Pipeline API офлайн?)</div>
       </div>
     );
   }
@@ -77,17 +77,17 @@ export function AutoTunerConfigCard({ config, onSave }: Props) {
       >
         <div className="v4-panel-t">
           <span className="v4-qa-arrow" aria-hidden="true">{open ? "▾" : "▸"}</span>{" "}
-          AutoTuner · Config
+          AutoTuner · параметры
         </div>
         <div className="v4-qa-config-summary">
           <span className={`v4-tag ${merged.retro_mode === "auto_apply" ? "v4-tag--ok" : ""}`}>
-            {merged.retro_mode === "auto_apply" ? "auto_apply" : "reporting"}
+            {merged.retro_mode === "auto_apply" ? "автоприменение" : "только отчёт"}
           </span>
           <span className="v4-pl-mono v4-qa-text-muted">
-            {(merged.auto_apply_min_confidence * 100).toFixed(0)}% conf · {merged.auto_apply_cooldown_hours}h cd
+            мин. уверенность {(merged.auto_apply_min_confidence * 100).toFixed(0)}% · задержка {merged.auto_apply_cooldown_hours}ч
           </span>
           {merged.cooldown_active && (
-            <span className="v4-tag v4-tag--warn">cd · {fmtHours(merged.cooldown_remaining_hours)}</span>
+            <span className="v4-tag v4-tag--warn">задержка · {fmtHours(merged.cooldown_remaining_hours)}</span>
           )}
         </div>
       </div>
@@ -98,7 +98,7 @@ export function AutoTunerConfigCard({ config, onSave }: Props) {
 
           <div className="v4-qa-config-grid">
             <div className="v4-qa-config-cell">
-              <div className="v4-qa-config-label">Retro mode</div>
+              <div className="v4-qa-config-label">Режим ретроспективы</div>
               <button
                 type="button"
                 className={`v4-qa-toggle ${merged.retro_mode === "auto_apply" ? "is-on" : ""}`}
@@ -106,15 +106,15 @@ export function AutoTunerConfigCard({ config, onSave }: Props) {
                 onClick={toggleRetroMode}
               >
                 <span className="v4-qa-toggle-dot" />
-                {merged.retro_mode === "auto_apply" ? "auto_apply" : "reporting"}
+                {merged.retro_mode === "auto_apply" ? "автоприменение" : "только отчёт"}
               </button>
               <div className="v4-qa-config-hint">
-                auto_apply применяет Tier-1 lessons автоматически; reporting — только stage.
+                Автоприменение раскатывает уроки уровня 1 сразу; «только отчёт» — лишь кладёт в буфер ожидания.
               </div>
             </div>
 
             <SliderCell
-              label="Min confidence"
+              label="Мин. уверенность"
               value={merged.auto_apply_min_confidence}
               displayValue={`${(merged.auto_apply_min_confidence * 100).toFixed(0)}%`}
               min={0.5}
@@ -125,7 +125,7 @@ export function AutoTunerConfigCard({ config, onSave }: Props) {
             />
 
             <SliderCell
-              label="Cooldown (часы)"
+              label="Задержка (часы)"
               value={merged.auto_apply_cooldown_hours}
               displayValue={String(merged.auto_apply_cooldown_hours)}
               min={1}
@@ -136,7 +136,7 @@ export function AutoTunerConfigCard({ config, onSave }: Props) {
             />
 
             <SliderCell
-              label="KPI degradation threshold"
+              label="Порог деградации KPI"
               value={merged.kpi_degradation_threshold}
               displayValue={`${(merged.kpi_degradation_threshold * 100).toFixed(0)}%`}
               min={0.01}
@@ -147,7 +147,7 @@ export function AutoTunerConfigCard({ config, onSave }: Props) {
             />
 
             <SliderCell
-              label="Lessons · max lines"
+              label="Уроки · макс. строк"
               value={merged.lessons_max_lines}
               displayValue={String(merged.lessons_max_lines)}
               min={10}
@@ -158,7 +158,7 @@ export function AutoTunerConfigCard({ config, onSave }: Props) {
             />
 
             <SliderCell
-              label="Lessons TTL (дни)"
+              label="Уроки · срок жизни (дни)"
               value={merged.lessons_ttl_days}
               displayValue={String(merged.lessons_ttl_days)}
               min={1}
@@ -169,7 +169,7 @@ export function AutoTunerConfigCard({ config, onSave }: Props) {
             />
 
             <div className="v4-qa-config-cell">
-              <div className="v4-qa-config-label">Numeric claim validator</div>
+              <div className="v4-qa-config-label">Проверка чисел</div>
               <button
                 type="button"
                 className={`v4-qa-toggle ${merged.validate_numeric_claims ? "is-on" : ""}`}
@@ -177,10 +177,10 @@ export function AutoTunerConfigCard({ config, onSave }: Props) {
                 onClick={toggleValidator}
               >
                 <span className="v4-qa-toggle-dot" />
-                {merged.validate_numeric_claims ? "on" : "off"}
+                {merged.validate_numeric_claims ? "включена" : "выключена"}
               </button>
               <div className="v4-qa-config-hint">
-                Сверяет числа в lessons с metrics.jsonl. Tolerance{" "}
+                Сверяет числа в уроках с metrics.jsonl. Допуск{" "}
                 {(merged.validation_tolerance * 100).toFixed(0)}%.
               </div>
             </div>
@@ -209,7 +209,7 @@ export function AutoTunerConfigCard({ config, onSave }: Props) {
             )}
             {merged.last_apply_at && (
               <span className="v4-pl-mono v4-qa-text-muted">
-                last apply: {new Date(merged.last_apply_at).toLocaleString()}
+                последнее применение: {new Date(merged.last_apply_at).toLocaleString()}
               </span>
             )}
           </div>
