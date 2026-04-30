@@ -130,16 +130,20 @@ const KIND_ICONS: Record<InsightKind, ReactElement> = {
 };
 
 export function AIInsightsPanel({ projects, blockedIssues }: Props) {
-  const insights = useMemo(
-    () => generateInsights(projects, blockedIssues),
+  // Compute insights and the "generated at" timestamp together — so the
+  // displayed time actually corresponds to when the insights were derived,
+  // not to the most recent unrelated parent re-render.
+  const { insights, time } = useMemo(
+    () => ({
+      insights: generateInsights(projects, blockedIssues),
+      time: new Date().toLocaleTimeString("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }),
+    }),
     [projects, blockedIssues]
   );
-
-  const time = new Date().toLocaleTimeString("ru-RU", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
 
   return (
     <div className="v4-panel">

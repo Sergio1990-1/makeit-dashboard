@@ -159,13 +159,13 @@ export function DashboardView({
 
       {/* Row: deadlines + closed chart */}
       <div className="v4-grid v4-grid--rev">
-        <UrgentDeadlinesPanel milestones={allMilestones} />
+        <UrgentDeadlinesPanel milestones={allMilestones} lastUpdated={lastUpdated} />
         <ClosedChart30d projects={filtered} />
       </div>
 
-      <MilestonesStrip milestones={allMilestones} />
+      <MilestonesStrip milestones={allMilestones} lastUpdated={lastUpdated} />
 
-      <CommitsHeatmapPanel projects={filtered} />
+      <CommitsHeatmapPanel projects={filtered} lastUpdated={lastUpdated} />
 
       <StaleBanner projects={filtered} onOpenList={onSeeAllProjects} />
     </div>

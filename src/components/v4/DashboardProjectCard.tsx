@@ -1,5 +1,6 @@
 import type { ProjectData, Monitor, MonitorStatus } from "../../types";
 import { calcRiskScore } from "../../utils/riskScore";
+import { GITHUB_OWNER } from "../../utils/config";
 
 interface Props {
   project: ProjectData;
@@ -29,6 +30,16 @@ function compactUSD(n: number): string {
 
 function formatNumber1d(n: number): string {
   return (Math.round(n * 10) / 10).toString().replace(".", ",");
+}
+
+function buildRepoUrl(repo: string): string {
+  // `repo` may already be `owner/name` or just `name`. Encode each segment
+  // separately so any unusual chars don't break the URL.
+  if (repo.includes("/")) {
+    const [owner, name] = repo.split("/", 2);
+    return `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
+  }
+  return `https://github.com/${encodeURIComponent(GITHUB_OWNER)}/${encodeURIComponent(repo)}`;
 }
 
 function formatEta(etaDays: number | null, etaDate: string | null): { label: string; sub?: string; danger?: boolean } {
@@ -72,7 +83,7 @@ export function DashboardProjectCard({ project, monitor }: Props) {
   return (
     <div className={`v4-pcard ${riskClass}`}>
       <div className="v4-pcard-row">
-        <a className="v4-pcard-name" href={`https://github.com/${project.repo.includes("/") ? project.repo : `Sergio1990-1/${project.repo}`}`} target="_blank" rel="noopener noreferrer">
+        <a className="v4-pcard-name" href={buildRepoUrl(project.repo)} target="_blank" rel="noopener noreferrer">
           {project.repo}
         </a>
         <div className="v4-pcard-badges">

@@ -1,21 +1,29 @@
+import { useMemo } from "react";
 import type { Milestone } from "../../types";
 import { daysUntil, formatShortDate } from "../../utils/date";
 
 interface Props {
   milestones: Milestone[];
+  /** Anchor for "days until" — recomputed on data refresh. */
+  lastUpdated: Date | null;
 }
 
-export function UrgentDeadlinesPanel({ milestones }: Props) {
-  const items = milestones
-    .filter((m) => {
-      if (!m.dueOn || m.state === "CLOSED") return false;
-      const total = m.openIssues + m.closedIssues;
-      if (total > 0 && m.openIssues === 0) return false;
-      const days = daysUntil(m.dueOn);
-      return days <= 7;
-    })
-    .map((m) => ({ milestone: m, days: daysUntil(m.dueOn!) }))
-    .sort((a, b) => a.days - b.days);
+export function UrgentDeadlinesPanel({ milestones, lastUpdated }: Props) {
+  // Compute `daysUntil` once per milestone (it calls Date.now() under the
+  // hood) — avoids the previous .filter()→.map() double-call pattern.
+  const items = useMemo(() => {
+    return milestones
+      .filter((m) => {
+        if (!m.dueOn || m.state === "CLOSED") return false;
+        const total = m.openIssues + m.closedIssues;
+        if (total > 0 && m.openIssues === 0) return false;
+        return true;
+      })
+      .map((m) => ({ milestone: m, days: daysUntil(m.dueOn!) }))
+      .filter(({ days }) => days <= 7)
+      .sort((a, b) => a.days - b.days);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [milestones, lastUpdated?.getTime()]);
 
   return (
     <div className="v4-panel">

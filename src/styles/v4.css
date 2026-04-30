@@ -52,6 +52,12 @@
   --v4-p3: #2563EB;
   --v4-p4: #94A0B8;
 
+  /* Commit-heatmap intensity steps (4 buckets, light → dark accent) */
+  --v4-heat-1: #DCE7FF;
+  --v4-heat-2: #92B0F5;
+  --v4-heat-3: #3F73E8;
+  --v4-heat-4: var(--v4-accent-700);
+
   /* Radii */
   --v4-r-sm: 6px;
   --v4-r-md: 8px;
@@ -76,7 +82,6 @@ body.v4 {
 body.v4 *,
 body.v4 *::before,
 body.v4 *::after { box-sizing: border-box; }
-body.v4 .v4 { font-family: var(--v4-sans); }
 body.v4 .num,
 body.v4 .v4-mono { font-variant-numeric: tabular-nums; }
 body.v4 .v4-mono { font-family: var(--v4-mono); }
@@ -1264,10 +1269,10 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
   border-radius: 2px;
   background: var(--v4-surface-3);
 }
-.v4-cc[data-v="1"] { background: #DCE7FF; }
-.v4-cc[data-v="2"] { background: #92B0F5; }
-.v4-cc[data-v="3"] { background: #3F73E8; }
-.v4-cc[data-v="4"] { background: var(--v4-accent-700); }
+.v4-cc[data-v="1"] { background: var(--v4-heat-1); }
+.v4-cc[data-v="2"] { background: var(--v4-heat-2); }
+.v4-cc[data-v="3"] { background: var(--v4-heat-3); }
+.v4-cc[data-v="4"] { background: var(--v4-heat-4); }
 .v4-commit-row .v4-tot {
   font-family: var(--v4-mono);
   text-align: right;

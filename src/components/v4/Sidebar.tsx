@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import type { ReactElement } from "react";
 import type { TabId } from "../../types";
 
@@ -132,16 +133,29 @@ export function Sidebar({
     onClose?.();
   };
 
+  // Close mobile drawer on Escape
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
+
   return (
     <>
-      {isOpen && <div className="v4-side-backdrop" onClick={onClose} />}
-      <aside className={`v4-side ${isOpen ? "is-open" : ""}`}>
+      {isOpen && <div className="v4-side-backdrop" onClick={onClose} aria-hidden="true" />}
+      <aside
+        className={`v4-side ${isOpen ? "is-open" : ""}`}
+        aria-label="Основная навигация"
+      >
         <div className="v4-brand">
           <div className="v4-brand-logo">M</div>
           <div className="v4-brand-name">MakeIT</div>
           <div className="v4-brand-ver">v4</div>
         </div>
-        <nav className="v4-nav">
+        <nav className="v4-nav" aria-label="Разделы">
           {sections.map((section, sIdx) => (
             <div key={sIdx}>
               {section.title && <div className="v4-nav-section">{section.title}</div>}
@@ -150,6 +164,7 @@ export function Sidebar({
                   key={item.id}
                   type="button"
                   className={`v4-nav-item ${activeTab === item.id ? "is-active" : ""}`}
+                  aria-current={activeTab === item.id ? "page" : undefined}
                   onClick={() => handleClick(item.id)}
                 >
                   {item.icon}

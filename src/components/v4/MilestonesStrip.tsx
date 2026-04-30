@@ -4,6 +4,14 @@ import { daysUntil, formatShortDate } from "../../utils/date";
 
 interface Props {
   milestones: Milestone[];
+  /** Anchor for "days until" calculations — recomputed on data refresh. */
+  lastUpdated: Date | null;
+}
+
+interface MilestoneRow {
+  m: Milestone;
+  days: number | null;
+  cls: "done" | "over" | "warn" | "norm";
 }
 
 type Sub = "open" | "done";
@@ -25,36 +33,44 @@ function inferPriority(m: Milestone): string | null {
   return null;
 }
 
-function classify(m: Milestone): "done" | "over" | "warn" | "norm" {
+function isDone(m: Milestone): boolean {
   const total = m.openIssues + m.closedIssues;
-  if (m.state === "CLOSED" || (total > 0 && m.openIssues === 0)) return "done";
-  if (!m.dueOn) return "norm";
-  const d = daysUntil(m.dueOn);
-  if (d < 0) return "over";
-  if (d <= 1) return "warn";
+  return m.state === "CLOSED" || (total > 0 && m.openIssues === 0);
+}
+
+function classify(m: Milestone, days: number | null): "done" | "over" | "warn" | "norm" {
+  if (isDone(m)) return "done";
+  if (days === null) return "norm";
+  if (days < 0) return "over";
+  if (days <= 1) return "warn";
   return "norm";
 }
 
-export function MilestonesStrip({ milestones }: Props) {
+export function MilestonesStrip({ milestones, lastUpdated }: Props) {
   const [sub, setSub] = useState<Sub>("open");
 
-  const isDone = (m: Milestone): boolean => {
-    const total = m.openIssues + m.closedIssues;
-    return m.state === "CLOSED" || (total > 0 && m.openIssues === 0);
-  };
+  // Compute days/cls once per refresh — avoids calling daysUntil() (impure)
+  // multiple times per milestone in the sort comparator and render body.
+  const rows: MilestoneRow[] = useMemo(() => {
+    return milestones.map((m) => {
+      const days = m.dueOn ? daysUntil(m.dueOn) : null;
+      return { m, days, cls: classify(m, days) };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [milestones, lastUpdated?.getTime()]);
 
   const open = useMemo(
     () =>
-      milestones
-        .filter((m) => !isDone(m))
+      rows
+        .filter((r) => r.cls !== "done")
         .sort((a, b) => {
-          if (a.dueOn && b.dueOn) return daysUntil(a.dueOn) - daysUntil(b.dueOn);
-          return a.dueOn ? -1 : b.dueOn ? 1 : 0;
+          if (a.days !== null && b.days !== null) return a.days - b.days;
+          return a.days !== null ? -1 : b.days !== null ? 1 : 0;
         }),
-    [milestones]
+    [rows]
   );
 
-  const done = useMemo(() => milestones.filter(isDone), [milestones]);
+  const done = useMemo(() => rows.filter((r) => r.cls === "done"), [rows]);
 
   const list = (sub === "open" ? open : done).slice(0, 6);
 
@@ -89,10 +105,9 @@ export function MilestonesStrip({ milestones }: Props) {
         </div>
       ) : (
         <div className="v4-ms-grid">
-          {list.map((m) => {
+          {list.map(({ m, days, cls }) => {
             const total = m.openIssues + m.closedIssues;
             const pct = total > 0 ? Math.round((m.closedIssues / total) * 100) : 0;
-            const cls = classify(m);
             const fillColor =
               cls === "done"
                 ? "var(--v4-success-500)"
@@ -102,14 +117,13 @@ export function MilestonesStrip({ milestones }: Props) {
                 ? "var(--v4-success-500)"
                 : "var(--v4-accent-500)";
             const priority = inferPriority(m);
-            const days = m.dueOn ? daysUntil(m.dueOn) : null;
             const dueLabel = !m.dueOn
               ? "—"
               : cls === "done"
               ? formatShortDate(m.dueOn)
               : days === 0
               ? "сегодня"
-              : days! < 0
+              : days !== null && days < 0
               ? `${formatShortDate(m.dueOn)} · ${days}д`
               : `${formatShortDate(m.dueOn)} · +${days}д`;
 

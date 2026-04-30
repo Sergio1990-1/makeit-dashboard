@@ -101,8 +101,12 @@ export function calcProgressDelta(projects: ProjectData[]): ProgressDelta {
   const closedInWindow = allIssues.filter(
     (i) => i.closedAt && new Date(i.closedAt).getTime() > cutoff
   ).length;
-  // Approximation: assume total was unchanged; previous done = current done − closedInWindow
-  const prevPct = ((totals.done - closedInWindow) / totals.total) * 100;
+  // Approximation: assume total was unchanged; previous done = current done − closedInWindow.
+  // Clamp at 0 — when the dashboard is filtered (by phase), `closedInWindow` may
+  // exceed `totals.done` for the filtered subset, which would otherwise yield a
+  // negative prevPct and an inflated delta.
+  const prevDone = Math.max(0, totals.done - closedInWindow);
+  const prevPct = (prevDone / totals.total) * 100;
   const nowPct = (totals.done / totals.total) * 100;
   return { pointsDelta7d: Math.round((nowPct - prevPct) * 10) / 10 };
 }

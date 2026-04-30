@@ -4,6 +4,9 @@ import { getLastNDays } from "../../utils/dashboardMetrics";
 
 interface Props {
   projects: ProjectData[];
+  /** Anchor for "last N days" — recomputed when data refreshes so the
+      heatmap doesn't go stale if the dashboard is left open past midnight. */
+  lastUpdated: Date | null;
 }
 
 const DAYS = 28;
@@ -16,8 +19,13 @@ function bucket(count: number): string | undefined {
   return "4";
 }
 
-export function CommitsHeatmapPanel({ projects }: Props) {
-  const days = useMemo(() => getLastNDays(DAYS), []);
+export function CommitsHeatmapPanel({ projects, lastUpdated }: Props) {
+  const days = useMemo(
+    () => getLastNDays(DAYS),
+    // recompute on every refresh — `lastUpdated` is the wall-clock anchor
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lastUpdated?.getTime()]
+  );
 
   // Pick top-N projects by 28d total commits, but show at least all projects with any activity
   const rows = useMemo(() => {
