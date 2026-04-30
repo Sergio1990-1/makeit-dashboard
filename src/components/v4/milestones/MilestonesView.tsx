@@ -31,16 +31,24 @@ const SORT_LABELS: Record<SortKey, string> = {
   repo: "Репо",
 };
 
+const VALID_SUBS: readonly SubTab[] = ["open", "done"];
+const VALID_GROUPINGS: readonly Grouping[] = ["repo", "deadline"];
+const VALID_SORTS: readonly SortKey[] = ["deadline", "progress", "name", "repo"];
+
 function loadState(): ToolbarState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const p = JSON.parse(raw) as Partial<ToolbarState>;
+      // Validate against allow-lists — protects against stale localStorage
+      // values from older/future schema versions.
       return {
-        sub: p.sub ?? "open",
-        grouping: p.grouping ?? "deadline",
-        sort: p.sort ?? "deadline",
-        asc: p.asc ?? true,
+        sub: VALID_SUBS.includes(p.sub as SubTab) ? (p.sub as SubTab) : "open",
+        grouping: VALID_GROUPINGS.includes(p.grouping as Grouping)
+          ? (p.grouping as Grouping)
+          : "deadline",
+        sort: VALID_SORTS.includes(p.sort as SortKey) ? (p.sort as SortKey) : "deadline",
+        asc: typeof p.asc === "boolean" ? p.asc : true,
         query: "",
       };
     }
@@ -181,6 +189,11 @@ export function MilestonesView({ milestones, lastUpdated }: Props) {
 
   // Group output
   const groups: { key: string; title: string; items: EnrichedMilestone[] }[] = useMemo(() => {
+    // Done sub-tab: deadline-bucketing makes no sense (a closed milestone
+    // can't be "Просрочено"). Always render as a single "Завершённые" group.
+    if (state.sub === "done") {
+      return [{ key: "done", title: "Завершённые", items: sorted }];
+    }
     if (state.grouping === "repo") {
       const map = new Map<string, EnrichedMilestone[]>();
       for (const e of sorted) {
@@ -206,7 +219,7 @@ export function MilestonesView({ milestones, lastUpdated }: Props) {
     return Array.from(map.entries())
       .sort(([, a], [, b]) => a.order - b.order)
       .map(([key, v]) => ({ key, title: v.label, items: v.items }));
-  }, [sorted, state.grouping]);
+  }, [sorted, state.grouping, state.sub]);
 
   return (
     <div className="v4-content">
@@ -374,8 +387,9 @@ export function MilestonesView({ milestones, lastUpdated }: Props) {
         </div>
       </div>
 
-      {/* Empty state */}
-      {agg.count === 0 && (
+      {/* Empty state — keyed off post-search count so search-with-no-results
+          shows the proper feedback message instead of a blank card area. */}
+      {filtered.length === 0 && (
         <div className="v4-panel">
           <div className="v4-empty">
             {state.query
@@ -388,7 +402,7 @@ export function MilestonesView({ milestones, lastUpdated }: Props) {
       )}
 
       {/* Cards */}
-      {agg.count > 0 && (
+      {filtered.length > 0 && (
         <div className="v4-ms-groups">
           {groups.map((g) => (
             <section key={g.key} className="v4-ms-group">
