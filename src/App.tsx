@@ -5,7 +5,7 @@ import { ChatButton } from "./components/ChatButton";
 import { FinanceEditor } from "./components/FinanceEditor";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { MonitoringView } from "./components/v4/monitoring/MonitoringView";
-import { AuditCombinedTab } from "./components/AuditCombinedTab";
+import { AuditView } from "./components/v4/audit/AuditView";
 import { PipelineView } from "./components/v4/pipeline/PipelineView";
 import { TranscriptsView } from "./components/v4/transcripts/TranscriptsView";
 import { ResearchTab } from "./components/ResearchTab";
@@ -238,13 +238,11 @@ function AppInner() {
         )}
 
         {/* Stateful tabs — mount lazily on first visit, keep alive via display:none */}
-        <div className="v4-legacy-frame" style={{ display: tab === "audit" ? undefined : "none" }}>
+        <div style={{ display: tab === "audit" ? undefined : "none" }}>
           {visitedTabs.has("audit") && (
-            <div className="bento-grid">
-              <ErrorBoundary fallback="Ошибка вкладки Аудит">
-                <AuditCombinedTab dashboardProjects={projects} />
-              </ErrorBoundary>
-            </div>
+            <ErrorBoundary fallback="Ошибка вкладки Аудит">
+              <AuditView dashboardProjects={projects} />
+            </ErrorBoundary>
           )}
         </div>
         <div style={{ display: tab === "pipeline" ? undefined : "none" }}>
