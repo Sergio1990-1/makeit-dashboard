@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { TokenForm } from "./components/TokenForm";
-import { ProjectCard } from "./components/ProjectCard";
 import { MilestoneCard } from "./components/MilestoneCard";
 import { ChatPanel } from "./components/ChatPanel";
 import { ChatButton } from "./components/ChatButton";
@@ -17,6 +16,7 @@ import { DebateTab } from "./components/DebateTab";
 import { Sidebar } from "./components/v4/Sidebar";
 import { Topbar } from "./components/v4/Topbar";
 import { DashboardView } from "./components/v4/DashboardView";
+import { ProjectsView } from "./components/v4/ProjectsView";
 import { useDashboard } from "./hooks/useDashboard";
 import { useMonitors } from "./hooks/useMonitors";
 import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH, PROJECTS } from "./utils/config";
@@ -95,17 +95,22 @@ function AppInner() {
     return () => { document.body.classList.remove("v4"); };
   }, []);
 
-  function getMonitorForRepo(repo: string): Monitor | undefined {
-    const keywords = MONITOR_MATCH[repo];
-    if (!keywords || monitors.length === 0) return undefined;
-    return monitors.find((m) =>
-      keywords.some(
-        (kw) =>
-          m.name.toLowerCase().includes(kw.toLowerCase()) ||
-          m.url.toLowerCase().includes(kw.toLowerCase())
-      )
-    );
-  }
+  // Memoized so child components (e.g. ProjectsView) can include this in
+  // memo dep arrays without re-running on every parent render.
+  const getMonitorForRepo = useCallback(
+    (repo: string): Monitor | undefined => {
+      const keywords = MONITOR_MATCH[repo];
+      if (!keywords || monitors.length === 0) return undefined;
+      return monitors.find((m) =>
+        keywords.some(
+          (kw) =>
+            m.name.toLowerCase().includes(kw.toLowerCase()) ||
+            m.url.toLowerCase().includes(kw.toLowerCase())
+        )
+      );
+    },
+    [monitors]
+  );
 
   useEffect(() => {
     if (getToken()) refresh(false); // use cache on initial load
@@ -203,18 +208,14 @@ function AppInner() {
         )}
 
         {projects.length > 0 && tab === "projects" && (
-          <div className="v4-legacy-frame">
-            <div className="bento-grid">
-              <div className="bento-panel span-12 panel-projects">
-                <div className="bento-panel-title">Все проекты</div>
-                <section className="projects-grid">
-                  {projects.map((p) => (
-                    <ProjectCard key={p.repo} project={p} monitor={getMonitorForRepo(p.repo)} />
-                  ))}
-                </section>
-              </div>
-            </div>
-          </div>
+          <ErrorBoundary fallback="Ошибка вкладки Проекты">
+            <ProjectsView
+              projects={projects}
+              getMonitor={getMonitorForRepo}
+              onFinanceClick={() => setFinanceOpen(true)}
+              onJumpToTab={(t) => setTab(t)}
+            />
+          </ErrorBoundary>
         )}
 
         {projects.length > 0 && tab === "milestones" && (() => {
