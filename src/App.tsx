@@ -7,7 +7,7 @@ import { FinanceEditor } from "./components/FinanceEditor";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { UptimeBar } from "./components/UptimeBar";
 import { AuditCombinedTab } from "./components/AuditCombinedTab";
-import { PipelineControlPanel } from "./components/PipelineControlPanel";
+import { PipelineView } from "./components/v4/pipeline/PipelineView";
 import { TranscriptsTab } from "./components/TranscriptsTab";
 import { ResearchTab } from "./components/ResearchTab";
 import { SpecsTab } from "./components/SpecsTab";
@@ -185,11 +185,14 @@ function AppInner() {
 
         {error && <div className="v4-error">{error}</div>}
 
-        {projects.length === 0 && loading && (
+        {/* Loading / empty state — only for tabs that depend on GitHub project data.
+            Tabs like Pipeline, Audit, Quality, Debate, Specs, Research, Transcripts
+            have their own state and shouldn't be obscured by this banner. */}
+        {projects.length === 0 && (tab === "dashboard" || tab === "projects" || tab === "milestones" || tab === "uptime") && loading && (
           <div className="v4-loading">Загрузка данных…</div>
         )}
 
-        {projects.length === 0 && !loading && !error && (
+        {projects.length === 0 && (tab === "dashboard" || tab === "projects" || tab === "milestones" || tab === "uptime") && !loading && !error && (
           <div className="v4-loading">Нажмите «Обновить» для загрузки данных</div>
         )}
 
@@ -303,13 +306,11 @@ function AppInner() {
             </div>
           )}
         </div>
-        <div className="v4-legacy-frame" style={{ display: tab === "pipeline" ? undefined : "none" }}>
+        <div style={{ display: tab === "pipeline" ? undefined : "none" }}>
           {visitedTabs.has("pipeline") && (
-            <div className="bento-grid">
-              <ErrorBoundary fallback="Ошибка вкладки Pipeline">
-                <PipelineControlPanel projects={projects} />
-              </ErrorBoundary>
-            </div>
+            <ErrorBoundary fallback="Ошибка вкладки Pipeline">
+              <PipelineView projects={projects} lastUpdated={lastUpdated} />
+            </ErrorBoundary>
           )}
         </div>
         <div className="v4-legacy-frame" style={{ display: tab === "transcripts" ? undefined : "none" }}>
