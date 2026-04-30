@@ -78,9 +78,9 @@ function loadState(): ToolbarState {
 
 function saveState(s: ToolbarState): void {
   try {
-    // do not persist transient query
-    const { query, ...persist } = s;
-    void query;
+    // Strip the transient `query` field — never persist search input.
+    const { query: _query, ...persist } = s;
+    void _query;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(persist));
   } catch {
     /* ignore */
@@ -171,7 +171,9 @@ export function ProjectsView({
     });
   }, [projects, state.phase, state.query]);
 
-  // Sort
+  // Sort. `getMonitor` is included because compareBy reads it for risk-key
+  // sorting; with App.tsx wrapping it in useCallback the reference is stable
+  // until monitors actually change.
   const sorted = useMemo(() => {
     const out = [...filtered];
     out.sort((a, b) => {
@@ -179,8 +181,7 @@ export function ProjectsView({
       return state.asc ? cmp : -cmp;
     });
     return out;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtered, state.sort, state.asc]);
+  }, [filtered, state.sort, state.asc, getMonitor]);
 
   // Aggregate stats over filtered
   const agg = useMemo(() => {

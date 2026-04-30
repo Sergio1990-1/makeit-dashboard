@@ -940,6 +940,8 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 }
 .v4-pcard-stat--danger { color: var(--v4-danger-700); }
 .v4-pcard-stat--danger svg { color: var(--v4-danger-700); }
+.v4-pcard-stat--warn { color: var(--v4-warn-700); }
+.v4-pcard-stat--warn svg { color: var(--v4-warn-700); }
 
 /* ────────────────────────────────────────
    AI INSIGHTS LIST

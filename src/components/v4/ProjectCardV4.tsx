@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ProjectData, Priority, Monitor, MonitorStatus } from "../../types";
 import { calcRiskScore } from "../../utils/riskScore";
 import { GITHUB_OWNER } from "../../utils/config";
@@ -101,7 +101,11 @@ export function ProjectCardV4({ project, monitor, onJumpToTab, onEditFinance }: 
       : "var(--v4-warn-500)";
 
   const hasFinances = project.budget > 0;
-  const paymentPct = hasFinances ? Math.round((project.paid / project.budget) * 100) : 0;
+  // Cap visual width at 100% — paid can exceed budget (edge case) and would
+  // otherwise overflow the bar track.
+  const paymentPct = hasFinances
+    ? Math.min(100, Math.round((project.paid / project.budget) * 100))
+    : 0;
   const fullyPaid = hasFinances && project.paid >= project.budget;
 
   // Count of open board issues without any P1-P4 label
@@ -121,14 +125,17 @@ export function ProjectCardV4({ project, monitor, onJumpToTab, onEditFinance }: 
 
   const showRisks = risk.level !== "low" && risk.factors.length > 0;
 
-  // 28-day heatmap cells (in render — would need lastUpdated for purity, but
-  // ProjectCardV4 is rendered in a tab that re-mounts when navigated, so this
-  // is acceptable. The expanded heatmap is opt-in.)
-  const heatDays = heatmapOpen ? getLastNDays(28) : [];
-  const heatCells = heatDays.map((d) => ({
-    d,
-    count: project.commitActivity?.byDate?.[d] ?? 0,
-  }));
+  // 28-day heatmap cells. Memoised so getLastNDays() (impure — calls
+  // new Date()) only runs on toggle, not on every render. The Projects tab
+  // re-mounts on navigation so the date window can't go stale within a tab
+  // session.
+  const heatCells = useMemo(() => {
+    if (!heatmapOpen) return [];
+    return getLastNDays(28).map((d) => ({
+      d,
+      count: project.commitActivity?.byDate?.[d] ?? 0,
+    }));
+  }, [heatmapOpen, project.commitActivity?.byDate]);
 
   return (
     <div className={`v4-pcard v4-pcard--full ${riskClass}`}>
@@ -364,14 +371,22 @@ export function ProjectCardV4({ project, monitor, onJumpToTab, onEditFinance }: 
             </span>
           )}
           {project.etaDate && (() => {
-            const overdue = project.etaDays !== null && project.etaDays > 0;
+            // ETA semantics: `etaDays` is "days UNTIL completion" (positive
+            // = future, see types/index.ts). Treat far-out forecasts as a
+            // schedule risk — matches legacy thresholds (>60 = danger,
+            // >30 = warn). Soon-completion = neutral/good.
+            const d = project.etaDays;
+            const danger = d !== null && d > 60;
+            const warn = d !== null && d > 30 && d <= 60;
             const target = new Date(project.etaDate).toLocaleDateString("ru-RU", {
               day: "numeric",
               month: "short",
             });
             return (
               <span
-                className={`v4-pcard-stat ${overdue ? "v4-pcard-stat--danger" : ""}`}
+                className={`v4-pcard-stat ${
+                  danger ? "v4-pcard-stat--danger" : warn ? "v4-pcard-stat--warn" : ""
+                }`}
                 title="Прогноз даты завершения"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -379,11 +394,11 @@ export function ProjectCardV4({ project, monitor, onJumpToTab, onEditFinance }: 
                   <circle cx="12" cy="12" r="5" />
                 </svg>
                 <b>{target}</b>
-                {project.etaDays !== null && project.etaDays !== 0 && (
+                {d !== null && d !== 0 && (
                   <>
                     {" "}
-                    ({project.etaDays > 0 ? "+" : ""}
-                    {project.etaDays}д)
+                    ({d > 0 ? "+" : ""}
+                    {d}д)
                   </>
                 )}
               </span>

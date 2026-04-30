@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { TokenForm } from "./components/TokenForm";
 import { MilestoneCard } from "./components/MilestoneCard";
 import { ChatPanel } from "./components/ChatPanel";
@@ -95,17 +95,22 @@ function AppInner() {
     return () => { document.body.classList.remove("v4"); };
   }, []);
 
-  function getMonitorForRepo(repo: string): Monitor | undefined {
-    const keywords = MONITOR_MATCH[repo];
-    if (!keywords || monitors.length === 0) return undefined;
-    return monitors.find((m) =>
-      keywords.some(
-        (kw) =>
-          m.name.toLowerCase().includes(kw.toLowerCase()) ||
-          m.url.toLowerCase().includes(kw.toLowerCase())
-      )
-    );
-  }
+  // Memoized so child components (e.g. ProjectsView) can include this in
+  // memo dep arrays without re-running on every parent render.
+  const getMonitorForRepo = useCallback(
+    (repo: string): Monitor | undefined => {
+      const keywords = MONITOR_MATCH[repo];
+      if (!keywords || monitors.length === 0) return undefined;
+      return monitors.find((m) =>
+        keywords.some(
+          (kw) =>
+            m.name.toLowerCase().includes(kw.toLowerCase()) ||
+            m.url.toLowerCase().includes(kw.toLowerCase())
+        )
+      );
+    },
+    [monitors]
+  );
 
   useEffect(() => {
     if (getToken()) refresh(false); // use cache on initial load
