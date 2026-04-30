@@ -32,7 +32,10 @@ const STORAGE = {
 function readStatus(): StatusFilter {
   try {
     const v = localStorage.getItem(STORAGE.status);
-    if (v === "all" || v === "up" || v === "down" || v === "paused" || v === "pending") {
+    // Allow only values that have a corresponding pill in STATUS_FILTERS —
+    // otherwise the user could end up in a "pending" filtered view with no
+    // active pill and no obvious way to clear it.
+    if (v === "all" || v === "up" || v === "down" || v === "paused") {
       return v;
     }
   } catch {
@@ -52,9 +55,10 @@ function readGroup(): GroupBy {
 }
 
 export function MonitoringView({ monitors, loading, error, onRefresh }: Props) {
-  // Re-render gate for the worker-URL setup screen. Toggling this triggers a
-  // refresh in the parent's useMonitors effect via getWorkerUrl() change.
-  const [hasWorker, setHasWorker] = useState(() => !!getWorkerUrl());
+  // Snapshot at mount: shows the setup screen if no worker URL is configured.
+  // Setup completion calls window.location.reload() so this stays a one-shot
+  // — no setter needed.
+  const [hasWorker] = useState(() => !!getWorkerUrl());
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(() => readStatus());
@@ -142,8 +146,12 @@ export function MonitoringView({ monitors, loading, error, onRefresh }: Props) {
         <div style={{ height: 10 }} />
         <MonitoringSetup
           onSaved={() => {
-            setHasWorker(true);
-            onRefresh();
+            // Reload so useMonitors' mount-time effect re-arms the 2-min
+            // polling interval. Without a reload, the hook only ever
+            // started its setInterval at mount when getWorkerUrl() was
+            // null and returned early; toggling setHasWorker just shows
+            // the data UI but auto-refresh stays inert.
+            window.location.reload();
           }}
         />
       </div>
@@ -183,6 +191,7 @@ export function MonitoringView({ monitors, loading, error, onRefresh }: Props) {
           </svg>
           <input
             type="search"
+            aria-label="Поиск по мониторам"
             placeholder="Поиск по имени, url, проекту…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}

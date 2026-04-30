@@ -76,7 +76,13 @@ export function MonitorCard({ monitor, nowMs }: Props) {
           className={`v4-pl-mono v4-mon-card-checked${stale ? " is-stale" : ""}`}
           title={monitor.lastCheckedAt ?? "Никогда не проверялся"}
         >
-          {stale && "⚠ "}{fmtAge(monitor.lastCheckedAt, nowMs)}
+          {stale && (
+            <>
+              <span className="v4-sr-only">Устаревшие данные: </span>
+              <span aria-hidden="true">⚠ </span>
+            </>
+          )}
+          {fmtAge(monitor.lastCheckedAt, nowMs)}
         </span>
       </div>
     </div>

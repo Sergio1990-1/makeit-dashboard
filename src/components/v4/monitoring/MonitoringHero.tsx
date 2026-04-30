@@ -38,7 +38,7 @@ export function MonitoringHero({ monitors, loading, onRefresh, nowMs }: Props) {
   return (
     <div className={`v4-mon-hero v4-mon-hero--${health}`}>
       <div className="v4-mon-hero-status">
-        <span className={`v4-mon-hero-dot v4-mon-hero-dot--${health}`} />
+        <span className={`v4-mon-hero-dot v4-mon-hero-dot--${health}`} aria-hidden="true" />
         <div>
           <div className="v4-mon-hero-title">{HEALTH_TITLE[health]}</div>
           <div className="v4-mon-hero-sub">

@@ -4091,6 +4091,19 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 .v4-mon-text-success { color: var(--v4-success-700); }
 .v4-mon-text-danger { color: var(--v4-danger-700); }
 
+/* Visually-hidden helper for screen-reader-only labels next to icons. */
+.v4-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .v4-mon-hero {
   display: flex;
   justify-content: space-between;
