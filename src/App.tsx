@@ -8,7 +8,7 @@ import { MonitoringView } from "./components/v4/monitoring/MonitoringView";
 import { AuditView } from "./components/v4/audit/AuditView";
 import { PipelineView } from "./components/v4/pipeline/PipelineView";
 import { TranscriptsView } from "./components/v4/transcripts/TranscriptsView";
-import { ResearchTab } from "./components/ResearchTab";
+import { ResearchView } from "./components/v4/research/ResearchView";
 import { SpecsTab } from "./components/SpecsTab";
 import { QualityView } from "./components/v4/quality/QualityView";
 import { DebateView } from "./components/v4/debate/DebateView";
@@ -259,13 +259,11 @@ function AppInner() {
             </ErrorBoundary>
           )}
         </div>
-        <div className="v4-legacy-frame" style={{ display: tab === "research" ? undefined : "none" }}>
+        <div style={{ display: tab === "research" ? undefined : "none" }}>
           {visitedTabs.has("research") && (
-            <div className="bento-grid">
-              <ErrorBoundary fallback="Ошибка вкладки Research">
-                <ResearchTab repos={projects.map((p) => p.repo)} />
-              </ErrorBoundary>
-            </div>
+            <ErrorBoundary fallback="Ошибка вкладки Research">
+              <ResearchView repos={projects.map((p) => p.repo)} />
+            </ErrorBoundary>
           )}
         </div>
         <div className="v4-legacy-frame" style={{ display: tab === "specs" ? undefined : "none" }}>
