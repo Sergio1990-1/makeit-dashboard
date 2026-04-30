@@ -7,7 +7,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { UptimeBar } from "./components/UptimeBar";
 import { AuditCombinedTab } from "./components/AuditCombinedTab";
 import { PipelineView } from "./components/v4/pipeline/PipelineView";
-import { TranscriptsTab } from "./components/TranscriptsTab";
+import { TranscriptsView } from "./components/v4/transcripts/TranscriptsView";
 import { ResearchTab } from "./components/ResearchTab";
 import { SpecsTab } from "./components/SpecsTab";
 import { QualityTab } from "./components/QualityTab";
@@ -261,13 +261,11 @@ function AppInner() {
             </ErrorBoundary>
           )}
         </div>
-        <div className="v4-legacy-frame" style={{ display: tab === "transcripts" ? undefined : "none" }}>
+        <div style={{ display: tab === "transcripts" ? undefined : "none" }}>
           {visitedTabs.has("transcripts") && (
-            <div className="bento-grid">
-              <ErrorBoundary fallback="Ошибка вкладки Транскрипты">
-                <TranscriptsTab projects={PROJECTS} />
-              </ErrorBoundary>
-            </div>
+            <ErrorBoundary fallback="Ошибка вкладки Транскрипты">
+              <TranscriptsView projects={PROJECTS} />
+            </ErrorBoundary>
           )}
         </div>
         <div className="v4-legacy-frame" style={{ display: tab === "research" ? undefined : "none" }}>
