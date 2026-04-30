@@ -5218,9 +5218,32 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 }
 .v4-rsh-card-chevron {
   color: var(--v4-ink-400);
+  font-size: 14px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--v4-line);
+  border-radius: var(--v4-r-sm);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 120ms, border-color 120ms;
+}
+.v4-rsh-card-chevron:hover:not(:disabled) {
+  background: var(--v4-surface-2);
+  border-color: var(--v4-accent-500);
+  color: var(--v4-accent-700);
+}
+.v4-rsh-card-chevron:focus-visible {
+  outline: 2px solid var(--v4-accent-500);
+  outline-offset: 1px;
+}
+.v4-rsh-card-chevron:disabled { opacity: 0.4; cursor: not-allowed; }
+.v4-rsh-refresh-hint {
   font-size: 12px;
-  width: 14px;
-  text-align: center;
+  padding: 0 4px 8px;
 }
 
 .v4-rsh-card-body {

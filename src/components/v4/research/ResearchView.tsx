@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useResearch } from "../../../hooks/useResearch";
 import { useResearchAgent } from "../../../hooks/useResearchAgent";
 import { StartResearchModal } from "../../StartResearchModal";
@@ -57,23 +57,38 @@ export function ResearchView({ repos }: Props) {
     return applySearch(applyFilter(projects, filter), search);
   }, [projects, filter, search]);
 
-  function handleOpenModal(repo?: string) {
+  // useCallback so memoised cards don't re-render whenever the parent
+  // ticks for unrelated state (agent status flips, search input).
+  const handleOpenModal = useCallback((repo?: string) => {
     setModalRepo(repo);
     setShowModal(true);
-  }
+  }, []);
 
-  function handleStartResearch(project: string, description: string, region: string) {
-    setShowModal(false);
-    agent.launchResearch({
-      project,
-      product_description: description || undefined,
-      region: region || undefined,
-    });
-  }
+  const handleStartResearch = useCallback(
+    (project: string, description: string, region: string) => {
+      setShowModal(false);
+      agent.launchResearch({
+        project,
+        product_description: description || undefined,
+        region: region || undefined,
+      });
+    },
+    [agent],
+  );
 
-  function handleStartDiscovery(repo: string) {
-    agent.launchDiscovery(`${GITHUB_OWNER}/${repo}`);
-  }
+  const handleStartDiscovery = useCallback(
+    (repo: string) => {
+      agent.launchDiscovery(`${GITHUB_OWNER}/${repo}`);
+    },
+    [agent],
+  );
+
+  const handleLaunchResearchFromCard = useCallback(
+    (repo: string) => {
+      handleOpenModal(repo);
+    },
+    [handleOpenModal],
+  );
 
   return (
     <div className="v4-content">
@@ -180,17 +195,27 @@ export function ResearchView({ repos }: Props) {
           </div>
         </div>
       ) : (
-        <div className="v4-rsh-list">
-          {visible.map((pr) => (
-            <ResearchProjectCardV4
-              key={pr.repo}
-              pr={pr}
-              agentStarting={agent.starting}
-              onLaunchResearch={(repo) => handleOpenModal(repo)}
-              onLaunchDiscovery={handleStartDiscovery}
-            />
-          ))}
-        </div>
+        <>
+          {/* Subtle inline indicator while a background refresh is running
+              and we already have data to show. Keeps the list visible
+              instead of swapping to a spinner. */}
+          {loading && projects.length > 0 && (
+            <div className="v4-rsh-refresh-hint v4-pl-mono v4-rsh-text-muted" role="status">
+              Обновление…
+            </div>
+          )}
+          <div className="v4-rsh-list">
+            {visible.map((pr) => (
+              <ResearchProjectCardV4
+                key={pr.repo}
+                pr={pr}
+                agentStarting={agent.starting}
+                onLaunchResearch={handleLaunchResearchFromCard}
+                onLaunchDiscovery={handleStartDiscovery}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       {showModal && (

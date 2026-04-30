@@ -18,7 +18,11 @@ export function ResearchProjectCardV4({
   onLaunchDiscovery,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
-  const [openSection, setOpenSection] = useState<Section | null>(null);
+  // Pre-open the Discovery section by default — it's the most useful view
+  // for an actively-investigated project. Initialising openSection here
+  // (rather than passing defaultOpen down) keeps the parent state in sync
+  // with what's visually open, so the first toggle click closes correctly.
+  const [openSection, setOpenSection] = useState<Section | null>("discovery");
 
   const hasResearch = !!pr.research;
   const hasDiscovery = !!pr.discovery;
@@ -45,19 +49,12 @@ export function ResearchProjectCardV4({
 
   return (
     <div className={`v4-rsh-card v4-rsh-card--${health}${expanded ? " is-expanded" : ""}`}>
-      <div
-        className={`v4-rsh-card-h${hasData ? " is-clickable" : ""}`}
-        onClick={toggleExpand}
-        onKeyDown={(e) => {
-          if (hasData && (e.key === "Enter" || e.key === " ")) {
-            e.preventDefault();
-            toggleExpand();
-          }
-        }}
-        role={hasData ? "button" : undefined}
-        tabIndex={hasData ? 0 : undefined}
-        aria-expanded={hasData ? expanded : undefined}
-      >
+      {/* Header is a row of plain spans + nested buttons + an explicit
+          expand <button> at the end. We deliberately do NOT make the
+          whole row a role="button" — that would nest interactive elements
+          (the action buttons) inside another interactive element, which
+          violates WCAG 4.1.1 and breaks screen-reader navigation. */}
+      <div className="v4-rsh-card-h">
         <div className="v4-rsh-card-name">
           <span className="v4-rsh-card-title">{pr.repo}</span>
           {pr.loading && <span className="v4-rsh-card-loading" aria-label="Загрузка" />}
@@ -91,7 +88,7 @@ export function ResearchProjectCardV4({
           )}
         </div>
 
-        <div className="v4-rsh-card-actions" onClick={(e) => e.stopPropagation()}>
+        <div className="v4-rsh-card-actions">
           <button
             type="button"
             className="v4-btn"
@@ -115,9 +112,16 @@ export function ResearchProjectCardV4({
         </div>
 
         {hasData && (
-          <span className="v4-rsh-card-chevron" aria-hidden="true">
+          <button
+            type="button"
+            className="v4-rsh-card-chevron"
+            onClick={toggleExpand}
+            disabled={!hasData}
+            aria-expanded={hasData ? expanded : undefined}
+            aria-label={expanded ? `Свернуть ${pr.repo}` : `Развернуть ${pr.repo}`}
+          >
             {expanded ? "▾" : "▸"}
-          </span>
+          </button>
         )}
       </div>
 
@@ -134,8 +138,8 @@ export function ResearchProjectCardV4({
               tone="warn"
             >
               <ul className="v4-rsh-list">
-                {pr.research.painPoints.map((p, i) => (
-                  <li key={i}>{p.theme}</li>
+                {pr.research.painPoints.map((p) => (
+                  <li key={p.theme}>{p.theme}</li>
                 ))}
               </ul>
             </CollapsibleSection>
@@ -148,8 +152,8 @@ export function ResearchProjectCardV4({
               tone="ok"
             >
               <ul className="v4-rsh-list">
-                {pr.research.opportunities.map((o, i) => (
-                  <li key={i}>{o}</li>
+                {pr.research.opportunities.map((o) => (
+                  <li key={o}>{o}</li>
                 ))}
               </ul>
             </CollapsibleSection>
@@ -160,7 +164,6 @@ export function ResearchProjectCardV4({
               isOpen={openSection === "discovery"}
               onToggle={() => toggleSection("discovery")}
               tone="ok"
-              defaultOpen
             >
               <DiscoverySection discovery={pr.discovery} />
             </CollapsibleSection>
@@ -176,30 +179,22 @@ interface SectionProps {
   isOpen: boolean;
   onToggle: () => void;
   tone: "ok" | "warn";
-  defaultOpen?: boolean;
   children: React.ReactNode;
 }
 
-function CollapsibleSection({ title, isOpen, onToggle, tone, defaultOpen, children }: SectionProps) {
-  // defaultOpen pre-expands on first render via local state hint, but
-  // user toggle takes precedence afterwards.
-  const [hasInteracted, setHasInteracted] = useState(false);
-  const open = hasInteracted ? isOpen : defaultOpen ?? isOpen;
+function CollapsibleSection({ title, isOpen, onToggle, tone, children }: SectionProps) {
   return (
     <div className={`v4-rsh-section v4-rsh-section--${tone}`}>
       <button
         type="button"
         className="v4-rsh-section-h"
-        onClick={() => {
-          setHasInteracted(true);
-          onToggle();
-        }}
-        aria-expanded={open}
+        onClick={onToggle}
+        aria-expanded={isOpen}
       >
-        <span className="v4-rsh-section-arrow" aria-hidden="true">{open ? "▾" : "▸"}</span>
+        <span className="v4-rsh-section-arrow" aria-hidden="true">{isOpen ? "▾" : "▸"}</span>
         <span className="v4-rsh-section-title">{title}</span>
       </button>
-      {open && <div className="v4-rsh-section-body">{children}</div>}
+      {isOpen && <div className="v4-rsh-section-body">{children}</div>}
     </div>
   );
 }
@@ -274,7 +269,7 @@ function CompetitorMatrix({ research }: { research: ResearchData }) {
               {c.audience && <div className="v4-rsh-comp-meta">Аудитория: {c.audience}</div>}
               {c.features.length > 0 && (
                 <ul className="v4-rsh-comp-features">
-                  {c.features.map((f, i) => <li key={i}>{f}</li>)}
+                  {c.features.map((f) => <li key={f}>{f}</li>)}
                 </ul>
               )}
             </div>
@@ -319,8 +314,11 @@ function DiscoveryGroup({
       </div>
       <div className="v4-rsh-disc-list">
         {suggestions.map((s, i) => (
+          // Composite key to handle near-duplicates: name should be unique
+          // most of the time; the description prefix breaks ties; index is
+          // a last-resort fallback if both name+description collide.
           <div
-            key={`${s.name}-${i}`}
+            key={`${s.name}::${(s.description ?? "").slice(0, 40)}::${i}`}
             className="v4-rsh-disc-item"
           >
             <div className="v4-rsh-disc-h">
