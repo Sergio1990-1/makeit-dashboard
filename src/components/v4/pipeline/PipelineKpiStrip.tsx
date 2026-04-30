@@ -3,14 +3,14 @@ import { compactUSD, formatDuration } from "./utils";
 
 interface Props {
   stats: PipelineStats | null;
-  /** Sum of cost for all results currently in the status payload (today's batch) */
-  todayCost: number;
-  /** Number of completed runs today (heuristic: distinct run-windows) */
-  todayRuns: number;
+  /** Sum of cost for all results in the current status payload (this session, not strictly today). */
+  sessionCost: number;
+  /** Number of distinct runs in the current status payload (heuristic). */
+  sessionRuns: number;
 }
 
-export function PipelineKpiStrip({ stats, todayCost, todayRuns }: Props) {
-  if (!stats && todayRuns === 0 && todayCost === 0) return null;
+export function PipelineKpiStrip({ stats, sessionCost, sessionRuns }: Props) {
+  if (!stats && sessionRuns === 0 && sessionCost === 0) return null;
 
   const firstPass = stats?.first_pass_rate ?? null;
   const firstPassColor =
@@ -25,15 +25,24 @@ export function PipelineKpiStrip({ stats, todayCost, todayRuns }: Props) {
   return (
     <div className="v4-projects-toolbar v4-pl-kpi-strip">
       <div className="v4-projects-agg">
-        <div className="v4-projects-agg-cell">
-          <div className="v4-projects-agg-n num">{todayRuns}</div>
-          <div className="v4-projects-agg-l">ranов сегодня</div>
+        <div
+          className="v4-projects-agg-cell"
+          title="Завершённые ранее запуски в текущей API-сессии"
+        >
+          <div className="v4-projects-agg-n num">{sessionRuns}</div>
+          <div className="v4-projects-agg-l">ranов в сессии</div>
         </div>
-        <div className="v4-projects-agg-cell">
-          <div className="v4-projects-agg-n num" style={{ color: todayCost > 0 ? "var(--v4-success-700)" : undefined }}>
-            {compactUSD(todayCost)}
+        <div
+          className="v4-projects-agg-cell"
+          title="Сумма cost по всем результатам в текущей API-сессии (не строго за сегодня)"
+        >
+          <div
+            className="v4-projects-agg-n num"
+            style={{ color: sessionCost > 0 ? "var(--v4-success-700)" : undefined }}
+          >
+            {compactUSD(sessionCost)}
           </div>
-          <div className="v4-projects-agg-l">cost сегодня</div>
+          <div className="v4-projects-agg-l">cost сессии</div>
         </div>
         {firstPass !== null && (
           <div className="v4-projects-agg-cell">
@@ -59,7 +68,7 @@ export function PipelineKpiStrip({ stats, todayCost, todayRuns }: Props) {
             <div className="v4-projects-agg-l">cost/задачу</div>
           </div>
         )}
-        {stats?.total_issues != null && (
+        {stats?.agent_completed != null && (
           <div className="v4-projects-agg-cell">
             <div className="v4-projects-agg-n num">{stats.agent_completed}</div>
             <div className="v4-projects-agg-l">agent done</div>

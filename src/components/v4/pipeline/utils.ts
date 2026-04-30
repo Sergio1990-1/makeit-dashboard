@@ -11,7 +11,6 @@ export function formatDuration(seconds: number): string {
 
 export function compactUSD(n: number): string {
   if (n >= 100) return `$${n.toFixed(0)}`;
-  if (n >= 1) return `$${n.toFixed(2)}`;
   return `$${n.toFixed(2)}`;
 }
 

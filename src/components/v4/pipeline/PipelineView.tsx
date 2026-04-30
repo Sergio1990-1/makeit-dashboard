@@ -39,7 +39,6 @@ export function PipelineView({ projects, lastUpdated }: Props) {
     available,
     status,
     stats,
-    statsProject,
     error,
     starting,
     stopping,
@@ -103,8 +102,10 @@ export function PipelineView({ projects, lastUpdated }: Props) {
   // the hero card for live elapsed and for grouping results.
   const [runStartedAt, setRunStartedAt] = useState<number | null>(null);
   // Snapshot of result count at the moment the run started — anything beyond
-  // this index in the current results array belongs to the current run.
-  const baselineResultCountRef = useRef<number>(0);
+  // this index in the current results array belongs to the current run. Kept
+  // as state (not ref) so the cost memo sees the right value in the same
+  // render commit cycle when a new run starts.
+  const [baselineResultCount, setBaselineResultCount] = useState(0);
   // Last completed run summary (shown when idle).
   const [lastRunSummary, setLastRunSummary] = useState<{
     done: number;
@@ -118,13 +119,13 @@ export function PipelineView({ projects, lastUpdated }: Props) {
   useEffect(() => {
     if (!status) return;
     if (status.running && !wasRunningRef.current) {
-      // New run started
+      // New run started — set baseline BEFORE the cost memo sees the next status
       setRunStartedAt(Date.now());
-      baselineResultCountRef.current = status.results.length;
+      setBaselineResultCount(status.results.length);
       setRunEpoch((e) => e + 1);
     } else if (!status.running && wasRunningRef.current) {
-      // Run ended — snapshot summary
-      const newResults = status.results.slice(baselineResultCountRef.current);
+      // Run ended — snapshot summary using the baseline that was set on start
+      const newResults = status.results.slice(baselineResultCount);
       const done = newResults.filter((r) => r.status === "done").length;
       const failed = newResults.filter(
         (r) => r.status !== "done" && r.status !== "queued" && r.status !== "in_progress"
@@ -133,27 +134,21 @@ export function PipelineView({ projects, lastUpdated }: Props) {
       setRunStartedAt(null);
     }
     wasRunningRef.current = status.running;
-  }, [status]);
+  }, [status, baselineResultCount]);
 
   // Aggregate cost of the current run
   const currentRunCost = useMemo(() => {
     if (!status || runStartedAt === null) return 0;
-    const tail = status.results.slice(baselineResultCountRef.current);
-    return sumCost(tail);
-  }, [status, runStartedAt]);
+    return sumCost(status.results.slice(baselineResultCount));
+  }, [status, runStartedAt, baselineResultCount]);
 
-  // Today metrics — runs and cost today
-  const { todayCost, todayRuns } = useMemo(() => {
-    if (!status) return { todayCost: 0, todayRuns: 0 };
-    // Without per-result timestamps we use a simple approximation:
-    //  todayCost = sum of all results' cost in the current status payload
-    //  (the API returns the most recent batch).
-    //  todayRuns = at least 1 if there are any results, +1 for the current
-    //  run if running.
+  // Session metrics — sum across the current API status payload (not strictly today).
+  const { sessionCost, sessionRuns } = useMemo(() => {
+    if (!status) return { sessionCost: 0, sessionRuns: 0 };
     const cost = sumCost(status.results);
     const runs = status.results.length > 0 ? 1 : 0;
     const total = runs + (status.running && runStartedAt ? 1 : 0);
-    return { todayCost: cost, todayRuns: total };
+    return { sessionCost: cost, sessionRuns: total };
   }, [status, runStartedAt]);
 
   // Classify dialog
@@ -284,7 +279,7 @@ export function PipelineView({ projects, lastUpdated }: Props) {
 
       {available === true && (
         <>
-          <PipelineKpiStrip stats={stats} todayCost={todayCost} todayRuns={todayRuns} />
+          <PipelineKpiStrip stats={stats} sessionCost={sessionCost} sessionRuns={sessionRuns} />
 
           <div className="v4-grid">
             {running ? (
@@ -335,9 +330,6 @@ export function PipelineView({ projects, lastUpdated }: Props) {
         error={classifyError}
         onClose={closeClassifyDialog}
       />
-
-      {/* statsProject hint suppressed via void to avoid warn — used for header sync */}
-      {void statsProject}
     </div>
   );
 }

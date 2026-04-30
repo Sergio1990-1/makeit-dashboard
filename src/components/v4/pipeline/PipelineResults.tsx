@@ -199,16 +199,12 @@ export function PipelineResults({
     });
   }, [results, filter, query]);
 
-  // Group by current vs previous
-  const { current, previous } = useMemo(() => {
-    if (currentRunStartedAt === null) return { current: [], previous: filtered };
-    // Without a per-result timestamp, we use array order as a heuristic:
-    // results are appended; "current" run = tail items added after the
-    // start time. We track baseline result count via parent-supplied
-    // currentRunStartedAt epoch but cannot perfectly partition. As a
-    // best-effort, treat all as "current" when running, "previous" when not.
-    return { current: filtered, previous: [] as PipelineResult[] };
-  }, [filtered, currentRunStartedAt]);
+  // The pipeline API does not currently expose per-result timestamps, so we
+  // can't reliably partition "current run" vs "previous". We show a "current
+  // run" separator only when `currentRunStartedAt` is set AND there are any
+  // filtered results — purely a visual cue that what follows belongs to the
+  // active run. When idle, results are shown without the separator.
+  const showRunSeparator = currentRunStartedAt !== null && filtered.length > 0;
 
   if (results.length === 0) {
     return (
@@ -259,45 +255,21 @@ export function PipelineResults({
       <div className="v4-pl-results">
         {filtered.length === 0 ? (
           <div className="v4-empty">Нет результатов под фильтр</div>
-        ) : currentRunStartedAt !== null && current.length > 0 ? (
-          <>
-            <div className="v4-pl-run-sep">
-              <span className="v4-pl-run-sep-line" />
-              <span className="v4-pl-run-sep-label">Текущий запуск · {current.length} задач</span>
-              <span className="v4-pl-run-sep-line" />
-            </div>
-            {current.map((r) => (
-              <ResultRow
-                key={`c-${r.issue_number}`}
-                r={r}
-                onTimelineClick={onTimelineClick}
-              />
-            ))}
-            {previous.length > 0 && (
-              <>
-                <div className="v4-pl-run-sep">
-                  <span className="v4-pl-run-sep-line" />
-                  <span className="v4-pl-run-sep-label">Предыдущие · {previous.length}</span>
-                  <span className="v4-pl-run-sep-line" />
-                </div>
-                {previous.map((r) => (
-                  <ResultRow
-                    key={`p-${r.issue_number}`}
-                    r={r}
-                    onTimelineClick={onTimelineClick}
-                  />
-                ))}
-              </>
-            )}
-          </>
         ) : (
-          filtered.map((r) => (
-            <ResultRow
-              key={r.issue_number}
-              r={r}
-              onTimelineClick={onTimelineClick}
-            />
-          ))
+          <>
+            {showRunSeparator && (
+              <div className="v4-pl-run-sep">
+                <span className="v4-pl-run-sep-line" />
+                <span className="v4-pl-run-sep-label">
+                  Текущий запуск · {filtered.length} задач
+                </span>
+                <span className="v4-pl-run-sep-line" />
+              </div>
+            )}
+            {filtered.map((r) => (
+              <ResultRow key={r.issue_number} r={r} onTimelineClick={onTimelineClick} />
+            ))}
+          </>
         )}
       </div>
     </div>
