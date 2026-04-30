@@ -10,7 +10,7 @@ import { PipelineView } from "./components/v4/pipeline/PipelineView";
 import { TranscriptsView } from "./components/v4/transcripts/TranscriptsView";
 import { ResearchTab } from "./components/ResearchTab";
 import { SpecsTab } from "./components/SpecsTab";
-import { QualityTab } from "./components/QualityTab";
+import { QualityView } from "./components/v4/quality/QualityView";
 import { DebateTab } from "./components/DebateTab";
 import { Sidebar } from "./components/v4/Sidebar";
 import { Topbar } from "./components/v4/Topbar";
@@ -286,13 +286,11 @@ function AppInner() {
             </div>
           )}
         </div>
-        <div className="v4-legacy-frame" style={{ display: tab === "quality" ? undefined : "none" }}>
+        <div style={{ display: tab === "quality" ? undefined : "none" }}>
           {visitedTabs.has("quality") && (
-            <div className="bento-grid">
-              <ErrorBoundary fallback="Ошибка вкладки Quality">
-                <QualityTab />
-              </ErrorBoundary>
-            </div>
+            <ErrorBoundary fallback="Ошибка вкладки Quality">
+              <QualityView />
+            </ErrorBoundary>
           )}
         </div>
         <div className="v4-legacy-frame" style={{ display: tab === "debate" ? undefined : "none" }}>
