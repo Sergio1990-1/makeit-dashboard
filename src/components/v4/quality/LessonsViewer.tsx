@@ -24,24 +24,31 @@ function fmtBytes(n: number): string {
 
 export function LessonsViewer({ projectSlug, cache, loadLessons }: Props) {
   const [activeTab, setActiveTab] = useState<string>("lessons-retro.md");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Derive loading state from cache + error so we never paint the
+  // "no files" empty state on the first frame before the fetch starts.
+  // The previous Promise.resolve().then(setLoading(true)) microtask
+  // guarded the `react-hooks/set-state-in-effect` rule but caused a
+  // visible flash where loading=false rendered before flipping to true.
+  const cached = projectSlug ? cache[projectSlug] : undefined;
+  const loading = projectSlug !== null && cached === undefined && error === null;
 
   useEffect(() => {
     if (!projectSlug) return;
     if (cache[projectSlug]) return;
     let cancelled = false;
+    // Microtask defers setError(null) past the effect body so the
+    // react-hooks/set-state-in-effect lint rule (which fires on sync
+    // setState during useEffect) is satisfied. Unlike the previous
+    // setLoading deferral, this no longer causes a visible flash —
+    // `loading` is now derived from cache + error rather than stored.
     Promise.resolve().then(() => {
       if (cancelled) return;
-      setLoading(true);
       setError(null);
-      loadLessons(projectSlug)
-        .catch((err) => {
-          if (!cancelled) setError(err instanceof Error ? err.message : "Ошибка загрузки");
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
+      loadLessons(projectSlug).catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Ошибка загрузки");
+      });
     });
     return () => { cancelled = true; };
   }, [projectSlug, cache, loadLessons]);
@@ -59,13 +66,13 @@ export function LessonsViewer({ projectSlug, cache, loadLessons }: Props) {
     );
   }
 
-  const data = cache[projectSlug];
-  const files = data?.files ?? [];
+  const files = cached?.files ?? [];
   const availableNames = files.map((f) => f.filename);
   const effectiveTab = availableNames.includes(activeTab)
     ? activeTab
     : (availableNames[0] ?? activeTab);
   const activeFile = files.find((f) => f.filename === effectiveTab);
+  const tabPanelId = `v4-qa-lessons-panel-${projectSlug}`;
 
   return (
     <div className="v4-panel">
@@ -78,15 +85,20 @@ export function LessonsViewer({ projectSlug, cache, loadLessons }: Props) {
 
       {error && <div className="v4-error">{error}</div>}
 
-      <div className="v4-qa-lessons-tabs">
+      <div className="v4-qa-lessons-tabs" role="tablist" aria-label="Lessons файлы">
         {FILE_ORDER.map((fname) => {
           const present = availableNames.includes(fname);
           const f = files.find((x) => x.filename === fname);
+          const selected = effectiveTab === fname;
           return (
             <button
               key={fname}
               type="button"
-              className={`v4-qa-lessons-tab ${effectiveTab === fname ? "is-active" : ""}`}
+              role="tab"
+              aria-selected={selected}
+              aria-controls={tabPanelId}
+              tabIndex={selected ? 0 : -1}
+              className={`v4-qa-lessons-tab ${selected ? "is-active" : ""}`}
               disabled={!present}
               onClick={() => setActiveTab(fname)}
               title={present ? FILE_LABELS[fname] : "Файл отсутствует"}
@@ -98,19 +110,23 @@ export function LessonsViewer({ projectSlug, cache, loadLessons }: Props) {
         })}
       </div>
 
-      {activeFile ? (
-        <>
-          <div className="v4-qa-lessons-meta">
-            <span className="v4-pl-mono">{activeFile.filename}</span>
-            <span className="v4-pl-mono v4-qa-text-muted">{fmtBytes(activeFile.size_bytes)}</span>
-            <span className="v4-pl-mono v4-qa-text-muted">{activeFile.line_count} строк</span>
-            <span className="v4-pl-mono v4-qa-text-muted">{fmtAge(activeFile.mtime)}</span>
-          </div>
-          <pre className="v4-qa-lessons-pre">{activeFile.content || "(пустой файл)"}</pre>
-        </>
-      ) : !loading ? (
-        <div className="v4-empty">В этом проекте пока нет lessons файлов.</div>
-      ) : null}
+      <div id={tabPanelId} role="tabpanel">
+        {activeFile ? (
+          <>
+            <div className="v4-qa-lessons-meta">
+              <span className="v4-pl-mono">{activeFile.filename}</span>
+              <span className="v4-pl-mono v4-qa-text-muted">{fmtBytes(activeFile.size_bytes)}</span>
+              <span className="v4-pl-mono v4-qa-text-muted">{activeFile.line_count} строк</span>
+              <span className="v4-pl-mono v4-qa-text-muted">{fmtAge(activeFile.mtime)}</span>
+            </div>
+            <pre className="v4-qa-lessons-pre">{activeFile.content || "(пустой файл)"}</pre>
+          </>
+        ) : loading ? (
+          <div className="v4-empty">Загрузка lessons-файлов…</div>
+        ) : (
+          <div className="v4-empty">В этом проекте пока нет lessons файлов.</div>
+        )}
+      </div>
     </div>
   );
 }

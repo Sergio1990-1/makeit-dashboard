@@ -32,6 +32,14 @@ export function PendingChangePreviewV4({ change, loadPreview, onConfirm, onCance
     return () => { cancelled = true; };
   }, [change.id, loadPreview]);
 
+  // Initial focus on mount only — separate from the keydown effect so an
+  // unstable `onCancel` reference (the parent passes an inline arrow) can't
+  // cause the close button to repeatedly steal focus on every parent
+  // re-render (e.g. when actionLoading flips during an approve action).
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -40,7 +48,6 @@ export function PendingChangePreviewV4({ change, loadPreview, onConfirm, onCance
       }
     };
     window.addEventListener("keydown", onKey);
-    closeButtonRef.current?.focus();
     return () => window.removeEventListener("keydown", onKey);
   }, [onCancel]);
 
