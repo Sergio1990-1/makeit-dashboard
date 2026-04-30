@@ -268,9 +268,12 @@ export interface ResearchHistoryItem {
   id: string;
   agent: "research" | "discovery";
   project: string;
-  status: "done" | "error";
+  /** Mirrors backend research_jobs status — includes in-progress states. */
+  status: "queued" | "searching" | "analyzing" | "done" | "error";
   started_at: string;
-  finished_at: string;
+  /** Backend /research/list does not expose a finish timestamp; absent for
+   *  jobs that haven't terminated and unknown for jobs that have. */
+  finished_at?: string;
 }
 
 export async function startResearchAgent(req: ResearchStartRequest): Promise<{ id: string }> {
@@ -432,11 +435,36 @@ export async function fetchTimeline(
   return res.json() as Promise<TimelineEntry[]>;
 }
 
+/** Backend list-item shape returned by /research/list and /discovery/list. */
+interface AgentListItem {
+  job_id: string;
+  status: string;
+  project: string;
+  created_at: string;
+  agent_type: string;
+}
+
 export async function fetchResearchHistory(project: string): Promise<ResearchHistoryItem[]> {
   const res = await fetch(
-    `${PIPELINE_BASE_URL}/research/history?project=${encodeURIComponent(project)}`,
+    `${PIPELINE_BASE_URL}/research/list?project=${encodeURIComponent(project)}`,
     { cache: "no-store" },
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json() as Promise<ResearchHistoryItem[]>;
+  const items = (await res.json()) as AgentListItem[];
+  // Backend returns `{job_id, status, project, created_at, agent_type}` —
+  // adapt to ResearchHistoryItem so callers stay stable and the field-name
+  // drift between dashboard and pipeline doesn't leak to UI code.
+  // Status is preserved as-is (backend emits queued/searching/done/error),
+  // and finished_at is left undefined since /research/list doesn't expose it.
+  const KNOWN: ResearchHistoryItem["status"][] = ["queued", "searching", "analyzing", "done", "error"];
+  return items.map((it) => ({
+    id: it.job_id,
+    agent: it.agent_type === "discovery" ? "discovery" : "research",
+    project: it.project,
+    status: KNOWN.includes(it.status as ResearchHistoryItem["status"])
+      ? (it.status as ResearchHistoryItem["status"])
+      : "error",
+    started_at: it.created_at,
+    finished_at: undefined,
+  }));
 }

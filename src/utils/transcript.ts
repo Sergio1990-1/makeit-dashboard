@@ -96,6 +96,36 @@ export interface QualityReport {
   score: number;
 }
 
+/** Backend `quality_report.json` ships `checks` as a dict keyed by check
+ * name (per SPEC-012 / task-05 in makeit-pipeline). Convert to the array
+ * shape the renderers expect, deriving a human-readable message from
+ * value/threshold/empty fields. */
+function adaptQualityReport(raw: unknown): QualityReport | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as { score?: number; checks?: unknown };
+  if (!r.checks || typeof r.checks !== "object") return null;
+  const entries = Object.entries(r.checks as Record<string, unknown>);
+  const checks: QualityCheck[] = entries.map(([name, raw]) => {
+    if (!raw || typeof raw !== "object") {
+      return { name, status: "warning", message: "" };
+    }
+    const e = raw as { status?: string; value?: number; threshold?: number; empty?: number };
+    const status: QualityCheck["status"] =
+      e.status === "pass" || e.status === "warning" || e.status === "fail"
+        ? e.status
+        : "warning";
+    const parts: string[] = [];
+    if (typeof e.value === "number") parts.push(`value=${e.value}`);
+    if (typeof e.threshold === "number") parts.push(`threshold=${e.threshold}`);
+    if (typeof e.empty === "number") parts.push(`empty=${e.empty}`);
+    return { name, status, message: parts.join(", ") };
+  });
+  return {
+    checks,
+    score: typeof r.score === "number" ? r.score : 0,
+  };
+}
+
 export interface TranscriptResult {
   task_id: string;
   brief: string;       // BRIEF.md content (markdown)
@@ -118,7 +148,7 @@ export async function fetchTranscriptResult(taskId: string): Promise<TranscriptR
     brief: data.brief_content || "",
     transcript: data.transcript_text || "",
     quality: data.quality || null,
-    quality_report: data.quality_report || null,
+    quality_report: adaptQualityReport(data.quality_report),
   };
 }
 
@@ -169,6 +199,18 @@ export async function saveTranscriptBrief(
     },
   );
   if (!res.ok) {
+    if (res.status === 405) {
+      // Backend doesn't expose PUT /transcript/result/{id} yet — FastAPI
+      // returns 405 Method Not Allowed because GET on this path exists
+      // but PUT does not. Tracked in makeit-pipeline#790. Surface a humane
+      // message so users know the editor change is local-only.
+      // NOTE: 404 is deliberately NOT included here — once the PUT route
+      // ships, a real "task not found" 404 must surface as such, not as
+      // "save not supported".
+      throw new Error(
+        "Сохранение пока не поддерживается на сервере. Изменения остались только локально (черновик в браузере).",
+      );
+    }
     const text = await res.text().catch(() => "");
     throw new Error(`Save failed (${res.status}): ${text}`);
   }
