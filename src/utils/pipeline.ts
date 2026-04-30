@@ -268,9 +268,12 @@ export interface ResearchHistoryItem {
   id: string;
   agent: "research" | "discovery";
   project: string;
-  status: "done" | "error";
+  /** Mirrors backend research_jobs status — includes in-progress states. */
+  status: "queued" | "searching" | "analyzing" | "done" | "error";
   started_at: string;
-  finished_at: string;
+  /** Backend /research/list does not expose a finish timestamp; absent for
+   *  jobs that haven't terminated and unknown for jobs that have. */
+  finished_at?: string;
 }
 
 export async function startResearchAgent(req: ResearchStartRequest): Promise<{ id: string }> {
@@ -449,15 +452,19 @@ export async function fetchResearchHistory(project: string): Promise<ResearchHis
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const items = (await res.json()) as AgentListItem[];
   // Backend returns `{job_id, status, project, created_at, agent_type}` —
-  // adapt to our long-standing ResearchHistoryItem shape so callers stay
-  // stable and the field-name drift between dashboard and pipeline doesn't
-  // surface to UI code.
+  // adapt to ResearchHistoryItem so callers stay stable and the field-name
+  // drift between dashboard and pipeline doesn't leak to UI code.
+  // Status is preserved as-is (backend emits queued/searching/done/error),
+  // and finished_at is left undefined since /research/list doesn't expose it.
+  const KNOWN: ResearchHistoryItem["status"][] = ["queued", "searching", "analyzing", "done", "error"];
   return items.map((it) => ({
     id: it.job_id,
     agent: it.agent_type === "discovery" ? "discovery" : "research",
     project: it.project,
-    status: it.status === "done" ? "done" : "error",
+    status: KNOWN.includes(it.status as ResearchHistoryItem["status"])
+      ? (it.status as ResearchHistoryItem["status"])
+      : "error",
     started_at: it.created_at,
-    finished_at: it.created_at,
+    finished_at: undefined,
   }));
 }

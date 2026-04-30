@@ -199,11 +199,14 @@ export async function saveTranscriptBrief(
     },
   );
   if (!res.ok) {
-    if (res.status === 405 || res.status === 404) {
-      // Backend doesn't expose PUT /transcript/result/{id} yet
-      // (tracked separately as a makeit-pipeline tech-debt issue).
-      // Surface a humane message rather than a raw HTTP error so users
-      // know the editor change is local-only and won't persist.
+    if (res.status === 405) {
+      // Backend doesn't expose PUT /transcript/result/{id} yet — FastAPI
+      // returns 405 Method Not Allowed because GET on this path exists
+      // but PUT does not. Tracked in makeit-pipeline#790. Surface a humane
+      // message so users know the editor change is local-only.
+      // NOTE: 404 is deliberately NOT included here — once the PUT route
+      // ships, a real "task not found" 404 must surface as such, not as
+      // "save not supported".
       throw new Error(
         "Сохранение пока не поддерживается на сервере. Изменения остались только локально (черновик в браузере).",
       );
