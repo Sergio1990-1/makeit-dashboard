@@ -1,19 +1,12 @@
 import { useEffect, useState } from "react";
 import { TokenForm } from "./components/TokenForm";
-import { Summary } from "./components/Summary";
 import { ProjectCard } from "./components/ProjectCard";
-import { BlockedItems } from "./components/BlockedItems";
-import { StackedChart } from "./components/StackedChart";
-
 import { MilestoneCard } from "./components/MilestoneCard";
-import { UrgentDeadlines } from "./components/UrgentDeadlines";
-import { StaleAlert } from "./components/StaleAlert";
 import { ChatPanel } from "./components/ChatPanel";
 import { ChatButton } from "./components/ChatButton";
 import { FinanceEditor } from "./components/FinanceEditor";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { UptimeBar } from "./components/UptimeBar";
-import { ClosedChart } from "./components/ClosedChart";
 import { AuditCombinedTab } from "./components/AuditCombinedTab";
 import { PipelineControlPanel } from "./components/PipelineControlPanel";
 import { TranscriptsTab } from "./components/TranscriptsTab";
@@ -21,12 +14,30 @@ import { ResearchTab } from "./components/ResearchTab";
 import { SpecsTab } from "./components/SpecsTab";
 import { QualityTab } from "./components/QualityTab";
 import { DebateTab } from "./components/DebateTab";
+import { Sidebar } from "./components/v4/Sidebar";
+import { Topbar } from "./components/v4/Topbar";
+import { DashboardView } from "./components/v4/DashboardView";
 import { useDashboard } from "./hooks/useDashboard";
 import { useMonitors } from "./hooks/useMonitors";
 import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH, PROJECTS } from "./utils/config";
 import { PasswordGate } from "./components/PasswordGate";
 import type { TabId, Monitor } from "./types";
 import "./App.css";
+import "./styles/v4.css";
+
+const TAB_CRUMBS: Record<TabId, string> = {
+  dashboard: "Дашборд",
+  projects: "Проекты",
+  milestones: "Milestones",
+  uptime: "Мониторинг",
+  pipeline: "Pipeline",
+  transcripts: "Транскрипты",
+  audit: "Аудит",
+  research: "Research",
+  specs: "Specs",
+  quality: "Quality",
+  debate: "Debate",
+};
 
 function AppInner() {
   const {
@@ -68,6 +79,7 @@ function AppInner() {
   const [msTab, setMsTab] = useState<"open" | "done">("open");
   const [chatOpen, setChatOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
+  const [sideOpen, setSideOpen] = useState(false);
 
   // Track visited tabs so stateful components mount lazily but stay alive
   const [visitedTabs, setVisitedTabs] = useState<Set<TabId>>(() => new Set(["dashboard", tab]));
@@ -77,6 +89,11 @@ function AppInner() {
       return new Set(prev).add(tab);
     });
   }, [tab]);
+
+  useEffect(() => {
+    document.body.classList.add("v4");
+    return () => { document.body.classList.remove("v4"); };
+  }, []);
 
   function getMonitorForRepo(repo: string): Monitor | undefined {
     const keywords = MONITOR_MATCH[repo];
@@ -104,303 +121,242 @@ function AppInner() {
   const openMilestones = allMilestones.filter((m) => !isMilestoneDone(m));
   const doneMilestones = allMilestones.filter((m) => isMilestoneDone(m));
 
-  return (
-    <div className="app">
-      <header className="header">
-        <div className="header-left">
-          <div className="header-logo">M</div>
-          <div className="header-title-group">
-            <h1>MakeIT</h1>
-            {lastUpdated && (
-              <span className="last-updated">
-                {lastUpdated.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
-              </span>
-            )}
+  // Token-form gate: classic experience until token is set
+  if (!hasToken) {
+    return (
+      <div className="v4-app" style={{ gridTemplateColumns: "1fr" }}>
+        <main className="v4-main">
+          <div className="v4-content" style={{ paddingTop: 60 }}>
+            <h1 style={{ fontSize: 28, marginBottom: 8 }}>MakeIT Dashboard</h1>
+            <p style={{ color: "var(--v4-ink-500)", marginBottom: 24 }}>
+              Укажите GitHub Token для начала работы.
+            </p>
+            <TokenForm onTokenSet={() => refresh(true)} />
           </div>
-        </div>
+        </main>
+      </div>
+    );
+  }
 
-        {hasToken && projects.length > 0 && (
-          <nav className="header-tabs">
-            {([
-              { id: "dashboard" as TabId, label: "Дашборд" },
-              { id: "projects" as TabId, label: `Проекты (${projects.length})` },
-              { id: "milestones" as TabId, label: `Milestones (${allMilestones.length})` },
-              { id: "uptime" as TabId, label: "Мониторинг" },
-              { id: "pipeline" as TabId, label: "Pipeline" },
-              { id: "transcripts" as TabId, label: "Транскрипты" },
-              { id: "audit" as TabId, label: "Аудит" },
-              { id: "research" as TabId, label: "Research" },
-              { id: "specs" as TabId, label: "Specs" },
-              { id: "quality" as TabId, label: "Quality" },
-              { id: "debate" as TabId, label: "Debate" },
-            ]).map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className={`tab ${tab === t.id ? "tab-active" : ""}`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </nav>
+  const handleLogout = () => {
+    clearAuth();
+    clearToken();
+    clearClaudeKey();
+    window.location.reload();
+  };
+
+  const crumbs = ["Все проекты", TAB_CRUMBS[tab] ?? tab];
+
+  // Audit alerts placeholder — could read from useAudit later. We expose a
+  // dot when there are critical findings; for now keep as undefined to avoid
+  // showing a stale badge.
+  const auditAlerts: number | undefined = undefined;
+
+  return (
+    <div className="v4-app">
+      <Sidebar
+        activeTab={tab}
+        onTabChange={setTab}
+        projectsCount={projects.length}
+        milestonesCount={allMilestones.length}
+        monitorsCount={monitors.length}
+        auditAlerts={auditAlerts}
+        isOpen={sideOpen}
+        onClose={() => setSideOpen(false)}
+      />
+      <main className="v4-main">
+        <Topbar
+          crumbs={crumbs}
+          showLive={true}
+          lastUpdated={lastUpdated}
+          onRefresh={() => {
+            refresh(true);
+            refreshMonitors();
+          }}
+          refreshing={loading}
+          onLogout={handleLogout}
+          onBurger={() => setSideOpen(true)}
+        />
+
+        {error && <div className="v4-error">{error}</div>}
+
+        {projects.length === 0 && loading && (
+          <div className="v4-loading">Загрузка данных…</div>
         )}
 
-        <div className="header-right">
-          {!hasToken && <TokenForm onTokenSet={() => refresh(true)} />}
-          {hasToken && (
-            <>
-              <button
-                onClick={() => refresh(true)}
-                disabled={loading}
-                className="header-icon-btn"
-                title="Обновить"
-                aria-label="Обновить данные"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={loading ? "spin" : ""}>
-                  <path d="M21 12a9 9 0 1 1-6.22-8.56" />
-                  <path d="M21 3v6h-6" />
-                </svg>
-              </button>
-              <button
-                onClick={() => { clearAuth(); clearToken(); clearClaudeKey(); window.location.reload(); }}
-                className="header-icon-btn header-icon-btn--subtle"
-                title="Выйти"
-                aria-label="Выйти и очистить токены"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                </svg>
-              </button>
-            </>
-          )}
-        </div>
-      </header>
+        {projects.length === 0 && !loading && !error && (
+          <div className="v4-loading">Нажмите «Обновить» для загрузки данных</div>
+        )}
 
-      {error && <div className="error-banner">{error}</div>}
+        {projects.length > 0 && tab === "dashboard" && (
+          <ErrorBoundary fallback="Ошибка в дашборде">
+            <DashboardView
+              projects={projects}
+              summary={summary}
+              blockedIssues={blockedIssues}
+              getMonitor={getMonitorForRepo}
+              lastUpdated={lastUpdated}
+              onSeeAllProjects={() => setTab("projects")}
+              onFinanceClick={() => setFinanceOpen(true)}
+            />
+          </ErrorBoundary>
+        )}
 
-      {!hasToken && (
-        <div className="empty-state">
-          <p>Укажите GitHub Token для начала работы</p>
-        </div>
-      )}
-
-      {hasToken && projects.length > 0 && (
-        <>
-          {/* Simple data-display tabs — conditional rendering (no important local state) */}
-          {(tab === "dashboard" || tab === "projects" || tab === "milestones" || tab === "uptime") && (
-            <div className={`bento-grid ${tab === "dashboard" ? "dashboard-grid" : ""}`}>
-              {tab === "dashboard" && (
-                <>
-                  <ErrorBoundary fallback="Ошибка в метриках">
-                    <Summary metrics={summary} onFinanceClick={() => setFinanceOpen(true)} />
-                  </ErrorBoundary>
-
-                  <ErrorBoundary fallback="Ошибка в графике">
-                    <ClosedChart projects={projects} />
-                  </ErrorBoundary>
-
-                  {/*
-                    Layout (12-col grid):
-                      Row 1: Summary (1-4)   | ClosedChart (5-12)
-                      Row 2: Stale (1-4)     | ActiveProjects (5-12, rowspan=2)
-                      Row 3: Blocked (1-4)   | (active cont.)
-                      Row 4: Urgent? (1-4)   | StackedChart (5-12)
-                    panel-projects/StackedChart pinned to col 5 via inline
-                    style; auto-flow places narrow span-4 panels in the
-                    leftover column 1-4 slots.
-                  */}
-
-                  <ErrorBoundary fallback="Ошибка в мониторинге">
-                    <StaleAlert projects={projects} />
-                  </ErrorBoundary>
-
-                  <div
-                    className="bento-panel span-8 panel-projects"
-                    style={{ gridColumn: '5 / span 8', gridRow: 'span 2', display: 'flex', flexDirection: 'column' }}
-                  >
-                    <div className="bento-panel-title">
-                      Активные проекты
-                      <button
-                        type="button"
-                        onClick={() => setTab("projects")}
-                        className="link-button"
-                        style={{ color: "var(--color-primary)", fontSize: "var(--text-sm)", fontWeight: "normal" }}
-                      >
-                        Все проекты →
-                      </button>
-                    </div>
-                    <section className="projects-grid">
-                      {[...projects]
-                        .sort((a, b) => {
-                          const cutoff = Date.now() - 3 * 24 * 60 * 60 * 1000;
-                          const recentA = a.issues.filter(i => i.closedAt && new Date(i.closedAt).getTime() > cutoff).length;
-                          const recentB = b.issues.filter(i => i.closedAt && new Date(i.closedAt).getTime() > cutoff).length;
-                          return recentB - recentA;
-                        })
-                        .slice(0, 4)
-                        .map((p) => (
-                          <ProjectCard key={p.repo} project={p} monitor={getMonitorForRepo(p.repo)} />
-                        ))}
-                    </section>
-                  </div>
-
-                  <ErrorBoundary fallback="Ошибка в blocked items">
-                    <BlockedItems issues={blockedIssues} />
-                  </ErrorBoundary>
-
-                  <ErrorBoundary fallback="Ошибка в дедлайнах">
-                    <UrgentDeadlines milestones={allMilestones} />
-                  </ErrorBoundary>
-
-                  <ErrorBoundary fallback="Ошибка в диаграмме">
-                    <StackedChart projects={projects} />
-                  </ErrorBoundary>
-                </>
-              )}
-
-              {tab === "projects" && (
-                <>
-                  <div className="bento-panel span-12 panel-projects">
-                    <div className="bento-panel-title">
-                      Все проекты
-                    </div>
-                    <section className="projects-grid">
-                      {projects
-                        .map((p) => (
-                          <ProjectCard key={p.repo} project={p} monitor={getMonitorForRepo(p.repo)} />
-                        ))}
-                    </section>
-                  </div>
-                </>
-              )}
-
-              {tab === "milestones" && (() => {
-                const list = msTab === "open" ? openMilestones : doneMilestones;
-                const sorted = msTab === "open"
-                  ? [...list].sort((a, b) => {
-                      if (a.dueOn && b.dueOn) return new Date(a.dueOn).getTime() - new Date(b.dueOn).getTime();
-                      return a.dueOn ? -1 : b.dueOn ? 1 : 0;
-                    })
-                  : list;
-                const grouped = Object.entries(
-                  sorted.reduce<Record<string, typeof list>>((acc, m) => {
-                    (acc[m.repo] ??= []).push(m);
-                    return acc;
-                  }, {})
-                );
-                return (
-                  <div className="bento-panel span-12">
-                    <div className="milestones-sub-tabs">
-                      <button
-                        className={`milestones-sub-tab ${msTab === "open" ? "milestones-sub-tab-active" : ""}`}
-                        onClick={() => setMsTab("open")}
-                      >
-                        Открытые <span className="milestones-sub-tab-count">{openMilestones.length}</span>
-                      </button>
-                      <button
-                        className={`milestones-sub-tab ${msTab === "done" ? "milestones-sub-tab-active" : ""}`}
-                        onClick={() => setMsTab("done")}
-                      >
-                        Завершённые <span className="milestones-sub-tab-count">{doneMilestones.length}</span>
-                      </button>
-                    </div>
-                    {list.length === 0 && (
-                      <div className="empty-state">
-                        {msTab === "open" ? "Нет открытых milestones" : "Пока нет завершённых milestones"}
-                      </div>
-                    )}
-                    <div className="milestones-grouped" style={{ padding: 0 }}>
-                      {grouped.map(([repo, milestones]) => (
-                        <div key={repo} className="milestone-group">
-                          <h3 className="milestone-group-title">{repo} <span className="milestone-group-count">({milestones.length})</span></h3>
-                          <div className="milestones-grid">
-                            {milestones.map((m) => (
-                              <MilestoneCard key={m.url} milestone={m} />
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {tab === "uptime" && (
-                <div className="bento-panel span-12">
-                  <div className="bento-panel-title">Мониторинг</div>
-                  <ErrorBoundary fallback="Ошибка в мониторинге">
-                    <UptimeBar monitors={monitors} loading={monitorsLoading} error={monitorsError} onRefresh={refreshMonitors} />
-                  </ErrorBoundary>
-                </div>
-              )}
+        {projects.length > 0 && tab === "projects" && (
+          <div className="v4-legacy-frame">
+            <div className="bento-grid">
+              <div className="bento-panel span-12 panel-projects">
+                <div className="bento-panel-title">Все проекты</div>
+                <section className="projects-grid">
+                  {projects.map((p) => (
+                    <ProjectCard key={p.repo} project={p} monitor={getMonitorForRepo(p.repo)} />
+                  ))}
+                </section>
+              </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Stateful tabs — mount lazily on first visit, keep alive via display:none */}
-          <div className="bento-grid" style={{ display: tab === "audit" ? undefined : "none" }}>
-            {visitedTabs.has("audit") && (
+        {projects.length > 0 && tab === "milestones" && (() => {
+          const list = msTab === "open" ? openMilestones : doneMilestones;
+          const sorted = msTab === "open"
+            ? [...list].sort((a, b) => {
+                if (a.dueOn && b.dueOn) return new Date(a.dueOn).getTime() - new Date(b.dueOn).getTime();
+                return a.dueOn ? -1 : b.dueOn ? 1 : 0;
+              })
+            : list;
+          const grouped = Object.entries(
+            sorted.reduce<Record<string, typeof list>>((acc, m) => {
+              (acc[m.repo] ??= []).push(m);
+              return acc;
+            }, {})
+          );
+          return (
+            <div className="v4-legacy-frame">
+              <div className="bento-grid">
+                <div className="bento-panel span-12">
+                  <div className="milestones-sub-tabs">
+                    <button
+                      className={`milestones-sub-tab ${msTab === "open" ? "milestones-sub-tab-active" : ""}`}
+                      onClick={() => setMsTab("open")}
+                    >
+                      Открытые <span className="milestones-sub-tab-count">{openMilestones.length}</span>
+                    </button>
+                    <button
+                      className={`milestones-sub-tab ${msTab === "done" ? "milestones-sub-tab-active" : ""}`}
+                      onClick={() => setMsTab("done")}
+                    >
+                      Завершённые <span className="milestones-sub-tab-count">{doneMilestones.length}</span>
+                    </button>
+                  </div>
+                  {list.length === 0 && (
+                    <div className="empty-state">
+                      {msTab === "open" ? "Нет открытых milestones" : "Пока нет завершённых milestones"}
+                    </div>
+                  )}
+                  <div className="milestones-grouped" style={{ padding: 0 }}>
+                    {grouped.map(([repo, milestones]) => (
+                      <div key={repo} className="milestone-group">
+                        <h3 className="milestone-group-title">
+                          {repo} <span className="milestone-group-count">({milestones.length})</span>
+                        </h3>
+                        <div className="milestones-grid">
+                          {milestones.map((m) => (
+                            <MilestoneCard key={m.url} milestone={m} />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {projects.length > 0 && tab === "uptime" && (
+          <div className="v4-legacy-frame">
+            <div className="bento-grid">
+              <div className="bento-panel span-12">
+                <div className="bento-panel-title">Мониторинг</div>
+                <ErrorBoundary fallback="Ошибка в мониторинге">
+                  <UptimeBar
+                    monitors={monitors}
+                    loading={monitorsLoading}
+                    error={monitorsError}
+                    onRefresh={refreshMonitors}
+                  />
+                </ErrorBoundary>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stateful tabs — mount lazily on first visit, keep alive via display:none */}
+        <div className="v4-legacy-frame" style={{ display: tab === "audit" ? undefined : "none" }}>
+          {visitedTabs.has("audit") && (
+            <div className="bento-grid">
               <ErrorBoundary fallback="Ошибка вкладки Аудит">
                 <AuditCombinedTab dashboardProjects={projects} />
               </ErrorBoundary>
-            )}
-          </div>
-          <div className="bento-grid" style={{ display: tab === "pipeline" ? undefined : "none" }}>
-            {visitedTabs.has("pipeline") && (
+            </div>
+          )}
+        </div>
+        <div className="v4-legacy-frame" style={{ display: tab === "pipeline" ? undefined : "none" }}>
+          {visitedTabs.has("pipeline") && (
+            <div className="bento-grid">
               <ErrorBoundary fallback="Ошибка вкладки Pipeline">
                 <PipelineControlPanel projects={projects} />
               </ErrorBoundary>
-            )}
-          </div>
-          <div className="bento-grid" style={{ display: tab === "transcripts" ? undefined : "none" }}>
-            {visitedTabs.has("transcripts") && (
+            </div>
+          )}
+        </div>
+        <div className="v4-legacy-frame" style={{ display: tab === "transcripts" ? undefined : "none" }}>
+          {visitedTabs.has("transcripts") && (
+            <div className="bento-grid">
               <ErrorBoundary fallback="Ошибка вкладки Транскрипты">
                 <TranscriptsTab projects={PROJECTS} />
               </ErrorBoundary>
-            )}
-          </div>
-          <div className="bento-grid" style={{ display: tab === "research" ? undefined : "none" }}>
-            {visitedTabs.has("research") && (
+            </div>
+          )}
+        </div>
+        <div className="v4-legacy-frame" style={{ display: tab === "research" ? undefined : "none" }}>
+          {visitedTabs.has("research") && (
+            <div className="bento-grid">
               <ErrorBoundary fallback="Ошибка вкладки Research">
                 <ResearchTab repos={projects.map((p) => p.repo)} />
               </ErrorBoundary>
-            )}
-          </div>
-          <div className="bento-grid" style={{ display: tab === "specs" ? undefined : "none" }}>
-            {visitedTabs.has("specs") && (
+            </div>
+          )}
+        </div>
+        <div className="v4-legacy-frame" style={{ display: tab === "specs" ? undefined : "none" }}>
+          {visitedTabs.has("specs") && (
+            <div className="bento-grid">
               <ErrorBoundary fallback="Ошибка вкладки Specs">
                 <SpecsTab />
               </ErrorBoundary>
-            )}
-          </div>
-          <div className="bento-grid" style={{ display: tab === "quality" ? undefined : "none" }}>
-            {visitedTabs.has("quality") && (
+            </div>
+          )}
+        </div>
+        <div className="v4-legacy-frame" style={{ display: tab === "quality" ? undefined : "none" }}>
+          {visitedTabs.has("quality") && (
+            <div className="bento-grid">
               <ErrorBoundary fallback="Ошибка вкладки Quality">
                 <QualityTab />
               </ErrorBoundary>
-            )}
-          </div>
-          <div className="bento-grid" style={{ display: tab === "debate" ? undefined : "none" }}>
-            {visitedTabs.has("debate") && (
+            </div>
+          )}
+        </div>
+        <div className="v4-legacy-frame" style={{ display: tab === "debate" ? undefined : "none" }}>
+          {visitedTabs.has("debate") && (
+            <div className="bento-grid">
               <ErrorBoundary fallback="Ошибка вкладки Debate">
                 <DebateTab />
               </ErrorBoundary>
-            )}
-          </div>
-        </>
-      )}
-
-      {hasToken && loading && projects.length === 0 && (
-        <div className="empty-state">
-          <p>Загрузка данных…</p>
+            </div>
+          )}
         </div>
-      )}
-
-      {hasToken && !loading && projects.length === 0 && !error && (
-        <div className="empty-state">
-          <p>Нажмите «Обновить» для загрузки данных</p>
-        </div>
-      )}
+      </main>
 
       <ChatButton onClick={() => setChatOpen(true)} isOpen={chatOpen} />
       <ChatPanel
