@@ -11,7 +11,7 @@ import { TranscriptsView } from "./components/v4/transcripts/TranscriptsView";
 import { ResearchTab } from "./components/ResearchTab";
 import { SpecsTab } from "./components/SpecsTab";
 import { QualityView } from "./components/v4/quality/QualityView";
-import { DebateTab } from "./components/DebateTab";
+import { DebateView } from "./components/v4/debate/DebateView";
 import { Sidebar } from "./components/v4/Sidebar";
 import { Topbar } from "./components/v4/Topbar";
 import { DashboardView } from "./components/v4/DashboardView";
@@ -284,13 +284,11 @@ function AppInner() {
             </ErrorBoundary>
           )}
         </div>
-        <div className="v4-legacy-frame" style={{ display: tab === "debate" ? undefined : "none" }}>
+        <div style={{ display: tab === "debate" ? undefined : "none" }}>
           {visitedTabs.has("debate") && (
-            <div className="bento-grid">
-              <ErrorBoundary fallback="Ошибка вкладки Debate">
-                <DebateTab />
-              </ErrorBoundary>
-            </div>
+            <ErrorBoundary fallback="Ошибка вкладки Debate">
+              <DebateView />
+            </ErrorBoundary>
           )}
         </div>
       </main>
