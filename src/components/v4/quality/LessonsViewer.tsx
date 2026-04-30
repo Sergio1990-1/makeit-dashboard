@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { LessonsFileResponse } from "../../../types";
 import { fmtAge } from "./utils";
 
@@ -25,6 +25,7 @@ function fmtBytes(n: number): string {
 export function LessonsViewer({ projectSlug, cache, loadLessons }: Props) {
   const [activeTab, setActiveTab] = useState<string>("lessons-retro.md");
   const [error, setError] = useState<string | null>(null);
+  const tabRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
 
   // Derive loading state from cache + error so we never paint the
   // "no files" empty state on the first frame before the fetch starts.
@@ -33,6 +34,38 @@ export function LessonsViewer({ projectSlug, cache, loadLessons }: Props) {
   // visible flash where loading=false rendered before flipping to true.
   const cached = projectSlug ? cache[projectSlug] : undefined;
   const loading = projectSlug !== null && cached === undefined && error === null;
+
+  const files = cached?.files ?? [];
+  const availableNames = files.map((f) => f.filename);
+  const effectiveTab = availableNames.includes(activeTab)
+    ? activeTab
+    : (availableNames[0] ?? activeTab);
+
+  // ARIA tablist arrow-key navigation per WAI-ARIA APG. Inlined
+  // (no useCallback) because availableNames/effectiveTab are derived
+  // each render and React Compiler handles memoization where needed.
+  const onTabsKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (availableNames.length === 0) return;
+    const key = e.key;
+    if (key !== "ArrowLeft" && key !== "ArrowRight" && key !== "Home" && key !== "End") return;
+    e.preventDefault();
+    const idx = availableNames.indexOf(effectiveTab);
+    let next: string;
+    if (key === "Home") {
+      next = availableNames[0];
+    } else if (key === "End") {
+      next = availableNames[availableNames.length - 1];
+    } else if (key === "ArrowRight") {
+      next = availableNames[(idx + 1) % availableNames.length];
+    } else {
+      next = availableNames[(idx - 1 + availableNames.length) % availableNames.length];
+    }
+    setActiveTab(next);
+    // Defer focus to next paint so the new tab's tabIndex=0 is in the DOM.
+    requestAnimationFrame(() => {
+      tabRefs.current.get(next)?.focus();
+    });
+  };
 
   useEffect(() => {
     if (!projectSlug) return;
@@ -66,11 +99,6 @@ export function LessonsViewer({ projectSlug, cache, loadLessons }: Props) {
     );
   }
 
-  const files = cached?.files ?? [];
-  const availableNames = files.map((f) => f.filename);
-  const effectiveTab = availableNames.includes(activeTab)
-    ? activeTab
-    : (availableNames[0] ?? activeTab);
   const activeFile = files.find((f) => f.filename === effectiveTab);
   const tabPanelId = `v4-qa-lessons-panel-${projectSlug}`;
 
@@ -85,7 +113,12 @@ export function LessonsViewer({ projectSlug, cache, loadLessons }: Props) {
 
       {error && <div className="v4-error">{error}</div>}
 
-      <div className="v4-qa-lessons-tabs" role="tablist" aria-label="Lessons файлы">
+      <div
+        className="v4-qa-lessons-tabs"
+        role="tablist"
+        aria-label="Lessons файлы"
+        onKeyDown={onTabsKeyDown}
+      >
         {FILE_ORDER.map((fname) => {
           const present = availableNames.includes(fname);
           const f = files.find((x) => x.filename === fname);
@@ -93,6 +126,9 @@ export function LessonsViewer({ projectSlug, cache, loadLessons }: Props) {
           return (
             <button
               key={fname}
+              ref={(el) => {
+                tabRefs.current.set(fname, el);
+              }}
               type="button"
               role="tab"
               aria-selected={selected}
