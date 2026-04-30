@@ -16,9 +16,9 @@ interface Props {
 
 const TIER_OPTS: Array<[number | null, string]> = [
   [null, "Все уровни"],
-  [1, "Уроки"],
-  [2, "Правила"],
-  [3, "Параметры"],
+  [1, "Т1 · Уроки"],
+  [2, "Т2 · Правила"],
+  [3, "Т3 · Параметры"],
 ];
 
 function ageHours(iso: string): number {

@@ -109,7 +109,7 @@ export function AutoTunerConfigCard({ config, onSave }: Props) {
                 {merged.retro_mode === "auto_apply" ? "автоприменение" : "только отчёт"}
               </button>
               <div className="v4-qa-config-hint">
-                Автоприменение раскатывает Tier-1 уроки сразу; «только отчёт» — лишь складывает в stage.
+                Автоприменение раскатывает уроки уровня 1 сразу; «только отчёт» — лишь кладёт в буфер ожидания.
               </div>
             </div>
 

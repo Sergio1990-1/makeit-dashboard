@@ -26,12 +26,12 @@ interface KpiDef {
 }
 
 const KPIS: KpiDef[] = [
-  { key: "first_pass_success_rate", label: "С первой попытки", sub: "успех без повторов", good: 0.8, bad: 0.6, higherIsBetter: true, isPercent: true },
-  { key: "retry_rate", label: "Частота повторов", sub: "повторные попытки", good: 0.1, bad: 0.25, higherIsBetter: false, isPercent: true },
+  { key: "first_pass_success_rate", label: "С первой попытки", sub: "успех с первой попытки", good: 0.8, bad: 0.6, higherIsBetter: true, isPercent: true },
+  { key: "retry_rate", label: "Повторы", sub: "повторные попытки", good: 0.1, bad: 0.25, higherIsBetter: false, isPercent: true },
   { key: "error_recovery_rate", label: "Восстановление", sub: "успех после ошибок", good: 0.7, bad: 0.4, higherIsBetter: true, isPercent: true },
   { key: "qa_pass_rate", label: "Прохождение QA", sub: "пройдено проверок QA", good: 0.9, bad: 0.7, higherIsBetter: true, isPercent: true },
   { key: "rollback_rate", label: "Откаты", sub: "частота откатов", good: 0.05, bad: 0.15, higherIsBetter: false, isPercent: true },
-  { key: "avg_finding_density", label: "Плотность находок", sub: "ср. находок на задачу", good: 1.0, bad: 3.0, higherIsBetter: false, isPercent: false },
+  { key: "avg_finding_density", label: "Находки", sub: "ср. находок на задачу", good: 1.0, bad: 3.0, higherIsBetter: false, isPercent: false },
 ];
 
 const SPARK_W = 88;
