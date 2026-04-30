@@ -5460,6 +5460,343 @@ ul.v4-rsh-list {
 .v4-rsh-empty .v4-btn { margin-top: 8px; }
 
 /* ────────────────────────────────────────
+   SPECS — PRD → Epic → Tasks
+   ──────────────────────────────────────── */
+.v4-spc-text-muted { color: var(--v4-ink-500); }
+
+.v4-spc-list { display: flex; flex-direction: column; gap: 10px; }
+
+/* — PRD card — */
+.v4-spc-card {
+  background: var(--v4-card);
+  border: 1px solid var(--v4-line);
+  border-radius: 14px;
+  padding: 14px 18px;
+  transition: border-color 150ms, box-shadow 150ms;
+}
+.v4-spc-card--ok { border-left: 3px solid var(--v4-success-500); }
+.v4-spc-card--warn { border-left: 3px solid var(--v4-warn-500); }
+.v4-spc-card--unknown { border-left: 3px solid var(--v4-line); }
+.v4-spc-card--danger { border-left: 3px solid var(--v4-danger-500); }
+.v4-spc-card.is-expanded {
+  border-color: var(--v4-accent-500);
+  box-shadow: 0 2px 6px rgba(11, 16, 32, 0.05);
+}
+
+.v4-spc-card-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+}
+.v4-spc-card-id-block {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.v4-spc-card-id {
+  font-size: 11px;
+  color: var(--v4-ink-500);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.v4-spc-card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--v4-ink-900);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.v4-spc-card-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.v4-spc-card-stat {
+  font-size: 12px;
+  color: var(--v4-ink-600);
+  white-space: nowrap;
+}
+.v4-spc-card-toggle {
+  background: transparent;
+  border: 1px solid var(--v4-line);
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--v4-ink-700);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms;
+}
+.v4-spc-card-toggle:hover {
+  background: var(--v4-soft);
+  border-color: var(--v4-accent-500);
+  color: var(--v4-accent-500);
+}
+.v4-spc-card-toggle:focus-visible {
+  outline: 2px solid var(--v4-accent-500);
+  outline-offset: 2px;
+}
+
+.v4-spc-card-body {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--v4-line);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* — Pipeline flow visualization — */
+.v4-spc-flow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 4px;
+  padding: 4px 0;
+}
+.v4-spc-flow-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.v4-spc-flow-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--v4-line);
+  flex-shrink: 0;
+  transition: background 200ms, box-shadow 200ms;
+}
+.v4-spc-flow-dot.is-active {
+  background: var(--v4-success-500);
+  box-shadow: 0 0 0 3px var(--v4-success-50);
+}
+.v4-spc-flow-label {
+  font-size: 12px;
+  color: var(--v4-ink-800);
+  white-space: nowrap;
+}
+.v4-spc-flow-label.is-inactive { color: var(--v4-ink-400); }
+.v4-spc-flow-line {
+  width: 28px;
+  height: 2px;
+  background: var(--v4-line);
+  margin: 0 2px;
+}
+.v4-spc-flow-line.is-active { background: var(--v4-success-300, var(--v4-success-500)); }
+
+/* — PRD meta block — */
+.v4-spc-prd-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 12px;
+  color: var(--v4-ink-700);
+}
+
+/* — Epic list — */
+.v4-spc-epics {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.v4-spc-epic {
+  border: 1px solid var(--v4-line);
+  border-radius: 10px;
+  background: var(--v4-soft);
+  overflow: hidden;
+}
+.v4-spc-epic.is-expanded {
+  background: var(--v4-card);
+  border-color: var(--v4-accent-500);
+}
+
+.v4-spc-epic-header {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  padding: 10px 14px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: background 120ms;
+}
+.v4-spc-epic-header:hover { background: rgba(0, 0, 0, 0.02); }
+.v4-spc-epic-header:focus-visible {
+  outline: 2px solid var(--v4-accent-500);
+  outline-offset: -2px;
+}
+.v4-spc-epic-id {
+  font-size: 11px;
+  color: var(--v4-ink-500);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.v4-spc-epic-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--v4-ink-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.v4-spc-epic-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.v4-spc-epic-stat {
+  font-size: 11px;
+  color: var(--v4-ink-600);
+  white-space: nowrap;
+}
+.v4-spc-chevron {
+  color: var(--v4-ink-500);
+  font-size: 12px;
+  width: 16px;
+  text-align: center;
+}
+
+.v4-spc-epic-body {
+  padding: 4px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.v4-spc-epic-overview {
+  margin: 0;
+  font-size: 13px;
+  color: var(--v4-ink-700);
+  line-height: 1.5;
+}
+
+/* — Tasks table — */
+.v4-spc-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--v4-line);
+  border-radius: 8px;
+}
+.v4-spc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.v4-spc-table thead {
+  background: var(--v4-soft);
+}
+.v4-spc-table th {
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--v4-ink-600);
+  border-bottom: 1px solid var(--v4-line);
+}
+.v4-spc-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--v4-line);
+  color: var(--v4-ink-800);
+  vertical-align: top;
+}
+.v4-spc-table tr:last-child td { border-bottom: 0; }
+.v4-spc-th-num,
+.v4-spc-td-num { width: 60px; white-space: nowrap; color: var(--v4-ink-500); }
+.v4-spc-th-size { width: 80px; }
+.v4-spc-td-title { font-weight: 500; color: var(--v4-ink-900); }
+.v4-spc-td-deps,
+.v4-spc-td-repo { font-size: 11px; }
+
+/* — Inline empty hint — */
+.v4-spc-empty-inline {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--v4-ink-500);
+  text-align: center;
+  background: var(--v4-soft);
+  border-radius: 8px;
+}
+
+/* — Empty state (no specs at all) — */
+.v4-spc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 36px 24px;
+  gap: 14px;
+}
+.v4-spc-empty svg {
+  width: 56px;
+  height: 56px;
+  color: var(--v4-ink-400);
+}
+.v4-spc-empty h3 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--v4-ink-900);
+}
+.v4-spc-empty p {
+  margin: 0;
+  max-width: 480px;
+  color: var(--v4-ink-700);
+  line-height: 1.5;
+}
+.v4-spc-empty-cmd {
+  background: var(--v4-soft);
+  border: 1px solid var(--v4-line);
+  padding: 8px 14px;
+  border-radius: 8px;
+}
+.v4-spc-empty-cmd code {
+  font-family: var(--v4-font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 13px;
+  color: var(--v4-accent-500);
+}
+
+@media (max-width: 700px) {
+  .v4-spc-card-head {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .v4-spc-card-meta { justify-content: flex-start; }
+  .v4-spc-epic-header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    gap: 6px 12px;
+  }
+  .v4-spc-epic-meta {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+  .v4-spc-chevron {
+    grid-row: 1;
+    grid-column: 3;
+  }
+  .v4-spc-epic-title { white-space: normal; }
+}
+
+/* ────────────────────────────────────────
    RESPONSIVE
    ──────────────────────────────────────── */
 @media (max-width: 1100px) {
