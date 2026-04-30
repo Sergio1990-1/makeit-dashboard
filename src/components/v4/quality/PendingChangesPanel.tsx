@@ -15,10 +15,10 @@ interface Props {
 }
 
 const TIER_OPTS: Array<[number | null, string]> = [
-  [null, "Все тиры"],
-  [1, "T1 lessons"],
-  [2, "T2 rules"],
-  [3, "T3 config"],
+  [null, "Все уровни"],
+  [1, "Уроки"],
+  [2, "Правила"],
+  [3, "Параметры"],
 ];
 
 function ageHours(iso: string): number {
@@ -121,7 +121,7 @@ export function PendingChangesPanel({
     <div className="v4-panel">
       <div className="v4-panel-h">
         <div className="v4-panel-t">
-          AutoTuner pending
+          AutoTuner · в очереди
           {sortedChanges.length > 0 && (
             <span className="v4-tag v4-tag--warn" style={{ marginLeft: 8 }}>
               {sortedChanges.length}
@@ -186,12 +186,12 @@ export function PendingChangesPanel({
                     )}
                     <span className="v4-qa-pending-target" title={c.target}>{c.target}</span>
                     <span className="v4-tag v4-pl-mono">{c.change_type}</span>
-                    <span className="v4-tag">T{c.tier}</span>
+                    <span className="v4-tag" title={`Уровень ${c.tier}`}>Т{c.tier}</span>
                     {c.scoped_projects && c.scoped_projects.length > 0 && (
-                      <span className="v4-tag">scope: {c.scoped_projects.join(", ")}</span>
+                      <span className="v4-tag">проекты: {c.scoped_projects.join(", ")}</span>
                     )}
                     {validationFailed && (
-                      <span className="v4-tag v4-tag--danger">⚠ validation</span>
+                      <span className="v4-tag v4-tag--danger">⚠ проверка</span>
                     )}
                     <span className="v4-qa-pending-age v4-pl-mono">{fmtAgeShort(c.created_at)}</span>
                   </div>
@@ -214,7 +214,7 @@ export function PendingChangesPanel({
                 {isExpanded && (
                   <div className="v4-qa-pending-details">
                     <div>
-                      <span className="v4-qa-text-muted">Staged:</span> {fmtDateTime(c.created_at)}
+                      <span className="v4-qa-text-muted">Поставлено в очередь:</span> {fmtDateTime(c.created_at)}
                     </div>
                     {c.validation && (
                       <pre className="v4-qa-pending-json">
@@ -240,7 +240,7 @@ export function PendingChangesPanel({
                       disabled={busy}
                       onClick={() => handleApplyClick(c)}
                     >
-                      {busy ? "…" : loadPreview ? "Preview + Apply" : "Применить"}
+                      {busy ? "…" : loadPreview ? "Просмотр и применить" : "Применить"}
                     </button>
                     <button
                       type="button"

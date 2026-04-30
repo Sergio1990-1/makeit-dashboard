@@ -65,7 +65,7 @@ export function QualityView() {
             <div className="v4-sub">Метрики качества pipeline-агента</div>
           </div>
         </div>
-        <div className="v4-empty">Загрузка Quality Dashboard…</div>
+        <div className="v4-empty">Загрузка метрик качества…</div>
       </div>
     );
   }
@@ -86,7 +86,7 @@ export function QualityView() {
         </div>
         <div className="v4-panel">
           <div className="v4-empty">
-            Не удалось подключиться к Pipeline API. Quality endpoints — часть makeit-pipeline.
+            Не удалось подключиться к Pipeline API. Эндпоинты качества — часть makeit-pipeline.
           </div>
           <pre className="v4-qa-offline-cmd">
 {`# Pipeline Mac:
@@ -179,13 +179,13 @@ launchctl start com.makeit.pipeline-tunnel`}
         <div className="v4-grid" style={{ marginTop: 14 }}>
           <div className="v4-panel">
             <div className="v4-panel-h">
-              <div className="v4-panel-t">Findings по категориям</div>
+              <div className="v4-panel-t">Находки по категориям</div>
             </div>
             <div className="v4-qa-bars-body">
               {findings && Object.keys(findings.categories).length > 0 ? (
                 <FindingsBarChart data={findings} />
               ) : (
-                <div className="v4-empty">Нет findings за период.</div>
+                <div className="v4-empty">Нет находок за период.</div>
               )}
             </div>
           </div>
@@ -263,7 +263,7 @@ launchctl start com.makeit.pipeline-tunnel`}
             onClick={() => setShowLessons((v) => !v)}
             aria-expanded={showLessons}
           >
-            {showLessons ? "▾" : "▸"} Lessons файлы (read-only)
+            {showLessons ? "▾" : "▸"} Файлы уроков (только чтение)
           </button>
         </div>
         {showLessons && (

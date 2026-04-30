@@ -48,17 +48,17 @@ export function QualityHero({
           <div className="v4-qa-hero-sub">
             {snapshot ? (
               <>
-                FPR{" "}
+                С первой попытки{" "}
                 <b style={{ color: healthColor(healthOf(snapshot.first_pass_success_rate, 0.8, 0.6)) }}>
                   {pct(snapshot.first_pass_success_rate, 0)}
                 </b>
                 <span className="v4-qa-sep">·</span>
-                Retry{" "}
+                Повторы{" "}
                 <b style={{ color: healthColor(healthOf(snapshot.retry_rate, 0.1, 0.25, false)) }}>
                   {pct(snapshot.retry_rate, 0)}
                 </b>
                 <span className="v4-qa-sep">·</span>
-                Recovery{" "}
+                Восстановление{" "}
                 <b style={{ color: healthColor(healthOf(snapshot.error_recovery_rate, 0.7, 0.4)) }}>
                   {pct(snapshot.error_recovery_rate, 0)}
                 </b>
@@ -66,11 +66,11 @@ export function QualityHero({
                 <span className="v4-pl-mono">
                   {snapshot.merged_count}/{snapshot.total_issues}
                 </span>{" "}
-                merged
+                замержено
                 {pendingCount > 0 && (
                   <>
                     <span className="v4-qa-sep">·</span>
-                    <b className="v4-qa-text-warn">{pendingCount}</b> pending
+                    <b className="v4-qa-text-warn">{pendingCount}</b> в очереди
                   </>
                 )}
               </>
@@ -97,7 +97,7 @@ export function QualityHero({
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polygon points="5 3 19 12 5 21 5 3" />
           </svg>
-          {retroRunning ? "Запуск…" : "Run Retro"}
+          {retroRunning ? "Запуск…" : "Провести ретро"}
         </button>
       </div>
     </div>
