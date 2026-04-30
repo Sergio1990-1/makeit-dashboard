@@ -1,8 +1,14 @@
 /** Shared date helpers used across deadline / chart components. */
 
-/** Whole-day distance between today and `dueOn` (ISO string). Negative = overdue. */
-export function daysUntil(dueOn: string): number {
-  return Math.ceil((new Date(dueOn).getTime() - Date.now()) / 86400000);
+/**
+ * Whole-day distance between a reference time and `dueOn` (ISO string).
+ * Negative = overdue. Pass `reference` (e.g. the `lastUpdated` data anchor)
+ * to keep classification consistent with positions computed against the
+ * same anchor — without it, Date.now() drifts every render.
+ */
+export function daysUntil(dueOn: string, reference?: Date): number {
+  const ref = reference ? reference.getTime() : Date.now();
+  return Math.ceil((new Date(dueOn).getTime() - ref) / 86400000);
 }
 
 /** Localised "DD MMM" (Russian short month) — used in deadline badges. */

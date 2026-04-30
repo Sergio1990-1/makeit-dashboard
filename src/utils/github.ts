@@ -334,6 +334,8 @@ query($owner: String!, $repo: String!) {
         dueOn
         url
         state
+        createdAt
+        closedAt
         closedIssues: issues(states: CLOSED) { totalCount }
         openIssues: issues(states: OPEN) { totalCount }
         allIssues: issues(first: 50, orderBy: {field: CREATED_AT, direction: ASC}) {
@@ -342,6 +344,8 @@ query($owner: String!, $repo: String!) {
             title
             state
             url
+            createdAt
+            closedAt
             labels(first: 10) { nodes { name } }
           }
         }
@@ -354,6 +358,8 @@ query($owner: String!, $repo: String!) {
         dueOn
         url
         state
+        createdAt
+        closedAt
         closedIssues: issues(states: CLOSED) { totalCount }
         openIssues: issues(states: OPEN) { totalCount }
         allIssues: issues(first: 50, orderBy: {field: CREATED_AT, direction: ASC}) {
@@ -362,6 +368,8 @@ query($owner: String!, $repo: String!) {
             title
             state
             url
+            createdAt
+            closedAt
             labels(first: 10) { nodes { name } }
           }
         }
@@ -376,6 +384,8 @@ interface MilestoneIssueNode {
   title: string;
   state: "OPEN" | "CLOSED";
   url: string;
+  createdAt: string | null;
+  closedAt: string | null;
   labels: { nodes: { name: string }[] };
 }
 
@@ -385,6 +395,8 @@ interface MilestoneNode {
   dueOn: string | null;
   url: string;
   state: "OPEN" | "CLOSED";
+  createdAt: string | null;
+  closedAt: string | null;
   closedIssues: { totalCount: number };
   openIssues: { totalCount: number };
   allIssues: { nodes: MilestoneIssueNode[] };
@@ -435,6 +447,8 @@ async function fetchRepoInfo(token: string, owner: string, repo: string): Promis
       dueOn: m.dueOn,
       url: m.url,
       state: m.state,
+      createdAt: m.createdAt,
+      closedAt: m.closedAt,
       openIssues: m.openIssues.totalCount,
       closedIssues: m.closedIssues.totalCount,
       repo,
@@ -444,6 +458,8 @@ async function fetchRepoInfo(token: string, owner: string, repo: string): Promis
         state: i.state,
         labels: i.labels.nodes.map((l) => l.name),
         url: i.url,
+        createdAt: i.createdAt,
+        closedAt: i.closedAt,
       })),
     })),
     commitActivity,
