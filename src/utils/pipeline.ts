@@ -432,11 +432,32 @@ export async function fetchTimeline(
   return res.json() as Promise<TimelineEntry[]>;
 }
 
+/** Backend list-item shape returned by /research/list and /discovery/list. */
+interface AgentListItem {
+  job_id: string;
+  status: string;
+  project: string;
+  created_at: string;
+  agent_type: string;
+}
+
 export async function fetchResearchHistory(project: string): Promise<ResearchHistoryItem[]> {
   const res = await fetch(
-    `${PIPELINE_BASE_URL}/research/history?project=${encodeURIComponent(project)}`,
+    `${PIPELINE_BASE_URL}/research/list?project=${encodeURIComponent(project)}`,
     { cache: "no-store" },
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json() as Promise<ResearchHistoryItem[]>;
+  const items = (await res.json()) as AgentListItem[];
+  // Backend returns `{job_id, status, project, created_at, agent_type}` —
+  // adapt to our long-standing ResearchHistoryItem shape so callers stay
+  // stable and the field-name drift between dashboard and pipeline doesn't
+  // surface to UI code.
+  return items.map((it) => ({
+    id: it.job_id,
+    agent: it.agent_type === "discovery" ? "discovery" : "research",
+    project: it.project,
+    status: it.status === "done" ? "done" : "error",
+    started_at: it.created_at,
+    finished_at: it.created_at,
+  }));
 }
