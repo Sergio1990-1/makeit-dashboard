@@ -112,6 +112,9 @@ export function MilestonesClosedSection({ milestones }: Props) {
                 </div>
                 {slice.map((m) => {
                   const total = m.openIssues + m.closedIssues;
+                  // GitHub allows closing a milestone with open issues, so
+                  // a CLOSED state doesn't imply 100% completion.
+                  const pct = total > 0 ? Math.round((m.closedIssues / total) * 100) : 100;
                   return (
                     <a
                       key={m.url}
@@ -138,7 +141,7 @@ export function MilestonesClosedSection({ milestones }: Props) {
                       <div className="v4-msclosed-row-issues num">
                         {m.closedIssues}/{total}
                       </div>
-                      <div className="v4-msclosed-row-pct num">100%</div>
+                      <div className="v4-msclosed-row-pct num">{pct}%</div>
                     </a>
                   );
                 })}

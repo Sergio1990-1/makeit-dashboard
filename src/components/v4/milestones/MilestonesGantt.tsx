@@ -53,7 +53,7 @@ export function MilestonesGantt({ milestones, zoom, onZoom, now }: Props) {
       .map((m) => {
         const startD = milestoneStart(m, now);
         const dueD = m.dueOn ? startOfDay(new Date(m.dueOn)) : null;
-        const days = m.dueOn ? daysUntil(m.dueOn) : null;
+        const days = m.dueOn ? daysUntil(m.dueOn, now) : null;
         return { m, startD, dueD, days, cls: classifyMilestone(m, days) };
       })
       .sort(

@@ -84,11 +84,10 @@ export function MilestonesView({ milestones, lastUpdated }: Props) {
 
   const enriched: Enriched[] = useMemo(() => {
     return milestones.map((m) => {
-      const days = m.dueOn ? daysUntil(m.dueOn) : null;
+      const days = m.dueOn ? daysUntil(m.dueOn, now) : null;
       return { m, days, cls: classifyMilestone(m, days) };
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [milestones, lastUpdated?.getTime()]);
+  }, [milestones, now]);
 
   const open = useMemo(() => enriched.filter((e) => e.cls !== "done"), [enriched]);
   const done = useMemo(() => enriched.filter((e) => e.cls === "done"), [enriched]);
@@ -119,7 +118,10 @@ export function MilestonesView({ milestones, lastUpdated }: Props) {
       return Array.from(map.entries())
         .sort((a, b) => a[0].localeCompare(b[0], "ru"))
         .map(([repo, items]) => ({
-          key: "norm",
+          // "repo" key falls through to the default `.v4-msgroup-dot`
+          // background (var(--v4-ink-400)) — handoff: repo grouping
+          // intentionally has no per-bucket colour.
+          key: "repo",
           title: repo,
           items: items.sort((a, b) => {
             if (a.days === null && b.days === null) return 0;
@@ -191,7 +193,7 @@ export function MilestonesView({ milestones, lastUpdated }: Props) {
 
       {/* Status distribution */}
       <div className="v4-msstatus-wrap">
-        <MilestonesStatusBar milestones={openMs} />
+        <MilestonesStatusBar milestones={openMs} now={now} />
       </div>
 
       {/* Toolbar */}
@@ -322,6 +324,7 @@ export function MilestonesView({ milestones, lastUpdated }: Props) {
                       key={e.m.url}
                       milestone={e.m}
                       density={state.density}
+                      now={now}
                     />
                   ))}
                 </div>

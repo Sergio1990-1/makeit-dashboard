@@ -15,7 +15,7 @@ const RING_C = 2 * Math.PI * RING_R;
 export function MilestonesHero({ milestones, now }: Props) {
   const stats = useMemo(() => {
     const enriched = milestones.map((m) => {
-      const days = m.dueOn ? daysUntil(m.dueOn) : null;
+      const days = m.dueOn ? daysUntil(m.dueOn, now) : null;
       return { m, days, cls: classifyMilestone(m, days) };
     });
 

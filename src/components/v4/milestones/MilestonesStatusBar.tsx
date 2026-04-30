@@ -5,6 +5,7 @@ import { classifyMilestone, type MilestoneStatusKind } from "./classifyMilestone
 
 interface Props {
   milestones: Milestone[];
+  now: Date;
 }
 
 const ORDER: {
@@ -20,7 +21,7 @@ const ORDER: {
   { k: "done", l: "Завершено", c: "var(--v4-success-500)" },
 ];
 
-export function MilestonesStatusBar({ milestones }: Props) {
+export function MilestonesStatusBar({ milestones, now }: Props) {
   const { buckets, total } = useMemo(() => {
     const b: Record<MilestoneStatusKind, number> = {
       overdue: 0,
@@ -31,11 +32,11 @@ export function MilestonesStatusBar({ milestones }: Props) {
       done: 0,
     };
     for (const m of milestones) {
-      const days = m.dueOn ? daysUntil(m.dueOn) : null;
+      const days = m.dueOn ? daysUntil(m.dueOn, now) : null;
       b[classifyMilestone(m, days)]++;
     }
     return { buckets: b, total: Math.max(1, milestones.length) };
-  }, [milestones]);
+  }, [milestones, now]);
 
   if (milestones.length === 0) return null;
 

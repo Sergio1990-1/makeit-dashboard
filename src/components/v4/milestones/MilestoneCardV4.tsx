@@ -12,6 +12,9 @@ import {
 interface Props {
   milestone: Milestone;
   density: "comfortable" | "compact";
+  /** Anchor for daysUntil — passed from the view to keep classification
+   *  consistent with the data refresh timestamp. */
+  now: Date;
 }
 
 const DESC_LIMIT = 140;
@@ -25,13 +28,13 @@ const FILL_BY_CLS: Record<string, string> = {
   noeta: "v4-mscv-fill--noeta",
 };
 
-export function MilestoneCardV4({ milestone, density }: Props) {
+export function MilestoneCardV4({ milestone, density, now }: Props) {
   const [expanded, setExpanded] = useState(false);
 
   const total = milestone.openIssues + milestone.closedIssues;
   const pct = total > 0 ? Math.round((milestone.closedIssues / total) * 100) : 0;
   const left = total - milestone.closedIssues;
-  const days = milestone.dueOn ? daysUntil(milestone.dueOn) : null;
+  const days = milestone.dueOn ? daysUntil(milestone.dueOn, now) : null;
   const cls = classifyMilestone(milestone, days);
   const isDone = cls === "done";
 
