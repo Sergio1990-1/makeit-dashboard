@@ -77,6 +77,8 @@ export interface MilestoneIssue {
   state: "OPEN" | "CLOSED";
   labels: string[];
   url: string;
+  createdAt: string | null;
+  closedAt: string | null;
 }
 
 export interface Milestone {
@@ -89,6 +91,8 @@ export interface Milestone {
   closedIssues: number;
   repo: string;
   issues: MilestoneIssue[];
+  createdAt: string | null;
+  closedAt: string | null;
 }
 
 export interface Filters {

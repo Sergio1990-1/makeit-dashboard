@@ -2,197 +2,247 @@ import { useState } from "react";
 import type { Milestone } from "../../../types";
 import { daysUntil, formatShortDate } from "../../../utils/date";
 import { classifyMilestone } from "./classifyMilestone";
+import {
+  countBlocked,
+  countByPriority,
+  inferPriority,
+  repoGlyphColor,
+} from "./utils";
 
 interface Props {
   milestone: Milestone;
+  density: "comfortable" | "compact";
 }
 
-const PRIORITY_TAG: Record<string, string> = {
-  P1: "v4-ptag--p1",
-  P2: "v4-ptag--p2",
-  P3: "v4-ptag--p3",
-  P4: "v4-ptag--p4",
+const DESC_LIMIT = 140;
+
+const FILL_BY_CLS: Record<string, string> = {
+  overdue: "v4-mscv-fill--overdue",
+  warn: "v4-mscv-fill--warn",
+  soon: "v4-mscv-fill--soon",
+  norm: "v4-mscv-fill--norm",
+  done: "v4-mscv-fill--done",
+  noeta: "v4-mscv-fill--noeta",
 };
 
-function inferPriority(m: Milestone): string | null {
-  const labels = (m.issues ?? []).flatMap((i) => i.labels);
-  for (const p of ["P1", "P2", "P3", "P4"]) {
-    if (labels.some((l) => l.startsWith(p))) return p;
-  }
-  return null;
-}
-
-function DeadlineBadge({ dueOn, days }: { dueOn: string | null; days: number | null }) {
-  if (!dueOn) return <span className="v4-ms-badge v4-ms-badge--neutral">без дедлайна</span>;
-  if (days === null) return null;
-  if (days < 0) return <span className="v4-ms-badge v4-ms-badge--overdue">просрочен {Math.abs(days)}д</span>;
-  if (days === 0) return <span className="v4-ms-badge v4-ms-badge--warn">сегодня</span>;
-  if (days <= 3) return <span className="v4-ms-badge v4-ms-badge--warn">{days}д осталось</span>;
-  if (days <= 14) return <span className="v4-ms-badge v4-ms-badge--info">{days}д · {formatShortDate(dueOn)}</span>;
-  return <span className="v4-ms-badge v4-ms-badge--neutral">{formatShortDate(dueOn)}</span>;
-}
-
-const DESC_LIMIT = 160;
-
-export function MilestoneCardV4({ milestone }: Props) {
+export function MilestoneCardV4({ milestone, density }: Props) {
   const [expanded, setExpanded] = useState(false);
-  const [descOpen, setDescOpen] = useState(false);
 
   const total = milestone.openIssues + milestone.closedIssues;
-  const progress = total > 0 ? Math.round((milestone.closedIssues / total) * 100) : 0;
+  const pct = total > 0 ? Math.round((milestone.closedIssues / total) * 100) : 0;
+  const left = total - milestone.closedIssues;
   const days = milestone.dueOn ? daysUntil(milestone.dueOn) : null;
   const cls = classifyMilestone(milestone, days);
   const isDone = cls === "done";
 
-  const fillColor =
-    isDone
-      ? "var(--v4-success-500)"
-      : progress >= 70
-      ? "var(--v4-success-500)"
-      : progress >= 30
-      ? "var(--v4-accent-500)"
-      : "var(--v4-warn-500)";
+  const pctClass =
+    pct >= 80
+      ? "v4-mscv-pct--good"
+      : pct >= 40
+      ? ""
+      : pct >= 1
+      ? "v4-mscv-pct--warn"
+      : "v4-mscv-pct--bad";
 
-  const priority = inferPriority(milestone);
+  let dueText: string;
+  if (isDone) dueText = "✓ завершён";
+  else if (days === null) dueText = "без даты";
+  else if (days < 0) dueText = `просрочен ${Math.abs(days)} дн`;
+  else if (days === 0) dueText = "сегодня";
+  else dueText = `${days} дн · ${formatShortDate(milestone.dueOn!)}`;
+
+  const inferred = inferPriority(milestone);
+  const showPTag = !isDone && (inferred === "P1" || inferred === "P2");
+
+  const p1 = countByPriority(milestone, "P1");
+  const p2 = countByPriority(milestone, "P2");
+  const blocked = countBlocked(milestone);
+
+  const chips: { k: string; l: string; cls: string }[] = [];
+  if (!isDone) {
+    if (p1 > 0)
+      chips.push({ k: "p1", l: `P1 · ${p1}`, cls: "v4-mscv-chip--p1" });
+    else if (p2 > 0 && pct < 80)
+      chips.push({ k: "p2", l: `P2 · ${p2}`, cls: "v4-mscv-chip--p2" });
+    if (blocked > 0)
+      chips.push({
+        k: "blocked",
+        l: `Blocked · ${blocked}`,
+        cls: "v4-mscv-chip--blocked",
+      });
+    if (left > 0)
+      chips.push({ k: "open", l: `${left} осталось`, cls: "" });
+  }
+
+  const desc = milestone.description ?? "";
+  const descTrunc =
+    desc.length > DESC_LIMIT ? desc.slice(0, DESC_LIMIT).trimEnd() + "…" : desc;
+
   const sortedIssues = [...(milestone.issues ?? [])].sort((a, b) => {
     if (a.state === b.state) return 0;
     return a.state === "OPEN" ? -1 : 1;
   });
 
-  const desc = milestone.description ?? "";
-  const descTruncated = desc.length > DESC_LIMIT && !descOpen ? desc.slice(0, DESC_LIMIT).trimEnd() + "…" : desc;
-
   return (
-    <div className={`v4-mscard-full v4-mscard-full--${cls}`}>
-      {/* Header */}
-      <div
-        className="v4-mscard-full-h"
+    <article
+      className={`v4-mscv v4-mscv--${cls}${
+        density === "compact" ? " v4-mscv--compact" : ""
+      }`}
+    >
+      <header
+        className="v4-mscv-head"
         role="button"
         tabIndex={0}
         aria-expanded={expanded}
-        aria-label={`Milestone ${milestone.title}, ${milestone.closedIssues} из ${total} задач закрыто. ${expanded ? "Свернуть" : "Раскрыть"} список.`}
-        onClick={() => setExpanded(!expanded)}
+        aria-label={`Milestone ${milestone.title}, ${milestone.closedIssues} из ${total} задач закрыто. ${
+          expanded ? "Свернуть" : "Раскрыть"
+        } список.`}
+        onClick={() => setExpanded((v) => !v)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            setExpanded(!expanded);
+            setExpanded((v) => !v);
           }
         }}
       >
-        <div className="v4-mscard-full-titlerow">
-          <div className="v4-mscard-full-meta">
-            <span className="v4-mscard-full-repo">{milestone.repo}</span>
-            <span className={`v4-mscard-full-arrow ${expanded ? "is-open" : ""}`}>▸</span>
+        <div className="v4-mscv-meta">
+          <div className="v4-mscv-repo">
+            <span
+              className="v4-mscv-repo-glyph"
+              style={{ background: repoGlyphColor(milestone.repo) }}
+            />
+            {milestone.repo}
+            <svg
+              className={`v4-mscv-chev${expanded ? " is-open" : ""}`}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
           </div>
-          <div className="v4-mscard-full-badges">
-            {priority && !isDone && (
-              <span className={`v4-ptag ${PRIORITY_TAG[priority] ?? "v4-ptag--p4"}`}>
-                {priority}
+          <div className="v4-mscv-meta-right">
+            {showPTag && inferred && (
+              <span
+                className={`v4-ptag v4-ptag--${inferred.toLowerCase()}`}
+              >
+                {inferred}
               </span>
             )}
-            {isDone ? (
-              <span className="v4-ms-badge v4-ms-badge--done">done ✓</span>
-            ) : (
-              <DeadlineBadge dueOn={milestone.dueOn} days={days} />
-            )}
+            <span className={`v4-mscv-due v4-mscv-due--${cls}`}>
+              {!isDone && cls !== "noeta" && (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 2" />
+                </svg>
+              )}
+              {dueText}
+            </span>
           </div>
         </div>
-        <div className="v4-mscard-full-title">
+
+        <div className="v4-mscv-title">
           <a
             href={milestone.url}
             target="_blank"
             rel="noopener noreferrer"
+            className="v4-mscv-titlelink"
             onClick={(e) => e.stopPropagation()}
-            className="v4-mscard-full-titlelink"
           >
-            {isDone && <span className="v4-mscard-full-check">✓ </span>}
             {milestone.title}
           </a>
         </div>
-        {desc && (
-          <div className="v4-mscard-full-desc">
-            {descTruncated}
-            {desc.length > DESC_LIMIT && (
-              <button
-                type="button"
-                className="v4-linkbtn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDescOpen((v) => !v);
-                }}
-              >
-                {descOpen ? "свернуть" : "ещё"}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
 
-      {/* Progress */}
-      <div className="v4-mscard-full-progress">
-        <div className="v4-ptrack v4-mscard-full-track">
+        {density !== "compact" && desc && (
+          <div className="v4-mscv-desc">{descTrunc}</div>
+        )}
+      </header>
+
+      <div className="v4-mscv-bar">
+        <div className="v4-mscv-bar-meta">
+          <div className="v4-mscv-bar-meta-left">
+            <span className="v4-mscv-bar-closed num">
+              {milestone.closedIssues}
+            </span>
+            <span className="v4-mscv-bar-total"> / {total} issues</span>
+          </div>
+          <div className={`v4-mscv-bar-pct num ${pctClass}`}>{pct}%</div>
+        </div>
+        <div className="v4-mscv-track">
           <div
-            className="v4-pfill"
-            style={{ width: `${progress}%`, background: fillColor }}
+            className={`v4-mscv-fill ${FILL_BY_CLS[cls] ?? ""}`}
+            style={{ width: `${pct}%` }}
           />
         </div>
-        <span className="v4-mscard-full-pct num">
-          {milestone.closedIssues}/{total} ({progress}%)
-        </span>
       </div>
 
-      {/* Expanded issue list */}
-      {expanded && sortedIssues.length > 0 && (
-        <div className="v4-mscard-full-issues">
-          {sortedIssues.map((issue) => {
-            const isClosed = issue.state === "CLOSED";
-            return (
-              <div
-                key={issue.number}
-                className={`v4-ms-issue ${isClosed ? "v4-ms-issue--closed" : ""}`}
-              >
-                <span
-                  className={`v4-ms-issue-status ${isClosed ? "v4-ms-issue-status--closed" : "v4-ms-issue-status--open"}`}
-                  aria-hidden="true"
-                >
-                  {isClosed ? "✓" : "○"}
-                </span>
-                <a
-                  href={issue.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="v4-ms-issue-title"
-                >
-                  #{issue.number} {issue.title}
-                </a>
-                <span className="v4-ms-issue-labels">
-                  {issue.labels
-                    .filter((l) => /^P[1-4]/.test(l))
-                    .map((l) => {
-                      const p = l.split("-")[0];
-                      return (
-                        <span
-                          key={l}
-                          className={`v4-ptag ${PRIORITY_TAG[p] ?? "v4-ptag--p4"}`}
-                        >
-                          {p}
-                        </span>
-                      );
-                    })}
-                  {issue.labels.includes("blocked") && (
-                    <span className="v4-ms-issue-blocked">blocked</span>
-                  )}
-                </span>
-              </div>
-            );
-          })}
+      {density !== "compact" && chips.length > 0 && (
+        <div className="v4-mscv-foot">
+          {chips.map((ch) => (
+            <span key={ch.k} className={`v4-mscv-chip ${ch.cls}`}>
+              {ch.l}
+            </span>
+          ))}
         </div>
       )}
-      {expanded && sortedIssues.length === 0 && (
-        <div className="v4-mscard-full-issues v4-mscard-full-issues--empty">
-          Нет привязанных issues
+
+      {expanded && (
+        <div className="v4-mscv-issues">
+          {sortedIssues.length === 0 ? (
+            <div className="v4-mscv-issues-empty">Нет привязанных issues</div>
+          ) : (
+            sortedIssues.map((issue) => {
+              const isClosed = issue.state === "CLOSED";
+              return (
+                <div
+                  key={issue.number}
+                  className={`v4-ms-issue${isClosed ? " v4-ms-issue--closed" : ""}`}
+                >
+                  <span
+                    className={`v4-ms-issue-status ${
+                      isClosed
+                        ? "v4-ms-issue-status--closed"
+                        : "v4-ms-issue-status--open"
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {isClosed ? "✓" : "○"}
+                  </span>
+                  <a
+                    href={issue.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="v4-ms-issue-title"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    #{issue.number} {issue.title}
+                  </a>
+                  <span className="v4-ms-issue-labels">
+                    {issue.labels
+                      .filter((l) => /^P[1-4]/i.test(l))
+                      .map((l) => {
+                        const p = l.split("-")[0].toUpperCase();
+                        return (
+                          <span
+                            key={l}
+                            className={`v4-ptag v4-ptag--${p.toLowerCase()}`}
+                          >
+                            {p}
+                          </span>
+                        );
+                      })}
+                    {issue.labels.some((l) => l.toLowerCase() === "blocked") && (
+                      <span className="v4-ms-issue-blocked">blocked</span>
+                    )}
+                  </span>
+                </div>
+              );
+            })
+          )}
         </div>
       )}
-    </div>
+    </article>
   );
 }
