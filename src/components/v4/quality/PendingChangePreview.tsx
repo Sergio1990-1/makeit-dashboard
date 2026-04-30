@@ -15,6 +15,7 @@ export function PendingChangePreviewV4({ change, loadPreview, onConfirm, onCance
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,11 +41,33 @@ export function PendingChangePreviewV4({ change, loadPreview, onConfirm, onCance
     closeButtonRef.current?.focus();
   }, []);
 
+  // Focus trap: Escape closes; Tab/Shift+Tab wrap focus inside the modal
+  // so keyboard users can't fall back into the obscured page content. The
+  // aria-modal="true" attribute promises this to assistive tech, so it
+  // must actually be enforced.
   useEffect(() => {
+    const FOCUSABLE =
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
         onCancel();
+        return;
+      }
+      if (e.key !== "Tab" || !modalRef.current) return;
+      const focusables = Array.from(
+        modalRef.current.querySelectorAll<HTMLElement>(FOCUSABLE),
+      ).filter((el) => !el.hasAttribute("aria-hidden"));
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey && (active === first || !modalRef.current.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -57,6 +80,7 @@ export function PendingChangePreviewV4({ change, loadPreview, onConfirm, onCance
   return (
     <div className="v4-qa-modal-backdrop" onClick={onCancel}>
       <div
+        ref={modalRef}
         className="v4-qa-modal"
         role="dialog"
         aria-modal="true"

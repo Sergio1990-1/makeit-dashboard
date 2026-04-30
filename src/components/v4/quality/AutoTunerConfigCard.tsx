@@ -57,6 +57,8 @@ export function AutoTunerConfigCard({ config, onSave }: Props) {
     await save({ validate_numeric_claims: !merged.validate_numeric_claims });
   }
 
+  const bodyId = "v4-qa-autotuner-config-body";
+
   return (
     <div className="v4-panel">
       <div
@@ -71,6 +73,7 @@ export function AutoTunerConfigCard({ config, onSave }: Props) {
           }
         }}
         aria-expanded={open}
+        aria-controls={bodyId}
       >
         <div className="v4-panel-t">
           <span className="v4-qa-arrow" aria-hidden="true">{open ? "▾" : "▸"}</span>{" "}
@@ -90,7 +93,7 @@ export function AutoTunerConfigCard({ config, onSave }: Props) {
       </div>
 
       {open && (
-        <div className="v4-qa-config-body">
+        <div id={bodyId} className="v4-qa-config-body">
           {localError && <div className="v4-error">{localError}</div>}
 
           <div className="v4-qa-config-grid">
