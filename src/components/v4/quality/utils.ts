@@ -3,8 +3,11 @@ import type { QualitySnapshot } from "../../../types";
 export type Health = "ok" | "warn" | "danger" | "unknown";
 
 /** Convert ISO week ("2026-W17") or ISO date string into a human-readable
- * date range. Falls back to the input if it can't be parsed. */
-export function formatPeriodRange(period: string): string {
+ * date range. Falls back to the input if it can't be parsed.
+ * Defensive: server may omit `period` on partial responses; return a dash
+ * rather than crashing the whole retro detail card. */
+export function formatPeriodRange(period: string | null | undefined): string {
+  if (!period) return "—";
   // ISO week format: "YYYY-Www"
   const wkMatch = period.match(/^(\d{4})-W(\d{1,2})$/);
   if (wkMatch) {
