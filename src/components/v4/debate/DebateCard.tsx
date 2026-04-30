@@ -33,10 +33,12 @@ export function DebateCard({ debate: d, nowMs, onOpen }: Props) {
       aria-label={`Открыть дебат: ${d.topic}`}
     >
       <div className="v4-db-card-h">
-        <span className={statusTagClass(d.status)}>{STATUS_LABEL[d.status]}</span>
+        <span className={statusTagClass(d.status)}>
+          {STATUS_LABEL[d.status] ?? d.status}
+        </span>
         {isDone && (
           <span className={consensusTagClass(d.consensus_level)}>
-            {CONSENSUS_LABEL[d.consensus_level]}
+            {CONSENSUS_LABEL[d.consensus_level] ?? d.consensus_level}
           </span>
         )}
         {isRunning && (

@@ -4943,7 +4943,7 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
   cursor: pointer;
   font: inherit;
   color: inherit;
-  transition: border-color 120ms, box-shadow 120ms, transform 120ms;
+  transition: border-color 120ms, box-shadow 120ms;
   min-width: 0;
 }
 .v4-db-card:hover {
@@ -4959,6 +4959,9 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
   border-top: 3px solid var(--v4-warn-500);
   background: var(--v4-warn-50);
 }
+/* Reset background on focus so the blue accent outline has enough
+ * contrast against the warn-yellow tint. */
+.v4-db-card--warn:focus-visible { background: var(--v4-paper); }
 .v4-db-card--danger { border-top: 3px solid var(--v4-danger-500); }
 .v4-db-card--neutral { border-top: 3px solid var(--v4-line); }
 
