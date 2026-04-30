@@ -14,23 +14,37 @@ const draftKey = (taskId: string) => `tpc:draft:${taskId}`;
 type ViewMode = "split" | "edit" | "preview";
 
 export function TranscriptEditorV4({ taskId, initialBrief, onSave, onCancel }: Props) {
-  const [text, setText] = useState<string>(() => {
+  const [text, setText] = useState<string>(initialBrief);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("split");
+
+  // Draft restore: confirm and apply in an effect (NOT in useState initialiser).
+  // React Strict Mode double-invokes initialisers in dev — calling
+  // window.confirm there fires the dialog twice and violates React's purity
+  // rules for state initialisers. Effects run once per mount even in Strict
+  // Mode (the cleanup-then-rerun pattern doesn't apply here because of the
+  // restoredRef guard).
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
     try {
       const stored = localStorage.getItem(draftKey(taskId));
       if (stored && stored !== initialBrief) {
         if (window.confirm("Найден несохранённый черновик. Восстановить?")) {
-          return stored;
+          setText(stored);
+        } else {
+          localStorage.removeItem(draftKey(taskId));
         }
-        localStorage.removeItem(draftKey(taskId));
       }
     } catch {
-      /* ignore */
+      /* localStorage unavailable */
     }
-    return initialBrief;
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("split");
+    // Only run once per mount for a given taskId — initialBrief is stable
+    // for the lifetime of this editor instance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskId]);
 
   const deferredText = useDeferredValue(text);
   const previewHtml = useMemo(() => renderBriefHtml(deferredText), [deferredText]);

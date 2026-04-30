@@ -2987,7 +2987,6 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
   border-radius: 99px;
   border: 0;
   cursor: pointer;
-  font-family: var(--v4-mono);
 }
 .v4-tpc-quality-chip--static { cursor: default; }
 .v4-tpc-quality-chip--sm { padding: 2px 7px; font-size: 10px; }

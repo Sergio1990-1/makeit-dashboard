@@ -81,7 +81,6 @@ export function TranscriptsView({ projects }: Props) {
   const [batchFiles, setBatchFiles] = useState<BatchFile[]>([]);
   const [batchActive, setBatchActive] = useState(false);
   const abortRef = useRef(false);
-  const retryInProgressRef = useRef(false);
 
   const onSubmitSingle = useCallback(async (file: File) => {
     setUploadError(null);
@@ -144,7 +143,12 @@ export function TranscriptsView({ projects }: Props) {
         }
         const item = queue[idx++];
         activeIds.add(item.id);
-        processOne(item);
+        // Fire-and-forget — surface unexpected throws so they don't
+        // become silent unhandled-rejection warnings.
+        processOne(item).catch((err) => {
+          console.error("[transcripts] batch processOne unexpected error:", err);
+          activeIds.delete(item.id);
+        });
       }
       while (activeIds.size > 0) {
         await new Promise((r) => setTimeout(r, 300));
@@ -216,10 +220,11 @@ export function TranscriptsView({ projects }: Props) {
     setActiveTaskId(taskId);
   }, []);
 
+  // Per-taskId double-click protection lives in TranscriptHistoryV4
+  // (inflightRetriesRef guards each row's button). No view-level guard
+  // needed — and adding one would create dead code that misleads readers.
   const onRetryFromHistory = useCallback(
     async (taskId: string, originalModel: TranscriptionModel | undefined) => {
-      if (retryInProgressRef.current) return;
-      retryInProgressRef.current = true;
       setBriefResult(null);
       setEditing(false);
       setUploadError(null);
@@ -229,8 +234,6 @@ export function TranscriptsView({ projects }: Props) {
         setHistoryRefreshKey((k) => k + 1);
       } catch (err) {
         setUploadError(`Не удалось повторить: ${err}`);
-      } finally {
-        retryInProgressRef.current = false;
       }
     },
     []
@@ -344,8 +347,10 @@ export function TranscriptsView({ projects }: Props) {
         />
       )}
 
-      {/* History — hidden when a brief is being viewed/edited or actively polled */}
-      {!briefResult && !activeTaskId && !loadingBrief && (
+      {/* History — hidden when a brief is being viewed/edited, actively
+          polled, or batch is in flight (its own auto-refresh + the history
+          5s poll would race). */}
+      {!briefResult && !activeTaskId && !loadingBrief && !batchActive && batchFiles.length === 0 && (
         <TranscriptHistoryV4
           onOpen={onOpenFromHistory}
           onResume={onResumeFromHistory}

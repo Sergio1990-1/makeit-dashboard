@@ -50,6 +50,10 @@ export function TranscriptProgressV4({ taskId, onDone, onRetry }: Props) {
   const startedAtRef = useRef<number | null>(null);
   const failCountRef = useRef(0);
   const pollStartedAtRef = useRef<number | null>(null);
+  // Epoch invalidates in-flight polls. Bumped on every effect setup so a
+  // fetch that resolves after taskId changes (e.g. retry from history) can't
+  // setStatus or fire onDone for the previous task.
+  const epochRef = useRef(0);
 
   // React idiomatic state-reset on identity-bearing prop change
   const lastTaskIdRef = useRef(taskId);
@@ -72,6 +76,7 @@ export function TranscriptProgressV4({ taskId, onDone, onRetry }: Props) {
   }, []);
 
   const poll = useCallback(async () => {
+    const myEpoch = epochRef.current;
     const polledMs = pollStartedAtRef.current
       ? Date.now() - pollStartedAtRef.current
       : 0;
@@ -83,6 +88,10 @@ export function TranscriptProgressV4({ taskId, onDone, onRetry }: Props) {
 
     try {
       const s = await fetchTranscriptStatus(taskId);
+      // Drop late responses from a previous taskId — without this, an
+      // in-flight poll resolving after a retry can setStatus / fire onDone
+      // for the wrong task.
+      if (epochRef.current !== myEpoch) return;
       setStatus(s);
       setPollError(null);
       failCountRef.current = 0;
@@ -94,6 +103,7 @@ export function TranscriptProgressV4({ taskId, onDone, onRetry }: Props) {
         if (s.stage === "done") onDone(s.result_url, taskId);
       }
     } catch (err) {
+      if (epochRef.current !== myEpoch) return;
       failCountRef.current += 1;
       setPollError(String(err));
       if (failCountRef.current >= MAX_POLL_FAILURES) {
@@ -104,6 +114,9 @@ export function TranscriptProgressV4({ taskId, onDone, onRetry }: Props) {
   }, [taskId, onDone, stopPolling]);
 
   useEffect(() => {
+    // Bump epoch first so any in-flight poll from the previous taskId
+    // returns early when it eventually resolves.
+    epochRef.current += 1;
     failCountRef.current = 0;
     startedAtRef.current = null;
     pollStartedAtRef.current = Date.now();
@@ -118,6 +131,7 @@ export function TranscriptProgressV4({ taskId, onDone, onRetry }: Props) {
     return () => {
       clearTimeout(initial);
       stopPolling();
+      epochRef.current += 1;
     };
   }, [poll, stopPolling]);
 

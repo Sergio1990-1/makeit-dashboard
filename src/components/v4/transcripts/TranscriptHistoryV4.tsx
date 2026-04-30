@@ -132,6 +132,7 @@ export function TranscriptHistoryV4({ onOpen, onResume, onRetry, refreshKey }: P
   const [items, setItems] = useState<TranscriptListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [state, setState] = useState<ToolbarState>(() => loadState());
   const [retryingIds, setRetryingIds] = useState<Set<string>>(new Set());
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
@@ -219,11 +220,15 @@ export function TranscriptHistoryV4({ onOpen, onResume, onRetry, refreshKey }: P
 
   const handleDelete = useCallback(async (taskId: string, filename: string) => {
     if (!window.confirm(`Удалить транскрипцию ${filename}?`)) return;
+    setDeleteError(null);
     try {
       await deleteTranscript(taskId);
       setItems((prev) => prev.filter((i) => i.task_id !== taskId));
     } catch (err) {
-      setError(`Не удалось удалить: ${err}`);
+      // Use a separate state from the load-error so the delete failure is
+      // visible even when items.length > 0 (the load-error panel is
+      // conditional on empty list).
+      setDeleteError(`Не удалось удалить ${filename}: ${err}`);
     }
   }, []);
 
@@ -405,6 +410,20 @@ export function TranscriptHistoryV4({ onOpen, onResume, onRetry, refreshKey }: P
           </div>
         </div>
       </div>
+
+      {deleteError && (
+        <div className="v4-error" style={{ margin: "8px 18px 0" }}>
+          {deleteError}
+          <button
+            type="button"
+            className="v4-linkbtn"
+            style={{ marginLeft: 12 }}
+            onClick={() => setDeleteError(null)}
+          >
+            закрыть
+          </button>
+        </div>
+      )}
 
       {sorted.length === 0 ? (
         <div className="v4-empty">
