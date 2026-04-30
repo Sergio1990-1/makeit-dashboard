@@ -37,9 +37,12 @@ function readFilter(): AuditFilter {
 
 export function CodeAuditView({ dashboardProjects = [] }: Props) {
   const { projects, runStatuses, auditorAvailable, loading, refresh, startRun, cancelRun } = useAudit();
+  // Store the full project object for each open dialog so a background
+  // refresh() that drops/replaces a project can't silently close the
+  // dialog mid-render via a failed lookup.
   const [confirmingProject, setConfirmingProject] = useState<AuditProjectStatus | null>(null);
-  const [issuesDialogProject, setIssuesDialogProject] = useState<string | null>(null);
-  const [verifyDialogProject, setVerifyDialogProject] = useState<string | null>(null);
+  const [issuesDialogProject, setIssuesDialogProject] = useState<AuditProjectStatus | null>(null);
+  const [verifyDialogProject, setVerifyDialogProject] = useState<AuditProjectStatus | null>(null);
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<AuditFilter>(() => readFilter());
@@ -130,8 +133,13 @@ export function CodeAuditView({ dashboardProjects = [] }: Props) {
       ) : (
         <div className="v4-au-grid">
           {visible.map((p) => {
+            // dashboardProjects[].repo is "owner/name"; auditor's p.repo is
+            // also "owner/name" but legacy callers used to compare against
+            // just the name segment. Compare slug-to-slug on both sides so
+            // the lookup actually matches.
+            const auditRepoName = (p.repo.split("/")[1] ?? p.repo).toLowerCase();
             const dashProject = dashboardProjects.find(
-              (dp) => dp.repo.toLowerCase() === (p.repo.split("/")[1] || p.repo).toLowerCase(),
+              (dp) => (dp.repo.split("/")[1] ?? dp.repo).toLowerCase() === auditRepoName,
             );
             const currentIssueUrls = p.last_run?.issue_urls ?? [];
             const auditIssues = currentIssueUrls.length > 0
@@ -153,8 +161,8 @@ export function CodeAuditView({ dashboardProjects = [] }: Props) {
                 nowMs={nowMs}
                 onRun={() => setConfirmingProject(p)}
                 onCancel={() => cancelRun(p.name)}
-                onVerify={() => setVerifyDialogProject(p.name)}
-                onCreateIssues={() => setIssuesDialogProject(p.name)}
+                onVerify={() => setVerifyDialogProject(p)}
+                onCreateIssues={() => setIssuesDialogProject(p)}
               />
             );
           })}
@@ -180,40 +188,33 @@ export function CodeAuditView({ dashboardProjects = [] }: Props) {
         />
       )}
 
-      {verifyDialogProject && (() => {
-        const dialogProject = projects.find((p) => p.name === verifyDialogProject);
-        if (!dialogProject) return null;
-        return (
-          <AuditVerifyDialog
-            project={dialogProject}
-            onClose={() => setVerifyDialogProject(null)}
-            onComplete={() => {
-              setVerifyDialogProject(null);
-              refresh();
-            }}
-          />
-        );
-      })()}
+      {verifyDialogProject && (
+        <AuditVerifyDialog
+          project={verifyDialogProject}
+          onClose={() => setVerifyDialogProject(null)}
+          onComplete={() => {
+            setVerifyDialogProject(null);
+            refresh();
+          }}
+        />
+      )}
 
-      {issuesDialogProject && (() => {
-        const dialogProject = projects.find((p) => p.name === issuesDialogProject);
-        if (!dialogProject) return null;
-        return (
-          <AuditIssuesDialog
-            project={dialogProject}
-            onClose={() => setIssuesDialogProject(null)}
-            onComplete={async (issuesCreated, issueUrls) => {
-              try {
-                await postAuditMeta(issuesDialogProject, issuesCreated, issueUrls);
-              } catch (e) {
-                console.error("Failed to save audit meta (issues still exist in GitHub):", e);
-              }
-              setIssuesDialogProject(null);
-              refresh();
-            }}
-          />
-        );
-      })()}
+      {issuesDialogProject && (
+        <AuditIssuesDialog
+          project={issuesDialogProject}
+          onClose={() => setIssuesDialogProject(null)}
+          onComplete={async (issuesCreated, issueUrls) => {
+            const projectName = issuesDialogProject.name;
+            try {
+              await postAuditMeta(projectName, issuesCreated, issueUrls);
+            } catch (e) {
+              console.error("Failed to save audit meta (issues still exist in GitHub):", e);
+            }
+            setIssuesDialogProject(null);
+            refresh();
+          }}
+        />
+      )}
     </>
   );
 }

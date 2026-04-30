@@ -132,7 +132,11 @@ export function UXAuditView() {
               onToggleExpand={() => {
                 const willExpand = expandedProject !== p.name;
                 setExpandedProject(willExpand ? p.name : null);
-                if (willExpand) { setFindingFilter("all"); setPageFilter("all"); }
+                // Reset filters on every toggle (expand AND collapse) so the
+                // next card opens with a clean slate, regardless of what the
+                // previously expanded card's filters were.
+                setFindingFilter("all");
+                setPageFilter("all");
               }}
               onSeverityChange={setFindingFilter}
               onPageChange={setPageFilter}

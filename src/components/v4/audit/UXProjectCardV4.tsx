@@ -274,8 +274,11 @@ function UXFindingsList({
         {filtered.length === 0 && (
           <div className="v4-empty">Нет findings по выбранным фильтрам</div>
         )}
-        {filtered.map((f, i) => (
-          <div key={i} className="v4-au-ux-finding">
+        {filtered.map((f) => (
+          <div
+            key={`${f.file}::${f.tool}::${f.description.slice(0, 80)}`}
+            className="v4-au-ux-finding"
+          >
             <div className="v4-au-ux-finding-h">
               <span
                 className="v4-au-ux-finding-sev"
