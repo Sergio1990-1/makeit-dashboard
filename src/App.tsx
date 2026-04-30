@@ -4,7 +4,7 @@ import { ChatPanel } from "./components/ChatPanel";
 import { ChatButton } from "./components/ChatButton";
 import { FinanceEditor } from "./components/FinanceEditor";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { UptimeBar } from "./components/UptimeBar";
+import { MonitoringView } from "./components/v4/monitoring/MonitoringView";
 import { AuditCombinedTab } from "./components/AuditCombinedTab";
 import { PipelineView } from "./components/v4/pipeline/PipelineView";
 import { TranscriptsView } from "./components/v4/transcripts/TranscriptsView";
@@ -185,13 +185,13 @@ function AppInner() {
         {error && <div className="v4-error">{error}</div>}
 
         {/* Loading / empty state — only for tabs that depend on GitHub project data.
-            Tabs like Pipeline, Audit, Quality, Debate, Specs, Research, Transcripts
-            have their own state and shouldn't be obscured by this banner. */}
-        {projects.length === 0 && (tab === "dashboard" || tab === "projects" || tab === "milestones" || tab === "uptime") && loading && (
+            Tabs like Pipeline, Audit, Quality, Debate, Specs, Research, Transcripts,
+            Monitoring have their own state and shouldn't be obscured by this banner. */}
+        {projects.length === 0 && (tab === "dashboard" || tab === "projects" || tab === "milestones") && loading && (
           <div className="v4-loading">Загрузка данных…</div>
         )}
 
-        {projects.length === 0 && (tab === "dashboard" || tab === "projects" || tab === "milestones" || tab === "uptime") && !loading && !error && (
+        {projects.length === 0 && (tab === "dashboard" || tab === "projects" || tab === "milestones") && !loading && !error && (
           <div className="v4-loading">Нажмите «Обновить» для загрузки данных</div>
         )}
 
@@ -226,22 +226,15 @@ function AppInner() {
           </ErrorBoundary>
         )}
 
-        {projects.length > 0 && tab === "uptime" && (
-          <div className="v4-legacy-frame">
-            <div className="bento-grid">
-              <div className="bento-panel span-12">
-                <div className="bento-panel-title">Мониторинг</div>
-                <ErrorBoundary fallback="Ошибка в мониторинге">
-                  <UptimeBar
-                    monitors={monitors}
-                    loading={monitorsLoading}
-                    error={monitorsError}
-                    onRefresh={refreshMonitors}
-                  />
-                </ErrorBoundary>
-              </div>
-            </div>
-          </div>
+        {tab === "uptime" && (
+          <ErrorBoundary fallback="Ошибка вкладки Мониторинг">
+            <MonitoringView
+              monitors={monitors}
+              loading={monitorsLoading}
+              error={monitorsError}
+              onRefresh={refreshMonitors}
+            />
+          </ErrorBoundary>
         )}
 
         {/* Stateful tabs — mount lazily on first visit, keep alive via display:none */}
