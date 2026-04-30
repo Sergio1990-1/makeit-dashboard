@@ -1,6 +1,12 @@
 import { useState } from "react";
 import type { EpicData } from "../../../types";
-import { priorityTagClass, sizeTagClass, stripEpicPrefix } from "./utils";
+import {
+  pluralRu,
+  priorityTagClass,
+  sizeTagClass,
+  stripEpicPrefix,
+  TASK_FORMS,
+} from "./utils";
 
 interface Props {
   epic: EpicData;
@@ -25,7 +31,7 @@ export function EpicPanel({ epic }: Props) {
         <span className="v4-spc-epic-meta">
           {taskCount > 0 && (
             <span className="v4-spc-epic-stat">
-              {taskCount} {taskCount === 1 ? "задача" : "задач"}
+              {taskCount} {pluralRu(taskCount, TASK_FORMS)}
             </span>
           )}
           {epic.deadline && (

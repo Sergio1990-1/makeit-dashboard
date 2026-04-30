@@ -110,3 +110,36 @@ export function stripPrdPrefix(title: string): string {
 export function stripEpicPrefix(title: string): string {
   return title.replace(/^Epic-\d+:\s*/i, "");
 }
+
+/**
+ * Russian noun pluralization.
+ *   forms = [one, few (2-4), many (0, 5+, 11-14)]
+ *
+ * Examples:
+ *   pluralRu(1,  ["задача", "задачи", "задач"]) → "задача"
+ *   pluralRu(3,  ["задача", "задачи", "задач"]) → "задачи"
+ *   pluralRu(5,  ["задача", "задачи", "задач"]) → "задач"
+ *   pluralRu(11, ["задача", "задачи", "задач"]) → "задач"   // 11-14 are "many"
+ *   pluralRu(21, ["задача", "задачи", "задач"]) → "задача"  // ends in 1, not 11
+ */
+export function pluralRu(n: number, forms: [string, string, string]): string {
+  const abs = Math.abs(n);
+  const mod100 = abs % 100;
+  if (mod100 >= 11 && mod100 <= 14) return forms[2];
+  const mod10 = abs % 10;
+  if (mod10 === 1) return forms[0];
+  if (mod10 >= 2 && mod10 <= 4) return forms[1];
+  return forms[2];
+}
+
+export const TASK_FORMS: [string, string, string] = ["задача", "задачи", "задач"];
+export const SPEC_FORMS: [string, string, string] = [
+  "спецификация",
+  "спецификации",
+  "спецификаций",
+];
+export const SPEC_READY_FORMS: [string, string, string] = [
+  "спека готова",
+  "спеки готовы",
+  "спек готово",
+];

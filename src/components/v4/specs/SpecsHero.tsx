@@ -1,5 +1,5 @@
 import type { SpecsProject } from "../../../types";
-import { totals } from "./utils";
+import { pluralRu, SPEC_FORMS, SPEC_READY_FORMS, TASK_FORMS, totals } from "./utils";
 
 interface Props {
   projects: SpecsProject[];
@@ -23,10 +23,10 @@ export function SpecsHero({ projects, loading, error, onRefresh }: Props) {
     : t.prds === 0
       ? "Specs Tracking"
       : t.inDevelopment > 0
-        ? `${t.inDevelopment} ${t.inDevelopment === 1 ? "PRD" : "PRD"} в разработке`
+        ? `${t.inDevelopment} PRD в разработке`
         : t.specReady > 0
-          ? `${t.specReady} ${t.specReady === 1 ? "спека готова" : "спек готовы"} к запуску`
-          : `${t.prds} ${t.prds === 1 ? "спецификация" : "спецификаций"}`;
+          ? `${t.specReady} ${pluralRu(t.specReady, SPEC_READY_FORMS)} к запуску`
+          : `${t.prds} ${pluralRu(t.prds, SPEC_FORMS)}`;
 
   return (
     <div className={`v4-rsh-hero v4-rsh-hero--${health}`}>
@@ -45,7 +45,7 @@ export function SpecsHero({ projects, loading, error, onRefresh }: Props) {
                 <span className="v4-rsh-sep">·</span>
                 <b>{t.epics}</b> {t.epics === 1 ? "epic" : "epics"}
                 <span className="v4-rsh-sep">·</span>
-                <b>{t.tasks}</b> {t.tasks === 1 ? "задача" : "задач"}
+                <b>{t.tasks}</b> {pluralRu(t.tasks, TASK_FORMS)}
                 {t.completed > 0 && (
                   <>
                     <span className="v4-rsh-sep">·</span>

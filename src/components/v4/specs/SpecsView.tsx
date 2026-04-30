@@ -64,8 +64,7 @@ export function SpecsView() {
           <h1>Specs</h1>
           <div className="v4-sub">
             PRD → Epic → Tasks из <span className="v4-pl-mono">makeit-pipeline</span> ·{" "}
-            <span className="v4-pl-mono">{projects.length}</span>{" "}
-            {projects.length === 1 ? "PRD" : "PRD"}
+            <span className="v4-pl-mono">{projects.length}</span> PRD
           </div>
         </div>
       </div>

@@ -3,11 +3,13 @@ import type { SpecsProject } from "../../../types";
 import { EpicPanel } from "./EpicPanel";
 import { PipelineFlow } from "./PipelineFlow";
 import {
+  pluralRu,
   priorityTagClass,
   STATUS_HEALTH,
   STATUS_LABEL,
   statusTagClass,
   stripPrdPrefix,
+  TASK_FORMS,
 } from "./utils";
 
 interface Props {
@@ -46,7 +48,7 @@ function SpecCardV4Inner({ project, initialExpanded = false }: Props) {
             {epics.length} {epics.length === 1 ? "epic" : "epics"}
           </span>
           <span className="v4-spc-card-stat">
-            {totalTasks} {totalTasks === 1 ? "задача" : "задач"}
+            {totalTasks} {pluralRu(totalTasks, TASK_FORMS)}
           </span>
           <button
             type="button"
