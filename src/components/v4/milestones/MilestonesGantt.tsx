@@ -290,10 +290,6 @@ export function MilestonesGantt({
                     className="v4-msgantt-list-group"
                     title={it.repo}
                   >
-                    <span
-                      className="v4-msgantt-list-group-glyph"
-                      style={{ background: repoGlyphColor(it.repo) }}
-                    />
                     <span className="v4-msgantt-list-group-name">
                       {it.repo}
                     </span>
