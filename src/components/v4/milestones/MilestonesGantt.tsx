@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import type { Milestone } from "../../../types";
 import { daysUntil, formatShortDate } from "../../../utils/date";
 import { classifyMilestone, type MilestoneStatusKind } from "./classifyMilestone";
@@ -15,6 +15,7 @@ import {
 } from "./utils";
 
 export type GanttZoom = "day" | "week" | "month";
+export type GanttGrouping = "none" | "repo";
 
 const ZOOMS: Record<GanttZoom, { dayW: number; label: string }> = {
   day: { dayW: 36, label: "День" },
@@ -24,13 +25,17 @@ const ZOOMS: Record<GanttZoom, { dayW: number; label: string }> = {
 
 const WINDOW_BACK_MAX = 21;
 const WINDOW_BACK_MIN = 3;
-const WINDOW_FWD = 60;
+const WINDOW_FWD_MIN = 60;
+const WINDOW_FWD_MAX = 365;
 const ROW_H = 44;
+const GROUP_H = 30;
 
 interface Props {
   milestones: Milestone[];
   zoom: GanttZoom;
   onZoom: (z: GanttZoom) => void;
+  grouping: GanttGrouping;
+  onGrouping: (g: GanttGrouping) => void;
   now: Date;
 }
 
@@ -42,7 +47,18 @@ interface Enriched {
   cls: MilestoneStatusKind;
 }
 
-export function MilestonesGantt({ milestones, zoom, onZoom, now }: Props) {
+type Item =
+  | { kind: "group"; repo: string; count: number }
+  | { kind: "row"; e: Enriched };
+
+export function MilestonesGantt({
+  milestones,
+  zoom,
+  onZoom,
+  grouping,
+  onGrouping,
+  now,
+}: Props) {
   const data = useMemo(() => {
     const dayW = ZOOMS[zoom].dayW;
 
@@ -70,9 +86,45 @@ export function MilestonesGantt({ milestones, zoom, onZoom, now }: Props) {
       Math.max(WINDOW_BACK_MIN, backFromEarliest)
     );
     const startWindow = startOfDay(addDays(now, -back));
-    const endWindow = startOfDay(addDays(now, WINDOW_FWD));
+
+    // Extend forward window to include the latest deadline (capped) — milestones
+    // with dueOn beyond default 60d would otherwise get clipped to right edge.
+    const latestDue = enriched.reduce<number>(
+      (acc, x) => (x.dueD && x.dueD.getTime() > acc ? x.dueD.getTime() : acc),
+      0
+    );
+    const fwdFromLatest =
+      latestDue > 0
+        ? diffDays(startOfDay(new Date(latestDue)), today) + 7
+        : WINDOW_FWD_MIN;
+    const fwd = Math.min(
+      WINDOW_FWD_MAX,
+      Math.max(WINDOW_FWD_MIN, fwdFromLatest)
+    );
+    const endWindow = startOfDay(addDays(now, fwd));
     const totalDays = diffDays(endWindow, startWindow);
     const totalW = totalDays * dayW;
+
+    // Build flat list of items (group headers + rows) for rendering
+    const items: Item[] = [];
+    if (grouping === "repo") {
+      const map = new Map<string, Enriched[]>();
+      for (const x of enriched) {
+        const arr = map.get(x.m.repo) ?? [];
+        arr.push(x);
+        map.set(x.m.repo, arr);
+      }
+      const repos = Array.from(map.keys()).sort((a, b) =>
+        a.localeCompare(b, "ru")
+      );
+      for (const repo of repos) {
+        const arr = map.get(repo)!;
+        items.push({ kind: "group", repo, count: arr.length });
+        for (const e of arr) items.push({ kind: "row", e });
+      }
+    } else {
+      for (const e of enriched) items.push({ kind: "row", e });
+    }
 
     const days: Date[] = [];
     for (let i = 0; i < totalDays; i++) {
@@ -107,6 +159,7 @@ export function MilestonesGantt({ milestones, zoom, onZoom, now }: Props) {
 
     return {
       enriched,
+      items,
       days,
       monthRuns,
       dayW,
@@ -116,9 +169,32 @@ export function MilestonesGantt({ milestones, zoom, onZoom, now }: Props) {
       weekendCols,
       startWindow,
     };
-  }, [milestones, zoom, now]);
+  }, [milestones, zoom, now, grouping]);
 
   const todaySod = useMemo(() => startOfDay(now), [now]);
+
+  // Auto-scroll the chart so "today" sits ~12% from the left edge of the
+  // visible viewport. Without this the chart loads at scrollLeft=0, which
+  // shows the back-window (mostly empty space) and forces the user to hunt
+  // for the relevant near-future portion.
+  const chartRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = chartRef.current;
+    if (!el) return;
+    const target = Math.max(0, data.todayLeft - el.clientWidth * 0.12);
+    el.scrollLeft = target;
+  }, [data.todayLeft, data.totalW, zoom]);
+
+  // On window resize, re-anchor today (clientWidth changes).
+  useEffect(() => {
+    const el = chartRef.current;
+    if (!el) return;
+    const onResize = () => {
+      el.scrollLeft = Math.max(0, data.todayLeft - el.clientWidth * 0.12);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [data.todayLeft]);
 
   return (
     <div className="v4-msgantt">
@@ -165,7 +241,25 @@ export function MilestonesGantt({ milestones, zoom, onZoom, now }: Props) {
               fill = % done
             </span>
           </div>
-          <div className="v4-pillgrp">
+          <div className="v4-pillgrp" role="group" aria-label="Группировка">
+            <button
+              type="button"
+              className={grouping === "none" ? "is-active" : ""}
+              onClick={() => onGrouping("none")}
+              title="Без группировки (по статусу)"
+            >
+              Поток
+            </button>
+            <button
+              type="button"
+              className={grouping === "repo" ? "is-active" : ""}
+              onClick={() => onGrouping("repo")}
+              title="Группировать по проекту"
+            >
+              По проекту
+            </button>
+          </div>
+          <div className="v4-pillgrp" role="group" aria-label="Масштаб">
             {(Object.entries(ZOOMS) as [GanttZoom, { label: string }][]).map(
               ([k, v]) => (
                 <button
@@ -188,7 +282,28 @@ export function MilestonesGantt({ milestones, zoom, onZoom, now }: Props) {
         <div className="v4-msgantt-body">
           <div className="v4-msgantt-list">
             <div className="v4-msgantt-list-h">Milestone</div>
-            {data.enriched.map((x, idx) => {
+            {data.items.map((it, idx) => {
+              if (it.kind === "group") {
+                return (
+                  <div
+                    key={`g-${it.repo}`}
+                    className="v4-msgantt-list-group"
+                    title={it.repo}
+                  >
+                    <span
+                      className="v4-msgantt-list-group-glyph"
+                      style={{ background: repoGlyphColor(it.repo) }}
+                    />
+                    <span className="v4-msgantt-list-group-name">
+                      {it.repo}
+                    </span>
+                    <span className="v4-msgantt-list-group-count num">
+                      {it.count}
+                    </span>
+                  </div>
+                );
+              }
+              const x = it.e;
               const total = x.m.openIssues + x.m.closedIssues;
               const pct =
                 total > 0 ? Math.round((x.m.closedIssues / total) * 100) : 0;
@@ -223,7 +338,7 @@ export function MilestonesGantt({ milestones, zoom, onZoom, now }: Props) {
             })}
           </div>
 
-          <div className="v4-msgantt-chart">
+          <div className="v4-msgantt-chart" ref={chartRef}>
             <div
               className="v4-msgantt-chart-inner"
               style={{ width: `${data.totalW}px` }}
@@ -290,7 +405,16 @@ export function MilestonesGantt({ milestones, zoom, onZoom, now }: Props) {
                   style={{ left: `${data.todayLeft}px` }}
                 />
 
-                {data.enriched.map((x, idx) => {
+                {data.items.map((it, idx) => {
+                  if (it.kind === "group") {
+                    return (
+                      <div
+                        key={`gs-${it.repo}`}
+                        className="v4-msgantt-grid-group"
+                      />
+                    );
+                  }
+                  const x = it.e;
                   const total = x.m.openIssues + x.m.closedIssues;
                   const pct =
                     total > 0
@@ -372,3 +496,4 @@ export function MilestonesGantt({ milestones, zoom, onZoom, now }: Props) {
 }
 
 export const GANTT_ROW_H = ROW_H;
+export const GANTT_GROUP_H = GROUP_H;

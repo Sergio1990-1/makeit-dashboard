@@ -3,7 +3,11 @@ import type { Milestone } from "../../../types";
 import { daysUntil } from "../../../utils/date";
 import { MilestoneCardV4 } from "./MilestoneCardV4";
 import { MilestonesHero } from "./MilestonesHero";
-import { MilestonesGantt, type GanttZoom } from "./MilestonesGantt";
+import {
+  MilestonesGantt,
+  type GanttGrouping,
+  type GanttZoom,
+} from "./MilestonesGantt";
 import { MilestonesClosedSection } from "./MilestonesClosedSection";
 import { MilestonesStatusBar } from "./MilestonesStatusBar";
 import { classifyMilestone } from "./classifyMilestone";
@@ -21,6 +25,7 @@ type Grouping = "deadline" | "repo";
 interface ToolbarState {
   density: Density;
   grouping: Grouping;
+  ganttGrouping: GanttGrouping;
   zoom: GanttZoom;
   query: string;
 }
@@ -29,6 +34,7 @@ const STORAGE_KEY = "makeit.milestonesView.v2";
 
 const VALID_DENSITY: readonly Density[] = ["comfortable", "compact"];
 const VALID_GROUPING: readonly Grouping[] = ["deadline", "repo"];
+const VALID_GANTT_GROUPING: readonly GanttGrouping[] = ["none", "repo"];
 const VALID_ZOOM: readonly GanttZoom[] = ["day", "week", "month"];
 
 function loadState(): ToolbarState {
@@ -43,6 +49,11 @@ function loadState(): ToolbarState {
         grouping: VALID_GROUPING.includes(p.grouping as Grouping)
           ? (p.grouping as Grouping)
           : "deadline",
+        ganttGrouping: VALID_GANTT_GROUPING.includes(
+          p.ganttGrouping as GanttGrouping
+        )
+          ? (p.ganttGrouping as GanttGrouping)
+          : "repo",
         zoom: VALID_ZOOM.includes(p.zoom as GanttZoom)
           ? (p.zoom as GanttZoom)
           : "week",
@@ -52,7 +63,13 @@ function loadState(): ToolbarState {
   } catch {
     /* ignore */
   }
-  return { density: "compact", grouping: "deadline", zoom: "week", query: "" };
+  return {
+    density: "compact",
+    grouping: "deadline",
+    ganttGrouping: "repo",
+    zoom: "week",
+    query: "",
+  };
 }
 
 function saveState(s: ToolbarState) {
@@ -185,6 +202,8 @@ export function MilestonesView({ milestones, lastUpdated }: Props) {
         milestones={openMs}
         zoom={state.zoom}
         onZoom={(z) => setState((s) => ({ ...s, zoom: z }))}
+        grouping={state.ganttGrouping}
+        onGrouping={(g) => setState((s) => ({ ...s, ganttGrouping: g }))}
         now={now}
       />
 
