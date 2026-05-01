@@ -409,7 +409,7 @@ export function MilestonesGantt({
                   if (it.kind === "group") {
                     return (
                       <div
-                        key={`gs-${it.repo}-${idx}`}
+                        key={`gs-${it.repo}`}
                         className="v4-msgantt-grid-group"
                       />
                     );
