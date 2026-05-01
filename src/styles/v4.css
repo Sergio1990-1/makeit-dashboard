@@ -6136,14 +6136,14 @@ ul.v4-rsh-list {
 
 /* Repo grouping in Gantt: group header row in left list + matching spacer
    in chart grid. Heights MUST match (34px) so list rows stay aligned with
-   their bar rows. */
+   their bar rows. Visual separation comes from background contrast +
+   uppercase mono label, not heavy rules. */
 .v4-msgantt-list-group {
   height: 34px;
   padding: 0 14px 0 18px;
   display: flex; align-items: center; gap: 10px;
   background: var(--v4-ink-50, #EEF1F6);
-  border-bottom: 1px solid var(--v4-line);
-  border-top: 2px solid var(--v4-ink-700);
+  border-bottom: 1px solid var(--v4-line-soft);
   position: relative;
 }
 .v4-msgantt-list-group-name {
@@ -6165,19 +6165,9 @@ ul.v4-rsh-list {
 .v4-msgantt-grid-group {
   height: 34px;
   background: var(--v4-ink-50, #EEF1F6);
-  border-bottom: 1px solid var(--v4-line);
-  border-top: 2px solid var(--v4-ink-700);
+  border-bottom: 1px solid var(--v4-line-soft);
   position: relative;
   z-index: 0;
-}
-/* Skip the heavy top-border on the first group (right after the axis/today)
-   so the chart doesn't get a doubled divider stacked on the existing rules.
-   Adjacent-sibling selectors target only the first group. */
-.v4-msgantt-list-h + .v4-msgantt-list-group {
-  border-top: 0;
-}
-.v4-msgantt-today + .v4-msgantt-grid-group {
-  border-top: 0;
 }
 
 .v4-msgantt-weekend {
