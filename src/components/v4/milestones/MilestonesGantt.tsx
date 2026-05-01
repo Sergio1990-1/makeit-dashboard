@@ -22,7 +22,8 @@ const ZOOMS: Record<GanttZoom, { dayW: number; label: string }> = {
   month: { dayW: 12, label: "Месяц" },
 };
 
-const WINDOW_BACK = 21;
+const WINDOW_BACK_MAX = 21;
+const WINDOW_BACK_MIN = 3;
 const WINDOW_FWD = 60;
 const ROW_H = 44;
 
@@ -43,11 +44,7 @@ interface Enriched {
 
 export function MilestonesGantt({ milestones, zoom, onZoom, now }: Props) {
   const data = useMemo(() => {
-    const startWindow = startOfDay(addDays(now, -WINDOW_BACK));
-    const endWindow = startOfDay(addDays(now, WINDOW_FWD));
-    const totalDays = diffDays(endWindow, startWindow);
     const dayW = ZOOMS[zoom].dayW;
-    const totalW = totalDays * dayW;
 
     const enriched: Enriched[] = milestones
       .map((m) => {
@@ -61,6 +58,21 @@ export function MilestonesGantt({ milestones, zoom, onZoom, now }: Props) {
           clsPriority(a.cls) - clsPriority(b.cls) ||
           a.startD.getTime() - b.startD.getTime()
       );
+
+    const today = startOfDay(now);
+    const earliestStart = enriched.reduce<Date>(
+      (acc, x) => (x.startD < acc ? x.startD : acc),
+      today
+    );
+    const backFromEarliest = diffDays(today, earliestStart);
+    const back = Math.min(
+      WINDOW_BACK_MAX,
+      Math.max(WINDOW_BACK_MIN, backFromEarliest)
+    );
+    const startWindow = startOfDay(addDays(now, -back));
+    const endWindow = startOfDay(addDays(now, WINDOW_FWD));
+    const totalDays = diffDays(endWindow, startWindow);
+    const totalW = totalDays * dayW;
 
     const days: Date[] = [];
     for (let i = 0; i < totalDays; i++) {
