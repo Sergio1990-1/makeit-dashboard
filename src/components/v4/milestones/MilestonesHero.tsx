@@ -5,14 +5,22 @@ import { classifyMilestone } from "./classifyMilestone";
 import { buildDaily14, buildSparkPath, stripEpicPrefix } from "./utils";
 
 interface Props {
+  /** Open milestones — drives portfolio stats, deadlines, status counts. */
   milestones: Milestone[];
+  /**
+   * All milestones (open + closed). Used only for the velocity sparkline so
+   * recently-closed issues inside *completed* milestones still count as
+   * throughput. Without this we'd miss bursts of work that happen right
+   * before a milestone closes.
+   */
+  allMilestones?: Milestone[];
   now: Date;
 }
 
 const RING_R = 46;
 const RING_C = 2 * Math.PI * RING_R;
 
-export function MilestonesHero({ milestones, now }: Props) {
+export function MilestonesHero({ milestones, allMilestones, now }: Props) {
   const stats = useMemo(() => {
     const enriched = milestones.map((m) => {
       const days = m.dueOn ? daysUntil(m.dueOn, now) : null;
@@ -31,8 +39,12 @@ export function MilestonesHero({ milestones, now }: Props) {
     ).length;
     const done = enriched.filter((x) => x.cls === "done").length;
 
-    // Velocity over last 14 days (combined across all milestones' issues)
-    const allIssues = milestones.flatMap((m) => m.issues ?? []);
+    // Velocity over last 14 days — uses *all* milestones (open + closed) so
+    // throughput captures issues that landed in milestones that have since
+    // been completed. Falls back to `milestones` if `allMilestones` not
+    // provided (older callers).
+    const velocitySource = allMilestones ?? milestones;
+    const allIssues = velocitySource.flatMap((m) => m.issues ?? []);
     const daily14 = buildDaily14(allIssues, now);
     const closed7 = daily14.slice(7).reduce((a, b) => a + b, 0);
     const closedPrev7 = daily14.slice(0, 7).reduce((a, b) => a + b, 0);
@@ -77,7 +89,7 @@ export function MilestonesHero({ milestones, now }: Props) {
       cnt30,
       cntFar,
     };
-  }, [milestones, now]);
+  }, [milestones, allMilestones, now]);
 
   const spark = buildSparkPath(stats.daily14, 220, 36);
   const velocityStr = stats.velocityPerDay.toFixed(1).replace(".", ",");

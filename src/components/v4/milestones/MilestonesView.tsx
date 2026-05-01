@@ -195,7 +195,7 @@ export function MilestonesView({ milestones, lastUpdated }: Props) {
       </div>
 
       {/* Hero — three tiles */}
-      <MilestonesHero milestones={openMs} now={now} />
+      <MilestonesHero milestones={openMs} allMilestones={milestones} now={now} />
 
       {/* Gantt */}
       <MilestonesGantt
