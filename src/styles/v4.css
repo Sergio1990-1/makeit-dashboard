@@ -6134,6 +6134,40 @@ ul.v4-rsh-list {
 .v4-msgantt-grid-row:last-child { border-bottom: 0; }
 .v4-msgantt-grid-row:hover { background: rgba(245,247,250,0.6); }
 
+/* Repo grouping in Gantt: group header row in left list + matching spacer
+   in chart grid. Heights MUST match (30px) so list rows stay aligned with
+   their bar rows. */
+.v4-msgantt-list-group {
+  height: 30px;
+  padding: 0 14px;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--v4-surface-2);
+  border-bottom: 1px solid var(--v4-line-soft);
+  border-top: 1px solid var(--v4-line-soft);
+}
+.v4-msgantt-list-group-glyph {
+  width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0;
+}
+.v4-msgantt-list-group-name {
+  font-family: var(--v4-mono); font-size: 11px; font-weight: 700;
+  color: var(--v4-ink-700);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.v4-msgantt-list-group-count {
+  font-size: 11px; font-weight: 700;
+  color: var(--v4-ink-500); flex-shrink: 0;
+}
+.v4-msgantt-grid-group {
+  height: 30px;
+  background: var(--v4-surface-2);
+  border-bottom: 1px solid var(--v4-line-soft);
+  border-top: 1px solid var(--v4-line-soft);
+  position: relative;
+  z-index: 0;
+}
+
 .v4-msgantt-weekend {
   position: absolute; top: 0; bottom: 0;
   background: rgba(148,160,184,0.06);
