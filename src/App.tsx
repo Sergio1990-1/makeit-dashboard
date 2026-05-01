@@ -222,7 +222,7 @@ function AppInner() {
 
         {projects.length > 0 && tab === "milestones" && (
           <ErrorBoundary fallback="Ошибка вкладки Milestones">
-            <MilestonesView milestones={allMilestones} lastUpdated={lastUpdated} />
+            <MilestonesView milestones={allMilestones} projects={projects} lastUpdated={lastUpdated} />
           </ErrorBoundary>
         )}
 

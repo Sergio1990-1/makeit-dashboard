@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Milestone } from "../../../types";
+import type { Milestone, ProjectData } from "../../../types";
 import { daysUntil } from "../../../utils/date";
 import { MilestoneCardV4 } from "./MilestoneCardV4";
 import { MilestonesHero } from "./MilestonesHero";
@@ -15,6 +15,8 @@ import { deadlineBucket } from "./utils";
 
 interface Props {
   milestones: Milestone[];
+  /** Project boards — passed to Hero so velocity matches the dashboard tile. */
+  projects?: ProjectData[];
   /** Anchor for daysUntil — recomputed on data refresh */
   lastUpdated: Date | null;
 }
@@ -88,7 +90,7 @@ interface Enriched {
   cls: ReturnType<typeof classifyMilestone>;
 }
 
-export function MilestonesView({ milestones, lastUpdated }: Props) {
+export function MilestonesView({ milestones, projects, lastUpdated }: Props) {
   const [state, setState] = useState<ToolbarState>(() => loadState());
 
   useEffect(() => {
@@ -195,7 +197,7 @@ export function MilestonesView({ milestones, lastUpdated }: Props) {
       </div>
 
       {/* Hero — three tiles */}
-      <MilestonesHero milestones={openMs} allMilestones={milestones} now={now} />
+      <MilestonesHero milestones={openMs} projects={projects} now={now} />
 
       {/* Gantt */}
       <MilestonesGantt

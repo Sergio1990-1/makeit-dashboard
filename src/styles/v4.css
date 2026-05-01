@@ -6687,3 +6687,102 @@ ul.v4-rsh-list {
   font-size: 12px; color: var(--v4-ink-500);
   text-align: center;
 }
+
+/* ────────────────────────────────────────
+   MOBILE — comprehensive ≤ 720px tweaks
+   Sidebar collapse handled at 1100px; this block focuses on phone-sized
+   viewports (375–720px). Goal: nothing horizontally clipped except the
+   Gantt chart (which scrolls intentionally).
+   ──────────────────────────────────────── */
+@media (max-width: 720px) {
+  /* TOPBAR — drop search + breadcrumb prefix + live pill text */
+  .v4-top { padding: 0 12px; gap: 8px; }
+  .v4-crumbs { font-size: 12px; gap: 4px; flex-wrap: nowrap; overflow: hidden; }
+  .v4-crumbs > .v4-sep:first-of-type,
+  .v4-crumbs > a:first-of-type { display: none; }
+  .v4-crumbs b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .v4-live { padding: 3px 6px; font-size: 0; gap: 0; margin-left: 6px; }
+  .v4-live-dot { margin: 0; }
+  .v4-top-right { gap: 4px; }
+  .v4-top-right .icon-btn { padding: 6px; }
+
+  /* PAGE HEADER */
+  .v4-content { padding: 0 12px 24px; }
+  .v4-ph { padding-top: 16px; gap: 8px; flex-wrap: wrap; }
+  .v4-ph h1 { font-size: 22px; line-height: 1.15; letter-spacing: -0.01em; }
+  .v4-ph .v4-sub { font-size: 12px; }
+  .v4-ph-right { width: 100%; justify-content: flex-start; }
+
+  /* MILESTONES HERO — 3 tiles → stack */
+  .v4-mshero { grid-template-columns: 1fr; gap: 10px; }
+  .v4-mshero-tile { padding: 14px 16px; min-height: 0; gap: 10px; }
+  .v4-mshero-main-body { gap: 16px; }
+  .v4-mshero-ring { width: 90px; height: 90px; }
+  .v4-mshero-num { font-size: 32px; }
+
+  /* DASHBOARD KPI ROW already collapses, just shrink padding */
+  .v4-kpi { padding: 14px 16px; }
+  .v4-kpi-num { font-size: 30px; }
+
+  /* GANTT HEADER — controls flex wrap, smaller pills, hide legend */
+  .v4-msgantt-h { padding: 10px 12px; gap: 8px; }
+  .v4-msgantt-controls { gap: 6px; width: 100%; }
+  .v4-msgantt-legend { display: none; }
+  .v4-msgantt-list { display: none; }
+  .v4-msgantt-body { grid-template-columns: 1fr; }
+  .v4-pillgrp button { padding: 4px 8px; font-size: 11px; }
+
+  /* MILESTONE TOOLBAR — single column */
+  .v4-mstoolbar { flex-direction: column; align-items: stretch; gap: 10px; }
+  .v4-mstoolbar-left, .v4-mstoolbar-tools { width: 100%; }
+  .v4-mstoolbar-tools { flex-wrap: wrap; gap: 6px; }
+  .v4-mstoolbar-search { width: 100%; }
+
+  /* GENERIC PANEL — reduce padding */
+  .v4-panel { padding: 14px 14px; }
+  .v4-panel-head { padding: 10px 14px; }
+
+  /* PROJECT CARDS / GRID — already collapses, font tweaks */
+  .v4-projectcard,
+  .v4-proj-card,
+  .v4-mscv { padding: 14px 14px; }
+  .v4-projectcard-title,
+  .v4-mscv-title { font-size: 14px; }
+
+  /* AUDIT / QUALITY / DEBATE etc — generic stack rules for grids */
+  .v4-au-grid,
+  .v4-spc-grid,
+  .v4-rsh-grid,
+  .v4-deb-grid,
+  .v4-qa-grid { grid-template-columns: 1fr !important; }
+
+  /* TOOLBAR PILL GROUPS — ensure they wrap, not overflow */
+  .v4-pillgrp { flex-wrap: wrap; }
+
+  /* MILESTONES STATUS BAR — labels stack */
+  .v4-msstatus { flex-direction: column; gap: 8px; }
+  .v4-msstatus-bar { width: 100%; }
+
+  /* CLOSED MILESTONES SECTION */
+  .v4-msclosed-h { padding: 10px 12px; }
+
+  /* MONITORING UPTIME ROWS */
+  .v4-mon-row { grid-template-columns: 1fr !important; gap: 6px; }
+
+  /* PIPELINE CONFIG */
+  .v4-pl-cx-grid { grid-template-columns: 1fr !important; }
+
+  /* CHAT BUTTON — smaller floating */
+  .v4-chat-btn { right: 12px; bottom: 12px; }
+}
+
+/* ≤ 480px — extra-tight phones */
+@media (max-width: 480px) {
+  .v4-content { padding: 0 10px 20px; }
+  .v4-ph h1 { font-size: 20px; }
+  .v4-mshero-num { font-size: 28px; }
+  .v4-mshero-ring { width: 80px; height: 80px; }
+  .v4-mshero-ring-pct { font-size: 20px; }
+  .v4-msgantt-t { font-size: 12px; }
+  .v4-msgantt-t svg { width: 12px; height: 12px; }
+}

@@ -68,12 +68,21 @@ export function startOfDay(d: Date): Date {
 /**
  * Build a 14-bucket array of issue closures, oldest first, ending with `now`.
  * Used by the Velocity hero tile sparkline & 7-day delta.
+ *
+ * Accepts any item with a `closedAt` timestamp — milestone-issues
+ * (`MilestoneIssue`) and project-items (`Issue`) both qualify. Presence of
+ * `closedAt` is the only signal we need; the explicit state check was
+ * pruning legitimate closures and would also break Issue inputs (whose
+ * `status` is "Done", not state="CLOSED").
  */
-export function buildDaily14(issues: MilestoneIssue[], now: Date): number[] {
+export function buildDaily14(
+  issues: Pick<MilestoneIssue, "closedAt">[],
+  now: Date,
+): number[] {
   const buckets = new Array<number>(14).fill(0);
   const start = startOfDay(addDays(now, -13));
   for (const i of issues) {
-    if (i.state !== "CLOSED" || !i.closedAt) continue;
+    if (!i.closedAt) continue;
     const d = startOfDay(new Date(i.closedAt));
     const idx = diffDays(d, start);
     if (idx >= 0 && idx < 14) buckets[idx]++;

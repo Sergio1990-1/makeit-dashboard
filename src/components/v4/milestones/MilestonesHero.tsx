@@ -1,26 +1,27 @@
 import { useMemo } from "react";
-import type { Milestone } from "../../../types";
+import type { Milestone, ProjectData } from "../../../types";
 import { daysUntil } from "../../../utils/date";
+import { calcPortfolioVelocity } from "../../../utils/dashboardMetrics";
 import { classifyMilestone } from "./classifyMilestone";
-import { buildDaily14, buildSparkPath, stripEpicPrefix } from "./utils";
+import { buildSparkPath, stripEpicPrefix } from "./utils";
 
 interface Props {
   /** Open milestones — drives portfolio stats, deadlines, status counts. */
   milestones: Milestone[];
   /**
-   * All milestones (open + closed). Used only for the velocity sparkline so
-   * recently-closed issues inside *completed* milestones still count as
-   * throughput. Without this we'd miss bursts of work that happen right
-   * before a milestone closes.
+   * Project data (issues from project boards). Velocity reuses the dashboard's
+   * `calcPortfolioVelocity` so the Milestones tile matches the headline KPI
+   * exactly. Without this we'd be summing milestone-issues — which are
+   * limited to first:50 by createdAt ASC and miss recent closures.
    */
-  allMilestones?: Milestone[];
+  projects?: ProjectData[];
   now: Date;
 }
 
 const RING_R = 46;
 const RING_C = 2 * Math.PI * RING_R;
 
-export function MilestonesHero({ milestones, allMilestones, now }: Props) {
+export function MilestonesHero({ milestones, projects, now }: Props) {
   const stats = useMemo(() => {
     const enriched = milestones.map((m) => {
       const days = m.dueOn ? daysUntil(m.dueOn, now) : null;
@@ -39,22 +40,19 @@ export function MilestonesHero({ milestones, allMilestones, now }: Props) {
     ).length;
     const done = enriched.filter((x) => x.cls === "done").length;
 
-    // Velocity over last 14 days — uses *all* milestones (open + closed) so
-    // throughput captures issues that landed in milestones that have since
-    // been completed. Falls back to `milestones` if `allMilestones` not
-    // provided (older callers).
-    const velocitySource = allMilestones ?? milestones;
-    const allIssues = velocitySource.flatMap((m) => m.issues ?? []);
-    const daily14 = buildDaily14(allIssues, now);
-    const closed7 = daily14.slice(7).reduce((a, b) => a + b, 0);
-    const closedPrev7 = daily14.slice(0, 7).reduce((a, b) => a + b, 0);
-    const velocityPerDay = closed7 / 7;
-    const velocityDelta =
-      closedPrev7 > 0
-        ? Math.round(((closed7 - closedPrev7) / closedPrev7) * 100)
-        : closed7 > 0
-        ? 100
-        : 0;
+    // Velocity — reuse the dashboard's portfolio calc against project-items
+    // (full set of issues with closedAt, no first:50 limit). Falls back to a
+    // milestone-issue scan if no projects passed in.
+    let velocityPerDay = 0;
+    let velocityDelta = 0;
+    let daily14: number[] = new Array(14).fill(0);
+    if (projects && projects.length > 0) {
+      const v = calcPortfolioVelocity(projects);
+      velocityPerDay = v.perDay7d;
+      velocityDelta = v.delta7dVsPrev;
+      // calcPortfolioVelocity returns daily28d — use the trailing 14 for spark
+      daily14 = v.daily28d.slice(-14);
+    }
 
     // Next deadline (skip done & noeta, only future or today)
     const upcoming = enriched
@@ -81,7 +79,6 @@ export function MilestonesHero({ milestones, allMilestones, now }: Props) {
       inProgress,
       done,
       daily14,
-      closed7,
       velocityPerDay,
       velocityDelta,
       upcoming,
@@ -89,7 +86,7 @@ export function MilestonesHero({ milestones, allMilestones, now }: Props) {
       cnt30,
       cntFar,
     };
-  }, [milestones, allMilestones, now]);
+  }, [milestones, projects, now]);
 
   const spark = buildSparkPath(stats.daily14, 220, 36);
   const velocityStr = stats.velocityPerDay.toFixed(1).replace(".", ",");
