@@ -888,6 +888,10 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 .v4-pfill {
   height: 100%;
   border-radius: 99px;
+  transition: width 700ms cubic-bezier(0.16, 1, 0.3, 1), background-color 280ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .v4-pfill { transition: none; }
 }
 .v4-ppct {
   font-family: var(--v4-mono);
@@ -6785,4 +6789,416 @@ ul.v4-rsh-list {
   .v4-mshero-ring-pct { font-size: 20px; }
   .v4-msgantt-t { font-size: 12px; }
   .v4-msgantt-t svg { width: 12px; height: 12px; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   WOW LAYER · entrance, magnetic hover, toasts, command palette, view transitions
+   Easings: easeOutExpo (0.16, 1, 0.3, 1) and easeOutBack (0.34, 1.56, 0.64, 1)
+   All disabled under prefers-reduced-motion.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 3 · Stagger entrance for grid items ────────────────────────────────── */
+@keyframes wow-card-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.v4-proj-grid > .v4-pcard,
+.v4-stack-list > .v4-stack-row,
+.v4-heat-strip > .v4-commit-row {
+  animation: wow-card-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+/* ── 5 · Stack distribution: bars stretch into place ─────────────────────── */
+.v4-stack-bar .v4-seg {
+  transform-origin: left center;
+  animation: wow-stack-grow 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms + 120ms);
+  transition: width 700ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes wow-stack-grow {
+  from { transform: scaleX(0); opacity: 0.4; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+
+/* ── 5 · Closed-30d chart: left-to-right reveal + trend draw-on ──────────── */
+.v4-closed-chart svg {
+  clip-path: inset(0 0 0 0);
+  animation: wow-chart-wipe 850ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes wow-chart-wipe {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+/* (Trend line draw-on removed: the path uses stroke-dasharray "4 3" as a
+   dotted style, so animating dashoffset slid the dashes rather than revealing
+   the line. The clip-path wipe above already handles the entrance.) */
+
+/* ── 5 · Heatmap cells: pop in with delay by column ──────────────────────── */
+.v4-commit-cells .v4-cc {
+  animation: wow-cell-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(var(--i, 0) * 14ms);
+  transition: transform 140ms ease, background 200ms ease;
+}
+.v4-commit-cells .v4-cc:hover {
+  transform: scale(1.45);
+  z-index: 1;
+}
+@keyframes wow-cell-pop {
+  from { opacity: 0; transform: scale(0.4); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* KPI cards: subtle entrance */
+.v4-kpi-row > .v4-kpi {
+  animation: wow-kpi-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+@keyframes wow-kpi-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+/* ── 7 · Magnetic hover-pop for project cards ────────────────────────────── */
+.v4-pcard {
+  transition:
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms ease,
+    border-color 200ms ease;
+  will-change: transform;
+}
+.v4-pcard:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 14px 32px -14px rgba(11, 16, 32, 0.18),
+    0 4px 10px -4px rgba(11, 16, 32, 0.08);
+  border-color: var(--v4-line-strong);
+}
+.v4-pcard::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(
+    280px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(37, 99, 235, 0.10),
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 220ms ease;
+  z-index: 0;
+}
+.v4-pcard:hover::after { opacity: 1; }
+.v4-pcard > * { position: relative; z-index: 1; }
+
+/* ── 4 · Sidebar tab pulse dot (unread/activity indicator) ───────────────── */
+.v4-nav-item { position: relative; }
+.v4-nav-pulse {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--v4-accent-500);
+  box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.55);
+  animation: wow-pulse-ring 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+.v4-nav-pulse--success { background: var(--v4-success-500); box-shadow: 0 0 0 0 rgba(18, 183, 106, 0.55); }
+.v4-nav-pulse--warn    { background: var(--v4-warn-500);    box-shadow: 0 0 0 0 rgba(247, 144, 9, 0.55); }
+.v4-nav-pulse--danger  { background: var(--v4-danger-500);  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+.v4-nav-item.is-active .v4-nav-pulse { background: #fff; box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.55); }
+@keyframes wow-pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.55); }
+  70%  { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}
+
+/* ── 4 · Toast stack (bottom-right) ──────────────────────────────────────── */
+.wow-toast-stack {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+  z-index: 100;
+  pointer-events: none;
+}
+.wow-toast {
+  pointer-events: auto;
+  background: var(--v4-paper);
+  border: 1px solid var(--v4-line);
+  border-left: 3px solid var(--v4-ink-400);
+  border-radius: var(--v4-r-md);
+  box-shadow:
+    0 16px 36px -16px rgba(11, 16, 32, 0.22),
+    0 4px 12px -4px rgba(11, 16, 32, 0.08);
+  padding: 11px 14px 11px 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 260px;
+  max-width: 380px;
+  font-size: 13px;
+  color: var(--v4-ink-800);
+  animation: wow-toast-in 280ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.wow-toast.is-leaving {
+  animation: wow-toast-out 200ms ease both;
+}
+.wow-toast--success { border-left-color: var(--v4-success-500); }
+.wow-toast--error   { border-left-color: var(--v4-danger-500); }
+.wow-toast--info    { border-left-color: var(--v4-accent-500); }
+.wow-toast-ic {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+.wow-toast--success .wow-toast-ic { color: var(--v4-success-500); }
+.wow-toast--error   .wow-toast-ic { color: var(--v4-danger-500); }
+.wow-toast--info    .wow-toast-ic { color: var(--v4-accent-500); }
+.wow-toast-ic svg { width: 16px; height: 16px; }
+.wow-toast-body { flex: 1; min-width: 0; line-height: 1.4; }
+.wow-toast-body b { display: block; color: var(--v4-ink-900); margin-bottom: 1px; font-size: 13px; font-weight: 600; }
+.wow-toast-body span { color: var(--v4-ink-500); font-size: 12px; }
+.wow-toast-close {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--v4-ink-400);
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 14px;
+  line-height: 1;
+  border-radius: 4px;
+}
+.wow-toast-close:hover { color: var(--v4-ink-700); background: var(--v4-surface-2); }
+@keyframes wow-toast-in {
+  from { opacity: 0; transform: translateX(40px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0)    scale(1); }
+}
+@keyframes wow-toast-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(40px); }
+}
+
+/* ── 2 · Command palette overlay ─────────────────────────────────────────── */
+.wow-cmdk-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 16, 32, 0.32);
+  backdrop-filter: blur(6px) saturate(140%);
+  -webkit-backdrop-filter: blur(6px) saturate(140%);
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 12vh;
+  animation: wow-cmdk-fade 160ms ease both;
+}
+@keyframes wow-cmdk-fade { from { opacity: 0; } to { opacity: 1; } }
+.wow-cmdk {
+  width: min(620px, 92vw);
+  background: var(--v4-paper);
+  border: 1px solid var(--v4-line);
+  border-radius: 14px;
+  box-shadow:
+    0 30px 80px -20px rgba(11, 16, 32, 0.35),
+    0 8px 24px -8px rgba(11, 16, 32, 0.16);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+  animation: wow-cmdk-pop 220ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes wow-cmdk-pop {
+  from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)     scale(1); }
+}
+.wow-cmdk-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--v4-line-soft);
+}
+.wow-cmdk-input-wrap svg {
+  width: 18px;
+  height: 18px;
+  color: var(--v4-ink-400);
+  flex-shrink: 0;
+}
+.wow-cmdk-input {
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-family: var(--v4-sans);
+  font-size: 15px;
+  color: var(--v4-ink-900);
+}
+.wow-cmdk-input::placeholder { color: var(--v4-ink-400); }
+.wow-cmdk-hint {
+  font-family: var(--v4-mono);
+  font-size: 10.5px;
+  color: var(--v4-ink-400);
+  border: 1px solid var(--v4-line);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.wow-cmdk-list {
+  overflow-y: auto;
+  padding: 6px;
+  flex: 1;
+  min-height: 0;
+}
+.wow-cmdk-section {
+  padding: 8px 10px 4px;
+  font-family: var(--v4-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--v4-ink-400);
+}
+.wow-cmdk-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--v4-ink-800);
+  font-size: 13.5px;
+  border: 0;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  font-family: var(--v4-sans);
+}
+.wow-cmdk-item:hover,
+.wow-cmdk-item.is-active {
+  background: var(--v4-surface-2);
+  color: var(--v4-ink-900);
+}
+.wow-cmdk-item.is-active {
+  background: var(--v4-accent-50);
+  color: var(--v4-accent-700);
+}
+.wow-cmdk-item-ic {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--v4-surface-2);
+  color: var(--v4-ink-500);
+  flex-shrink: 0;
+}
+.wow-cmdk-item.is-active .wow-cmdk-item-ic {
+  background: var(--v4-accent-100);
+  color: var(--v4-accent-700);
+}
+.wow-cmdk-item-ic svg { width: 14px; height: 14px; }
+.wow-cmdk-item-body { flex: 1; min-width: 0; }
+.wow-cmdk-item-title {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wow-cmdk-item-sub {
+  font-size: 11.5px;
+  color: var(--v4-ink-400);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wow-cmdk-item.is-active .wow-cmdk-item-sub { color: var(--v4-accent-600); }
+.wow-cmdk-item-kbd {
+  font-family: var(--v4-mono);
+  font-size: 10.5px;
+  color: var(--v4-ink-400);
+  border: 1px solid var(--v4-line);
+  border-radius: 4px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+.wow-cmdk-foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--v4-line-soft);
+  font-size: 11px;
+  color: var(--v4-ink-400);
+  font-family: var(--v4-mono);
+}
+.wow-cmdk-foot .wow-cmdk-hint { font-size: 9.5px; }
+.wow-cmdk-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--v4-ink-400);
+  font-size: 13px;
+}
+
+/* ── 6 · View Transitions API · cross-fade between tabs ──────────────────── */
+@supports (view-transition-name: none) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 280ms;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  ::view-transition-old(root) {
+    animation-name: wow-vt-out;
+  }
+  ::view-transition-new(root) {
+    animation-name: wow-vt-in;
+  }
+}
+@keyframes wow-vt-out {
+  to { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes wow-vt-in {
+  from { opacity: 0; transform: translateY(6px); }
+}
+
+/* ── Reduced-motion guardrail ─────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .v4-proj-grid > .v4-pcard,
+  .v4-stack-list > .v4-stack-row,
+  .v4-heat-strip > .v4-commit-row,
+  .v4-stack-bar .v4-seg,
+  .v4-closed-chart svg,
+  .v4-closed-chart svg path[stroke-dasharray],
+  .v4-commit-cells .v4-cc,
+  .v4-kpi-row > .v4-kpi,
+  .v4-nav-pulse,
+  .wow-toast,
+  .wow-cmdk,
+  .wow-cmdk-backdrop {
+    animation: none !important;
+  }
+  .v4-pcard,
+  .v4-pcard::after,
+  .v4-commit-cells .v4-cc {
+    transition: none !important;
+  }
+  .v4-closed-chart svg {
+    animation: none !important;
+    clip-path: none !important;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
 }

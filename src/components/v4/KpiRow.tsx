@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import type { CSSProperties } from "react";
 import type { ProjectData, SummaryMetrics } from "../../types";
 import {
   calcPortfolioVelocity,
@@ -6,6 +7,11 @@ import {
   calcProgressDelta,
   sumOpenPriorities,
 } from "../../utils/dashboardMetrics";
+import { TweenedNumber } from "./TweenedNumber";
+
+interface IndexedStyle extends CSSProperties {
+  "--i"?: number;
+}
 
 interface Props {
   projects: ProjectData[];
@@ -19,10 +25,6 @@ function compactUSD(n: number): string {
     return `$${k.toFixed(k % 1 === 0 ? 0 : 1).replace(".", ",")}k`;
   }
   return `$${n}`;
-}
-
-function formatNumber1d(n: number): string {
-  return (Math.round(n * 10) / 10).toString().replace(".", ",");
 }
 
 function buildSparkPath(values: number[], width: number, height: number): { line: string; area: string } {
@@ -69,7 +71,7 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
   return (
     <div className="v4-kpi-row">
       {/* 1. Прогресс портфеля (accent) */}
-      <div className="v4-kpi v4-kpi--acc">
+      <div className="v4-kpi v4-kpi--acc" style={{ "--i": 0 } as IndexedStyle}>
         <div className="v4-kpi-lbl">
           <span className="v4-kpi-ic">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -80,7 +82,7 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
           Прогресс портфеля
         </div>
         <div className="v4-kpi-val num">
-          {pctDone}
+          <TweenedNumber value={pctDone} />
           <span className="v4-u">%</span>
         </div>
         <div className="v4-kpi-meta">
@@ -98,22 +100,22 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
         </div>
         <div className="v4-kpi-splits">
           <div className="v4-kpi-split">
-            <div className="v4-kpi-split-n">{summary.totalIssues}</div>
+            <div className="v4-kpi-split-n"><TweenedNumber value={summary.totalIssues} /></div>
             <div className="v4-kpi-split-l">Всего</div>
           </div>
           <div className="v4-kpi-split">
-            <div className="v4-kpi-split-n">{summary.doneCount}</div>
+            <div className="v4-kpi-split-n"><TweenedNumber value={summary.doneCount} /></div>
             <div className="v4-kpi-split-l">Сделано</div>
           </div>
           <div className="v4-kpi-split">
-            <div className="v4-kpi-split-n">{summary.openCount}</div>
+            <div className="v4-kpi-split-n"><TweenedNumber value={summary.openCount} /></div>
             <div className="v4-kpi-split-l">Открыто</div>
           </div>
         </div>
       </div>
 
       {/* 2. Открытые задачи */}
-      <div className="v4-kpi">
+      <div className="v4-kpi" style={{ "--i": 1 } as IndexedStyle}>
         <div className="v4-kpi-lbl">
           <span className="v4-kpi-ic v4-kpi-ic--b">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -122,7 +124,7 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
           </span>
           Открытые задачи
         </div>
-        <div className="v4-kpi-val num">{summary.openCount}</div>
+        <div className="v4-kpi-val num"><TweenedNumber value={summary.openCount} /></div>
         <div className="v4-kpi-meta">
           {openDelta.netDelta7d !== 0 ? (
             <>
@@ -137,22 +139,22 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
         </div>
         <div className="v4-kpi-splits">
           <div className="v4-kpi-split">
-            <div className="v4-kpi-split-n" style={{ color: "var(--v4-p1)" }}>{priorityTotals.P1}</div>
+            <div className="v4-kpi-split-n" style={{ color: "var(--v4-p1)" }}><TweenedNumber value={priorityTotals.P1} /></div>
             <div className="v4-kpi-split-l">P1</div>
           </div>
           <div className="v4-kpi-split">
-            <div className="v4-kpi-split-n" style={{ color: "var(--v4-p2)" }}>{priorityTotals.P2}</div>
+            <div className="v4-kpi-split-n" style={{ color: "var(--v4-p2)" }}><TweenedNumber value={priorityTotals.P2} /></div>
             <div className="v4-kpi-split-l">P2</div>
           </div>
           <div className="v4-kpi-split">
-            <div className="v4-kpi-split-n" style={{ color: "var(--v4-p3)" }}>{priorityTotals.P3}</div>
+            <div className="v4-kpi-split-n" style={{ color: "var(--v4-p3)" }}><TweenedNumber value={priorityTotals.P3} /></div>
             <div className="v4-kpi-split-l">P3</div>
           </div>
         </div>
       </div>
 
       {/* 3. Velocity 7д + sparkline */}
-      <div className="v4-kpi">
+      <div className="v4-kpi" style={{ "--i": 2 } as IndexedStyle}>
         <div className="v4-kpi-lbl">
           <span className="v4-kpi-ic v4-kpi-ic--p">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -162,7 +164,7 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
           Velocity · 7 дней
         </div>
         <div className="v4-kpi-val num">
-          {formatNumber1d(velocity.perDay7d)}
+          <TweenedNumber value={velocity.perDay7d} decimals={1} decimalSeparator="," />
           <span className="v4-u">/день</span>
         </div>
         <div className="v4-kpi-meta">
@@ -190,6 +192,7 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
       {/* 4. Бюджет */}
       <div
         className="v4-kpi"
+        style={{ "--i": 3, ...(onFinanceClick ? { cursor: "pointer" } : null) } as IndexedStyle}
         onClick={onFinanceClick}
         role={onFinanceClick ? "button" : undefined}
         tabIndex={onFinanceClick ? 0 : undefined}
@@ -199,7 +202,6 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
             onFinanceClick();
           }
         }}
-        style={onFinanceClick ? { cursor: "pointer" } : undefined}
         aria-label={onFinanceClick ? "Открыть редактор финансов" : undefined}
       >
         <div className="v4-kpi-lbl">

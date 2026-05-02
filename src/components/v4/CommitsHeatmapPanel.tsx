@@ -1,6 +1,11 @@
 import { useMemo } from "react";
+import type { CSSProperties } from "react";
 import type { ProjectData } from "../../types";
 import { getLastNDays } from "../../utils/dashboardMetrics";
+
+interface IndexedStyle extends CSSProperties {
+  "--i"?: number;
+}
 
 interface Props {
   projects: ProjectData[];
@@ -53,25 +58,30 @@ export function CommitsHeatmapPanel({ projects, lastUpdated }: Props) {
         {rows.length === 0 || grandTotal === 0 ? (
           <div className="v4-empty">Нет активности за {DAYS} дней</div>
         ) : (
-          rows.map((row) => (
-            <div key={row.repo} className="v4-commit-row">
-              <span className="v4-nm">{row.repo}</span>
-              <div className="v4-commit-cells">
-                {row.cells.map((count, i) => {
-                  const v = bucket(count);
-                  return (
-                    <div
-                      key={i}
-                      className="v4-cc"
-                      data-v={v}
-                      title={`${days[i]}: ${count} коммит${count === 1 ? "" : count >= 2 && count <= 4 ? "а" : "ов"}`}
-                    />
-                  );
-                })}
+          rows.map((row, rowIdx) => {
+            const rowStyle: IndexedStyle = { "--i": rowIdx };
+            return (
+              <div key={row.repo} className="v4-commit-row" style={rowStyle}>
+                <span className="v4-nm">{row.repo}</span>
+                <div className="v4-commit-cells">
+                  {row.cells.map((count, i) => {
+                    const v = bucket(count);
+                    const cellStyle: IndexedStyle = { "--i": i };
+                    return (
+                      <div
+                        key={i}
+                        className="v4-cc"
+                        data-v={v}
+                        style={cellStyle}
+                        title={`${days[i]}: ${count} коммит${count === 1 ? "" : count >= 2 && count <= 4 ? "а" : "ов"}`}
+                      />
+                    );
+                  })}
+                </div>
+                <span className="v4-tot">{row.total}</span>
               </div>
-              <span className="v4-tot">{row.total}</span>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

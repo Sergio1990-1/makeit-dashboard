@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TokenForm } from "./components/TokenForm";
 import { ChatPanel } from "./components/ChatPanel";
 import { ChatButton } from "./components/ChatButton";
@@ -14,6 +14,9 @@ import { QualityView } from "./components/v4/quality/QualityView";
 import { DebateView } from "./components/v4/debate/DebateView";
 import { Sidebar } from "./components/v4/Sidebar";
 import { Topbar } from "./components/v4/Topbar";
+import { ToastHost } from "./components/v4/ToastHost";
+import { useToast } from "./components/v4/toastContext";
+import { CommandPalette } from "./components/v4/CommandPalette";
 import { DashboardView } from "./components/v4/DashboardView";
 import { ProjectsView } from "./components/v4/ProjectsView";
 import { MilestonesView } from "./components/v4/milestones/MilestonesView";
@@ -40,6 +43,7 @@ const TAB_CRUMBS: Record<TabId, string> = {
 };
 
 function AppInner() {
+  const toast = useToast();
   const {
     projects,
     summary,
@@ -52,12 +56,43 @@ function AppInner() {
 
   const { monitors, loading: monitorsLoading, error: monitorsError, refresh: refreshMonitors } = useMonitors();
 
+  // Toast on refresh result. Skip both the very first effect run AND the
+  // first transition from no-data → has-data (initial fetch). We only want
+  // to notify on subsequent refreshes, so a real prior `lastUpdated` Date
+  // must already be in the ref before the success branch fires.
+  const lastUpdatedRef = useRef<Date | null>(null);
+  const errorRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (errorRef.current === undefined) {
+      errorRef.current = error;
+      lastUpdatedRef.current = lastUpdated;
+      return;
+    }
+    if (error && error !== errorRef.current) {
+      toast.push({ kind: "error", title: "Не удалось обновить данные", description: error });
+    } else if (
+      !error &&
+      lastUpdated &&
+      lastUpdatedRef.current !== null &&
+      lastUpdated !== lastUpdatedRef.current &&
+      projects.length > 0
+    ) {
+      toast.push({
+        kind: "success",
+        title: "Данные обновлены",
+        description: `${projects.length} проектов · ${lastUpdated.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}`,
+      });
+    }
+    errorRef.current = error;
+    lastUpdatedRef.current = lastUpdated;
+  }, [lastUpdated, error, projects.length, toast]);
+
   const VALID_TABS: TabId[] = [
     "dashboard", "projects", "milestones", "uptime", "audit",
     "pipeline", "transcripts", "research", "specs", "quality", "debate",
   ];
   const ACTIVE_TAB_KEY = "makeit.activeTab";
-  const [tab, setTab] = useState<TabId>(() => {
+  const [tab, setTabRaw] = useState<TabId>(() => {
     try {
       const stored = localStorage.getItem(ACTIVE_TAB_KEY);
       if (stored && (VALID_TABS as string[]).includes(stored)) {
@@ -68,6 +103,19 @@ function AppInner() {
     }
     return "dashboard";
   });
+  // Wrap state setter with View Transitions API for a smooth cross-fade
+  // between tabs. Falls back to plain setState in browsers without support
+  // (e.g. Firefox today) — tabs still switch, just without the animation.
+  const setTab = useCallback((next: TabId) => {
+    type DocVT = Document & { startViewTransition?: (cb: () => void) => unknown };
+    const doc = document as DocVT;
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (typeof doc.startViewTransition === "function" && !reduced) {
+      doc.startViewTransition(() => setTabRaw(next));
+    } else {
+      setTabRaw(next);
+    }
+  }, []);
   useEffect(() => {
     try {
       localStorage.setItem(ACTIVE_TAB_KEY, tab);
@@ -79,6 +127,20 @@ function AppInner() {
   const [chatOpen, setChatOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
   const [sideOpen, setSideOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // Cmd-K opens command palette (works alongside the existing Topbar shortcut
+  // since both register handlers — palette wins because it's an overlay).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // Track visited tabs so stateful components mount lazily but stay alive.
   // Uses the React-recommended "setState during render" pattern for derived
@@ -98,6 +160,17 @@ function AppInner() {
     document.body.classList.add("v4");
     return () => { document.body.classList.remove("v4"); };
   }, []);
+
+  // Live activity pulses on the sidebar. Auto-clears for the active tab.
+  // Declared above the no-token early return so hook order is stable.
+  const pulses = useMemo(() => {
+    const out: Partial<Record<TabId, "accent" | "success" | "warn" | "danger">> = {};
+    const downCount = monitors.filter((m) => m.status === "down").length;
+    if (downCount > 0) out.uptime = "danger";
+    if (blockedIssues.length >= 5) out.dashboard = "warn";
+    if (tab in out) delete out[tab];
+    return out;
+  }, [monitors, blockedIssues.length, tab]);
 
   // Memoized so child components (e.g. ProjectsView) can include this in
   // memo dep arrays without re-running on every parent render.
@@ -165,6 +238,7 @@ function AppInner() {
         milestonesCount={allMilestones.length}
         monitorsCount={monitors.length}
         auditAlerts={auditAlerts}
+        pulses={pulses}
         isOpen={sideOpen}
         onClose={() => setSideOpen(false)}
       />
@@ -306,6 +380,19 @@ function AppInner() {
           onClose={() => setFinanceOpen(false)}
         />
       )}
+
+      {paletteOpen && (
+        <CommandPalette
+          projects={projects}
+          milestones={allMilestones}
+          activeTab={tab}
+          onClose={() => setPaletteOpen(false)}
+          onJumpTab={(t) => { setPaletteOpen(false); setTab(t); }}
+          onRefresh={() => { setPaletteOpen(false); refresh(true); refreshMonitors(); }}
+          onLogout={() => { setPaletteOpen(false); handleLogout(); }}
+          onOpenFinance={() => { setPaletteOpen(false); setFinanceOpen(true); }}
+        />
+      )}
     </div>
   );
 }
@@ -317,7 +404,11 @@ function App() {
     return <PasswordGate onAuth={() => setAuthed(true)} />;
   }
 
-  return <AppInner />;
+  return (
+    <ToastHost>
+      <AppInner />
+    </ToastHost>
+  );
 }
 
 export default App;

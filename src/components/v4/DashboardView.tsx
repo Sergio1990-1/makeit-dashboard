@@ -137,11 +137,12 @@ export function DashboardView({
             <div className="v4-empty">Нет проектов в текущем фильтре</div>
           ) : (
             <div className="v4-proj-grid">
-              {top4.map((p) => (
+              {top4.map((p, i) => (
                 <DashboardProjectCard
                   key={p.repo}
                   project={p}
                   monitor={getMonitor(p.repo)}
+                  index={i}
                 />
               ))}
             </div>

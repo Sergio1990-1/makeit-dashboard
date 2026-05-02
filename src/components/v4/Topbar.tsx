@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 interface Props {
   /** Crumb segments — last is bold (current page) */
@@ -15,7 +15,9 @@ interface Props {
   onLogout: () => void;
   /** Mobile sidebar toggle */
   onBurger?: () => void;
-  /** Optional search submit (Ctrl/Cmd-K focuses) */
+  /** Optional search submit. The ⌘K shortcut now opens the global Command
+   *  Palette instead of focusing this input — it remains a passive search
+   *  field for click-and-type usage. */
   onSearch?: (query: string) => void;
 }
 
@@ -31,17 +33,6 @@ export function Topbar({
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [query, setQuery] = useState("");
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        inputRef.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   return (
     <div className="v4-top">
