@@ -80,6 +80,25 @@ function pathMatchesAny(path: string, globs: string[]): boolean {
   return globs.some((g) => pathMatchesGlob(path, g));
 }
 
+// External path resolution. Templates use {repo}; when the external repo is
+// makeit-knowledge AND classification has a knowledge_path override, that
+// override wins — historical knowledge files don't follow the convention
+// (mankassa-business-logic.md, tax-research-kg.md, quiet-walls-model.md).
+function resolveExternalPath(
+  externalRepo: string,
+  pathTpl: string,
+  classification: ProjectClassification,
+  repo: string,
+): string {
+  if (
+    externalRepo === "Sergio1990-1/makeit-knowledge" &&
+    classification.knowledge_path
+  ) {
+    return classification.knowledge_path;
+  }
+  return pathTpl.replace("{repo}", repo);
+}
+
 // Helper: probe whether a path exists in the repo. Caches per-(repo, dir) so
 // many file_exists rules under the same directory share one listing.
 type DirCache = Map<string, Map<string, { name: string; type: string; path: string }[]>>;
@@ -336,7 +355,7 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
       case "external_file_exists": {
         const externalRepo = param<string>(c, "repo", "");
         const pathTpl = param<string>(c, "path_template", param<string>(c, "path", ""));
-        const path = pathTpl.replace("{repo}", ctx.repo);
+        const path = resolveExternalPath(externalRepo, pathTpl, ctx.classification, ctx.repo);
         const [extOwner, extRepoName] = externalRepo.split("/");
         if (!extOwner || !extRepoName) return { ...base, status: "unknown", detail: "Bad external repo" };
         const ok = await pathExists(ctx.token, extOwner, extRepoName, path, ctx.dirCache, "file");
@@ -351,7 +370,7 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         const externalRepo = param<string>(c, "external_repo", "");
         const pathTpl = param<string>(c, "path_template", "");
         const ageMin = param<number>(c, "project_age_days_min", 7);
-        const path = pathTpl.replace("{repo}", ctx.repo);
+        const path = resolveExternalPath(externalRepo, pathTpl, ctx.classification, ctx.repo);
         const meta = await getRepoMeta(ctx.token, ctx.owner, ctx.repo);
         const ageDays = (Date.now() - new Date(meta.created_at).getTime()) / 86400000;
         if (ageDays < ageMin) {
@@ -373,7 +392,12 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         const externalRepo = param<string | undefined>(c, "external_repo", undefined);
         const pathTpl = param<string | undefined>(c, "path_template", undefined);
         const literalPath = param<string | undefined>(c, "path", undefined);
-        const path = (pathTpl ? pathTpl.replace("{repo}", ctx.repo) : literalPath) ?? "";
+        let path: string;
+        if (externalRepo && pathTpl) {
+          path = resolveExternalPath(externalRepo, pathTpl, ctx.classification, ctx.repo);
+        } else {
+          path = (pathTpl ? pathTpl.replace("{repo}", ctx.repo) : literalPath) ?? "";
+        }
         if (!path) return { ...base, status: "unknown", detail: "doc_freshness: нет пути" };
 
         let owner = ctx.owner;

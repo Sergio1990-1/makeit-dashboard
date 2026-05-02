@@ -38,6 +38,9 @@ export interface ProjectClassification {
   tier: 1 | 2 | 3;
   complex: boolean;
   client: boolean;
+  // Override for the project's knowledge file in makeit-knowledge.
+  // Defaults to `knowledge/{repo}-business-logic.md` when omitted.
+  knowledge_path?: string;
 }
 
 export interface ChecklistDocument {
