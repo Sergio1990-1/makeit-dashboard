@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Milestone } from "../../../types";
 import { daysUntil, formatShortDate } from "../../../utils/date";
-import { getStartOverride } from "../../../utils/milestoneEdit";
+import { getEffectiveStart } from "../../../utils/milestoneEdit";
 import { classifyMilestone, type MilestoneStatusKind } from "./classifyMilestone";
 import { MilestoneEditConfirm, type PendingChange } from "./MilestoneEditConfirm";
 import {
@@ -88,11 +88,10 @@ export function MilestonesGantt({
 
     const enriched: Enriched[] = milestones
       .map((m) => {
-        const heuristicStart = milestoneStart(m, now);
-        const startOverride = getStartOverride(m.url);
-        const startD = startOverride
-          ? startOfDay(new Date(startOverride))
-          : heuristicStart;
+        const effective = getEffectiveStart(m);
+        const startD = effective
+          ? startOfDay(new Date(effective))
+          : milestoneStart(m, now);
         const dueD = m.dueOn ? startOfDay(new Date(m.dueOn)) : null;
         const days = m.dueOn ? daysUntil(m.dueOn, now) : null;
         return { m, startD, dueD, days, cls: classifyMilestone(m, days) };
@@ -560,15 +559,7 @@ export function MilestonesGantt({
                   const fillW = (width * pct) / 100;
                   const hasFill = pct > 0;
 
-                  const duePos = x.dueD
-                    ? diffDays(x.dueD, data.startWindow) * data.dayW +
-                      data.dayW / 2 -
-                      7
-                    : null;
-                  const showDiamond =
-                    duePos !== null && duePos >= -10 && duePos <= data.totalW + 10;
                   const showText = width >= 90;
-
                   const dueLabel = x.m.dueOn ? formatShortDate(x.m.dueOn) : "";
 
                   const ghost =
@@ -638,13 +629,6 @@ export function MilestonesGantt({
                         <div
                           className="v4-msgantt-bar-ghost"
                           style={{ left: `${ghostLeft}px`, width: `${ghostWidth}px` }}
-                        />
-                      )}
-                      {showDiamond && duePos !== null && (
-                        <div
-                          className={`v4-msgantt-due v4-msgantt-due--${x.cls}`}
-                          style={{ left: `${duePos}px` }}
-                          title={dueLabel ? `Дедлайн: ${dueLabel}` : "Дедлайн"}
                         />
                       )}
                     </div>

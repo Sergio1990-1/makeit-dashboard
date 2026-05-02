@@ -6711,22 +6711,6 @@ ul.v4-rsh-list {
 .v4-msgantt-bar--noeta .v4-msgantt-bar-fill { background: rgba(74,85,112,0.25); }
 .v4-msgantt-bar--noeta .v4-msgantt-bar-text { text-shadow: none; }
 
-.v4-msgantt-due {
-  position: absolute;
-  width: 14px; height: 14px;
-  background: var(--v4-paper);
-  border: 2px solid currentColor;
-  transform: rotate(45deg);
-  top: 15px;
-  z-index: 2;
-}
-.v4-msgantt-due--overdue { color: var(--v4-danger-500); background: var(--v4-danger-500); }
-.v4-msgantt-due--warn    { color: var(--v4-warn-500);  background: var(--v4-warn-500); }
-.v4-msgantt-due--soon    { color: var(--v4-accent-500); }
-.v4-msgantt-due--norm    { color: var(--v4-ink-500); }
-.v4-msgantt-due--done    { color: var(--v4-success-500); background: var(--v4-success-500); }
-.v4-msgantt-due--noeta   { display: none; }
-
 /* Closed section (collapsible) */
 .v4-msclosed {
   background: var(--v4-paper);

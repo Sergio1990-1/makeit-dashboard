@@ -4,10 +4,10 @@ import type { Milestone } from "../../../types";
 import { getToken } from "../../../utils/config";
 import { formatShortDate } from "../../../utils/date";
 import {
+  commitStartChange,
   parseMilestoneUrl,
   patchMilestoneDueOn,
   setDueOverride,
-  setStartOverride,
   triggerCacheSync,
 } from "../../../utils/milestoneEdit";
 import { useToast } from "../toastContext";
@@ -59,23 +59,22 @@ export function MilestoneEditConfirm({ change, onClose, onSaved }: Props) {
       toast.push({ title: "Не удалось распарсить URL milestone", kind: "error" });
       return;
     }
+    const token = getToken();
+    if ((dueChanged || startChanged) && !token) {
+      toast.push({
+        title: "Нет GitHub-токена",
+        description: "Добавь PAT в настройках, чтобы изменить сроки.",
+        kind: "error",
+      });
+      return;
+    }
     setSaving(true);
 
     if (dueChanged) {
-      const token = getToken();
-      if (!token) {
-        toast.push({
-          title: "Нет GitHub-токена",
-          description: "Добавь PAT в настройках, чтобы изменить дедлайн.",
-          kind: "error",
-        });
-        setSaving(false);
-        return;
-      }
-      const result = await patchMilestoneDueOn(token, ref, change.newDue);
+      const result = await patchMilestoneDueOn(token!, ref, change.newDue);
       if (!result) {
         toast.push({
-          title: "GitHub отклонил запрос",
+          title: "GitHub отклонил запрос (дедлайн)",
           description: "Дедлайн не сохранён. Проверь права токена.",
           kind: "error",
         });
@@ -83,18 +82,32 @@ export function MilestoneEditConfirm({ change, onClose, onSaved }: Props) {
         return;
       }
       setDueOverride(change.milestone.url, change.newDue);
-      triggerCacheSync();
     }
 
     if (startChanged) {
-      setStartOverride(change.milestone.url, change.newStart);
+      const ok = await commitStartChange(token!, change.milestone, change.newStart);
+      if (!ok) {
+        toast.push({
+          title: "GitHub отклонил запрос (старт)",
+          description:
+            "Стартовая дата хранится в description milestone. Проверь права токена.",
+          kind: "error",
+        });
+        setSaving(false);
+        return;
+      }
     }
+
+    if (dueChanged || startChanged) triggerCacheSync();
 
     toast.push({
       title: "Сроки обновлены",
-      description: dueChanged
-        ? "Дедлайн ушёл в GitHub. Стартовая дата хранится локально."
-        : "Стартовая дата хранится локально (без GitHub).",
+      description:
+        dueChanged && startChanged
+          ? "Дедлайн и старт ушли в GitHub."
+          : dueChanged
+            ? "Дедлайн ушёл в GitHub."
+            : "Старт записан в description milestone (виден всем устройствам).",
       kind: "success",
     });
     setSaving(false);
@@ -146,7 +159,7 @@ export function MilestoneEditConfirm({ change, onClose, onSaved }: Props) {
             <tbody>
               <tr className={startChanged ? "is-changed" : ""}>
                 <th scope="row">
-                  Старт <span className="v4-mscconfirm-tag">локально</span>
+                  Старт <span className="v4-mscconfirm-tag v4-mscconfirm-tag--gh">GitHub</span>
                 </th>
                 <td>{fmtDateMaybe(change.oldStart)}</td>
                 <td>{fmtDateMaybe(change.newStart)}</td>
@@ -160,14 +173,16 @@ export function MilestoneEditConfirm({ change, onClose, onSaved }: Props) {
               </tr>
             </tbody>
           </table>
-          {dueChanged && (
+          {(dueChanged || startChanged) && (
             <div className="v4-mscconfirm-note">
-              Дедлайн уйдёт в GitHub через REST API и будет виден всей команде.
-            </div>
-          )}
-          {!dueChanged && startChanged && (
-            <div className="v4-mscconfirm-note">
-              Стартовая дата изменится только в этом браузере (GitHub не хранит start).
+              Изменения уйдут в GitHub и будут видны всей команде.
+              {startChanged && !dueChanged && (
+                <>
+                  {" "}
+                  Старт хранится как тег в description milestone (
+                  <code>{`<!-- makeit-start: … -->`}</code>) — невидимо в GitHub UI.
+                </>
+              )}
             </div>
           )}
         </div>
