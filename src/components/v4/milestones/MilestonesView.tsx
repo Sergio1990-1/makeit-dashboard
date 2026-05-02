@@ -13,6 +13,7 @@ import { MilestonesStatusBar } from "./MilestonesStatusBar";
 import { MilestoneIssuesPopup } from "./MilestoneIssuesPopup";
 import { classifyMilestone } from "./classifyMilestone";
 import { deadlineBucket } from "./utils";
+import { applyDueOverrides } from "../../../utils/milestoneEdit";
 
 interface Props {
   milestones: Milestone[];
@@ -91,13 +92,23 @@ interface Enriched {
   cls: ReturnType<typeof classifyMilestone>;
 }
 
-export function MilestonesView({ milestones, projects, lastUpdated }: Props) {
+export function MilestonesView({ milestones: rawMilestones, projects, lastUpdated }: Props) {
   const [state, setState] = useState<ToolbarState>(() => loadState());
   const [popupMs, setPopupMs] = useState<Milestone | null>(null);
+  // Bumped each time a user edit lands so derived memos re-read overrides.
+  const [overrideTick, setOverrideTick] = useState(0);
 
   useEffect(() => {
     saveState(state);
   }, [state]);
+
+  // Apply local due-date overrides to the milestone array so every downstream
+  // tile (Gantt, Hero, cards, popup) sees the same effective due date.
+  const milestones = useMemo(
+    () => applyDueOverrides(rawMilestones),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rawMilestones, overrideTick],
+  );
 
   // Re-resolve the popup milestone against the latest data so issue counts
   // refresh while the popup is open. Match by URL — stable across refreshes.
@@ -217,6 +228,8 @@ export function MilestonesView({ milestones, projects, lastUpdated }: Props) {
         onGrouping={(g) => setState((s) => ({ ...s, ganttGrouping: g }))}
         now={now}
         onSelect={setPopupMs}
+        overrideTick={overrideTick}
+        onEdited={() => setOverrideTick((t) => t + 1)}
       />
 
       {/* Closed section (collapsible) */}
@@ -370,6 +383,7 @@ export function MilestonesView({ milestones, projects, lastUpdated }: Props) {
         <MilestoneIssuesPopup
           milestone={popupMsLive}
           onClose={() => setPopupMs(null)}
+          onEdited={() => setOverrideTick((t) => t + 1)}
         />
       )}
     </div>

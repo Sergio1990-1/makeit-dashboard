@@ -6561,6 +6561,112 @@ ul.v4-rsh-list {
   flex-shrink: 0;
 }
 
+.v4-msgantt-bar-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  z-index: 6;
+  cursor: ew-resize;
+}
+.v4-msgantt-bar-handle--l { left: 0; }
+.v4-msgantt-bar-handle--r { right: 0; }
+.v4-msgantt-bar:hover .v4-msgantt-bar-handle::after {
+  content: "";
+  position: absolute;
+  top: 4px; bottom: 4px;
+  left: 1px; right: 1px;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 2px;
+}
+.v4-msgantt-bar.is-dragging { opacity: 0.35; }
+.v4-msgantt-bar-ghost {
+  position: absolute;
+  top: 9px;
+  height: 26px;
+  border-radius: 6px;
+  background: rgba(37, 99, 235, 0.18);
+  border: 1.5px dashed var(--v4-accent-500);
+  z-index: 7;
+  pointer-events: none;
+}
+
+/* Confirm-edit modal — reuses .v4-mspopup shell with extra styles */
+.v4-mscconfirm { max-width: 460px; }
+.v4-mscconfirm-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.v4-mscconfirm-lead {
+  margin: 0;
+  font-size: 14px;
+  color: var(--v4-ink-800);
+}
+.v4-mscconfirm-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.v4-mscconfirm-tbl th {
+  text-align: left;
+  padding: 8px 6px;
+  font-weight: 600;
+  color: var(--v4-ink-700);
+  border-bottom: 1px solid var(--v4-line-soft);
+}
+.v4-mscconfirm-tbl thead th {
+  font-family: var(--v4-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--v4-ink-500);
+  font-weight: 600;
+}
+.v4-mscconfirm-tbl td {
+  padding: 8px 6px;
+  font-family: var(--v4-mono);
+  color: var(--v4-ink-700);
+  border-bottom: 1px solid var(--v4-line-soft);
+}
+.v4-mscconfirm-tbl tr.is-changed th,
+.v4-mscconfirm-tbl tr.is-changed td {
+  color: var(--v4-ink-900);
+  font-weight: 700;
+}
+.v4-mscconfirm-tbl tr.is-changed td:last-child {
+  background: var(--v4-success-50);
+  color: var(--v4-success-700);
+  border-radius: 4px;
+}
+.v4-mscconfirm-tag {
+  display: inline-block;
+  margin-left: 6px;
+  font-family: var(--v4-mono);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 99px;
+  background: var(--v4-surface-2);
+  color: var(--v4-ink-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.v4-mscconfirm-tag--gh {
+  background: var(--v4-accent-50);
+  color: var(--v4-accent-700);
+}
+.v4-mscconfirm-note {
+  font-size: 12px;
+  color: var(--v4-ink-500);
+  background: var(--v4-surface-2);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.v4-mscconfirm-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--v4-line-soft);
+}
+
 .v4-msgantt-bar--overdue {
   background: var(--v4-danger-100); color: var(--v4-danger-700);
   border: 1px solid var(--v4-danger-500);
@@ -7667,6 +7773,68 @@ ul.v4-rsh-list {
   font-size: 11px;
 }
 .v4-mspopup-ghlink:hover { text-decoration: underline; }
+
+.v4-mspopup-edit-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--v4-ink-500);
+  cursor: pointer;
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: background .15s, color .15s;
+}
+.v4-mspopup-edit-btn:hover {
+  background: var(--v4-surface-2);
+  color: var(--v4-accent-600);
+}
+.v4-mspopup-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.v4-mspopup-edit input[type="date"] {
+  font-family: var(--v4-mono);
+  font-size: 11px;
+  padding: 4px 6px;
+  border: 1px solid var(--v4-line-strong);
+  border-radius: 6px;
+  background: var(--v4-paper);
+  color: var(--v4-ink-900);
+}
+.v4-mspopup-edit-save,
+.v4-mspopup-edit-clear,
+.v4-mspopup-edit-cancel {
+  appearance: none;
+  border: 0;
+  font-family: var(--v4-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s, opacity .15s;
+}
+.v4-mspopup-edit-save {
+  background: var(--v4-accent-500);
+  color: #fff;
+}
+.v4-mspopup-edit-save:hover:not(:disabled) { background: var(--v4-accent-600); }
+.v4-mspopup-edit-clear {
+  background: #FEE4E2;
+  color: #B42318;
+}
+.v4-mspopup-edit-clear:hover:not(:disabled) { background: #FCC8C5; }
+.v4-mspopup-edit-cancel {
+  background: var(--v4-surface-2);
+  color: var(--v4-ink-700);
+}
+.v4-mspopup-edit-cancel:hover:not(:disabled) { background: var(--v4-surface-3); }
+.v4-mspopup-edit button:disabled,
+.v4-mspopup-edit input:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .v4-mspopup-tabs {
   display: flex;

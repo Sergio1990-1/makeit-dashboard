@@ -1,7 +1,9 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Milestone } from "../../../types";
 import { daysUntil, formatShortDate } from "../../../utils/date";
+import { getStartOverride } from "../../../utils/milestoneEdit";
 import { classifyMilestone, type MilestoneStatusKind } from "./classifyMilestone";
+import { MilestoneEditConfirm, type PendingChange } from "./MilestoneEditConfirm";
 import {
   addDays,
   clsPriority,
@@ -13,6 +15,14 @@ import {
   startOfDay,
   stripEpicPrefix,
 } from "./utils";
+
+function toIsoDay(d: Date): string {
+  // Local midnight → "YYYY-MM-DD"
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 export type GanttZoom = "day" | "week" | "month";
 export type GanttGrouping = "none" | "repo";
@@ -39,6 +49,11 @@ interface Props {
   now: Date;
   /** Open the issues popup. Cmd/Ctrl-click still opens the GitHub URL. */
   onSelect?: (m: Milestone) => void;
+  /** Bumped each time the local override store changes — used as a memo dep
+   *  so milestoneStart picks up new user-set starts on the next render. */
+  overrideTick?: number;
+  /** Notify parent about a successful drag-edit so it can re-apply overrides. */
+  onEdited?: () => void;
 }
 
 function isModClick(e: { metaKey: boolean; ctrlKey: boolean; button: number }) {
@@ -65,13 +80,19 @@ export function MilestonesGantt({
   onGrouping,
   now,
   onSelect,
+  overrideTick = 0,
+  onEdited,
 }: Props) {
   const data = useMemo(() => {
     const dayW = ZOOMS[zoom].dayW;
 
     const enriched: Enriched[] = milestones
       .map((m) => {
-        const startD = milestoneStart(m, now);
+        const heuristicStart = milestoneStart(m, now);
+        const startOverride = getStartOverride(m.url);
+        const startD = startOverride
+          ? startOfDay(new Date(startOverride))
+          : heuristicStart;
         const dueD = m.dueOn ? startOfDay(new Date(m.dueOn)) : null;
         const days = m.dueOn ? daysUntil(m.dueOn, now) : null;
         return { m, startD, dueD, days, cls: classifyMilestone(m, days) };
@@ -176,9 +197,104 @@ export function MilestonesGantt({
       weekendCols,
       startWindow,
     };
-  }, [milestones, zoom, now, grouping]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [milestones, zoom, now, grouping, overrideTick]);
 
   const todaySod = useMemo(() => startOfDay(now), [now]);
+
+  // Drag state for resizing milestone bars
+  type DragMode = "left" | "right" | "move";
+  const dragRef = useRef<{
+    url: string;
+    mode: DragMode;
+    startPx: number;
+    origStartIdx: number;
+    origEndIdx: number;
+    dayW: number;
+  } | null>(null);
+  const [dragGhost, setDragGhost] = useState<{
+    url: string;
+    leftIdx: number;
+    rightIdx: number;
+  } | null>(null);
+  const [pendingChange, setPendingChange] = useState<PendingChange | null>(null);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const drag = dragRef.current;
+      if (!drag) return;
+      const dx = e.clientX - drag.startPx;
+      const dDays = Math.round(dx / drag.dayW);
+      let leftIdx = drag.origStartIdx;
+      let rightIdx = drag.origEndIdx;
+      if (drag.mode === "left") {
+        leftIdx = Math.min(drag.origEndIdx - 1, drag.origStartIdx + dDays);
+      } else if (drag.mode === "right") {
+        rightIdx = Math.max(drag.origStartIdx + 1, drag.origEndIdx + dDays);
+      } else {
+        leftIdx = drag.origStartIdx + dDays;
+        rightIdx = drag.origEndIdx + dDays;
+      }
+      setDragGhost({ url: drag.url, leftIdx, rightIdx });
+    };
+    const onUp = () => {
+      const drag = dragRef.current;
+      const ghost = dragGhost;
+      dragRef.current = null;
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+      setDragGhost(null);
+      if (!drag || !ghost) return;
+      const moved =
+        ghost.leftIdx !== drag.origStartIdx || ghost.rightIdx !== drag.origEndIdx;
+      if (!moved) return;
+      const target = data.enriched.find((x) => x.m.url === drag.url);
+      if (!target) return;
+      const newStartD = addDays(data.startWindow, ghost.leftIdx);
+      // Right index is exclusive in our left/width math; due day = rightIdx-1.
+      const newDueD = addDays(data.startWindow, ghost.rightIdx - 1);
+      const newStart = toIsoDay(newStartD);
+      const newDue = drag.mode === "left" ? target.m.dueOn : `${toIsoDay(newDueD)}T00:00:00Z`;
+      const oldStart = toIsoDay(target.startD);
+      setPendingChange({
+        milestone: target.m,
+        oldStart,
+        oldDue: target.m.dueOn,
+        newStart,
+        newDue,
+      });
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [data, dragGhost]);
+
+  const beginDrag = (
+    e: React.MouseEvent,
+    url: string,
+    mode: DragMode,
+    startIdx: number,
+    endIdx: number,
+    dayW: number,
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragRef.current = {
+      url,
+      mode,
+      startPx: e.clientX,
+      origStartIdx: startIdx,
+      origEndIdx: endIdx,
+      dayW,
+    };
+    document.body.style.userSelect = "none";
+    document.body.style.cursor =
+      mode === "move" ? "grabbing" : "ew-resize";
+    setDragGhost({ url, leftIdx: startIdx, rightIdx: endIdx });
+  };
 
   // Auto-scroll the chart so "today" sits ~12% from the left edge of the
   // visible viewport. Without this the chart loads at scrollLeft=0, which
@@ -455,12 +571,19 @@ export function MilestonesGantt({
 
                   const dueLabel = x.m.dueOn ? formatShortDate(x.m.dueOn) : "";
 
+                  const ghost =
+                    dragGhost && dragGhost.url === x.m.url ? dragGhost : null;
+                  const ghostLeft = ghost ? ghost.leftIdx * data.dayW : null;
+                  const ghostWidth = ghost
+                    ? Math.max(28, (ghost.rightIdx - ghost.leftIdx) * data.dayW)
+                    : null;
+
                   return (
                     <div key={`${x.m.url}-${idx}`} className="v4-msgantt-grid-row">
                       <a
                         className={`v4-msgantt-bar v4-msgantt-bar--${x.cls}${
                           hasFill ? " has-fill" : ""
-                        }`}
+                        }${ghost ? " is-dragging" : ""}`}
                         href={x.m.url}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -472,6 +595,12 @@ export function MilestonesGantt({
                           if (!onSelect || isModClick(e)) return;
                           e.preventDefault();
                           onSelect(x.m);
+                        }}
+                        onMouseDown={(e) => {
+                          // Body drag = "move" (shift due preserving duration).
+                          // Edge handles handled by their own mousedown via stopPropagation.
+                          if (e.button !== 0) return;
+                          beginDrag(e, x.m.url, "move", startIdx, endIdx, data.dayW);
                         }}
                       >
                         {hasFill && (
@@ -488,7 +617,29 @@ export function MilestonesGantt({
                             <span className="v4-msgantt-bar-pct num">{pct}%</span>
                           </div>
                         )}
+                        <span
+                          className="v4-msgantt-bar-handle v4-msgantt-bar-handle--l"
+                          aria-label="Изменить дату начала"
+                          onMouseDown={(e) => {
+                            if (e.button !== 0) return;
+                            beginDrag(e, x.m.url, "left", startIdx, endIdx, data.dayW);
+                          }}
+                        />
+                        <span
+                          className="v4-msgantt-bar-handle v4-msgantt-bar-handle--r"
+                          aria-label="Изменить дедлайн"
+                          onMouseDown={(e) => {
+                            if (e.button !== 0) return;
+                            beginDrag(e, x.m.url, "right", startIdx, endIdx, data.dayW);
+                          }}
+                        />
                       </a>
+                      {ghost && ghostLeft !== null && ghostWidth !== null && (
+                        <div
+                          className="v4-msgantt-bar-ghost"
+                          style={{ left: `${ghostLeft}px`, width: `${ghostWidth}px` }}
+                        />
+                      )}
                       {showDiamond && duePos !== null && (
                         <div
                           className={`v4-msgantt-due v4-msgantt-due--${x.cls}`}
@@ -503,6 +654,14 @@ export function MilestonesGantt({
             </div>
           </div>
         </div>
+      )}
+
+      {pendingChange && (
+        <MilestoneEditConfirm
+          change={pendingChange}
+          onClose={() => setPendingChange(null)}
+          onSaved={() => onEdited?.()}
+        />
       )}
     </div>
   );

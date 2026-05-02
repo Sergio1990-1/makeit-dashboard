@@ -2,18 +2,47 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Milestone } from "../../../types";
 import { formatShortDate } from "../../../utils/date";
+import { getToken } from "../../../utils/config";
+import {
+  parseMilestoneUrl,
+  patchMilestoneDueOn,
+  setDueOverride,
+  triggerCacheSync,
+} from "../../../utils/milestoneEdit";
+import { useToast } from "../toastContext";
 import { MilestoneIssueRow } from "./MilestoneIssueRow";
 import { repoGlyphColor, stripEpicPrefix } from "./utils";
 
 interface Props {
   milestone: Milestone;
   onClose: () => void;
+  /** Called after a successful edit so the parent can re-read overrides. */
+  onEdited?: () => void;
 }
 
 type Tab = "all" | "open" | "closed";
 
-export function MilestoneIssuesPopup({ milestone, onClose }: Props) {
+/** "2026-05-09T00:00:00Z" → "2026-05-09" for <input type=date> binding. */
+function dueOnInputValue(iso: string | null): string {
+  if (!iso) return "";
+  // GitHub stores due_on as a date at 08:00 UTC; show the local-equivalent day.
+  return iso.slice(0, 10);
+}
+
+/** "2026-05-09" → "2026-05-09T00:00:00Z" — the format GitHub accepts. */
+function dueDateToIso(yyyymmdd: string): string {
+  return `${yyyymmdd}T00:00:00Z`;
+}
+
+export function MilestoneIssuesPopup({ milestone, onClose, onEdited }: Props) {
   const [tab, setTab] = useState<Tab>("all");
+  const [editing, setEditing] = useState(false);
+  const [draftDate, setDraftDate] = useState("");
+  const [saving, setSaving] = useState(false);
+  const toast = useToast();
+
+  const ref = useMemo(() => parseMilestoneUrl(milestone.url), [milestone.url]);
+  const canEdit = ref !== null;
 
   // ESC to close
   useEffect(() => {
@@ -106,24 +135,128 @@ export function MilestoneIssuesPopup({ milestone, onClose }: Props) {
             </span>
           </div>
           <div className="v4-mspopup-meta-row">
-            {milestone.dueOn && (
-              <span>
-                Дедлайн: <b>{formatShortDate(milestone.dueOn)}</b>
-              </span>
+            {editing ? (
+              <form
+                className="v4-mspopup-edit"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!ref) return;
+                  const token = getToken();
+                  if (!token) {
+                    toast.push({
+                      title: "Нет GitHub-токена",
+                      description: "Добавь PAT в настройках, чтобы редактировать milestone.",
+                      kind: "error",
+                    });
+                    return;
+                  }
+                  setSaving(true);
+                  const dueOn = draftDate ? dueDateToIso(draftDate) : null;
+                  const result = await patchMilestoneDueOn(token, ref, dueOn);
+                  setSaving(false);
+                  if (!result) {
+                    toast.push({
+                      title: "Не удалось сохранить",
+                      description: "GitHub отклонил запрос. Проверь права токена.",
+                      kind: "error",
+                    });
+                    return;
+                  }
+                  setDueOverride(milestone.url, dueOn);
+                  triggerCacheSync();
+                  toast.push({
+                    title: dueOn ? "Дедлайн обновлён" : "Дедлайн снят",
+                    kind: "success",
+                  });
+                  setEditing(false);
+                  onEdited?.();
+                }}
+              >
+                <input
+                  type="date"
+                  value={draftDate}
+                  onChange={(e) => setDraftDate(e.target.value)}
+                  disabled={saving}
+                  aria-label="Дата дедлайна"
+                />
+                <button
+                  type="submit"
+                  className="v4-mspopup-edit-save"
+                  disabled={saving}
+                >
+                  {saving ? "..." : "Сохранить"}
+                </button>
+                {milestone.dueOn && (
+                  <button
+                    type="button"
+                    className="v4-mspopup-edit-clear"
+                    disabled={saving}
+                    onClick={async () => {
+                      if (!ref) return;
+                      const token = getToken();
+                      if (!token) return;
+                      setSaving(true);
+                      const result = await patchMilestoneDueOn(token, ref, null);
+                      setSaving(false);
+                      if (!result) {
+                        toast.push({ title: "Не удалось снять дедлайн", kind: "error" });
+                        return;
+                      }
+                      setDueOverride(milestone.url, null);
+                      triggerCacheSync();
+                      toast.push({ title: "Дедлайн снят", kind: "success" });
+                      setEditing(false);
+                      onEdited?.();
+                    }}
+                  >
+                    Снять
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="v4-mspopup-edit-cancel"
+                  disabled={saving}
+                  onClick={() => setEditing(false)}
+                >
+                  Отмена
+                </button>
+              </form>
+            ) : (
+              <>
+                <span>
+                  Дедлайн:{" "}
+                  <b>
+                    {milestone.dueOn ? formatShortDate(milestone.dueOn) : "не задан"}
+                  </b>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      className="v4-mspopup-edit-btn"
+                      title="Изменить дедлайн"
+                      onClick={() => {
+                        setDraftDate(dueOnInputValue(milestone.dueOn));
+                        setEditing(true);
+                      }}
+                    >
+                      ✎
+                    </button>
+                  )}
+                </span>
+                {milestone.state === "CLOSED" && milestone.closedAt && (
+                  <span>
+                    Закрыт: <b>{formatShortDate(milestone.closedAt)}</b>
+                  </span>
+                )}
+                <a
+                  href={milestone.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="v4-mspopup-ghlink"
+                >
+                  Открыть на GitHub →
+                </a>
+              </>
             )}
-            {milestone.state === "CLOSED" && milestone.closedAt && (
-              <span>
-                Закрыт: <b>{formatShortDate(milestone.closedAt)}</b>
-              </span>
-            )}
-            <a
-              href={milestone.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="v4-mspopup-ghlink"
-            >
-              Открыть на GitHub →
-            </a>
           </div>
         </div>
 
