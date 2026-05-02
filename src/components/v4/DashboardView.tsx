@@ -3,7 +3,7 @@ import type { ProjectData, SummaryMetrics, Issue, Monitor } from "../../types";
 import { KpiRow } from "./KpiRow";
 import { DashboardProjectCard } from "./DashboardProjectCard";
 import { AIInsightsPanel } from "./AIInsightsPanel";
-import { StackedDistribution } from "./StackedDistribution";
+import { ProgressMatrix } from "./ProgressMatrix";
 import { BlockedPanel } from "./BlockedPanel";
 import { UrgentDeadlinesPanel } from "./UrgentDeadlinesPanel";
 import { ClosedChart30d } from "./ClosedChart30d";
@@ -154,7 +154,7 @@ export function DashboardView({
 
       {/* Row: stacked + blocked */}
       <div className="v4-grid">
-        <StackedDistribution projects={filtered} />
+        <ProgressMatrix projects={filtered} />
         <BlockedPanel issues={blockedIssues} />
       </div>
 
