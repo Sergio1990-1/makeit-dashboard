@@ -159,12 +159,14 @@ query($owner: String!, $number: Int!, $cursor: String) {
           type
           content {
             ... on Issue {
+              number
               title
               url
               createdAt
               updatedAt
               closedAt
               state
+              milestone { title }
               labels(first: 20) {
                 nodes { name }
               }
@@ -195,12 +197,14 @@ interface ProjectItemNode {
   id: string;
   type: string;
   content: {
+    number?: number;
     title?: string;
     url?: string;
     createdAt?: string;
     updatedAt?: string;
     closedAt?: string | null;
     state?: string;
+    milestone?: { title: string } | null;
     labels?: { nodes: { name: string }[] };
     repository?: { name: string };
   } | null;
@@ -273,12 +277,14 @@ export async function fetchAllProjectItems(): Promise<Issue[]> {
 
       issues.push({
         id: node.id,
+        number: node.content.number ?? null,
         title: node.content.title,
         url: node.content.url ?? "",
         status,
         priority: parsePriority(labels),
         labels,
         repo,
+        milestoneTitle: node.content.milestone?.title ?? null,
         isBlocked: labels.some((l) => l.toLowerCase() === "blocked"),
         createdAt: node.content.createdAt ?? "",
         updatedAt: node.content.updatedAt ?? "",
@@ -329,15 +335,6 @@ query($owner: String!, $repo: String!) {
         state
         closedIssues: issues(states: CLOSED) { totalCount }
         openIssues: issues(states: OPEN) { totalCount }
-        allIssues: issues(first: 50, orderBy: {field: CREATED_AT, direction: ASC}) {
-          nodes {
-            number
-            title
-            state
-            url
-            labels(first: 10) { nodes { name } }
-          }
-        }
       }
     }
     closedMilestones: milestones(first: 10, states: CLOSED, orderBy: {field: DUE_DATE, direction: DESC}) {
@@ -349,28 +346,11 @@ query($owner: String!, $repo: String!) {
         state
         closedIssues: issues(states: CLOSED) { totalCount }
         openIssues: issues(states: OPEN) { totalCount }
-        allIssues: issues(first: 50, orderBy: {field: CREATED_AT, direction: ASC}) {
-          nodes {
-            number
-            title
-            state
-            url
-            labels(first: 10) { nodes { name } }
-          }
-        }
       }
     }
   }
 }
 `;
-
-interface MilestoneIssueNode {
-  number: number;
-  title: string;
-  state: "OPEN" | "CLOSED";
-  url: string;
-  labels: { nodes: { name: string }[] };
-}
 
 interface MilestoneNode {
   title: string;
@@ -380,7 +360,6 @@ interface MilestoneNode {
   state: "OPEN" | "CLOSED";
   closedIssues: { totalCount: number };
   openIssues: { totalCount: number };
-  allIssues: { nodes: MilestoneIssueNode[] };
 }
 
 interface RepoInfoResponse {
@@ -431,13 +410,9 @@ export async function fetchRepoInfo(owner: string, repo: string): Promise<RepoIn
       openIssues: m.openIssues.totalCount,
       closedIssues: m.closedIssues.totalCount,
       repo,
-      issues: m.allIssues.nodes.map((i) => ({
-        number: i.number,
-        title: i.title,
-        state: i.state,
-        labels: i.labels.nodes.map((l) => l.name),
-        url: i.url,
-      })),
+      // Issue list is hydrated in transform.ts:buildProjectData by grouping
+      // PROJECT_ITEMS_QUERY results — keeps REPO_INFO_QUERY cheap.
+      issues: [],
     })),
     commitActivity,
     openIssueCount: graphqlResult.repository.openIssueCount.totalCount,
