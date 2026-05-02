@@ -1,6 +1,7 @@
 import type {
   ChecklistDocument,
   ChecklistRule,
+  ChecklistSettings,
   HealthFinding,
   HealthLayer,
   HealthLayerSummary,
@@ -17,11 +18,66 @@ import {
   getLatestWorkflowRun,
   listMilestones,
   listIssuesWithoutMilestone,
+  countClosedIssuesSince,
+  listCommitsForPath,
+  getCommitFiles,
+  listMergedPRsInWindow,
+  getPRFiles,
 } from "./github-actions";
 
 // Helper: read a typed param from a check object with a fallback.
 function param<T>(obj: Record<string, unknown>, key: string, fallback: T): T {
   return (obj[key] as T | undefined) ?? fallback;
+}
+
+// Resolve a value that may be either a literal or a `{ ref: "settings.X" }`
+// pointer into the document's settings block. Used for shared thresholds.
+function resolveRef<T>(
+  value: unknown,
+  settings: ChecklistSettings,
+  fallback: T,
+): T {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value !== "object") return value as T;
+  const ref = (value as Record<string, unknown>).ref;
+  if (typeof ref !== "string") return fallback;
+  // Supported namespaces: "settings.<key>".
+  const [ns, key] = ref.split(".");
+  if (ns !== "settings" || !key) return fallback;
+  const v = (settings as unknown as Record<string, unknown>)[key];
+  return (v ?? fallback) as T;
+}
+
+// Minimal glob matcher — supports the patterns we use in the checklist:
+// "app/**", "docs/**", "src/**", "alembic/versions/**", "README.md",
+// "CLAUDE.md". No need for a full library.
+function pathMatchesGlob(path: string, glob: string): boolean {
+  if (glob === path) return true;
+  if (glob.endsWith("/**")) {
+    const prefix = glob.slice(0, -3);
+    return path === prefix || path.startsWith(prefix + "/");
+  }
+  if (glob.endsWith("/*")) {
+    const prefix = glob.slice(0, -2);
+    if (!path.startsWith(prefix + "/")) return false;
+    return !path.slice(prefix.length + 1).includes("/");
+  }
+  if (glob.includes("*")) {
+    const re = new RegExp(
+      "^" +
+        glob
+          .split("*")
+          .map((s) => s.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+          .join(".*") +
+        "$",
+    );
+    return re.test(path);
+  }
+  return path === glob;
+}
+
+function pathMatchesAny(path: string, globs: string[]): boolean {
+  return globs.some((g) => pathMatchesGlob(path, g));
 }
 
 // Helper: probe whether a path exists in the repo. Caches per-(repo, dir) so
@@ -244,7 +300,11 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
       }
 
       case "issues_without_milestone": {
-        const max = resolveSettingsRef(c.max_count, ctx.doc.settings.issues_no_milestone_threshold);
+        const max = resolveRef<number>(
+          c.max_count,
+          ctx.doc.settings,
+          ctx.doc.settings.issues_no_milestone_threshold,
+        );
         const numbers = await listIssuesWithoutMilestone(ctx.token, ctx.owner, ctx.repo);
         const ok = numbers.length <= max;
         return {
@@ -309,18 +369,187 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         };
       }
 
-      // ── Layer 3 / 4 — пока не реализовано, отложено. ─────────────────────
-      // Возвращаем "unknown" чтобы не штрафовать; UI покажет как «отложено».
-      case "doc_freshness":
-      case "pr_touches_code_not_docs":
-      case "coverage_badge_present":
-      case "coverage_threshold":
+      case "doc_freshness": {
+        const externalRepo = param<string | undefined>(c, "external_repo", undefined);
+        const pathTpl = param<string | undefined>(c, "path_template", undefined);
+        const literalPath = param<string | undefined>(c, "path", undefined);
+        const path = (pathTpl ? pathTpl.replace("{repo}", ctx.repo) : literalPath) ?? "";
+        if (!path) return { ...base, status: "unknown", detail: "doc_freshness: нет пути" };
+
+        let owner = ctx.owner;
+        let repo = ctx.repo;
+        if (externalRepo) {
+          const [eo, er] = externalRepo.split("/");
+          if (!eo || !er) return { ...base, status: "unknown", detail: "doc_freshness: bad external_repo" };
+          owner = eo;
+          repo = er;
+        }
+
+        const maxAge = resolveRef<number>(c.max_age_days, ctx.doc.settings, 90);
+        const maxClosedSince = resolveRef<number | undefined>(
+          c.max_closed_issues_since,
+          ctx.doc.settings,
+          undefined as unknown as number,
+        );
+        const minLines = resolveRef<number>(
+          c.min_meaningful_change_lines,
+          ctx.doc.settings,
+          0,
+        );
+
+        const commits = await listCommitsForPath(ctx.token, owner, repo, path, 10);
+        if (commits.length === 0) {
+          // Без коммитов нельзя ни о чём судить — file_exists ловит реальное
+          // отсутствие файла, здесь возвращаем unknown.
+          return { ...base, status: "unknown", detail: `Нет истории коммитов для ${path}` };
+        }
+
+        // Find the last *meaningful* commit by walking newest → oldest and
+        // accumulating additions+deletions until we cross min_meaningful.
+        let cumulative = 0;
+        let meaningfulDate: string | null = null;
+        if (minLines <= 0) {
+          meaningfulDate = commits[0].date;
+        } else {
+          for (const cm of commits) {
+            const files = await getCommitFiles(ctx.token, owner, repo, cm.sha);
+            const f = files.find((x) => x.filename === path);
+            if (f) cumulative += f.additions + f.deletions;
+            if (cumulative >= minLines) {
+              meaningfulDate = cm.date;
+              break;
+            }
+          }
+        }
+        // If we never reached the threshold within the 10-commit window,
+        // treat the oldest commit as a soft signal — the doc has only had
+        // typo-level edits for a long time.
+        const refDate = meaningfulDate ?? commits[commits.length - 1].date;
+        const ageDays = Math.floor((Date.now() - new Date(refDate).getTime()) / 86400000);
+
+        const reasons: string[] = [];
+        if (ageDays > maxAge) reasons.push(`${ageDays} дн. без правок (порог ${maxAge})`);
+
+        // Closed-issue counter against the *target* repo (the project itself,
+        // even if the doc lives in makeit-knowledge — issues are closed in
+        // the project repo, that's where the work happens).
+        if (typeof maxClosedSince === "number" && maxClosedSince > 0) {
+          const closedCount = await countClosedIssuesSince(
+            ctx.token,
+            ctx.owner,
+            ctx.repo,
+            refDate,
+          );
+          if (closedCount >= maxClosedSince) {
+            reasons.push(`закрыто ${closedCount} issues с правки (порог ${maxClosedSince})`);
+          }
+        }
+
+        if (reasons.length === 0) {
+          return {
+            ...base,
+            status: "pass",
+            detail: `Свежо (${ageDays} дн., ${commits.length} коммитов в окне)`,
+          };
+        }
+        return { ...base, status: "fail", detail: reasons.join("; ") };
+      }
+
+      case "coverage_badge_present": {
+        const path = param<string>(c, "path", "README.md");
+        if (!(await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file"))) {
+          return { ...base, status: "fail", detail: `Нет ${path}` };
+        }
+        try {
+          const text = await readRepoFile(ctx.token, ctx.owner, ctx.repo, path);
+          const re = /(codecov|coveralls)\.io|shields\.io\/(codecov|coveralls)|img\.shields\.io\/codecov/i;
+          const ok = re.test(text);
+          return {
+            ...base,
+            status: ok ? "pass" : "fail",
+            detail: ok ? "Coverage badge найден в README" : "В README нет coverage-бейджа (codecov/coveralls)",
+          };
+        } catch {
+          return { ...base, status: "unknown", detail: `Не удалось прочитать ${path}` };
+        }
+      }
+
+      case "coverage_threshold": {
+        const thresholds = ctx.doc.settings.coverage_thresholds;
+        const tier = ctx.classification.tier;
+        let threshold = 0;
+        if (tier === 1) {
+          threshold = ctx.classification.complex ? thresholds.tier_1_complex : thresholds.tier_1;
+        } else if (tier === 2) {
+          threshold = thresholds.tier_2;
+        } else {
+          threshold = 0;
+        }
+
+        // Try shields.io public JSON for codecov first; works even when the
+        // dashboard repo's own GitHub token is not authorised for codecov.
+        const url = `https://img.shields.io/codecov/c/github/${ctx.owner}/${ctx.repo}.json`;
+        try {
+          const r = await fetch(url);
+          if (!r.ok) {
+            return { ...base, status: "unknown", detail: `coverage badge недоступен (HTTP ${r.status})` };
+          }
+          const json = await r.json();
+          const value = String(json.value ?? "").trim();
+          const m = value.match(/(\d+(?:\.\d+)?)\s*%/);
+          if (!m) {
+            return { ...base, status: "unknown", detail: `coverage = "${value}", не получилось распарсить` };
+          }
+          const pct = Number(m[1]);
+          const ok = pct >= threshold;
+          return {
+            ...base,
+            status: ok ? "pass" : "fail",
+            detail: `${pct}% (порог tier ${tier}${ctx.classification.complex ? " complex" : ""}: ${threshold}%)`,
+          };
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "fetch error";
+          return { ...base, status: "unknown", detail: `coverage сервис недоступен: ${msg}` };
+        }
+      }
+
+      case "pr_touches_code_not_docs": {
+        const windowDays = resolveRef<number>(c.window_days, ctx.doc.settings, 30);
+        const maxCount = resolveRef<number>(c.max_count, ctx.doc.settings, 3);
+        const codeGlobs = param<string[]>(c, "code_globs", ["app/**", "src/**"]);
+        const docGlobs = param<string[]>(c, "doc_globs", ["docs/**", "README.md", "CLAUDE.md"]);
+        const prs = await listMergedPRsInWindow(ctx.token, ctx.owner, ctx.repo, windowDays, 30);
+        if (prs.length === 0) {
+          return { ...base, status: "pass", detail: `Нет смерженных PR за ${windowDays} дн.` };
+        }
+        let driftCount = 0;
+        const driftPrs: number[] = [];
+        for (const pr of prs) {
+          const files = await getPRFiles(ctx.token, ctx.owner, ctx.repo, pr.number);
+          const touchesCode = files.some((f) => pathMatchesAny(f, codeGlobs));
+          const touchesDocs = files.some((f) => pathMatchesAny(f, docGlobs));
+          if (touchesCode && !touchesDocs) {
+            driftCount++;
+            driftPrs.push(pr.number);
+          }
+        }
+        const ok = driftCount <= maxCount;
+        return {
+          ...base,
+          status: ok ? "pass" : "fail",
+          detail: ok
+            ? `${driftCount} PR без обновления доков за ${windowDays} дн. (порог ${maxCount})`
+            : `${driftCount} PR за ${windowDays} дн. без правок в docs/: ${driftPrs.slice(0, 5).map((n) => `#${n}`).join(", ")}`,
+        };
+      }
+
+      // ── Layer 4 (LLM) — отложено, реализуется в iteration 3. ─────────────
       case "ai_template_filled":
       case "ai_doc_code_sync":
       case "ai_contract_milestones_sync":
       case "ai_knowledge_coverage":
       case "ai_claude_md_freshness":
-        return { ...base, status: "unknown", detail: `Проверка ${c.type} в разработке` };
+        return { ...base, status: "unknown", detail: `LLM-проверка ${c.type} в разработке` };
 
       default:
         return { ...base, status: "unknown", detail: `Неизвестный тип проверки ${c.type}` };
@@ -329,17 +558,6 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
     const msg = err instanceof Error ? err.message : "ошибка";
     return { ...base, status: "unknown", detail: `Ошибка проверки: ${msg}` };
   }
-}
-
-// settings ref values come as either { ref: "settings.x" } or a plain number.
-function resolveSettingsRef(value: unknown, fallback: number): number {
-  if (typeof value === "number") return value;
-  if (value && typeof value === "object" && "ref" in (value as Record<string, unknown>)) {
-    // Already substituted upstream when settings were applied; if still a ref,
-    // fall back to the default.
-    return fallback;
-  }
-  return fallback;
 }
 
 function computeScore(findings: HealthFinding[], doc: ChecklistDocument): HealthScore {
