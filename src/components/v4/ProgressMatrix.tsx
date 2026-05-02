@@ -209,7 +209,7 @@ function PriorityCell({ val, max, color, alpha, dimmed, focused }: CellProps) {
 }
 
 export function ProgressMatrix({ projects }: Props) {
-  const [sortKey, setSortKey] = useState<SortKey>("progress");
+  const [sortKey, setSortKey] = useState<SortKey>("open");
   const [hover, setHoverRaw] = useState<{ row: number | null; col: SortKey | null } | null>(null);
   const setHover = (
     next:

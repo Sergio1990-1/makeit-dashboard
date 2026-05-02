@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import type { Milestone, MilestoneIssue } from "../../../types";
+import type { Milestone } from "../../../types";
 import { formatShortDate } from "../../../utils/date";
+import { MilestoneIssueRow } from "./MilestoneIssueRow";
 import { repoGlyphColor, stripEpicPrefix } from "./utils";
 
 interface Props {
@@ -168,7 +169,7 @@ export function MilestoneIssuesPopup({ milestone, onClose }: Props) {
           ) : (
             <ul className="v4-mspopup-list">
               {visible.map((issue) => (
-                <IssueRow key={issue.url} issue={issue} />
+                <MilestoneIssueRow key={issue.url} issue={issue} />
               ))}
             </ul>
           )}
@@ -188,50 +189,3 @@ export function MilestoneIssuesPopup({ milestone, onClose }: Props) {
   );
 }
 
-function IssueRow({ issue }: { issue: MilestoneIssue }) {
-  const isClosed = issue.state === "CLOSED";
-  const priority = issue.labels
-    .map((l) => /^P[1-4]\b/i.exec(l)?.[0]?.toUpperCase())
-    .find((x): x is string => Boolean(x));
-  const isBlocked = issue.labels.some((l) => l.toLowerCase() === "blocked");
-  return (
-    <li className={`v4-mspopup-issue${isClosed ? " is-closed" : ""}`}>
-      <span
-        className={`v4-mspopup-issue-st v4-mspopup-issue-st--${
-          isClosed ? "closed" : "open"
-        }`}
-        aria-label={isClosed ? "Закрыт" : "Открыт"}
-      >
-        {isClosed ? "✓" : "○"}
-      </span>
-      <a
-        href={issue.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="v4-mspopup-issue-title"
-      >
-        <span className="v4-mspopup-issue-num num">#{issue.number}</span>{" "}
-        {issue.title}
-      </a>
-      <span className="v4-mspopup-issue-tags">
-        {priority && (
-          <span
-            className={`v4-ptag v4-ptag--${priority.toLowerCase()}`}
-          >
-            {priority}
-          </span>
-        )}
-        {isBlocked && (
-          <span className="v4-ptag" style={{ background: "#FEE4E2", color: "#B42318" }}>
-            blocked
-          </span>
-        )}
-      </span>
-      {isClosed && issue.closedAt && (
-        <span className="v4-mspopup-issue-date num">
-          {formatShortDate(issue.closedAt)}
-        </span>
-      )}
-    </li>
-  );
-}

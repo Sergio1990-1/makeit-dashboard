@@ -2875,51 +2875,6 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
   color: var(--v4-ink-400);
   font-size: 12px;
 }
-.v4-ms-issue {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px 6px 17px;
-  font-size: 12px;
-  border-bottom: 1px solid var(--v4-line-soft);
-}
-.v4-ms-issue:last-child { border-bottom: 0; }
-.v4-ms-issue--closed { opacity: 0.62; }
-.v4-ms-issue-status {
-  font-family: var(--v4-mono);
-  font-size: 12px;
-  font-weight: 700;
-  flex-shrink: 0;
-  width: 14px;
-  text-align: center;
-}
-.v4-ms-issue-status--closed { color: var(--v4-success-700); }
-.v4-ms-issue-status--open { color: var(--v4-ink-400); }
-.v4-ms-issue-title {
-  flex: 1;
-  color: var(--v4-ink-800);
-  text-decoration: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-.v4-ms-issue-title:hover { color: var(--v4-accent-700); }
-.v4-ms-issue-labels {
-  display: inline-flex;
-  gap: 4px;
-  align-items: center;
-  flex-shrink: 0;
-}
-.v4-ms-issue-blocked {
-  font-family: var(--v4-mono);
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 99px;
-  background: var(--v4-danger-50);
-  color: var(--v4-danger-700);
-}
 
 /* ────────────────────────────────────────
    TRANSCRIPTS VIEW
@@ -7764,6 +7719,8 @@ ul.v4-rsh-list {
   margin: 0;
   padding: 0;
 }
+/* Card-embedded variant: tighter padding, transparent surface, no outer border */
+.v4-mspopup-list--card { background: transparent; }
 .v4-mspopup-issue {
   display: grid;
   grid-template-columns: 24px 1fr auto auto;
@@ -7773,6 +7730,13 @@ ul.v4-rsh-list {
   border-bottom: 1px solid var(--v4-line-soft);
   font-size: 13px;
 }
+.v4-mspopup-issue--dense {
+  grid-template-columns: 22px 1fr auto;
+  gap: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+}
+.v4-mspopup-issue--dense .v4-mspopup-issue-date { display: none; }
 .v4-mspopup-issue:last-child { border-bottom: 0; }
 .v4-mspopup-issue:hover { background: var(--v4-surface-2); }
 .v4-mspopup-issue-st {

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Milestone } from "../../../types";
 import { daysUntil, formatShortDate } from "../../../utils/date";
 import { classifyMilestone } from "./classifyMilestone";
+import { MilestoneIssueRow } from "./MilestoneIssueRow";
 import {
   countBlocked,
   countByPriority,
@@ -206,53 +207,11 @@ export function MilestoneCardV4({ milestone, density, now, onSelect }: Props) {
           {sortedIssues.length === 0 ? (
             <div className="v4-mscv-issues-empty">Нет привязанных issues</div>
           ) : (
-            sortedIssues.map((issue) => {
-              const isClosed = issue.state === "CLOSED";
-              return (
-                <div
-                  key={issue.number}
-                  className={`v4-ms-issue${isClosed ? " v4-ms-issue--closed" : ""}`}
-                >
-                  <span
-                    className={`v4-ms-issue-status ${
-                      isClosed
-                        ? "v4-ms-issue-status--closed"
-                        : "v4-ms-issue-status--open"
-                    }`}
-                    aria-hidden="true"
-                  >
-                    {isClosed ? "✓" : "○"}
-                  </span>
-                  <a
-                    href={issue.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="v4-ms-issue-title"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    #{issue.number} {issue.title}
-                  </a>
-                  <span className="v4-ms-issue-labels">
-                    {issue.labels
-                      .filter((l) => /^P[1-4]/i.test(l))
-                      .map((l) => {
-                        const p = l.split("-")[0].toUpperCase();
-                        return (
-                          <span
-                            key={l}
-                            className={`v4-ptag v4-ptag--${p.toLowerCase()}`}
-                          >
-                            {p}
-                          </span>
-                        );
-                      })}
-                    {issue.labels.some((l) => l.toLowerCase() === "blocked") && (
-                      <span className="v4-ms-issue-blocked">blocked</span>
-                    )}
-                  </span>
-                </div>
-              );
-            })
+            <ul className="v4-mspopup-list v4-mspopup-list--card">
+              {sortedIssues.map((issue) => (
+                <MilestoneIssueRow key={issue.number} issue={issue} dense />
+              ))}
+            </ul>
           )}
         </div>
       )}
