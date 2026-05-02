@@ -399,3 +399,144 @@ export async function addIssueToProject(
     contentId: issueData.repository.issue.id,
   });
 }
+
+// ── Project Health helpers ─────────────────────────────────────────────
+// REST endpoints used by the health-engine. Kept here so all GitHub access
+// goes through one auth/error path.
+
+export interface RepoMeta {
+  created_at: string;
+  pushed_at: string;
+  default_branch: string;
+  open_issues_count: number;
+}
+
+export async function getRepoMeta(token: string, owner: string, repo: string): Promise<RepoMeta> {
+  const data = await rest(token, `/repos/${owner}/${repo}`);
+  return {
+    created_at: data.created_at,
+    pushed_at: data.pushed_at,
+    default_branch: data.default_branch,
+    open_issues_count: data.open_issues_count,
+  };
+}
+
+export async function listRepoLabels(token: string, owner: string, repo: string): Promise<string[]> {
+  const out: string[] = [];
+  for (let page = 1; page <= 5; page++) {
+    const data = await rest(token, `/repos/${owner}/${repo}/labels?per_page=100&page=${page}`);
+    if (!Array.isArray(data) || data.length === 0) break;
+    out.push(...data.map((l: { name: string }) => l.name));
+    if (data.length < 100) break;
+  }
+  return out;
+}
+
+export interface Workflow {
+  id: number;
+  name: string;
+  path: string;
+  state: string;
+}
+
+export async function listWorkflows(token: string, owner: string, repo: string): Promise<Workflow[]> {
+  try {
+    const data = await rest(token, `/repos/${owner}/${repo}/actions/workflows?per_page=100`);
+    return Array.isArray(data.workflows) ? data.workflows : [];
+  } catch {
+    return [];
+  }
+}
+
+export interface WorkflowRun {
+  id: number;
+  status: string;
+  conclusion: string | null;
+  created_at: string;
+}
+
+export async function getLatestWorkflowRun(
+  token: string,
+  owner: string,
+  repo: string,
+  workflowId: number,
+): Promise<WorkflowRun | null> {
+  try {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/actions/workflows/${workflowId}/runs?per_page=1`,
+    );
+    const runs = Array.isArray(data.workflow_runs) ? data.workflow_runs : [];
+    return runs[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// Last commit that touched a path. Used by doc_freshness checks (when
+// implemented) and to verify a file actually exists when we want commit
+// metadata as well as content.
+export async function getLatestCommitForPath(
+  token: string,
+  owner: string,
+  repo: string,
+  path: string,
+): Promise<{ sha: string; date: string } | null> {
+  try {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/commits?path=${encodeURIComponent(path)}&per_page=1`,
+    );
+    const commit = Array.isArray(data) ? data[0] : null;
+    if (!commit) return null;
+    return { sha: commit.sha, date: commit.commit.author?.date ?? commit.commit.committer?.date };
+  } catch {
+    return null;
+  }
+}
+
+// Count issues closed since `since` (ISO date). Excludes PRs.
+export async function countClosedIssuesSince(
+  token: string,
+  owner: string,
+  repo: string,
+  since: string,
+): Promise<number> {
+  let count = 0;
+  for (let page = 1; page <= 10; page++) {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/issues?state=closed&since=${encodeURIComponent(since)}&per_page=100&page=${page}`,
+    );
+    if (!Array.isArray(data) || data.length === 0) break;
+    for (const i of data as Array<{ pull_request?: unknown; closed_at: string | null }>) {
+      if (i.pull_request) continue;
+      if (i.closed_at && new Date(i.closed_at) >= new Date(since)) count++;
+    }
+    if (data.length < 100) break;
+  }
+  return count;
+}
+
+// All open issues that have no milestone assigned. Returns issue numbers.
+export async function listIssuesWithoutMilestone(
+  token: string,
+  owner: string,
+  repo: string,
+): Promise<number[]> {
+  const out: number[] = [];
+  for (let page = 1; page <= 10; page++) {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/issues?state=open&milestone=none&per_page=100&page=${page}`,
+    );
+    if (!Array.isArray(data) || data.length === 0) break;
+    for (const i of data as Array<{ number: number; pull_request?: unknown; milestone: unknown }>) {
+      if (i.pull_request) continue;
+      if (i.milestone == null) out.push(i.number);
+    }
+    if (data.length < 100) break;
+  }
+  return out;
+}
+

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ProjectData, Monitor, Phase } from "../../types";
 import { ProjectCardV4 } from "./ProjectCardV4";
+import { ProjectHealthPage } from "./health/ProjectHealthPage";
 import { calcRiskScore } from "../../utils/riskScore";
 
 interface Props {
@@ -133,6 +134,12 @@ export function ProjectsView({
   const [state, setState] = useState<ToolbarState>(() => loadState());
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
+  const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
+
+  const selectedProject = useMemo(
+    () => (selectedRepo ? projects.find((p) => p.repo === selectedRepo) : undefined),
+    [projects, selectedRepo],
+  );
 
   useEffect(() => {
     saveState(state);
@@ -227,6 +234,16 @@ export function ProjectsView({
       }))
       .filter((g) => g.items.length > 0);
   }, [sorted, state.groupByPhase]);
+
+  if (selectedRepo) {
+    return (
+      <ProjectHealthPage
+        repo={selectedRepo}
+        project={selectedProject}
+        onBack={() => setSelectedRepo(null)}
+      />
+    );
+  }
 
   return (
     <div className="v4-content">
@@ -398,13 +415,25 @@ export function ProjectsView({
               )}
               <div className="v4-projects-grid">
                 {g.items.map((p) => (
-                  <ProjectCardV4
-                    key={p.repo}
-                    project={p}
-                    monitor={getMonitor(p.repo)}
-                    onJumpToTab={onJumpToTab}
-                    onEditFinance={onFinanceClick}
-                  />
+                  <div key={p.repo} className="v4-project-cell">
+                    <ProjectCardV4
+                      project={p}
+                      monitor={getMonitor(p.repo)}
+                      onJumpToTab={onJumpToTab}
+                      onEditFinance={onFinanceClick}
+                    />
+                    <button
+                      type="button"
+                      className="v4-btn v4-project-health-btn"
+                      onClick={() => setSelectedRepo(p.repo)}
+                      aria-label={`Открыть Health для ${p.repo}`}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>
+                        <path d="M12 22s-8-4.5-8-11.8A5 5 0 0 1 12 5a5 5 0 0 1 8 5.2c0 7.3-8 11.8-8 11.8z" />
+                      </svg>
+                      Health
+                    </button>
+                  </div>
                 ))}
               </div>
             </section>
