@@ -217,6 +217,10 @@ export function MilestonesGantt({
     rightIdx: number;
   } | null>(null);
   const [pendingChange, setPendingChange] = useState<PendingChange | null>(null);
+  // Set on mouseup whenever a drag was in progress. The synthetic `click` that
+  // browsers fire after `mousedown` + `mouseup` on the same element would
+  // otherwise open the issues popup right after a drag-resize.
+  const suppressClickRef = useRef(false);
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -243,7 +247,18 @@ export function MilestonesGantt({
       document.body.style.userSelect = "";
       document.body.style.cursor = "";
       setDragGhost(null);
-      if (!drag || !ghost) return;
+      if (!drag) return;
+      // Always suppress the `click` synthesized after mousedown+mouseup on a
+      // drag — even a 0-day drag (mouseup without movement) shouldn't open
+      // the popup because the user committed to "drag" intent.
+      suppressClickRef.current = true;
+      // Drop the flag on the next macrotask so legitimate clicks elsewhere
+      // are unaffected. setTimeout(0) > requestAnimationFrame here because
+      // the `click` event runs synchronously after `mouseup`.
+      window.setTimeout(() => {
+        suppressClickRef.current = false;
+      }, 0);
+      if (!ghost) return;
       const moved =
         ghost.leftIdx !== drag.origStartIdx || ghost.rightIdx !== drag.origEndIdx;
       if (!moved) return;
@@ -583,6 +598,14 @@ export function MilestonesGantt({
                           dueLabel ? " · до " + dueLabel : ""
                         }`}
                         onClick={(e) => {
+                          // Suppress the synthesized click after a drag —
+                          // otherwise dragging an edge handle also opens the
+                          // issues popup on mouseup.
+                          if (suppressClickRef.current) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return;
+                          }
                           if (!onSelect || isModClick(e)) return;
                           e.preventDefault();
                           onSelect(x.m);
