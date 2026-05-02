@@ -10,6 +10,7 @@ import {
 } from "./MilestonesGantt";
 import { MilestonesClosedSection } from "./MilestonesClosedSection";
 import { MilestonesStatusBar } from "./MilestonesStatusBar";
+import { MilestoneIssuesPopup } from "./MilestoneIssuesPopup";
 import { classifyMilestone } from "./classifyMilestone";
 import { deadlineBucket } from "./utils";
 
@@ -92,10 +93,18 @@ interface Enriched {
 
 export function MilestonesView({ milestones, projects, lastUpdated }: Props) {
   const [state, setState] = useState<ToolbarState>(() => loadState());
+  const [popupMs, setPopupMs] = useState<Milestone | null>(null);
 
   useEffect(() => {
     saveState(state);
   }, [state]);
+
+  // Re-resolve the popup milestone against the latest data so issue counts
+  // refresh while the popup is open. Match by URL — stable across refreshes.
+  const popupMsLive = useMemo(() => {
+    if (!popupMs) return null;
+    return milestones.find((m) => m.url === popupMs.url) ?? popupMs;
+  }, [milestones, popupMs]);
 
   // Anchor "now" to lastUpdated so daysUntil/Gantt today line stay consistent
   // with the data refresh (otherwise minor drift between refreshes shows).
@@ -207,10 +216,11 @@ export function MilestonesView({ milestones, projects, lastUpdated }: Props) {
         grouping={state.ganttGrouping}
         onGrouping={(g) => setState((s) => ({ ...s, ganttGrouping: g }))}
         now={now}
+        onSelect={setPopupMs}
       />
 
       {/* Closed section (collapsible) */}
-      <MilestonesClosedSection milestones={doneMs} />
+      <MilestonesClosedSection milestones={doneMs} onSelect={setPopupMs} />
 
       {/* Status distribution */}
       <div className="v4-msstatus-wrap">
@@ -346,6 +356,7 @@ export function MilestonesView({ milestones, projects, lastUpdated }: Props) {
                       milestone={e.m}
                       density={state.density}
                       now={now}
+                      onSelect={setPopupMs}
                     />
                   ))}
                 </div>
@@ -353,6 +364,13 @@ export function MilestonesView({ milestones, projects, lastUpdated }: Props) {
             );
           })}
         </div>
+      )}
+
+      {popupMsLive && (
+        <MilestoneIssuesPopup
+          milestone={popupMsLive}
+          onClose={() => setPopupMs(null)}
+        />
       )}
     </div>
   );

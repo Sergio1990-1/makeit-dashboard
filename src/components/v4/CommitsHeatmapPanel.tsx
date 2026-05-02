@@ -88,7 +88,10 @@ export function CommitsHeatmapPanel({ projects, lastUpdated }: Props) {
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
-  const [hover, setHover] = useState<{ row: number; col: number } | null>(null);
+  // Hover keyed by repo name + col index. Repo name is stable across re-sorts;
+  // a row index would point to a different project after data refresh.
+  const [hover, setHover] = useState<{ repo: string; col: number } | null>(null);
+  const hoveredRow = hover ? rows.find((r) => r.repo === hover.repo) : null;
 
   return (
     <div className="v4-panel">
@@ -115,7 +118,7 @@ export function CommitsHeatmapPanel({ projects, lastUpdated }: Props) {
         ) : (
           rows.map((row, rowIdx) => {
             const a = rowAlpha(rowIdx);
-            const isRowHover = hover?.row === rowIdx;
+            const isRowHover = hover?.repo === row.repo;
             const rowStyle: IndexedStyle = {
               "--i": rowIdx,
               opacity: a,
@@ -132,9 +135,9 @@ export function CommitsHeatmapPanel({ projects, lastUpdated }: Props) {
                   {row.cells.map((count, colIdx) => {
                     const lv = levelOf(count);
                     const isHover =
-                      hover?.row === rowIdx && hover?.col === colIdx;
+                      hover?.repo === row.repo && hover?.col === colIdx;
                     const inAxis =
-                      hover && (hover.row === rowIdx || hover.col === colIdx);
+                      hover && (hover.repo === row.repo || hover.col === colIdx);
                     const cellProg = Math.max(
                       0,
                       Math.min(1, a * 1.4 - (colIdx / DAYS) * 0.5)
@@ -159,7 +162,7 @@ export function CommitsHeatmapPanel({ projects, lastUpdated }: Props) {
                             : ""
                         }`}
                         onMouseEnter={() =>
-                          setHover({ row: rowIdx, col: colIdx })
+                          setHover({ repo: row.repo, col: colIdx })
                         }
                       >
                         <div
@@ -178,9 +181,9 @@ export function CommitsHeatmapPanel({ projects, lastUpdated }: Props) {
         )}
 
         {hover &&
-          rows[hover.row] &&
+          hoveredRow &&
           (() => {
-            const r = rows[hover.row];
+            const r = hoveredRow;
             const v = r.cells[hover.col];
             const day = days[hover.col];
             const date = new Date(day);

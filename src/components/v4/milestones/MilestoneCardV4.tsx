@@ -15,6 +15,11 @@ interface Props {
   /** Anchor for daysUntil — passed from the view to keep classification
    *  consistent with the data refresh timestamp. */
   now: Date;
+  onSelect?: (m: Milestone) => void;
+}
+
+function isModClick(e: { metaKey: boolean; ctrlKey: boolean; button: number }) {
+  return e.metaKey || e.ctrlKey || e.button === 1;
 }
 
 const DESC_LIMIT = 140;
@@ -28,7 +33,7 @@ const FILL_BY_CLS: Record<string, string> = {
   noeta: "v4-mscv-fill--noeta",
 };
 
-export function MilestoneCardV4({ milestone, density, now }: Props) {
+export function MilestoneCardV4({ milestone, density, now, onSelect }: Props) {
   const [expanded, setExpanded] = useState(false);
 
   const total = milestone.openIssues + milestone.closedIssues;
@@ -152,7 +157,12 @@ export function MilestoneCardV4({ milestone, density, now }: Props) {
             target="_blank"
             rel="noopener noreferrer"
             className="v4-mscv-titlelink"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!onSelect || isModClick(e)) return;
+              e.preventDefault();
+              onSelect(milestone);
+            }}
           >
             {milestone.title}
           </a>

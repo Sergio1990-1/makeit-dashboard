@@ -5,11 +5,16 @@ import { repoGlyphColor } from "./utils";
 
 interface Props {
   milestones: Milestone[];
+  onSelect?: (m: Milestone) => void;
 }
 
 const PAGE_SIZE = 12;
 
-export function MilestonesClosedSection({ milestones }: Props) {
+function isModClick(e: { metaKey: boolean; ctrlKey: boolean; button: number }) {
+  return e.metaKey || e.ctrlKey || e.button === 1;
+}
+
+export function MilestonesClosedSection({ milestones, onSelect }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
@@ -122,6 +127,11 @@ export function MilestonesClosedSection({ milestones }: Props) {
                       href={m.url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={(e) => {
+                        if (!onSelect || isModClick(e)) return;
+                        e.preventDefault();
+                        onSelect(m);
+                      }}
                     >
                       <div>
                         <span

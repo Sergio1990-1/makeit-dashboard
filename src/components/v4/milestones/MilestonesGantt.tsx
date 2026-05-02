@@ -37,6 +37,12 @@ interface Props {
   grouping: GanttGrouping;
   onGrouping: (g: GanttGrouping) => void;
   now: Date;
+  /** Open the issues popup. Cmd/Ctrl-click still opens the GitHub URL. */
+  onSelect?: (m: Milestone) => void;
+}
+
+function isModClick(e: { metaKey: boolean; ctrlKey: boolean; button: number }) {
+  return e.metaKey || e.ctrlKey || e.button === 1;
 }
 
 interface Enriched {
@@ -58,6 +64,7 @@ export function MilestonesGantt({
   grouping,
   onGrouping,
   now,
+  onSelect,
 }: Props) {
   const data = useMemo(() => {
     const dayW = ZOOMS[zoom].dayW;
@@ -311,6 +318,11 @@ export function MilestonesGantt({
                   rel="noopener noreferrer"
                   className={`v4-msgantt-row v4-msgantt-row--${x.cls}`}
                   title={x.m.title}
+                  onClick={(e) => {
+                    if (!onSelect || isModClick(e)) return;
+                    e.preventDefault();
+                    onSelect(x.m);
+                  }}
                 >
                   <span
                     className="v4-msgantt-row-glyph"
@@ -456,6 +468,11 @@ export function MilestonesGantt({
                         title={`${x.m.title} · ${x.m.closedIssues}/${total} (${pct}%)${
                           dueLabel ? " · до " + dueLabel : ""
                         }`}
+                        onClick={(e) => {
+                          if (!onSelect || isModClick(e)) return;
+                          e.preventDefault();
+                          onSelect(x.m);
+                        }}
                       >
                         {hasFill && (
                           <div
