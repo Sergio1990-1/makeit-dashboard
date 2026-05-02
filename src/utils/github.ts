@@ -158,12 +158,14 @@ query($owner: String!, $number: Int!, $cursor: String) {
           type
           content {
             ... on Issue {
+              number
               title
               url
               createdAt
               updatedAt
               closedAt
               state
+              milestone { title }
               labels(first: 20) {
                 nodes { name }
               }
@@ -194,12 +196,14 @@ interface ProjectItemNode {
   id: string;
   type: string;
   content: {
+    number?: number;
     title?: string;
     url?: string;
     createdAt?: string;
     updatedAt?: string;
     closedAt?: string | null;
     state?: string;
+    milestone?: { title: string } | null;
     labels?: { nodes: { name: string }[] };
     repository?: { name: string };
   } | null;
@@ -275,12 +279,14 @@ export async function fetchAllProjectItems(token: string): Promise<Issue[]> {
 
       issues.push({
         id: node.id,
+        number: node.content.number ?? null,
         title: node.content.title,
         url: node.content.url ?? "",
         status,
         priority: parsePriority(labels),
         labels,
         repo,
+        milestoneTitle: node.content.milestone?.title ?? null,
         isBlocked: labels.some((l: string) => l.toLowerCase() === "blocked"),
         createdAt: node.content.createdAt ?? "",
         updatedAt: node.content.updatedAt ?? "",
@@ -338,17 +344,6 @@ query($owner: String!, $repo: String!) {
         closedAt
         closedIssues: issues(states: CLOSED) { totalCount }
         openIssues: issues(states: OPEN) { totalCount }
-        allIssues: issues(first: 50, orderBy: {field: CREATED_AT, direction: ASC}) {
-          nodes {
-            number
-            title
-            state
-            url
-            createdAt
-            closedAt
-            labels(first: 10) { nodes { name } }
-          }
-        }
       }
     }
     closedMilestones: milestones(first: 10, states: CLOSED, orderBy: {field: DUE_DATE, direction: DESC}) {
@@ -362,32 +357,11 @@ query($owner: String!, $repo: String!) {
         closedAt
         closedIssues: issues(states: CLOSED) { totalCount }
         openIssues: issues(states: OPEN) { totalCount }
-        allIssues: issues(first: 50, orderBy: {field: CREATED_AT, direction: ASC}) {
-          nodes {
-            number
-            title
-            state
-            url
-            createdAt
-            closedAt
-            labels(first: 10) { nodes { name } }
-          }
-        }
       }
     }
   }
 }
 `;
-
-interface MilestoneIssueNode {
-  number: number;
-  title: string;
-  state: "OPEN" | "CLOSED";
-  url: string;
-  createdAt: string | null;
-  closedAt: string | null;
-  labels: { nodes: { name: string }[] };
-}
 
 interface MilestoneNode {
   title: string;
@@ -399,7 +373,6 @@ interface MilestoneNode {
   closedAt: string | null;
   closedIssues: { totalCount: number };
   openIssues: { totalCount: number };
-  allIssues: { nodes: MilestoneIssueNode[] };
 }
 
 interface RepoInfoResponse {
@@ -452,15 +425,9 @@ async function fetchRepoInfo(token: string, owner: string, repo: string): Promis
       openIssues: m.openIssues.totalCount,
       closedIssues: m.closedIssues.totalCount,
       repo,
-      issues: m.allIssues.nodes.map((i) => ({
-        number: i.number,
-        title: i.title,
-        state: i.state,
-        labels: i.labels.nodes.map((l) => l.name),
-        url: i.url,
-        createdAt: i.createdAt,
-        closedAt: i.closedAt,
-      })),
+      // Issue list is hydrated client-side in fetchDashboardData by grouping
+      // PROJECT_ITEMS_QUERY results — keeps REPO_INFO_QUERY cheap.
+      issues: [],
     })),
     commitActivity,
     openIssueCount: graphqlResult.repository.openIssueCount.totalCount,
@@ -557,6 +524,34 @@ export async function fetchDashboardData(token: string, forceRefresh = false): P
     const repoIssues = allIssues.filter((i) => i.repo === project.repo);
     const repoInfo = await fetchRepoInfo(token, project.owner, project.repo);
 
+    // Hydrate milestone.issues from PROJECT_ITEMS_QUERY data instead of pulling
+    // them inside REPO_INFO_QUERY (which previously cost ~10× more per repo).
+    const issuesByMilestone = new Map<string, Issue[]>();
+    for (const i of repoIssues) {
+      if (!i.milestoneTitle) continue;
+      const arr = issuesByMilestone.get(i.milestoneTitle);
+      if (arr) arr.push(i); else issuesByMilestone.set(i.milestoneTitle, [i]);
+    }
+    const hydratedMilestones = repoInfo.milestones.map((m) => ({
+      ...m,
+      // Sort by createdAt ASC to match the previous REPO_INFO_QUERY ordering
+      // (orderBy: {field: CREATED_AT, direction: ASC}) so consumers that
+      // depended on insertion order keep behaving the same.
+      issues: (issuesByMilestone.get(m.title) ?? [])
+        .filter((i) => i.number !== null)
+        .slice()
+        .sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""))
+        .map((i) => ({
+          number: i.number as number,
+          title: i.title,
+          state: (i.closedAt ? "CLOSED" : "OPEN") as "OPEN" | "CLOSED",
+          labels: i.labels,
+          url: i.url,
+          createdAt: i.createdAt,
+          closedAt: i.closedAt,
+        })),
+    }));
+
     const priorityCounts: Record<Priority, number> = { P1: 0, P2: 0, P3: 0, P4: 0 };
     for (const issue of repoIssues) {
       if (issue.priority && issue.status !== "Done") priorityCounts[issue.priority]++;
@@ -622,7 +617,7 @@ export async function fetchDashboardData(token: string, forceRefresh = false): P
       openCount,
       doneCount,
       totalCount,
-      milestones: repoInfo.milestones,
+      milestones: hydratedMilestones,
       budget: project.budget,
       paid: project.paid,
       remaining: project.budget - project.paid,
