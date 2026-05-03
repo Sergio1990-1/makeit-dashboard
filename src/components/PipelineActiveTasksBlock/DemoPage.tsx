@@ -51,7 +51,10 @@ export function PipelineActiveTasksDemoPage() {
 
       <div style={block}>
         <div style={blockHd}>Comfortable density · 6 задач</div>
-        <PipelineActiveTasksBlock status={DEMO_STATUS_RUNNING} />
+        <PipelineActiveTasksBlock
+          status={DEMO_STATUS_RUNNING}
+          onOpenContext={(n) => alert(`open context for #${n}`)}
+        />
       </div>
 
       <div style={block}>

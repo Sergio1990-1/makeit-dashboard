@@ -19,6 +19,12 @@ interface Props {
   status: PipelineStatus;
   density?: "comfortable" | "compact";
   showV2?: boolean;
+  /**
+   * Optional callback to open the IssueContext modal (PR #196).
+   * Called from the per-card expanded view when the operator wants
+   * the full backend-side context for one issue.
+   */
+  onOpenContext?: (issueNumber: number) => void;
 }
 
 function buildIssueUrl(project: string | null, number: number): string {
@@ -90,6 +96,7 @@ export function PipelineActiveTasksBlock({
   status,
   density = "comfortable",
   showV2 = false,
+  onOpenContext,
 }: Props) {
   const completedNums = useMemo(
     () => new Set<number>((status.results || []).map((r: PipelineResult) => r.issue_number)),
@@ -168,7 +175,12 @@ export function PipelineActiveTasksBlock({
                 expanded={expanded.has(t.number)}
                 onToggle={() => toggle(t.number)}
               />
-              {expanded.has(t.number) && <ExpandedTimeline task={t} />}
+              {expanded.has(t.number) && (
+                <ExpandedTimeline
+                  task={t}
+                  onOpenContext={onOpenContext ? () => onOpenContext(t.number) : undefined}
+                />
+              )}
             </div>
           ))
         )}

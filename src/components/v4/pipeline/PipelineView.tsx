@@ -18,6 +18,7 @@ import { PipelineHero } from "./PipelineHero";
 import { PipelineStatusBanners } from "./PipelineStatusBanners";
 import { PipelineKpiStrip } from "./PipelineKpiStrip";
 import { PipelineActiveTasksBlock } from "../../PipelineActiveTasksBlock";
+import { IssueContextPanel } from "./IssueContextPanel";
 import { PipelineResults } from "./PipelineResults";
 import { PipelineComplexityPanel } from "./PipelineComplexityPanel";
 import { PipelineClosedChartV4 } from "./PipelineClosedChartV4";
@@ -196,6 +197,15 @@ export function PipelineView({
 
   // Timeline modal
   const [timelineIssue, setTimelineIssue] = useState<number | null>(null);
+  // IssueContextPanel modal — issue number whose backend context is open.
+  // Repo composition mirrors PR #196: pipeline's `current_project` is a bare
+  // repo slug, so we prepend `GITHUB_OWNER` to get the `owner/name` form the
+  // pipeline-side `/issue/{repo}/...` endpoint expects. `null` when no project
+  // is active so the panel never opens against a stale repo.
+  const [openContextIssue, setOpenContextIssue] = useState<number | null>(null);
+  const repoForContext = status?.current_project
+    ? `${GITHUB_OWNER}/${status.current_project}`
+    : null;
 
   function handleStart() {
     void start({
@@ -294,7 +304,10 @@ export function PipelineView({
 
           <div className="v4-grid">
             {running && status ? (
-              <PipelineActiveTasksBlock status={status} />
+              <PipelineActiveTasksBlock
+                status={status}
+                onOpenContext={repoForContext ? (n) => setOpenContextIssue(n) : undefined}
+              />
             ) : (
               <div className="v4-panel">
                 <div className="v4-panel-h">
@@ -333,6 +346,16 @@ export function PipelineView({
           onClose={() => setTimelineIssue(null)}
         />
       )}
+      {/* IssueContextPanel — backend-side context for one in-flight task.
+          `key` resets state on every issue switch so a stale fetch from the
+          previous issue can't paint over the new one. (PR #196.) */}
+      <IssueContextPanel
+        key={openContextIssue ?? "closed"}
+        open={openContextIssue !== null}
+        repo={repoForContext}
+        issueNumber={openContextIssue}
+        onClose={() => setOpenContextIssue(null)}
+      />
       <ClassifyDialog
         open={classifyDialogOpen}
         classifying={classifying}

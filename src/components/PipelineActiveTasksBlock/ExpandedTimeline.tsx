@@ -27,7 +27,14 @@ function copyToClipboard(text: string): Promise<void> {
   });
 }
 
-export function ExpandedTimeline({ task }: { task: ActiveTask }) {
+export function ExpandedTimeline({
+  task,
+  onOpenContext,
+}: {
+  task: ActiveTask;
+  /** Optional: open the IssueContextPanel modal (PR #196) for this task. */
+  onOpenContext?: () => void;
+}) {
   const stages = task.stages || [];
   const [copied, setCopied] = useState(false);
 
@@ -70,6 +77,16 @@ export function ExpandedTimeline({ task }: { task: ActiveTask }) {
           ))}
         </div>
         <div className="pl2-exp-meta-r">
+          {onOpenContext && (
+            <button
+              type="button"
+              className="pl2-btn"
+              onClick={onOpenContext}
+              title="Полный backend-контекст задачи (статус, retry-бюджет, артефакты)"
+            >
+              Контекст ↗
+            </button>
+          )}
           <a className="pl2-btn" href={task.issueUrl} target="_blank" rel="noreferrer">
             Open issue ↗
           </a>
