@@ -8,14 +8,20 @@ interface Props {
   onRescan: () => void;
   refreshing: boolean;
   rulesCount: number;
+  /** Optional — wired from ProjectHealthPage to open the BulkCreateModal. */
+  onBulkCreate?: () => void;
 }
 
 // Header of the report — repo name with classification chips, sub-row with
 // scan time and rules-version link, action buttons (drift scan placeholder
 // + rescan), and the 3-tile KPI row. Navigation back to the projects list
 // happens via the topbar breadcrumb.
-export function Hero({ report, onRescan, refreshing, rulesCount }: Props) {
+export function Hero({ report, onRescan, refreshing, rulesCount, onBulkCreate }: Props) {
   const cls = report.classification;
+  // Bulk-create only makes sense when there's something to file. Hiding the
+  // button (rather than disabling) keeps the toolbar visually clean for
+  // healthy projects.
+  const hasFails = report.findings.some((f) => f.status === "fail");
   return (
     <section className="ph-hero-block">
       <div className="ph-hero-top">
@@ -54,6 +60,16 @@ export function Hero({ report, onRescan, refreshing, rulesCount }: Props) {
           </div>
         </div>
         <div className="ph-hero-actions">
+          {hasFails && onBulkCreate && (
+            <button
+              type="button"
+              className="v4-btn"
+              onClick={onBulkCreate}
+              title="Массово создать GitHub issues для всех нарушений"
+            >
+              <Icon name="git-branch" /> Создать issues по всем
+            </button>
+          )}
           <button type="button" className="v4-btn" disabled title="Layer 4 — следующая итерация">
             <Icon name="zap" /> Просканировать drift
           </button>
