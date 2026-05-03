@@ -10,7 +10,9 @@ import { ClosedChart30d } from "./ClosedChart30d";
 import { MilestonesStrip } from "./MilestonesStrip";
 import { CommitsHeatmapPanel } from "./CommitsHeatmapPanel";
 import { StaleBanner } from "./StaleBanner";
+import { OrphanIssuesPanel } from "./OrphanIssuesPanel";
 import { usePortfolioHealth } from "../../hooks/usePortfolioHealth";
+import { usePortfolioOrphans } from "../../hooks/usePortfolioOrphans";
 
 interface Props {
   projects: ProjectData[];
@@ -57,6 +59,15 @@ export function DashboardView({
   const portfolioLastUpdated = useMemo(
     () => (portfolio.lastUpdated ? new Date(portfolio.lastUpdated) : null),
     [portfolio.lastUpdated],
+  );
+
+  // Orphan-issues trend uses its own hook (separate cache/refresh cadence
+  // from health) so a slow health scan doesn't block the chart and a
+  // forced "обновить orphans" doesn't trigger a 50-call health re-scan.
+  const orphans = usePortfolioOrphans();
+  const orphansLastUpdated = useMemo(
+    () => (orphans.lastUpdated ? new Date(orphans.lastUpdated) : null),
+    [orphans.lastUpdated],
   );
 
   const filtered = useMemo(
@@ -173,6 +184,13 @@ export function DashboardView({
           onOpenHealth={onOpenHealth}
         />
       </div>
+
+      {/* Full-width orphan-issues trend */}
+      <OrphanIssuesPanel
+        items={orphans.items}
+        loading={orphans.loading}
+        lastUpdated={orphansLastUpdated}
+      />
 
       {/* Row: stacked + blocked */}
       <div className="v4-grid">

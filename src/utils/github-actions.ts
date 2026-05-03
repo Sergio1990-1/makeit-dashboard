@@ -688,3 +688,51 @@ export async function listIssuesWithoutMilestone(
   return out;
 }
 
+// Same query as listIssuesWithoutMilestone, but returns the metadata callers
+// need to plot a 30-day orphan trend (created_at + originating repo). Kept as
+// a separate function so existing call-sites keep their compact `number[]`
+// shape.
+//
+// Pagination caps at 5 pages × 100 = 500 orphans per repo — same envelope as
+// findOpenIssueByTitle. If a project ever exceeds that, the chart will
+// undercount but never crash.
+export interface OrphanIssueMeta {
+  number: number;
+  created_at: string;
+  repo: string;
+}
+
+export async function listOrphanIssuesWithMeta(
+  token: string,
+  owner: string,
+  repo: string,
+): Promise<OrphanIssueMeta[]> {
+  const PER_PAGE = 100;
+  const MAX_PAGES = 5;
+  const out: OrphanIssueMeta[] = [];
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/issues?state=open&milestone=none&per_page=${PER_PAGE}&page=${page}`,
+    );
+    if (!Array.isArray(data) || data.length === 0) break;
+    for (const i of data as Array<{
+      number: number;
+      pull_request?: unknown;
+      milestone: unknown;
+      created_at: string;
+    }>) {
+      // The /issues endpoint returns PRs interleaved — drop them or the
+      // count balloons with merged-but-milestone-less PRs.
+      if (i.pull_request) continue;
+      // GitHub's `milestone=none` filter is server-side, but we re-check on
+      // the client too: defence-in-depth against an API quirk where the
+      // filter occasionally ships an issue with a stale milestone object.
+      if (i.milestone != null) continue;
+      out.push({ number: i.number, created_at: i.created_at, repo });
+    }
+    if (data.length < PER_PAGE) break;
+  }
+  return out;
+}
+

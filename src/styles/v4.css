@@ -1405,6 +1405,62 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 .v4-cc-peak b { color: var(--v4-ink-900); }
 
 /* ────────────────────────────────────────
+   ORPHAN ISSUES PANEL
+   ──────────────────────────────────────── */
+.v4-orphan-tip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px solid var(--v4-line-soft);
+  max-height: 160px;
+  overflow-y: auto;
+}
+.v4-orphan-tip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--v4-ink-700);
+}
+.v4-orphan-tip-c {
+  font-family: var(--v4-mono);
+  font-weight: 700;
+  color: var(--v4-ink-900);
+  font-variant-numeric: tabular-nums;
+}
+.v4-orphan-tip-more {
+  font-size: 10px;
+  color: var(--v4-ink-500);
+  padding-top: 2px;
+}
+.v4-orphan-skel {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 10px 20px 14px;
+  flex: 1;
+  min-height: 220px;
+}
+.v4-orphan-skel-bar {
+  flex: 1;
+  background: linear-gradient(
+    90deg,
+    var(--v4-line-soft) 0%,
+    var(--v4-surface-2, #f4f5f9) 50%,
+    var(--v4-line-soft) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: 3px;
+  animation: v4-ai-skel-shimmer 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .v4-orphan-skel-bar { animation: none; }
+}
+
+/* ────────────────────────────────────────
    MILESTONES STRIP
    ──────────────────────────────────────── */
 .v4-ms-grid {
