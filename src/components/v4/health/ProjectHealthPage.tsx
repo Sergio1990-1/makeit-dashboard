@@ -95,20 +95,33 @@ export function ProjectHealthPage({ repo, project }: Props) {
         return;
       }
 
-      // Race guard: if we're already mid-flight or finished, do nothing.
-      // For terminal states the button renders as <a> and never calls back.
-      const current = actionStates.get(finding.rule_id) ?? { kind: "idle" };
-      if (current.kind === "creating" || current.kind === "created" || current.kind === "duplicate") {
-        return;
-      }
-
-      setActionState(finding.rule_id, { kind: "creating" });
+      // Race-safe transition idle/error → creating: do the guard inside
+      // the functional updater so a rapid double-click can't both pass
+      // a stale "idle" snapshot and fire two parallel create requests.
+      // `transitioned` is captured from the updater so we know whether
+      // *this* call won the race.
+      let transitioned = false;
+      setActionStates((prev) => {
+        const current = prev.get(finding.rule_id) ?? { kind: "idle" };
+        if (
+          current.kind === "creating" ||
+          current.kind === "created" ||
+          current.kind === "duplicate"
+        ) {
+          return prev;
+        }
+        transitioned = true;
+        const m = new Map(prev);
+        m.set(finding.rule_id, { kind: "creating" });
+        return m;
+      });
+      if (!transitioned) return;
 
       const title = buildIssueTitle(finding);
       const labels = buildIssueLabels(finding);
       const body = buildIssueBody(
         finding,
-        `${GITHUB_OWNER}/${repo}`,
+        repo,
         report.classification,
         report.generated_at,
       );
@@ -168,7 +181,10 @@ export function ProjectHealthPage({ repo, project }: Props) {
         });
       }
     },
-    [report, repo, actionStates, setActionState, toast],
+    // No `actionStates` here — the race guard reads via setActionStates(prev)
+    // so the callback identity stays stable and FindingsBoard doesn't
+    // re-render on every per-finding state mutation.
+    [report, repo, setActionState, toast],
   );
 
   // ─── Edge states first ─────────────────────────────────────────────

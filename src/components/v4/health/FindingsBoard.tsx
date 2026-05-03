@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { HealthFinding, HealthReport, ProjectClassification } from "../../../types/health";
+import type { HealthFinding, HealthReport } from "../../../types/health";
 import { LAYER_NAMES } from "../../../types/health";
 import { Icon, type IconName } from "./Icon";
 import { groupByLayer, pluralize, sortFindings } from "./utils";
@@ -415,6 +415,3 @@ function CleanCelebration({ repo, count }: { repo: string; count: number }) {
   );
 }
 
-// Re-export for tests / external users that build a custom container around
-// FindingsBoard but still want to type the action map / classification.
-export type { ProjectClassification };
