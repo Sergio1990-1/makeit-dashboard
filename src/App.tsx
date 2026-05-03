@@ -28,6 +28,8 @@ import { fetchPipelineStatus, fetchPipelineLimits } from "./utils/pipeline";
 import type { PipelineAbortReason, PipelineLimits } from "./utils/pipeline";
 import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH, PROJECTS } from "./utils/config";
 import { PasswordGate } from "./components/PasswordGate";
+import { SettingsBootstrap, SettingsUnavailable } from "./components/v4/SettingsBootstrap";
+import { useSettings } from "./hooks/useSettings";
 import type { TabId, Monitor } from "./types";
 import "./App.css";
 import "./styles/v4.css";
@@ -552,6 +554,28 @@ function AppInner() {
   );
 }
 
+function SettingsGate() {
+  const settings = useSettings();
+  if (!settings.ready) {
+    if (settings.error === "auth") {
+      return <SettingsBootstrap onSuccess={settings.retry} />;
+    }
+    if (settings.error === "unavailable") {
+      return <SettingsUnavailable onRetry={settings.retry} />;
+    }
+    // Initial loading state — short, but render something rather than a blank
+    // page so the user knows the app is alive while loadAllSettings() resolves.
+    return (
+      <div className="v4-app" style={{ gridTemplateColumns: "1fr", minHeight: "100vh" }}>
+        <main className="v4-main">
+          <div className="v4-loading">Загрузка настроек…</div>
+        </main>
+      </div>
+    );
+  }
+  return <AppInner />;
+}
+
 function App() {
   const [authed, setAuthed] = useState(getAuth());
 
@@ -561,7 +585,7 @@ function App() {
 
   return (
     <ToastHost>
-      <AppInner />
+      <SettingsGate />
     </ToastHost>
   );
 }
