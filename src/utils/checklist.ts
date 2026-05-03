@@ -34,9 +34,13 @@ function validate(parsed: unknown): asserts parsed is ChecklistDocument {
   }
 }
 
-export async function loadChecklist(token: string, force = false): Promise<ChecklistDocument> {
+export async function loadChecklist(
+  token: string,
+  force = false,
+  signal?: AbortSignal,
+): Promise<ChecklistDocument> {
   if (!force && cached) return cached.doc;
-  const text = await readRepoFile(token, KNOWLEDGE_OWNER, KNOWLEDGE_REPO, CHECKLIST_PATH);
+  const text = await readRepoFile(token, KNOWLEDGE_OWNER, KNOWLEDGE_REPO, CHECKLIST_PATH, signal);
   const parsed = yaml.load(text);
   validate(parsed);
   cached = { doc: parsed, loaded_at: Date.now() };

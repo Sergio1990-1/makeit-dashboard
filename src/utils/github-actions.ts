@@ -1,11 +1,17 @@
 const GITHUB_GRAPHQL = "https://api.github.com/graphql";
 const GITHUB_REST = "https://api.github.com";
 
-async function graphql<T>(token: string, query: string, variables: Record<string, unknown> = {}): Promise<T> {
+async function graphql<T>(
+  token: string,
+  query: string,
+  variables: Record<string, unknown> = {},
+  signal?: AbortSignal,
+): Promise<T> {
   const res = await fetch(GITHUB_GRAPHQL, {
     method: "POST",
     headers: { Authorization: `bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({ query, variables }),
+    signal,
   });
   if (res.status === 401 || res.status === 403) {
     throw new Error("GitHub token истёк или недостаточно прав. Сбросьте токен и введите новый.");
@@ -16,7 +22,7 @@ async function graphql<T>(token: string, query: string, variables: Record<string
   return json.data as T;
 }
 
-async function rest(token: string, path: string, method = "GET", body?: unknown) {
+async function rest(token: string, path: string, method = "GET", body?: unknown, signal?: AbortSignal) {
   const res = await fetch(`${GITHUB_REST}${path}`, {
     method,
     headers: {
@@ -25,6 +31,7 @@ async function rest(token: string, path: string, method = "GET", body?: unknown)
       Accept: "application/vnd.github.v3+json",
     },
     body: body ? JSON.stringify(body) : undefined,
+    signal,
   });
   if (res.status === 401 || res.status === 403) {
     throw new Error("GitHub token истёк или недостаточно прав. Сбросьте токен и введите новый.");
@@ -49,9 +56,10 @@ export async function listRepoFiles(
   token: string,
   owner: string,
   repo: string,
-  path = ""
+  path = "",
+  signal?: AbortSignal,
 ): Promise<{ name: string; type: string; path: string }[]> {
-  const data = await rest(token, `/repos/${owner}/${repo}/contents/${path}`);
+  const data = await rest(token, `/repos/${owner}/${repo}/contents/${path}`, "GET", undefined, signal);
   if (!Array.isArray(data)) return [];
   return data.map((f: { name: string; type: string; path: string }) => ({
     name: f.name,
@@ -64,9 +72,10 @@ export async function readRepoFile(
   token: string,
   owner: string,
   repo: string,
-  path: string
+  path: string,
+  signal?: AbortSignal,
 ): Promise<string> {
-  const data = await rest(token, `/repos/${owner}/${repo}/contents/${path}`);
+  const data = await rest(token, `/repos/${owner}/${repo}/contents/${path}`, "GET", undefined, signal);
   if (data.encoding === "base64" && data.content) {
     const bytes = Uint8Array.from(atob(data.content.replace(/\s/g, "")), (c) => c.charCodeAt(0));
     return new TextDecoder().decode(bytes);
@@ -286,9 +295,10 @@ export async function addComment(
 export async function listMilestones(
   token: string,
   owner: string,
-  repo: string
+  repo: string,
+  signal?: AbortSignal,
 ): Promise<{ number: number; title: string; state: string; due_on: string | null; open_issues: number; closed_issues: number }[]> {
-  const data = await rest(token, `/repos/${owner}/${repo}/milestones?state=all&per_page=100`);
+  const data = await rest(token, `/repos/${owner}/${repo}/milestones?state=all&per_page=100`, "GET", undefined, signal);
   return data.map((m: { number: number; title: string; state: string; due_on: string | null; open_issues: number; closed_issues: number }) => ({
     number: m.number,
     title: m.title,
@@ -453,8 +463,8 @@ export interface RepoMeta {
   open_issues_count: number;
 }
 
-export async function getRepoMeta(token: string, owner: string, repo: string): Promise<RepoMeta> {
-  const data = await rest(token, `/repos/${owner}/${repo}`);
+export async function getRepoMeta(token: string, owner: string, repo: string, signal?: AbortSignal): Promise<RepoMeta> {
+  const data = await rest(token, `/repos/${owner}/${repo}`, "GET", undefined, signal);
   return {
     created_at: data.created_at,
     pushed_at: data.pushed_at,
@@ -488,10 +498,10 @@ export async function getRepoTreeSha(
   return { commitSha, treeSha };
 }
 
-export async function listRepoLabels(token: string, owner: string, repo: string): Promise<string[]> {
+export async function listRepoLabels(token: string, owner: string, repo: string, signal?: AbortSignal): Promise<string[]> {
   const out: string[] = [];
   for (let page = 1; page <= 5; page++) {
-    const data = await rest(token, `/repos/${owner}/${repo}/labels?per_page=100&page=${page}`);
+    const data = await rest(token, `/repos/${owner}/${repo}/labels?per_page=100&page=${page}`, "GET", undefined, signal);
     if (!Array.isArray(data) || data.length === 0) break;
     out.push(...data.map((l: { name: string }) => l.name));
     if (data.length < 100) break;
@@ -506,11 +516,16 @@ export interface Workflow {
   state: string;
 }
 
-export async function listWorkflows(token: string, owner: string, repo: string): Promise<Workflow[]> {
+export async function listWorkflows(token: string, owner: string, repo: string, signal?: AbortSignal): Promise<Workflow[]> {
   try {
-    const data = await rest(token, `/repos/${owner}/${repo}/actions/workflows?per_page=100`);
+    const data = await rest(token, `/repos/${owner}/${repo}/actions/workflows?per_page=100`, "GET", undefined, signal);
     return Array.isArray(data.workflows) ? data.workflows : [];
-  } catch {
+  } catch (err) {
+    // Re-throw AbortError so callers higher up the stack can distinguish a
+    // cancelled scan from a transient API failure (which is what the broad
+    // `catch → []` was designed for). DOMException with `name === "AbortError"`
+    // is what fetch raises when its signal aborts.
+    if (err instanceof Error && err.name === "AbortError") throw err;
     return [];
   }
 }
@@ -527,15 +542,20 @@ export async function getLatestWorkflowRun(
   owner: string,
   repo: string,
   workflowId: number,
+  signal?: AbortSignal,
 ): Promise<WorkflowRun | null> {
   try {
     const data = await rest(
       token,
       `/repos/${owner}/${repo}/actions/workflows/${workflowId}/runs?per_page=1`,
+      "GET",
+      undefined,
+      signal,
     );
     const runs = Array.isArray(data.workflow_runs) ? data.workflow_runs : [];
     return runs[0] ?? null;
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") throw err;
     return null;
   }
 }
@@ -548,16 +568,21 @@ export async function getLatestCommitForPath(
   owner: string,
   repo: string,
   path: string,
+  signal?: AbortSignal,
 ): Promise<{ sha: string; date: string } | null> {
   try {
     const data = await rest(
       token,
       `/repos/${owner}/${repo}/commits?path=${encodeURIComponent(path)}&per_page=1`,
+      "GET",
+      undefined,
+      signal,
     );
     const commit = Array.isArray(data) ? data[0] : null;
     if (!commit) return null;
     return { sha: commit.sha, date: commit.commit.author?.date ?? commit.commit.committer?.date };
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") throw err;
     return null;
   }
 }
@@ -568,12 +593,16 @@ export async function countClosedIssuesSince(
   owner: string,
   repo: string,
   since: string,
+  signal?: AbortSignal,
 ): Promise<number> {
   let count = 0;
   for (let page = 1; page <= 10; page++) {
     const data = await rest(
       token,
       `/repos/${owner}/${repo}/issues?state=closed&since=${encodeURIComponent(since)}&per_page=100&page=${page}`,
+      "GET",
+      undefined,
+      signal,
     );
     if (!Array.isArray(data) || data.length === 0) break;
     for (const i of data as Array<{ pull_request?: unknown; closed_at: string | null }>) {
@@ -593,9 +622,10 @@ export async function getCommitFiles(
   owner: string,
   repo: string,
   sha: string,
+  signal?: AbortSignal,
 ): Promise<Array<{ filename: string; additions: number; deletions: number }>> {
   try {
-    const data = await rest(token, `/repos/${owner}/${repo}/commits/${sha}`);
+    const data = await rest(token, `/repos/${owner}/${repo}/commits/${sha}`, "GET", undefined, signal);
     return Array.isArray(data.files)
       ? data.files.map((f: { filename: string; additions: number; deletions: number }) => ({
           filename: f.filename,
@@ -603,7 +633,8 @@ export async function getCommitFiles(
           deletions: f.deletions,
         }))
       : [];
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") throw err;
     return [];
   }
 }
@@ -615,18 +646,23 @@ export async function listCommitsForPath(
   repo: string,
   path: string,
   limit = 10,
+  signal?: AbortSignal,
 ): Promise<Array<{ sha: string; date: string }>> {
   try {
     const data = await rest(
       token,
       `/repos/${owner}/${repo}/commits?path=${encodeURIComponent(path)}&per_page=${limit}`,
+      "GET",
+      undefined,
+      signal,
     );
     if (!Array.isArray(data)) return [];
     return data.map((c: { sha: string; commit: { author?: { date?: string }; committer?: { date?: string } } }) => ({
       sha: c.sha,
       date: c.commit.author?.date ?? c.commit.committer?.date ?? "",
     })).filter((c) => c.date);
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") throw err;
     return [];
   }
 }
@@ -643,6 +679,7 @@ export async function listMergedPRsInWindow(
   repo: string,
   windowDays: number,
   hardLimit = 50,
+  signal?: AbortSignal,
 ): Promise<MergedPR[]> {
   const cutoff = Date.now() - windowDays * 86400000;
   const out: MergedPR[] = [];
@@ -650,6 +687,9 @@ export async function listMergedPRsInWindow(
     const data = await rest(
       token,
       `/repos/${owner}/${repo}/pulls?state=closed&per_page=30&page=${page}&sort=updated&direction=desc`,
+      "GET",
+      undefined,
+      signal,
     );
     if (!Array.isArray(data) || data.length === 0) break;
     let any = false;
@@ -677,16 +717,21 @@ export async function getPRFiles(
   owner: string,
   repo: string,
   number: number,
+  signal?: AbortSignal,
 ): Promise<string[]> {
   try {
     const data = await rest(
       token,
       `/repos/${owner}/${repo}/pulls/${number}/files?per_page=300`,
+      "GET",
+      undefined,
+      signal,
     );
     return Array.isArray(data)
       ? data.map((f: { filename: string }) => f.filename)
       : [];
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") throw err;
     return [];
   }
 }
@@ -696,12 +741,16 @@ export async function listIssuesWithoutMilestone(
   token: string,
   owner: string,
   repo: string,
+  signal?: AbortSignal,
 ): Promise<number[]> {
   const out: number[] = [];
   for (let page = 1; page <= 10; page++) {
     const data = await rest(
       token,
       `/repos/${owner}/${repo}/issues?state=open&milestone=none&per_page=100&page=${page}`,
+      "GET",
+      undefined,
+      signal,
     );
     if (!Array.isArray(data) || data.length === 0) break;
     for (const i of data as Array<{ number: number; pull_request?: unknown; milestone: unknown }>) {
@@ -731,6 +780,7 @@ export async function listOrphanIssuesWithMeta(
   token: string,
   owner: string,
   repo: string,
+  signal?: AbortSignal,
 ): Promise<OrphanIssueMeta[]> {
   const PER_PAGE = 100;
   const MAX_PAGES = 5;
@@ -739,6 +789,9 @@ export async function listOrphanIssuesWithMeta(
     const data = await rest(
       token,
       `/repos/${owner}/${repo}/issues?state=open&milestone=none&per_page=${PER_PAGE}&page=${page}`,
+      "GET",
+      undefined,
+      signal,
     );
     if (!Array.isArray(data) || data.length === 0) break;
     for (const i of data as Array<{

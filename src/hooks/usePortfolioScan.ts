@@ -39,10 +39,13 @@ export interface PortfolioScanOptions<TItem, TResult> {
   // passes and (on a non-fresh cache) before the bump-then-await sequence.
   // The `force` flag is forwarded so the enumerator can bypass its own
   // caches on a manual refresh — health uses this for the checklist load.
-  enumerate: (token: string, force: boolean) => Promise<TItem[]>;
+  // `signal` is the current scan's AbortSignal — wire it through to fetch
+  // helpers so refresh()/unmount can cancel in-flight requests.
+  enumerate: (token: string, force: boolean, signal: AbortSignal) => Promise<TItem[]>;
   // Per-item scanner. Called inside a try/catch by the runner — throw freely
   // for per-item failures, the runner will log it and keep going.
-  scanItem: (token: string, item: TItem) => Promise<TResult>;
+  // `signal` aborts when refresh() runs again or the hook unmounts.
+  scanItem: (token: string, item: TItem, signal: AbortSignal) => Promise<TResult>;
   // Russian message shown when `enumerate` throws and there is no item to
   // scan. The error's own message is preferred when available; this is the
   // generic fallback.
@@ -99,11 +102,18 @@ export function usePortfolioScan<TItem, TResult>(
   });
 
   // Monotonic request id — discriminates between in-flight scans so a stale
-  // run can't overwrite a fresher one's state.
+  // run can't overwrite a fresher one's state. Kept as a defensive layer on
+  // top of AbortController: if a fetch helper drops the signal somewhere or
+  // a synchronous cache write races setState, the id guard still fires.
   const requestId = useRef(0);
   // Prevents setState after unmount. The in-flight GitHub calls will complete
   // in the background but their results are dropped.
   const isMounted = useRef(true);
+  // Cancels in-flight fetches on refresh()/unmount. A typical health scan
+  // fans out ~50 GitHub REST calls × 12 repos; without this, hitting Refresh
+  // twice in a row sends ~1200 requests against the rate limit while the
+  // first run's results get silently discarded by the requestId guard.
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const run = useCallback(
     async (force: boolean, withInitialDelay: boolean) => {
@@ -137,6 +147,15 @@ export function usePortfolioScan<TItem, TResult>(
         }
       }
 
+      // Cancel any in-flight scan from a previous refresh()/mount before
+      // starting a new one. Old fetches reject with AbortError → the
+      // per-item runner converts to {ok:false}, but the requestId guard
+      // below also short-circuits the setState anyway.
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      const signal = controller.signal;
+
       // Bump the request id BEFORE any await so the cleanup path (which also
       // bumps requestId) can invalidate this run while it's parked in the
       // initial delay. Without this, a StrictMode double-mount can let the
@@ -155,9 +174,12 @@ export function usePortfolioScan<TItem, TResult>(
 
       let items: TItem[];
       try {
-        items = await enumerate(token, force);
+        items = await enumerate(token, force, signal);
       } catch (err) {
         if (myReq !== requestId.current || !isMounted.current) return;
+        // AbortError from a superseded scan: stay silent. The fresh scan
+        // already bumped requestId and will own the next setState.
+        if (err instanceof Error && err.name === "AbortError") return;
         const msg = err instanceof Error ? err.message : enumerateErrorFallback;
         setState((s) => ({ ...s, loading: false, error: msg }));
         return;
@@ -168,11 +190,13 @@ export function usePortfolioScan<TItem, TResult>(
       type Settled = { ok: true; result: TResult } | { ok: false; error: string };
       const settled = await runWithConcurrency<TItem, Settled>(items, concurrency, async (item) => {
         try {
-          const result = await scanItem(token, item);
+          const result = await scanItem(token, item, signal);
           return { ok: true, result };
         } catch (err) {
           // Per-item isolation: a 404 / rate-limit on one item mustn't wipe
-          // the whole scan.
+          // the whole scan. AbortError flows through here too — the
+          // requestId guard below catches the stale-scan case before any
+          // setState lands.
           const msg = err instanceof Error ? err.message : "scan failed";
           return { ok: false, error: msg };
         }
@@ -206,6 +230,9 @@ export function usePortfolioScan<TItem, TResult>(
     void run(false, true);
     return () => {
       isMounted.current = false;
+      // Abort in-flight fetches so they don't keep burning rate limit
+      // budget after the component goes away.
+      abortControllerRef.current?.abort();
       // Bump the request id so any in-flight handlers see a stale id and
       // skip their setState calls. We deliberately mutate the live ref —
       // the "snapshot ref before cleanup" advice doesn't apply.

@@ -24,8 +24,8 @@ export function usePortfolioOrphans(): UsePortfolioOrphansResult {
   const enumerate = useCallback(async () => DEFAULT_PROJECTS, []);
 
   const scanItem = useCallback(
-    (token: string, proj: typeof DEFAULT_PROJECTS[number]): Promise<OrphansPerRepo> =>
-      listOrphanIssuesWithMeta(token, proj.owner, proj.repo),
+    (token: string, proj: typeof DEFAULT_PROJECTS[number], signal: AbortSignal): Promise<OrphansPerRepo> =>
+      listOrphanIssuesWithMeta(token, proj.owner, proj.repo, signal),
     [],
   );
 
