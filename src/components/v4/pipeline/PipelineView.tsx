@@ -14,7 +14,7 @@ import { QualityPanel } from "../../QualityPanel";
 import { ConfigPanel, type LabelOption } from "./ConfigPanel";
 import { PipelineHero } from "./PipelineHero";
 import { PipelineKpiStrip } from "./PipelineKpiStrip";
-import { PipelineActiveTasks } from "./PipelineActiveTasks";
+import { PipelineActiveTasksBlock } from "../../PipelineActiveTasksBlock";
 import { PipelineResults } from "./PipelineResults";
 import { PipelineComplexityPanel } from "./PipelineComplexityPanel";
 import { PipelineClosedChartV4 } from "./PipelineClosedChartV4";
@@ -113,8 +113,6 @@ export function PipelineView({ projects, lastUpdated }: Props) {
     finishedAt: number | null;
   } | null>(null);
   const wasRunningRef = useRef<boolean>(false);
-  // Bumped each new run — children use this to clear ephemeral state.
-  const [runEpoch, setRunEpoch] = useState(0);
 
   useEffect(() => {
     if (!status) return;
@@ -122,7 +120,6 @@ export function PipelineView({ projects, lastUpdated }: Props) {
       // New run started — set baseline BEFORE the cost memo sees the next status
       setRunStartedAt(Date.now());
       setBaselineResultCount(status.results.length);
-      setRunEpoch((e) => e + 1);
     } else if (!status.running && wasRunningRef.current) {
       // Run ended — snapshot summary using the baseline that was set on start
       const newResults = status.results.slice(baselineResultCount);
@@ -282,8 +279,8 @@ export function PipelineView({ projects, lastUpdated }: Props) {
           <PipelineKpiStrip stats={stats} sessionCost={sessionCost} sessionRuns={sessionRuns} />
 
           <div className="v4-grid">
-            {running ? (
-              <PipelineActiveTasks status={status} runEpoch={runEpoch} />
+            {running && status ? (
+              <PipelineActiveTasksBlock status={status} />
             ) : (
               <div className="v4-panel">
                 <div className="v4-panel-h">

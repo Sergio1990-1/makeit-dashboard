@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App.tsx'
+import { PipelineActiveTasksDemoPage } from './components/PipelineActiveTasksBlock/DemoPage'
 
 // Sanity check: when served from a non-localhost origin, the runtime
 // config.js should override the default localhost API URLs. Warn loudly
@@ -65,8 +66,12 @@ registerSW({
   },
 })
 
+// `?pipeline-demo=1` mounts the standalone Active Tasks demo (mock data,
+// no auth, no GitHub token). Useful for iterating on the design without
+// a live pipeline backend.
+const isPipelineDemo =
+  typeof window !== 'undefined' && window.location.search.includes('pipeline-demo=1')
+
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+  <StrictMode>{isPipelineDemo ? <PipelineActiveTasksDemoPage /> : <App />}</StrictMode>,
 )

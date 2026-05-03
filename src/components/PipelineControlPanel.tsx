@@ -1,12 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { usePipeline } from "../hooks/usePipeline";
 import { GITHUB_OWNER, PROJECTS } from "../utils/config";
-import type { PipelineStageEntry, PipelineQueueItem, ComplexityFilter, ComplexityLevel, ClassifyProgress, ClassifyResponse, EscalationCategory, Outcome } from "../utils/pipeline";
-import { classifyIssues, PHASE_ORDER, PHASE_LABEL } from "../utils/pipeline";
+import type { ComplexityFilter, ComplexityLevel, ClassifyProgress, ClassifyResponse, EscalationCategory, Outcome } from "../utils/pipeline";
+import { classifyIssues } from "../utils/pipeline";
 import type { ProjectData } from "../types";
 import { PipelineClosedChart } from "./PipelineClosedChart";
 import { IssueTimeline } from "./IssueTimeline";
 import { QualityPanel } from "./QualityPanel";
+import { PipelineActiveTasksBlock } from "./PipelineActiveTasksBlock";
 
 const LABEL_OPTIONS = ["P1-critical", "P2-high", "P3-medium"] as const;
 type LabelOption = (typeof LABEL_OPTIONS)[number];
@@ -56,25 +57,6 @@ function RiskBadge({ riskLevel, executionPolicy }: { riskLevel?: string; executi
     >
       {style.label}
     </span>
-  );
-}
-
-function RiskDot({ riskLevel }: { riskLevel?: string }) {
-  if (!riskLevel) return null;
-  const style = RISK_STYLE[riskLevel];
-  if (!style) return null;
-  return (
-    <span
-      title={`Риск: ${style.label}`}
-      style={{
-        display: "inline-block",
-        width: 7,
-        height: 7,
-        borderRadius: "50%",
-        background: style.color,
-        flexShrink: 0,
-      }}
-    />
   );
 }
 
@@ -135,200 +117,9 @@ function formatDuration(seconds: number): string {
   return `${h}ч ${m % 60}м`;
 }
 
-function getElapsedSinceMs(startMs: number | undefined): number | null {
-  if (startMs == null) return null;
-  return (Date.now() - startMs) / 1000;
-}
-
-// LiveTimer is for in-flight tasks only — it always renders the active-blue
-// color and ticks every second. Caller is responsible for unmounting it (or
-// passing fallbackStartMs=undefined) when the task finishes. Currently used
-// only by the "Активные задачи" panel, where taskSeenAtRef.current.delete(n)
-// removes the entry on completion.
-function LiveTimer({
-  fallbackStartMs,
-}: {
-  fallbackStartMs?: number;
-}) {
-  const [, setTick] = useState(0);
-
-  useEffect(() => {
-    if (fallbackStartMs == null) return;
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, [fallbackStartMs]);
-
-  const elapsed = getElapsedSinceMs(fallbackStartMs);
-  if (elapsed === null) return null;
-
-  return (
-    <span style={{
-      fontFamily: "var(--font-mono)",
-      fontSize: "var(--text-xs)",
-      color: "var(--blue-500)",
-      minWidth: 42,
-      textAlign: "right",
-    }}>
-      {formatDuration(elapsed)}
-    </span>
-  );
-}
-
-/* ── Phase progress helpers (new /pipeline/status format) ── */
-
-type PhaseState =
-  | { kind: "pending" }
-  | { kind: "running"; entry: PipelineStageEntry; index: number }
-  | { kind: "success" | "partial" | "failure" | "terminal_failure"; entry: PipelineStageEntry; index: number };
-
-function getPhaseState(
-  stages: PipelineStageEntry[] | undefined,
-  phase: string,
-): PhaseState {
-  if (!stages?.length) return { kind: "pending" };
-  let last: PipelineStageEntry | undefined;
-  let lastIdx = -1;
-  for (let i = 0; i < stages.length; i++) {
-    if (stages[i].phase === phase) {
-      last = stages[i];
-      lastIdx = i;
-    }
-  }
-  if (!last) return { kind: "pending" };
-  return { kind: last.status, entry: last, index: lastIdx };
-}
-
-// Surface backend phases not in PHASE_ORDER instead of dropping them silently
-// (e.g. if backend renames or adds a phase, dashboard otherwise looks "stuck").
-const warnedUnknownPhases = new Set<string>();
-
-function buildPhaseList(stages: PipelineStageEntry[] | undefined): string[] {
-  if (!stages?.length) return [...PHASE_ORDER];
-  const known = new Set<string>(PHASE_ORDER);
-  const unknown: string[] = [];
-  const seen = new Set<string>();
-  for (const s of stages) {
-    if (known.has(s.phase) || seen.has(s.phase)) continue;
-    seen.add(s.phase);
-    unknown.push(s.phase);
-    if (!warnedUnknownPhases.has(s.phase)) {
-      warnedUnknownPhases.add(s.phase);
-      console.warn(`[pipeline] unknown phase '${s.phase}' — append to PHASE_ORDER in src/utils/pipeline.ts`);
-    }
-  }
-  return unknown.length ? [...PHASE_ORDER, ...unknown] : [...PHASE_ORDER];
-}
-
-function StageProgress({
-  stages,
-  compact = false,
-}: {
-  stages?: PipelineStageEntry[];
-  compact?: boolean;
-}) {
-  const phases = buildPhaseList(stages);
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: compact ? 4 : 6 }}>
-      {phases.map((phase, i) => {
-        const state = getPhaseState(stages, phase);
-        const dotSize = compact ? 8 : 10;
-        const isPending = state.kind === "pending";
-        const isRunning = state.kind === "running";
-        const isSuccess = state.kind === "success" || state.kind === "partial";
-        const isFailed = state.kind === "failure" || state.kind === "terminal_failure";
-
-        const dotColor = isSuccess
-          ? "var(--green-500)"
-          : isFailed
-            ? "var(--red-500)"
-            : isRunning
-              ? "var(--blue-500)"
-              : "var(--gray-400)";
-
-        // Tooltip: phase + duration + summary
-        let tooltip: string | undefined;
-        if (!isPending) {
-          const e = state.entry;
-          const parts: string[] = [PHASE_LABEL[phase] ?? phase];
-          if (e.duration_seconds > 0) parts.push(formatDuration(e.duration_seconds));
-          if (e.cost_usd > 0) parts.push(`$${e.cost_usd.toFixed(2)}`);
-          if (e.summary) parts.push(e.summary);
-          tooltip = parts.join(" · ");
-        }
-
-        return (
-          <div
-            key={phase}
-            title={tooltip}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: compact ? 3 : 5,
-              cursor: tooltip ? "help" : undefined,
-            }}
-          >
-            {i > 0 && (
-              <div
-                style={{
-                  width: compact ? 10 : 16,
-                  height: 1,
-                  background: isPending ? "var(--gray-300)" : dotColor,
-                  opacity: isPending ? 0.5 : 0.6,
-                }}
-              />
-            )}
-            <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-              <div
-                style={{
-                  width: dotSize,
-                  height: dotSize,
-                  borderRadius: "50%",
-                  background: dotColor,
-                  boxShadow: isRunning ? `0 0 6px ${dotColor}` : undefined,
-                  animation: isRunning ? "pulse 1.5s ease-in-out infinite" : undefined,
-                }}
-              />
-              {!compact && (
-                <span
-                  style={{
-                    fontSize: "var(--text-xs)",
-                    color: isPending
-                      ? "var(--color-text-faint)"
-                      : "var(--color-text-secondary)",
-                    letterSpacing: "0.02em",
-                  }}
-                >
-                  {PHASE_LABEL[phase] ?? phase}
-                  {phase === "review" && isSuccess && (() => {
-                    // Surface review verdict from event name (review_approved / review_changes_requested)
-                    const ev = state.entry.event;
-                    const verdict = ev === "review_approved"
-                      ? "APPROVED"
-                      : ev === "review_changes_requested"
-                        ? "CHANGES_REQUESTED"
-                        : null;
-                    if (!verdict) return null;
-                    return (
-                      <span
-                        style={{
-                          marginLeft: 3,
-                          fontSize: "var(--text-xs)",
-                          color: VERDICT_STYLE[verdict]?.color ?? "var(--color-text-muted)",
-                        }}
-                      >
-                        ({verdict})
-                      </span>
-                    );
-                  })()}
-                </span>
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+/* The previous LiveTimer / StageProgress / RiskDot helpers used to render the
+   "Активные задачи" panel inline. Active-task rendering now lives in
+   ./PipelineActiveTasksBlock; the result-row UI below uses its own logic. */
 
 /* ── Escalation reason badge (Task 2) ── */
 
@@ -465,13 +256,6 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
 
   const [timelineIssue, setTimelineIssue] = useState<number | null>(null);
 
-  // Fallback timer source: remember when each active task was first seen in
-  // the dashboard, so we can show a live timer even if the backend's
-  // issue_stages is empty (or lags behind). In-memory only — reloads reset
-  // fallback timers to zero, which is fine because the real timer kicks in
-  // as soon as backend stages arrive.
-  const taskSeenAtRef = useRef<Map<number, number>>(new Map());
-
   const [classifyDialogOpen, setClassifyDialogOpen] = useState(false);
   const [classifying, setClassifying] = useState(false);
   const [classifyProgress, setClassifyProgress] = useState<ClassifyProgress | null>(null);
@@ -561,7 +345,6 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
 
   const isRunning = status?.running ?? false;
   const isStopping = status?.stopping ?? false;
-  const issueStages = status?.issue_stages ?? {};
 
   return (
     <>
@@ -872,111 +655,8 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
 
       {/* ── Live tasks ── */}
       {isRunning && status && (
-        <div className="bento-panel span-6">
-          <div className="bento-panel-title">
-            Активные задачи
-            <span style={{
-              background: "var(--color-primary)",
-              color: "#fff",
-              fontSize: "var(--text-xs)",
-              fontWeight: 700,
-              padding: "1px 7px",
-              borderRadius: 10,
-              textTransform: "none",
-            }}>
-              {status.active_tasks}
-            </span>
-          </div>
-          {(() => {
-            // Merge queue items with live stage data; prefer issue_stages as source of truth.
-            // Exclude issues already in results (completed) so only truly active tasks show.
-            const completedNums = new Set(status.results.map((r) => r.issue_number));
-            const stageIssueNums = Object.keys(issueStages).map(Number).filter((n) => !completedNums.has(n));
-            const queueNums = new Set(status.queue.map((q) => q.number));
-            // Issues that have stages but aren't in queue (already running)
-            const extraNums = stageIssueNums.filter((n) => !queueNums.has(n));
-            const allItems = [
-              ...extraNums.map((n): PipelineQueueItem => ({ number: n, title: `Issue #${n}`, status: "in_progress", priority: 0 })),
-              ...status.queue.filter((q) => !completedNums.has(q.number)),
-            ];
-
-            // Update the fallback timer map: record first-seen time for every
-            // currently-active task, and drop entries that are no longer active.
-            const seen = taskSeenAtRef.current;
-            const activeNums = new Set<number>(allItems.map((i) => i.number));
-            const now = Date.now();
-            activeNums.forEach((n) => {
-              if (!seen.has(n)) seen.set(n, now);
-            });
-            // Forget anything no longer in the active list (completed, removed, etc.)
-            Array.from(seen.keys()).forEach((n) => {
-              if (!activeNums.has(n) || completedNums.has(n)) seen.delete(n);
-            });
-
-            if (allItems.length === 0) {
-              return (
-                <div style={{ color: "var(--color-text-muted)", fontSize: "var(--text-sm)" }}>
-                  Ожидание задач...
-                </div>
-              );
-            }
-            return (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {allItems.slice(0, 10).map((item) => {
-                  const liveStages = issueStages[item.number];
-                  const fallbackStartMs = seen.get(item.number);
-                  return (
-                    <div
-                      key={item.number}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "6px 8px",
-                        borderRadius: "var(--radius-sm)",
-                        background: "var(--color-bg)",
-                        border: "1px solid var(--color-border)",
-                      }}
-                    >
-                      <span style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: "var(--text-xs)",
-                        color: "var(--color-text-muted)",
-                        minWidth: 36,
-                      }}>
-                        #{item.number}
-                      </span>
-                      <RiskDot riskLevel={item.risk_level} />
-                      <span style={{
-                        flex: 1,
-                        fontSize: "var(--text-sm)",
-                        color: "var(--color-text)",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}>
-                        {item.title}
-                      </span>
-                      {liveStages ? (
-                        <StageProgress stages={liveStages} />
-                      ) : (
-                        <span style={{
-                          fontSize: "var(--text-xs)",
-                          color: "var(--color-text-muted)",
-                          padding: "1px 6px",
-                          borderRadius: 8,
-                          border: "1px solid var(--color-border)",
-                        }}>
-                          {STATUS_LABEL[item.status] ?? item.status}
-                        </span>
-                      )}
-                      <LiveTimer fallbackStartMs={fallbackStartMs} />
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
+        <div className="bento-panel span-12 pl2-bento-reset">
+          <PipelineActiveTasksBlock status={status} />
         </div>
       )}
 
