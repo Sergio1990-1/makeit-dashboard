@@ -3,7 +3,7 @@ import type { ProjectData } from "../../../types";
 import type { HealthFinding } from "../../../types/health";
 import { useProjectHealth } from "../../../hooks/useProjectHealth";
 import { loadChecklist } from "../../../utils/checklist";
-import { GITHUB_OWNER, GITHUB_PROJECT_NUMBER, getToken } from "../../../utils/config";
+import { GITHUB_OWNER, GITHUB_PROJECT_NUMBER, getClaudeKey, getToken } from "../../../utils/config";
 import {
   addIssueToProject,
   createIssue,
@@ -35,8 +35,72 @@ interface Props {
 // Most of these collapse to "render the report with banners on top".
 
 export function ProjectHealthPage({ repo, project }: Props) {
-  const { report, loading, error, classificationMissing, refresh } = useProjectHealth(repo);
+  const {
+    report,
+    loading,
+    error,
+    classificationMissing,
+    refresh,
+    scanDrift,
+    driftScanning,
+    driftProgress,
+  } = useProjectHealth(repo);
   const toast = useToast();
+
+  // Re-read Claude key on each render — settings may change mid-session
+  // (SettingsPanel emits an event but we don't subscribe here; the simplest
+  // correct behaviour is "ask localStorage every time we render Hero").
+  const hasClaudeKey = !!getClaudeKey();
+
+  const handleScanDrift = useCallback(async () => {
+    const outcome = await scanDrift();
+    switch (outcome.kind) {
+      case "ok": {
+        if (outcome.total === 0) {
+          toast.push({
+            kind: "info",
+            title: "Drift-скан: нечего проверять",
+            description: "Для этого проекта нет применимых Layer-4 правил.",
+          });
+        } else {
+          toast.push({
+            kind: "success",
+            title: `Drift-скан: +${outcome.addedFails} fails, ${outcome.cachedHits} cached`,
+            description: `Проверено ${outcome.total} правил.`,
+          });
+        }
+        break;
+      }
+      case "no-key":
+        toast.push({
+          kind: "error",
+          title: "Нет Claude API key",
+          description: "Настрой ключ в шапке, чтобы запускать drift-сканы.",
+        });
+        break;
+      case "no-token":
+        toast.push({
+          kind: "error",
+          title: "Нет GitHub токена",
+          description: "Добавьте токен в настройках.",
+        });
+        break;
+      case "no-report":
+        toast.push({
+          kind: "error",
+          title: "Нет отчёта",
+          description: "Сначала запусти базовый скан.",
+        });
+        break;
+      case "error":
+        toast.push({
+          kind: "error",
+          title: "Drift-скан упал",
+          description: outcome.message,
+        });
+        break;
+    }
+  }, [scanDrift, toast]);
 
   // Load the rules count for the hero "N правил · makeit-knowledge" link.
   // Fire once when the page opens; the value is cached by loadChecklist.
@@ -256,6 +320,10 @@ export function ProjectHealthPage({ repo, project }: Props) {
         refreshing={refreshing}
         rulesCount={rulesCount}
         onBulkCreate={() => setBulkOpen(true)}
+        onScanDrift={handleScanDrift}
+        driftScanning={driftScanning}
+        driftProgress={driftProgress}
+        hasClaudeKey={hasClaudeKey}
       />
       <div className="ph-page">
         <div className="ph-main">
