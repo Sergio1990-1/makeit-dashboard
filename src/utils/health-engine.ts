@@ -25,6 +25,7 @@ import {
   listMergedPRsInWindow,
   getPRFiles,
 } from "./github-actions";
+import { Semaphore } from "./semaphore";
 
 // Helper: read a typed param from a check object with a fallback.
 function param<T>(obj: Record<string, unknown>, key: string, fallback: T): T {
@@ -744,14 +745,13 @@ export async function runHealthCheck(
 
   // Apply applicable rules. We run with limited concurrency so a single repo
   // doesn't fan out 50 GitHub calls in parallel and trip secondary rate limits.
+  // Semaphore gives smooth concurrency — a new rule starts as soon as a slot
+  // frees, instead of waiting for the whole batch to finish.
   const applicable = doc.rules.filter((r) => ruleApplies(r, cls));
-  const findings: HealthFinding[] = [];
-  const concurrency = 5;
-  for (let i = 0; i < applicable.length; i += concurrency) {
-    const batch = applicable.slice(i, i + concurrency);
-    const results = await Promise.all(batch.map((r) => executeCheck(r, ctx)));
-    findings.push(...results);
-  }
+  const sem = new Semaphore(5);
+  const findings: HealthFinding[] = await Promise.all(
+    applicable.map((rule) => sem.run(() => executeCheck(rule, ctx))),
+  );
 
   // Surface skipped (not-applicable) rules so the UI can show coverage too.
   for (const r of doc.rules) {
