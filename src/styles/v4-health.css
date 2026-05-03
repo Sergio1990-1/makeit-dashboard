@@ -616,6 +616,30 @@
   align-items: flex-end; flex-shrink: 0;
 }
 .ph-fi-actions .v4-btn { white-space: nowrap; font-size: 11.5px; }
+
+/* «→ issue» button states */
+.ph-fi-issue.is-linked {
+  text-decoration: none;
+  font-family: var(--v4-mono);
+}
+.ph-fi-issue.is-error {
+  border-color: var(--v4-danger-500);
+  color: var(--v4-danger-700);
+  background: var(--v4-danger-50);
+}
+.ph-fi-issue.is-error:hover {
+  border-color: var(--v4-danger-700);
+  color: var(--v4-danger-700);
+}
+.ph-fi-issue.is-loading { cursor: progress; opacity: 0.85; }
+.ph-fi-issue-spin {
+  width: 12px; height: 12px;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  animation: v4-spin 0.9s linear infinite;
+}
 .ph-fi-rem {
   margin: 12px 0 2px 114px;
   background: var(--v4-accent-50);
