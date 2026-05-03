@@ -146,6 +146,17 @@ function AppInner() {
     [setTab],
   );
 
+  // Open the Project Health drilldown for a specific repo from outside the
+  // Projects tab (currently invoked by AIInsightsPanel). Bypasses
+  // `navigateTab` because that one explicitly clears `healthRepo`.
+  const openHealthForRepo = useCallback(
+    (repo: string) => {
+      setHealthRepo(repo);
+      setTab("projects");
+    },
+    [setTab],
+  );
+
   // Cmd-K opens command palette (works alongside the existing Topbar shortcut
   // since both register handlers — palette wins because it's an overlay).
   useEffect(() => {
@@ -374,6 +385,7 @@ function AppInner() {
               lastUpdated={lastUpdated}
               onSeeAllProjects={() => navigateTab("projects")}
               onFinanceClick={() => setFinanceOpen(true)}
+              onOpenHealth={openHealthForRepo}
             />
           </ErrorBoundary>
         )}
