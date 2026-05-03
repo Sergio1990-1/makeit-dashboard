@@ -13,7 +13,6 @@ import { Icon } from "./Icon";
 interface Props {
   repo: string;
   project?: ProjectData;
-  onBack: () => void;
 }
 
 // Top-level page. Decides between the 7 visual states described in the
@@ -22,7 +21,7 @@ interface Props {
 //   grace-period / report-clean / report-warn / report-critical
 // Most of these collapse to "render the report with banners on top".
 
-export function ProjectHealthPage({ repo, project, onBack }: Props) {
+export function ProjectHealthPage({ repo, project }: Props) {
   const { report, loading, error, classificationMissing, refresh } = useProjectHealth(repo);
 
   // Load the rules count for the hero "N правил · makeit-knowledge" link.
@@ -48,7 +47,7 @@ export function ProjectHealthPage({ repo, project, onBack }: Props) {
   if (classificationMissing) {
     return (
       <div className="v4-content">
-        <PageHeaderForState repo={repo} onBack={onBack} />
+        <PageHeaderForState repo={repo} />
         <div className="ph-page">
           <div className="ph-main">
             <ClassificationMissing repo={repo} onRetry={refresh} />
@@ -61,7 +60,7 @@ export function ProjectHealthPage({ repo, project, onBack }: Props) {
   if (error) {
     return (
       <div className="v4-content">
-        <PageHeaderForState repo={repo} onBack={onBack} />
+        <PageHeaderForState repo={repo} />
         <div className="ph-page">
           <div className="ph-main">
             <ErrorState message={error} onRetry={refresh} />
@@ -74,7 +73,7 @@ export function ProjectHealthPage({ repo, project, onBack }: Props) {
   if (loading && !report) {
     return (
       <div className="v4-content">
-        <PageHeaderForState repo={repo} onBack={onBack} />
+        <PageHeaderForState repo={repo} />
         <div className="ph-page">
           <div className="ph-main">
             <LoadingState repo={repo} />
@@ -87,7 +86,7 @@ export function ProjectHealthPage({ repo, project, onBack }: Props) {
   if (!report) {
     return (
       <div className="v4-content">
-        <PageHeaderForState repo={repo} onBack={onBack} />
+        <PageHeaderForState repo={repo} />
         <div className="ph-page">
           <div className="ph-main">
             <LoadingState repo={repo} />
@@ -103,7 +102,6 @@ export function ProjectHealthPage({ repo, project, onBack }: Props) {
     <div className="v4-content">
       <Hero
         report={report}
-        onBack={onBack}
         onRescan={refresh}
         refreshing={refreshing}
         rulesCount={rulesCount}
@@ -139,16 +137,12 @@ export function ProjectHealthPage({ repo, project, onBack }: Props) {
   );
 }
 
-// Minimal header during edge states — just a back-button so the user is
-// never trapped on a loading/error screen.
-function PageHeaderForState({ repo, onBack }: { repo: string; onBack: () => void }) {
+// Minimal header during edge states — repo name + Health label. Navigation
+// back to the projects list is handled by the topbar breadcrumb.
+function PageHeaderForState({ repo }: { repo: string }) {
   return (
     <section className="ph-hero-block">
       <div className="ph-hero-top">
-        <button type="button" className="v4-btn ph-back" onClick={onBack}>
-          <Icon name="arrow-left" />
-          Все проекты
-        </button>
         <div className="ph-hero-id">
           <div className="ph-hero-titlerow">
             <h1>

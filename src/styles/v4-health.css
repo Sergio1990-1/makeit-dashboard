@@ -14,6 +14,7 @@
 
 /* ══════════ HERO BLOCK ══════════ */
 .ph-hero-block {
+  margin-top: 22px;
   margin-bottom: 18px;
   animation: ph-hero-in .5s cubic-bezier(.2,.8,.2,1) both;
 }
@@ -29,7 +30,6 @@
   margin-bottom: 18px;
   flex-wrap: wrap;
 }
-.ph-back { flex-shrink: 0; }
 .ph-hero-id { flex: 1; min-width: 0; }
 .ph-hero-titlerow {
   display: flex;

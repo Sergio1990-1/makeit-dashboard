@@ -9,6 +9,10 @@ interface Props {
   getMonitor: (repo: string) => Monitor | undefined;
   onFinanceClick: () => void;
   onJumpToTab?: (tab: "pipeline" | "audit") => void;
+  /** Selected repo for the embedded ProjectHealthPage. Lifted to the parent
+   *  so the topbar breadcrumb can include the project name. */
+  selectedRepo: string | null;
+  onSelectRepo: (repo: string | null) => void;
 }
 
 type PhaseFilter = "all" | Phase | "stale";
@@ -130,11 +134,12 @@ export function ProjectsView({
   getMonitor,
   onFinanceClick,
   onJumpToTab,
+  selectedRepo,
+  onSelectRepo,
 }: Props) {
   const [state, setState] = useState<ToolbarState>(() => loadState());
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
-  const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
 
   const selectedProject = useMemo(
     () => (selectedRepo ? projects.find((p) => p.repo === selectedRepo) : undefined),
@@ -240,7 +245,6 @@ export function ProjectsView({
       <ProjectHealthPage
         repo={selectedRepo}
         project={selectedProject}
-        onBack={() => setSelectedRepo(null)}
       />
     );
   }
@@ -425,7 +429,7 @@ export function ProjectsView({
                     <button
                       type="button"
                       className="v4-btn v4-project-health-btn"
-                      onClick={() => setSelectedRepo(p.repo)}
+                      onClick={() => onSelectRepo(p.repo)}
                       aria-label={`Открыть Health для ${p.repo}`}
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>

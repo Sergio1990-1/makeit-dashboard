@@ -129,6 +129,20 @@ function AppInner() {
   const [financeOpen, setFinanceOpen] = useState(false);
   const [sideOpen, setSideOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  // Selected repo for the Project Health sub-page on the Projects tab. Lifted
+  // here so the topbar breadcrumb can include the project name and let the
+  // user navigate back via "Проекты".
+  const [healthRepo, setHealthRepo] = useState<string | null>(null);
+  // Switching tabs should always land on the tab's main view — clear the
+  // drill-down before changing tabs so the user never returns to a stale
+  // sub-page on tab re-entry.
+  const navigateTab = useCallback(
+    (next: TabId) => {
+      setHealthRepo(null);
+      setTab(next);
+    },
+    [setTab],
+  );
 
   // Cmd-K opens command palette (works alongside the existing Topbar shortcut
   // since both register handlers — palette wins because it's an overlay).
@@ -223,7 +237,18 @@ function AppInner() {
     window.location.reload();
   };
 
-  const crumbs = ["Все проекты", TAB_CRUMBS[tab] ?? tab];
+  const crumbs =
+    tab === "projects" && healthRepo
+      ? ["Все проекты", TAB_CRUMBS.projects, healthRepo]
+      : ["Все проекты", TAB_CRUMBS[tab] ?? tab];
+
+  // When on the health sub-page, clicking the "Проекты" crumb (index 1)
+  // returns to the projects list. Other intermediate crumbs are inert.
+  const handleCrumbClick = (i: number) => {
+    if (tab === "projects" && healthRepo && i === 1) {
+      setHealthRepo(null);
+    }
+  };
 
   // Audit alerts placeholder — could read from useAudit later. We expose a
   // dot when there are critical findings; for now keep as undefined to avoid
@@ -234,7 +259,7 @@ function AppInner() {
     <div className="v4-app">
       <Sidebar
         activeTab={tab}
-        onTabChange={setTab}
+        onTabChange={navigateTab}
         projectsCount={projects.length}
         milestonesCount={allMilestones.length}
         monitorsCount={monitors.length}
@@ -246,6 +271,7 @@ function AppInner() {
       <main className="v4-main">
         <Topbar
           crumbs={crumbs}
+          onCrumbClick={tab === "projects" && healthRepo ? handleCrumbClick : undefined}
           showLive={true}
           lastUpdated={lastUpdated}
           onRefresh={() => {
@@ -278,7 +304,7 @@ function AppInner() {
               blockedIssues={blockedIssues}
               getMonitor={getMonitorForRepo}
               lastUpdated={lastUpdated}
-              onSeeAllProjects={() => setTab("projects")}
+              onSeeAllProjects={() => navigateTab("projects")}
               onFinanceClick={() => setFinanceOpen(true)}
             />
           </ErrorBoundary>
@@ -290,7 +316,9 @@ function AppInner() {
               projects={projects}
               getMonitor={getMonitorForRepo}
               onFinanceClick={() => setFinanceOpen(true)}
-              onJumpToTab={(t) => setTab(t)}
+              onJumpToTab={(t) => navigateTab(t)}
+              selectedRepo={healthRepo}
+              onSelectRepo={setHealthRepo}
             />
           </ErrorBoundary>
         )}
@@ -388,7 +416,7 @@ function AppInner() {
           milestones={allMilestones}
           activeTab={tab}
           onClose={() => setPaletteOpen(false)}
-          onJumpTab={(t) => { setPaletteOpen(false); setTab(t); }}
+          onJumpTab={(t) => { setPaletteOpen(false); navigateTab(t); }}
           onRefresh={() => { setPaletteOpen(false); refresh(true); refreshMonitors(); }}
           onLogout={() => { setPaletteOpen(false); handleLogout(); }}
           onOpenFinance={() => { setPaletteOpen(false); setFinanceOpen(true); }}

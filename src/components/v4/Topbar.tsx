@@ -3,6 +3,9 @@ import { useRef, useState } from "react";
 interface Props {
   /** Crumb segments — last is bold (current page) */
   crumbs: string[];
+  /** Optional click handler for non-last crumbs. When provided, intermediate
+   *  crumbs render as buttons; the index of the clicked crumb is passed back. */
+  onCrumbClick?: (index: number) => void;
   /** Show "GitHub API · live" pill */
   showLive?: boolean;
   /** Last refresh time */
@@ -23,6 +26,7 @@ interface Props {
 
 export function Topbar({
   crumbs,
+  onCrumbClick,
   showLive = true,
   lastUpdated,
   onRefresh,
@@ -49,10 +53,23 @@ export function Topbar({
         </button>
         {crumbs.map((c, i) => {
           const isLast = i === crumbs.length - 1;
+          const clickable = !isLast && !!onCrumbClick;
           return (
             <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
               {i > 0 && <span className="v4-sep">/</span>}
-              {isLast ? <b>{c}</b> : <span>{c}</span>}
+              {isLast ? (
+                <b>{c}</b>
+              ) : clickable ? (
+                <button
+                  type="button"
+                  className="v4-crumb-link"
+                  onClick={() => onCrumbClick?.(i)}
+                >
+                  {c}
+                </button>
+              ) : (
+                <span>{c}</span>
+              )}
             </span>
           );
         })}
