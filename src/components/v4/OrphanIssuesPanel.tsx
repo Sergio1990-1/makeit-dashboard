@@ -11,12 +11,12 @@ interface Props {
 
 // SVG viewBox dimensions — match ClosedChart30d so both panels feel like
 // siblings under the same header style.
-const W = 960;
-const H = 320;
+const W = 480;
+const H = 220;
 const PAD_L = 16;
 const PAD_R = 16;
-const PAD_T = 24;
-const PAD_B = 28;
+const PAD_T = 18;
+const PAD_B = 22;
 const INNER_W = W - PAD_L - PAD_R;
 const INNER_H = H - PAD_T - PAD_B;
 
@@ -188,8 +188,8 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated }: Props) {
             <circle cx="12" cy="12" r="10" />
             <path d="M12 8v4M12 16h.01" />
           </svg>
-          Orphan-issues по портфелю
-          <span className="v4-tag">30 дней · без milestone</span>
+          Issues без milestone
+          <span className="v4-tag">30 дней</span>
           {showRefreshing && <span className="v4-tag">обновляется…</span>}
         </div>
         <div className="v4-panel-meta">

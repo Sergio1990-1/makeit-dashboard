@@ -1090,12 +1090,26 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 /* ────────────────────────────────────────
    AI INSIGHTS LIST
    ──────────────────────────────────────── */
-.v4-ai-list { padding: 6px 0; }
+.v4-ai-list {
+  padding: 6px 0;
+  /* Cap the list height so the panel doesn't outgrow its sibling
+     ("Активные проекты"). Surplus rows scroll inside the panel
+     instead of stretching the row vertically. */
+  max-height: 420px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.v4-ai-list::-webkit-scrollbar { width: 6px; }
+.v4-ai-list::-webkit-scrollbar-thumb {
+  background: var(--v4-line-strong, #d6dbe5);
+  border-radius: 3px;
+}
+.v4-ai-list::-webkit-scrollbar-track { background: transparent; }
 .v4-ai-item {
   display: grid;
   grid-template-columns: 28px 1fr auto;
-  gap: 12px;
-  padding: 12px 18px;
+  gap: 10px;
+  padding: 8px 16px;
   border-bottom: 1px solid var(--v4-line-soft);
   align-items: start;
 }
@@ -1122,7 +1136,13 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 .v4-ai-item-ds {
   font-size: 12px;
   color: var(--v4-ink-600);
-  line-height: 1.5;
+  line-height: 1.4;
+  /* Clamp to 2 lines — the full text lives behind the "Открыть Health"
+     button anyway, so an in-list teaser is enough. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .v4-ai-item-meta {
   font-family: var(--v4-mono);
@@ -1160,7 +1180,7 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 .v4-ai-actions {
   display: flex;
   gap: 6px;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 .v4-ai-btn {
   font-size: 11px;
@@ -1471,7 +1491,7 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
    ──────────────────────────────────────── */
 .v4-ms-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
   padding: 14px;
 }

@@ -72,10 +72,12 @@ export function MilestonesStrip({ milestones, lastUpdated }: Props) {
 
   const done = useMemo(() => rows.filter((r) => r.cls === "done"), [rows]);
 
-  const list = (sub === "open" ? open : done).slice(0, 6);
+  // 4 cards (2×2 grid) — leaves room for the side-by-side
+  // "Issues без milestone" panel without overflowing the row.
+  const list = (sub === "open" ? open : done).slice(0, 4);
 
   return (
-    <div className="v4-panel" style={{ marginBottom: 14 }}>
+    <div className="v4-panel">
       <div className="v4-panel-h">
         <div className="v4-panel-t">
           Ближайшие milestones <span className="v4-tag">≤ 30 дней</span>

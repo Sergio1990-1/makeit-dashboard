@@ -12,7 +12,9 @@ interface Props {
 
 // Sorting / filtering knobs — single source of truth so a designer tweak is
 // one edit instead of grep-and-replace through the file.
-const MAX_CARDS = 5;
+// Cap the rendered list at ~3× the visible-without-scroll count (≈5).
+// Surplus rows scroll within the panel via .v4-ai-list { max-height }.
+const MAX_CARDS = 15;
 const MIN_SEVERITY: HealthSeverity = "medium";
 // 90 chars keeps each card to one visual line on the dashboard column at the
 // narrowest layout width (~480px). Longer content is truncated with «…».
@@ -164,7 +166,7 @@ export function AIInsightsPanel({ reports, loading, lastUpdated, onOpenHealth }:
             <path d="M12 2a3 3 0 00-3 3v1.27A4 4 0 005 10v1.5a3.5 3.5 0 00-1 6.66V20a2 2 0 002 2h12a2 2 0 002-2v-1.84a3.5 3.5 0 00-1-6.66V10a4 4 0 00-4-3.73V5a3 3 0 00-3-3z" />
           </svg>
           AI-инсайты по портфелю
-          <span className="v4-tag">health · top-{MAX_CARDS}</span>
+          <span className="v4-tag">{top.length}</span>
           {showRefreshing && <span className="v4-tag">обновляется…</span>}
         </div>
         {meta && <div className="v4-panel-meta">{meta}</div>}

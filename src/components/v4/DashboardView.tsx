@@ -193,13 +193,6 @@ export function DashboardView({
         />
       </div>
 
-      {/* Full-width orphan-issues trend */}
-      <OrphanIssuesPanel
-        items={orphans.items}
-        loading={orphans.loading}
-        lastUpdated={orphansLastUpdated}
-      />
-
       {/* Row: stacked + blocked */}
       <div className="v4-grid">
         <ProgressMatrix projects={filtered} />
@@ -212,7 +205,15 @@ export function DashboardView({
         <ClosedChart30d projects={filtered} />
       </div>
 
-      <MilestonesStrip milestones={allMilestones} lastUpdated={lastUpdated} />
+      {/* Row: nearest milestones (2×2 cards) + issues-without-milestone trend */}
+      <div className="v4-grid">
+        <MilestonesStrip milestones={allMilestones} lastUpdated={lastUpdated} />
+        <OrphanIssuesPanel
+          items={orphans.items}
+          loading={orphans.loading}
+          lastUpdated={orphansLastUpdated}
+        />
+      </div>
 
       <CommitsHeatmapPanel projects={filtered} lastUpdated={lastUpdated} />
 

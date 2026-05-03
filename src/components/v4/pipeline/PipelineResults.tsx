@@ -208,7 +208,7 @@ export function PipelineResults({
 
   if (results.length === 0) {
     return (
-      <div className="v4-panel">
+      <div className="v4-panel" style={{ marginBottom: 14 }}>
         <div className="v4-panel-h">
           <div className="v4-panel-t">Результаты</div>
         </div>
@@ -218,7 +218,7 @@ export function PipelineResults({
   }
 
   return (
-    <div className="v4-panel">
+    <div className="v4-panel" style={{ marginBottom: 14 }}>
       <div className="v4-panel-h">
         <div className="v4-panel-t">
           Результаты <span className="v4-tag">{results.length} задач</span>
