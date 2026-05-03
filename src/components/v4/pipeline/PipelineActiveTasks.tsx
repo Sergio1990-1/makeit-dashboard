@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { GITHUB_OWNER } from "../../../utils/config";
 import type {
   PipelineQueueItem,
   PipelineStageEntry,
   PipelineStatus,
 } from "../../../utils/pipeline";
+import { IssueContextPanel } from "./IssueContextPanel";
 import { PhaseDots } from "./PhaseDots";
 import { RiskDot } from "./badges";
 import { formatDuration } from "./utils";
@@ -42,11 +44,21 @@ function LiveTimer({ startMs }: { startMs?: number }) {
 
 export function PipelineActiveTasks({ status, runEpoch }: Props) {
   const taskSeenAtRef = useRef<Map<number, number>>(new Map());
+  // Issue number whose context modal is currently open. `null` = closed.
+  const [openIssue, setOpenIssue] = useState<number | null>(null);
 
   // Reset on new run
   useEffect(() => {
     taskSeenAtRef.current = new Map();
   }, [runEpoch]);
+
+  // pipeline `current_project` is a bare repo slug ("Sewing-ERP"); the
+  // IssueContext API needs "owner/name". Compose against the dashboard's
+  // single GitHub owner. Returns null when no project is active so the panel
+  // never opens against a stale repo.
+  const repoForContext = status?.current_project
+    ? `${GITHUB_OWNER}/${status.current_project}`
+    : null;
 
   // Derive active items first (pure computation), then sync the seen-map in
   // an effect — avoids calling Date.now() during render.
@@ -114,8 +126,19 @@ export function PipelineActiveTasks({ status, runEpoch }: Props) {
           allItems.slice(0, 10).map((item) => {
             const liveStages = issueStages[item.number];
             const fallbackStartMs = seen.get(item.number);
+            // Each row is a button so keyboard users can open the context
+            // panel via Enter/Space — matches the click-to-inspect contract.
+            // Disabled when there's no active project (the panel needs an
+            // owner/name to fetch).
             return (
-              <div key={item.number} className="v4-pl-active-row">
+              <button
+                key={item.number}
+                type="button"
+                className="v4-pl-active-row v4-pl-active-row-btn"
+                onClick={() => setOpenIssue(item.number)}
+                disabled={!repoForContext}
+                aria-label={`Контекст задачи #${item.number}: ${item.title}`}
+              >
                 <span className="v4-pl-mono v4-pl-active-num">#{item.number}</span>
                 <RiskDot riskLevel={item.risk_level} />
                 <span className="v4-pl-active-title">{item.title}</span>
@@ -127,11 +150,20 @@ export function PipelineActiveTasks({ status, runEpoch }: Props) {
                   </span>
                 )}
                 <LiveTimer startMs={fallbackStartMs} />
-              </div>
+              </button>
             );
           })
         )}
       </div>
+      {/* `key` resets the panel's state on every issue switch — keeps the
+          fetch effect simple (no manual reset) and prevents stale data flashes. */}
+      <IssueContextPanel
+        key={openIssue ?? "closed"}
+        open={openIssue !== null}
+        repo={repoForContext}
+        issueNumber={openIssue}
+        onClose={() => setOpenIssue(null)}
+      />
     </div>
   );
 }

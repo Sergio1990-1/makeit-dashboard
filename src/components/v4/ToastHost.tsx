@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import { safeHttpUrl } from "../../utils/url";
 import { ToastCtx } from "./toastContext";
 import type { ToastAction, ToastContextValue, ToastInput, ToastKind } from "./toastContext";
 
@@ -14,18 +15,6 @@ interface Toast extends Required<Omit<ToastInput, "description" | "action">> {
   description?: string | { text: string; url: string };
   action?: ToastAction;
   leaving: boolean;
-}
-
-function safeHttpUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      return parsed.href;
-    }
-  } catch {
-    // ignore — URL constructor throws on malformed input
-  }
-  return null;
 }
 
 function ToastDescription({
