@@ -4,15 +4,24 @@
 #   pip install pre-commit && pre-commit install
 #
 # Required by MakeIT GLOBAL_CLAUDE.md (Security): detect-private-key.
-# Other hooks are safety-only (no automatic re-formatting) so the config can
-# land cleanly without churning unrelated files. Style/formatting hooks
-# (end-of-file-fixer, trailing-whitespace) tracked separately.
+# `ruff` from the canonical Init.md list is intentionally omitted — this is
+# a JS/TS-only project, no Python sources to lint.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
+      # Security
       - id: detect-private-key
+      # Safety
       - id: check-added-large-files
         args: ["--maxkb=1024"]
       - id: check-merge-conflict
       - id: check-yaml
+      - id: check-json
+        # tsconfig*.json files are JSON-with-comments (TypeScript convention),
+        # not strict JSON — exclude them from this strict-JSON check.
+        exclude: ^tsconfig.*\.json$
+      - id: no-commit-to-branch  # default: blocks commits on main/master
+      # Hygiene (auto-fix)
+      - id: end-of-file-fixer
+      - id: trailing-whitespace

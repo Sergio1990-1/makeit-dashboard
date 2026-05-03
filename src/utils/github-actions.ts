@@ -845,4 +845,3 @@ export async function listOrphanIssuesWithMeta(
   }
   return out;
 }
-
