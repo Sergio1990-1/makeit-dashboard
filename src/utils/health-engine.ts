@@ -31,6 +31,35 @@ function param<T>(obj: Record<string, unknown>, key: string, fallback: T): T {
   return (obj[key] as T | undefined) ?? fallback;
 }
 
+// Fetch with bounded exponential backoff. Used for flaky third-party endpoints
+// (shields.io) where transient 5xx / network blips are common. Last attempt's
+// response is returned as-is so the caller can decide what to do with non-OK
+// statuses; only thrown errors propagate after retries are exhausted.
+async function fetchWithRetry(
+  url: string,
+  retries = 1,
+  baseDelay = 250,
+): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const r = await fetch(url);
+      if (r.ok) return r;
+      if (attempt < retries) {
+        await new Promise((res) => setTimeout(res, baseDelay * Math.pow(4, attempt)));
+        continue;
+      }
+      return r;
+    } catch (err) {
+      if (attempt < retries) {
+        await new Promise((res) => setTimeout(res, baseDelay * Math.pow(4, attempt)));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error("unreachable");
+}
+
 // Resolve a value that may be either a literal or a `{ ref: "settings.X" }`
 // pointer into the document's settings block. Used for shared thresholds.
 function resolveRef<T>(
@@ -538,11 +567,13 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
 
         // Try shields.io public JSON for codecov first; works even when the
         // dashboard repo's own GitHub token is not authorised for codecov.
+        // shields.io occasionally returns transient 5xx — retry once with
+        // exponential backoff before giving up as `unknown`.
         const url = `https://img.shields.io/codecov/c/github/${ctx.owner}/${ctx.repo}.json`;
         try {
-          const r = await fetch(url);
+          const r = await fetchWithRetry(url);
           if (!r.ok) {
-            return { ...base, status: "unknown", detail: `coverage badge недоступен (HTTP ${r.status})` };
+            return { ...base, status: "unknown", detail: `coverage сервис недоступен (HTTP ${r.status})` };
           }
           const json = await r.json();
           const value = String(json.value ?? "").trim();
