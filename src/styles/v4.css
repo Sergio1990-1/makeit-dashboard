@@ -1092,10 +1092,11 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
    ──────────────────────────────────────── */
 .v4-ai-list {
   padding: 6px 0;
-  /* Cap the list height so the panel doesn't outgrow its sibling
-     ("Активные проекты"). Surplus rows scroll inside the panel
-     instead of stretching the row vertically. */
-  max-height: 420px;
+  /* Cap aligned with the "Активные проекты" panel (1 row of 2 cards).
+     Surplus insight rows scroll inside the panel instead of stretching
+     the row vertically. Tuned in tandem with .v4-pcard heights — adjust
+     both if cards get taller. */
+  max-height: 280px;
   overflow-y: auto;
   scrollbar-width: thin;
 }
@@ -1214,6 +1215,69 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 .v4-ai-sev--high     { color: var(--v4-danger-700); background: var(--v4-danger-50); }
 .v4-ai-sev--medium   { color: var(--v4-warn-700);   background: var(--v4-warn-50); }
 .v4-ai-sev--low      { color: var(--v4-ink-600);    background: var(--v4-line-soft, #eef0f4); }
+
+/* ── Compact insight row (replaces the multi-section InsightCard).
+   Whole row is a button → click opens Health for the repo. severity +
+   title + repo all on one baseline; detail clamps to 1 line below.
+   Hover/focus state matches other v4 list items. ── */
+.v4-ai-row {
+  display: grid;
+  grid-template-columns: 78px 1fr 14px;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 8px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--v4-line-soft);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.v4-ai-row:last-child { border-bottom: 0; }
+.v4-ai-row:hover { background: var(--v4-line-soft, #eef0f4); }
+.v4-ai-row:focus-visible {
+  outline: 2px solid var(--v4-accent-500);
+  outline-offset: -2px;
+}
+.v4-ai-row-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.v4-ai-row-ttl {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.v4-ai-row-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--v4-ink-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.v4-ai-row-ds {
+  font-size: 12px;
+  color: var(--v4-ink-600);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.v4-ai-row-arrow {
+  color: var(--v4-ink-400);
+  font-size: 12px;
+  text-align: right;
+}
+.v4-ai-row:hover .v4-ai-row-arrow { color: var(--v4-accent-600); }
 
 /* skeleton */
 .v4-ai-skel { grid-template-columns: 78px 1fr 40px; }

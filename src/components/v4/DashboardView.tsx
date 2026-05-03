@@ -91,10 +91,12 @@ export function DashboardView({
     [projects]
   );
 
-  // Top-4 active by recent closed activity (last 3 days). Uses lastUpdated as
+  // Top-2 active by recent closed activity (last 3 days). Uses lastUpdated as
   // the time anchor so sorting is stable until the data refreshes — avoids
   // calling Date.now() inside useMemo (react-hooks/purity).
-  const top4 = useMemo(() => {
+  // 2 cards (one row) keeps the panel compact and serves as the height
+  // anchor for the AI insights panel rendered next to it.
+  const topProjects = useMemo(() => {
     const anchor = lastUpdated ? lastUpdated.getTime() : 0;
     const cutoff = anchor > 0 ? anchor - 3 * 24 * 60 * 60 * 1000 : 0;
     return [...filtered]
@@ -108,7 +110,7 @@ export function DashboardView({
         if (recentB !== recentA) return recentB - recentA;
         return b.openCount - a.openCount;
       })
-      .slice(0, 4);
+      .slice(0, 2);
   }, [filtered, lastUpdated]);
 
   const subText = useMemo(() => {
@@ -169,11 +171,11 @@ export function DashboardView({
               Все проекты →
             </button>
           </div>
-          {top4.length === 0 ? (
+          {topProjects.length === 0 ? (
             <div className="v4-empty">Нет проектов в текущем фильтре</div>
           ) : (
             <div className="v4-proj-grid">
-              {top4.map((p, i) => (
+              {topProjects.map((p, i) => (
                 <DashboardProjectCard
                   key={p.repo}
                   project={p}

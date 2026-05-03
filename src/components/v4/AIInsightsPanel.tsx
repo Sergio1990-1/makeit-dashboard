@@ -201,49 +201,29 @@ interface CardProps {
 
 function InsightCard({ entry, onOpenHealth }: CardProps) {
   const { finding, repo } = entry;
-  // Detail is optional in the type; fall back to remediation to avoid an
-  // empty grey strip under the title for findings that only ship a fix.
   const rawDetail = finding.detail ?? finding.remediation ?? "";
   const detail = truncate(rawDetail, TRUNCATE_LEN);
 
   return (
-    <div className="v4-ai-item v4-ai-fail">
-      <div className={`v4-ai-sev v4-ai-sev--${finding.severity}`}>
+    <button
+      type="button"
+      className="v4-ai-row"
+      onClick={() => onOpenHealth(repo)}
+      title={`${repo} · L${finding.layer} · ${finding.rule_id}`}
+    >
+      <span className={`v4-ai-sev v4-ai-sev--${finding.severity}`}>
         <span className="v4-ai-sev-dot" />
         {finding.severity}
-      </div>
-      <div className="v4-ai-body">
-        <div className="v4-ai-item-ttl">
-          <span>{finding.title}</span>
+      </span>
+      <span className="v4-ai-row-main">
+        <span className="v4-ai-row-ttl">
+          <span className="v4-ai-row-title">{finding.title}</span>
           <span className="v4-ai-repo v4-mono">{repo}</span>
-        </div>
-        {detail && <div className="v4-ai-item-ds">{detail}</div>}
-        <div className="v4-ai-actions">
-          <button
-            type="button"
-            className="v4-btn v4-btn--pri v4-ai-btn"
-            // Defensive: even though `repo` always comes from the report,
-            // keep the closure explicit so a future refactor can't pass
-            // undefined accidentally.
-            onClick={() => onOpenHealth(repo)}
-          >
-            Открыть Health
-          </button>
-          <button
-            type="button"
-            className="v4-btn v4-ai-btn"
-            disabled
-            title="Доступно после Epic-006"
-          >
-            → issue
-          </button>
-        </div>
-      </div>
-      <div className="v4-ai-item-meta">
-        <span className="v4-mono">{finding.rule_id}</span>
-        <br />L{finding.layer}
-      </div>
-    </div>
+        </span>
+        {detail && <span className="v4-ai-row-ds">{detail}</span>}
+      </span>
+      <span className="v4-ai-row-arrow" aria-hidden>↗</span>
+    </button>
   );
 }
 
