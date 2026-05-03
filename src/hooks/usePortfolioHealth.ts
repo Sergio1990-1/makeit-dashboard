@@ -130,12 +130,18 @@ export function usePortfolioHealth(): State & { refresh: () => void } {
       }
     }
 
+    // Bump the request id BEFORE any await so the cleanup path (which also
+    // bumps requestId) can invalidate this run while it's parked in the
+    // initial delay. Without this, a StrictMode double-mount can let the
+    // first run's setTimeout resolve under the second mount's `isMounted=true`
+    // and write stale state.
+    const myReq = ++requestId.current;
+
     if (withInitialDelay) {
       await new Promise((r) => setTimeout(r, INITIAL_DELAY_MS));
-      if (!isMounted.current) return;
+      if (myReq !== requestId.current || !isMounted.current) return;
     }
 
-    const myReq = ++requestId.current;
     if (isMounted.current) {
       setState((s) => ({ ...s, loading: true, error: null }));
     }
@@ -196,9 +202,8 @@ export function usePortfolioHealth(): State & { refresh: () => void } {
     return () => {
       isMounted.current = false;
       // Bump the request id so any in-flight handlers see a stale id and
-      // skip their setState calls. Mutating the ref itself (not a copy) is
-      // the whole point — the lint rule's usual "snapshot the ref" advice
-      // doesn't apply here.
+      // skip their setState calls. We deliberately mutate the live ref —
+      // the "snapshot ref before cleanup" advice doesn't apply.
       // eslint-disable-next-line react-hooks/exhaustive-deps
       requestId.current++;
     };
