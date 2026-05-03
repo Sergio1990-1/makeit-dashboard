@@ -679,7 +679,9 @@ export async function callClaudeWithTool<T>(
       return block.input as T;
     }
   }
-  throw new Error("model did not call tool");
+  throw new Error(
+    `model did not call tool "${toolDef.name}" (model=${model})`,
+  );
 }
 
 // ── Chat with tool use loop ──
