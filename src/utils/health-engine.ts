@@ -7,6 +7,7 @@ import type {
   HealthLayerSummary,
   HealthReport,
   HealthScore,
+  HealthTrend,
   ProjectClassification,
 } from "../types/health";
 import {
@@ -596,6 +597,42 @@ function computeScore(findings: HealthFinding[], doc: ChecklistDocument): Health
   return { raw, grade };
 }
 
+// Trend history is stored in localStorage as a list of up to 7 score values.
+// Updated on every successful scan, so the sparkline reflects "last 7 scans".
+const TREND_PREFIX = "makeit_health_trend_";
+const TREND_MAX = 7;
+
+function loadTrendHistory(repo: string): number[] {
+  try {
+    const raw = localStorage.getItem(TREND_PREFIX + repo);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((n) => typeof n === "number") : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveTrendHistory(repo: string, points: number[]): void {
+  try {
+    localStorage.setItem(TREND_PREFIX + repo, JSON.stringify(points));
+  } catch {
+    /* quota — drop silently */
+  }
+}
+
+function buildTrend(repo: string, currentScore: number): HealthTrend {
+  const prev = loadTrendHistory(repo);
+  // Append current; cap at TREND_MAX to keep recent only.
+  const points = [...prev, currentScore].slice(-TREND_MAX);
+  saveTrendHistory(repo, points);
+  const oldest = points[0];
+  const delta = points.length > 1 ? currentScore - oldest : 0;
+  const direction: HealthTrend["direction"] =
+    delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+  return { points, delta, direction };
+}
+
 function summarizeByLayer(findings: HealthFinding[]): Record<HealthLayer, HealthLayerSummary> {
   const empty: HealthLayerSummary = { total: 0, pass: 0, fail: 0, unknown: 0, skipped: 0 };
   const out: Record<HealthLayer, HealthLayerSummary> = {
@@ -669,13 +706,16 @@ export async function runHealthCheck(
     });
   }
 
+  const score = computeScore(findings, doc);
+  const trend = buildTrend(repo, score.raw);
   return {
     repo,
     generated_at: new Date().toISOString(),
     classification: cls,
     in_grace_period: inGrace,
     findings,
-    score: computeScore(findings, doc),
+    score,
     by_layer: summarizeByLayer(findings),
+    trend,
   };
 }

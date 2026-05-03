@@ -27,6 +27,7 @@ import { PasswordGate } from "./components/PasswordGate";
 import type { TabId, Monitor } from "./types";
 import "./App.css";
 import "./styles/v4.css";
+import "./styles/v4-health.css";
 
 const TAB_CRUMBS: Record<TabId, string> = {
   dashboard: "Дашборд",

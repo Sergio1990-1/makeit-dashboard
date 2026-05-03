@@ -1,0 +1,78 @@
+import type { HealthReport } from "../../../types/health";
+import { Icon } from "./Icon";
+import { KpiRow } from "./KpiRow";
+import { formatScanTime } from "./utils";
+
+interface Props {
+  report: HealthReport;
+  onBack: () => void;
+  onRescan: () => void;
+  refreshing: boolean;
+  rulesCount: number;
+}
+
+// Header of the report — repo name with classification chips, sub-row with
+// scan time and rules-version link, action buttons (drift scan placeholder
+// + rescan), and the 3-tile KPI row.
+export function Hero({ report, onBack, onRescan, refreshing, rulesCount }: Props) {
+  const cls = report.classification;
+  return (
+    <section className="ph-hero-block">
+      <div className="ph-hero-top">
+        <button type="button" className="v4-btn ph-back" onClick={onBack} aria-label="Назад к списку проектов">
+          <Icon name="arrow-left" />
+          Все проекты
+        </button>
+        <div className="ph-hero-id">
+          <div className="ph-hero-titlerow">
+            <h1>
+              <span className="v4-mono">{report.repo}</span>
+            </h1>
+            <div className="ph-hero-tags">
+              <span className={`ph-tag ph-tag--tier${cls.tier}`}>tier {cls.tier}</span>
+              {cls.complex && <span className="ph-tag ph-tag--complex">complex</span>}
+              {cls.client ? (
+                <span className="ph-tag ph-tag--client">client</span>
+              ) : (
+                <span className="ph-tag ph-tag--internal">internal</span>
+              )}
+              {report.in_grace_period && (
+                <span className="ph-tag ph-tag--grace">
+                  <Icon name="seedling" /> grace · 3 дня
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="ph-hero-sub">
+            <span><Icon name="clock" /> Скан {formatScanTime(report.generated_at)}</span>
+            <span className="v4-sep">·</span>
+            <a
+              href="https://github.com/Sergio1990-1/makeit-knowledge/blob/main/Skills/PROJECT_CHECKLIST.yaml"
+              target="_blank"
+              rel="noreferrer"
+              className="ph-hero-link"
+            >
+              <Icon name="book" /> {rulesCount} правил · makeit-knowledge
+            </a>
+          </div>
+        </div>
+        <div className="ph-hero-actions">
+          <button type="button" className="v4-btn" disabled title="Layer 4 — следующая итерация">
+            <Icon name="zap" /> Просканировать drift
+          </button>
+          <button
+            type="button"
+            className={`v4-btn v4-btn--pri ${refreshing ? "is-spin" : ""}`}
+            disabled={refreshing}
+            onClick={onRescan}
+          >
+            <Icon name="refresh" />
+            {refreshing ? "Сканирую…" : "Пересканировать"}
+          </button>
+        </div>
+      </div>
+
+      <KpiRow report={report} />
+    </section>
+  );
+}

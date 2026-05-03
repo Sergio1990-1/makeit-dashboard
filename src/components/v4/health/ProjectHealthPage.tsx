@@ -1,7 +1,14 @@
-import { useMemo } from "react";
-import { useProjectHealth } from "../../../hooks/useProjectHealth";
-import type { HealthFinding, HealthLayer, HealthReport } from "../../../types/health";
+import { useEffect, useState } from "react";
 import type { ProjectData } from "../../../types";
+import { useProjectHealth } from "../../../hooks/useProjectHealth";
+import { loadChecklist } from "../../../utils/checklist";
+import { getToken } from "../../../utils/config";
+import { Hero } from "./Hero";
+import { LayerStrip } from "./LayerStrip";
+import { FindingsBoard } from "./FindingsBoard";
+import { Sidebar } from "./Sidebar";
+import { ClassificationMissing, ErrorState, LoadingState } from "./States";
+import { Icon } from "./Icon";
 
 interface Props {
   repo: string;
@@ -9,216 +16,144 @@ interface Props {
   onBack: () => void;
 }
 
-const LAYER_TITLES: Record<HealthLayer, string> = {
-  1: "Гигиена",
-  2: "Документация",
-  3: "Свежесть и операционка",
-  4: "Drift (AI)",
-};
-
-const STATUS_ICON: Record<HealthFinding["status"], string> = {
-  pass: "✓",
-  fail: "✗",
-  unknown: "?",
-  skipped: "—",
-};
-
-const SEVERITY_LABEL: Record<HealthFinding["severity"], string> = {
-  critical: "critical",
-  high: "high",
-  medium: "medium",
-  low: "low",
-};
-
-function FindingsLayer({
-  layer,
-  findings,
-}: {
-  layer: HealthLayer;
-  findings: HealthFinding[];
-}) {
-  const items = findings.filter((f) => f.layer === layer);
-  if (items.length === 0) return null;
-
-  // Sort: fail → unknown → pass → skipped, then by severity weight.
-  const order: Record<HealthFinding["status"], number> = {
-    fail: 0,
-    unknown: 1,
-    pass: 2,
-    skipped: 3,
-  };
-  const sevOrder: Record<HealthFinding["severity"], number> = {
-    critical: 0,
-    high: 1,
-    medium: 2,
-    low: 3,
-  };
-  const sorted = [...items].sort((a, b) => {
-    const s = order[a.status] - order[b.status];
-    if (s !== 0) return s;
-    return sevOrder[a.severity] - sevOrder[b.severity];
-  });
-
-  const summary = items.reduce(
-    (acc, f) => {
-      acc[f.status]++;
-      return acc;
-    },
-    { pass: 0, fail: 0, unknown: 0, skipped: 0 } as Record<HealthFinding["status"], number>,
-  );
-
-  return (
-    <details className="v4-health-layer" open>
-      <summary>
-        <strong>Слой {layer}: {LAYER_TITLES[layer]}</strong>
-        {" — "}
-        <span style={{ color: "var(--v4-good-700)" }}>{summary.pass} ok</span>
-        {" / "}
-        <span style={{ color: "var(--v4-p1)" }}>{summary.fail} провалено</span>
-        {summary.unknown > 0 && <> {" / "} <span style={{ opacity: 0.7 }}>{summary.unknown} не определено</span></>}
-        {summary.skipped > 0 && <> {" / "} <span style={{ opacity: 0.5 }}>{summary.skipped} пропущено</span></>}
-      </summary>
-      <div className="v4-health-list">
-        {sorted.map((f) => (
-          <div key={f.rule_id} className={`v4-health-item v4-health-item--${f.status}`}>
-            <span className="v4-health-item-icon">{STATUS_ICON[f.status]}</span>
-            <div className="v4-health-item-body">
-              <div className="v4-health-item-title">
-                {f.title}
-                {f.status === "fail" && (
-                  <span className={`v4-health-item-sev v4-health-item-sev--${f.severity}`}>
-                    {SEVERITY_LABEL[f.severity]}
-                  </span>
-                )}
-              </div>
-              {f.detail && <div className="v4-health-item-detail">{f.detail}</div>}
-              {f.status === "fail" && f.remediation && (
-                <div className="v4-health-item-remediation">{f.remediation}</div>
-              )}
-              <div className="v4-health-item-meta">
-                <code>{f.rule_id}</code>
-                {f.source && <> · источник: {f.source}</>}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </details>
-  );
-}
+// Top-level page. Decides between the 7 visual states described in the
+// design handoff:
+//   loading-initial / loading-refresh / error / classification-missing /
+//   grace-period / report-clean / report-warn / report-critical
+// Most of these collapse to "render the report with banners on top".
 
 export function ProjectHealthPage({ repo, project, onBack }: Props) {
   const { report, loading, error, refresh } = useProjectHealth(repo);
 
-  const failedCount = useMemo(
-    () => (report ? report.findings.filter((f) => f.status === "fail").length : 0),
-    [report],
-  );
+  // Load the rules count for the hero "N правил · makeit-knowledge" link.
+  // Fire once when the page opens; the value is cached by loadChecklist.
+  const [rulesCount, setRulesCount] = useState<number>(0);
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    let cancelled = false;
+    loadChecklist(token)
+      .then((doc) => {
+        if (!cancelled) setRulesCount(doc.rules.length);
+      })
+      .catch(() => {
+        /* if the checklist fails we still render — Hero will show 0 */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  return (
-    <div className="v4-content">
-      <div className="v4-ph">
-        <div>
-          <button type="button" className="v4-btn" onClick={onBack} style={{ marginBottom: 6 }}>
-            ← Все проекты
-          </button>
-          <h1>{repo} — Health</h1>
-          <div className="v4-sub">
-            {project && (
-              <>
-                {project.client} · фаза {project.phase}
-                {" · "}
-              </>
-            )}
-            {report && (
-              <>
-                tier {report.classification.tier}
-                {report.classification.complex ? " · complex" : ""}
-                {report.classification.client ? " · client" : ""}
-                {report.in_grace_period && " · grace period"}
-              </>
-            )}
+  // ─── Edge states first ─────────────────────────────────────────────
+  if (error) {
+    // Classification-missing surfaces as an error message from the engine.
+    if (error.includes("not in project_classification")) {
+      return (
+        <div className="v4-content">
+          <PageHeaderForState repo={repo} onBack={onBack} />
+          <div className="ph-page">
+            <div className="ph-main">
+              <ClassificationMissing repo={repo} onRetry={refresh} />
+            </div>
           </div>
         </div>
-        <div className="v4-ph-right">
-          <button type="button" className="v4-btn" onClick={refresh} disabled={loading}>
-            {loading ? "Сканирую…" : "Пересканировать"}
-          </button>
+      );
+    }
+    return (
+      <div className="v4-content">
+        <PageHeaderForState repo={repo} onBack={onBack} />
+        <div className="ph-page">
+          <div className="ph-main">
+            <ErrorState message={error} onRetry={refresh} />
+          </div>
         </div>
       </div>
+    );
+  }
 
-      <div style={{ height: 10 }} />
-
-      {error && (
-        <div className="v4-panel">
-          <div className="v4-empty" style={{ color: "var(--v4-p1)" }}>{error}</div>
+  if (loading && !report) {
+    return (
+      <div className="v4-content">
+        <PageHeaderForState repo={repo} onBack={onBack} />
+        <div className="ph-page">
+          <div className="ph-main">
+            <LoadingState repo={repo} />
+          </div>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {loading && !report && (
-        <div className="v4-panel">
-          <div className="v4-empty">Сканирую {repo}…</div>
+  if (!report) {
+    return (
+      <div className="v4-content">
+        <PageHeaderForState repo={repo} onBack={onBack} />
+        <div className="ph-page">
+          <div className="ph-main">
+            <LoadingState repo={repo} />
+          </div>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {report && <ReportBody report={report} failedCount={failedCount} />}
+  // ─── Report rendered ───────────────────────────────────────────────
+  const refreshing = loading;
+  return (
+    <div className="v4-content">
+      <Hero
+        report={report}
+        onBack={onBack}
+        onRescan={refresh}
+        refreshing={refreshing}
+        rulesCount={rulesCount}
+      />
+      <div className="ph-page">
+        <div className="ph-main">
+          {refreshing && (
+            <div className="ph-refresh-banner">
+              <span className="ph-refresh-spin" />
+              Пересканирую {report.repo}… отчёт обновится через несколько секунд.
+            </div>
+          )}
+          {report.in_grace_period && (
+            <div className="ph-grace-banner">
+              <Icon name="seedling" />
+              <span>
+                <b>Льготный период.</b> Проект младше 3 дней — нарушения отображаются, но не штрафуют (кроме критических).
+              </span>
+            </div>
+          )}
+          <LayerStrip report={report} />
+          <FindingsBoard report={report} />
+        </div>
+        <Sidebar report={report} project={project} />
+      </div>
     </div>
   );
 }
 
-function ReportBody({ report, failedCount }: { report: HealthReport; failedCount: number }) {
+// Minimal header during edge states — just a back-button so the user is
+// never trapped on a loading/error screen.
+function PageHeaderForState({ repo, onBack }: { repo: string; onBack: () => void }) {
   return (
-    <>
-      <div className="v4-panel">
-        <div className="v4-panel-h">
-          <div className="v4-panel-t">Health-score</div>
-          <div className="v4-panel-meta">
-            обновлено {new Date(report.generated_at).toLocaleTimeString("ru-RU")}
+    <section className="ph-hero-block">
+      <div className="ph-hero-top">
+        <button type="button" className="v4-btn ph-back" onClick={onBack}>
+          <Icon name="arrow-left" />
+          Все проекты
+        </button>
+        <div className="ph-hero-id">
+          <div className="ph-hero-titlerow">
+            <h1>
+              <span className="v4-mono">{repo}</span>
+            </h1>
           </div>
-        </div>
-        <div className="v4-health-score">
-          <div className={`v4-health-grade v4-health-grade--${report.score.grade}`}>
-            {report.score.grade}
+          <div className="ph-hero-sub">
+            <span><Icon name="shield" /> Health</span>
           </div>
-          <div className="v4-health-score-num num">{report.score.raw}</div>
-          <div className="v4-health-score-label">
-            <div>{failedCount} нарушений</div>
-            <div style={{ opacity: 0.6, fontSize: 12 }}>
-              из {report.findings.filter((f) => f.status !== "skipped").length} применимых правил
-            </div>
-          </div>
-        </div>
-
-        <div className="v4-health-layers-summary">
-          {([1, 2, 3, 4] as HealthLayer[]).map((layer) => {
-            const s = report.by_layer[layer];
-            const applied = s.total - s.skipped;
-            if (applied === 0) return null;
-            return (
-              <div key={layer} className="v4-health-layer-stat">
-                <div className="v4-health-layer-stat-title">Слой {layer}</div>
-                <div className="v4-health-layer-stat-bar">
-                  <span style={{ flex: s.pass, background: "var(--v4-good-500)" }} />
-                  <span style={{ flex: s.fail, background: "var(--v4-p1)" }} />
-                  <span style={{ flex: s.unknown, background: "var(--v4-warn-500, #d4a017)" }} />
-                </div>
-                <div className="v4-health-layer-stat-meta">
-                  {s.pass}/{applied}
-                </div>
-              </div>
-            );
-          })}
         </div>
       </div>
-
-      <div className="v4-panel">
-        <div className="v4-panel-h">
-          <div className="v4-panel-t">Чек-лист</div>
-        </div>
-        {([1, 2, 3, 4] as HealthLayer[]).map((layer) => (
-          <FindingsLayer key={layer} layer={layer} findings={report.findings} />
-        ))}
-      </div>
-    </>
+    </section>
   );
 }

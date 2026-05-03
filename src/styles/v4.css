@@ -7965,7 +7965,11 @@ ul.v4-rsh-list {
 }
 
 
-/* ── Project Health (developer preview — to be redesigned) ─────────────── */
+
+/* ── Project card → Health button overlay ──────────────────────────────
+   The card itself comes from ProjectCardV4 untouched; this is a small
+   floating CTA pinned to its top-right corner so the user can drill into
+   the health page without disturbing the card's existing layout. */
 .v4-project-cell { position: relative; }
 .v4-project-health-btn {
   position: absolute;
@@ -7974,110 +7978,8 @@ ul.v4-rsh-list {
   z-index: 2;
   padding: 4px 10px;
   font-size: 11px;
-  background: var(--v4-bg-elev, rgba(255,255,255,0.85));
-  backdrop-filter: blur(4px);
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  backdrop-filter: blur(4px);
 }
-
-.v4-health-score {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 14px 4px 6px;
-}
-.v4-health-grade {
-  font-family: var(--v4-mono);
-  font-size: 44px;
-  font-weight: 700;
-  width: 64px;
-  height: 64px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--v4-ink-100);
-  color: var(--v4-ink-900);
-}
-.v4-health-grade--A { background: var(--v4-good-100, #dcfce7); color: var(--v4-good-700, #15803d); }
-.v4-health-grade--B { background: var(--v4-good-100, #dcfce7); color: var(--v4-good-700, #15803d); opacity: 0.85; }
-.v4-health-grade--C { background: #fef3c7; color: #92400e; }
-.v4-health-grade--D { background: #fed7aa; color: #9a3412; }
-.v4-health-grade--F { background: #fecaca; color: var(--v4-p1, #b91c1c); }
-.v4-health-score-num { font-size: 28px; font-weight: 600; }
-.v4-health-score-label { font-size: 12px; color: var(--v4-ink-700); }
-
-.v4-health-layers-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
-  padding: 10px 4px;
-  border-top: 1px solid var(--v4-ink-200);
-  margin-top: 10px;
-}
-.v4-health-layer-stat-title { font-size: 11px; color: var(--v4-ink-700); margin-bottom: 4px; }
-.v4-health-layer-stat-bar {
-  display: flex;
-  height: 6px;
-  border-radius: 3px;
-  overflow: hidden;
-  background: var(--v4-ink-100);
-}
-.v4-health-layer-stat-bar > span { display: block; height: 100%; }
-.v4-health-layer-stat-meta { font-size: 11px; color: var(--v4-ink-700); margin-top: 4px; }
-
-.v4-health-layer { padding: 10px 0; border-top: 1px solid var(--v4-ink-200); }
-.v4-health-layer:first-of-type { border-top: 0; }
-.v4-health-layer summary { cursor: pointer; padding: 6px 0; font-size: 13px; }
-.v4-health-list { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; }
-.v4-health-item {
-  display: grid;
-  grid-template-columns: 24px 1fr;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--v4-ink-50, #fafafa);
-}
-.v4-health-item-icon {
-  font-family: var(--v4-mono);
-  font-weight: 700;
-  text-align: center;
-  align-self: start;
-  padding-top: 2px;
-}
-.v4-health-item--pass { background: var(--v4-good-100, #f0fdf4); }
-.v4-health-item--pass .v4-health-item-icon { color: var(--v4-good-700, #15803d); }
-.v4-health-item--fail { background: #fef2f2; }
-.v4-health-item--fail .v4-health-item-icon { color: var(--v4-p1, #b91c1c); }
-.v4-health-item--unknown { background: #fef9c3; opacity: 0.85; }
-.v4-health-item--skipped { opacity: 0.5; }
-.v4-health-item-title { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
-.v4-health-item-sev {
-  font-family: var(--v4-mono);
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--v4-ink-200);
-  color: var(--v4-ink-900);
-}
-.v4-health-item-sev--critical { background: #fecaca; color: #991b1b; }
-.v4-health-item-sev--high { background: #fed7aa; color: #9a3412; }
-.v4-health-item-detail { font-size: 12px; color: var(--v4-ink-700); margin-top: 3px; }
-.v4-health-item-remediation {
-  font-size: 12px;
-  color: var(--v4-ink-900);
-  margin-top: 6px;
-  padding: 6px 8px;
-  background: rgba(0,0,0,0.04);
-  border-left: 2px solid var(--v4-accent-600, #2563eb);
-  border-radius: 0 4px 4px 0;
-  white-space: pre-wrap;
-}
-.v4-health-item-meta {
-  font-size: 11px;
-  color: var(--v4-ink-500);
-  margin-top: 4px;
-  font-family: var(--v4-mono);
-}
-.v4-health-item-meta code { font-size: 11px; background: rgba(0,0,0,0.04); padding: 1px 4px; border-radius: 3px; }

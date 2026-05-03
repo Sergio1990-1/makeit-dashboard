@@ -85,6 +85,15 @@ export interface HealthLayerSummary {
   skipped: number;
 }
 
+export interface HealthTrend {
+  // Самая старая точка → самая новая. До 7 значений (по сканам).
+  // На первом запуске в массиве 1 точка (текущий score).
+  points: number[];
+  // current − points[0]; 0 если точек < 2.
+  delta: number;
+  direction: "up" | "down" | "flat";
+}
+
 export interface HealthReport {
   repo: string;
   generated_at: string;
@@ -93,4 +102,14 @@ export interface HealthReport {
   findings: HealthFinding[];
   score: HealthScore;
   by_layer: Record<HealthLayer, HealthLayerSummary>;
+  trend: HealthTrend;
 }
+
+// Имена слоёв для UI. Слои определены в makeit-knowledge/Skills/PROJECT_CHECKLIST.yaml
+// (4 концентрических круга). Здесь только человекочитаемые названия.
+export const LAYER_NAMES: Record<HealthLayer, string> = {
+  1: "Гигиена",
+  2: "Документация",
+  3: "Свежесть и операционка",
+  4: "Drift (AI)",
+};
