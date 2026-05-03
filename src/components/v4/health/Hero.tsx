@@ -5,7 +5,6 @@ import { formatScanTime } from "./utils";
 
 interface Props {
   report: HealthReport;
-  onBack: () => void;
   onRescan: () => void;
   refreshing: boolean;
   rulesCount: number;
@@ -13,16 +12,13 @@ interface Props {
 
 // Header of the report — repo name with classification chips, sub-row with
 // scan time and rules-version link, action buttons (drift scan placeholder
-// + rescan), and the 3-tile KPI row.
-export function Hero({ report, onBack, onRescan, refreshing, rulesCount }: Props) {
+// + rescan), and the 3-tile KPI row. Navigation back to the projects list
+// happens via the topbar breadcrumb.
+export function Hero({ report, onRescan, refreshing, rulesCount }: Props) {
   const cls = report.classification;
   return (
     <section className="ph-hero-block">
       <div className="ph-hero-top">
-        <button type="button" className="v4-btn ph-back" onClick={onBack} aria-label="Назад к списку проектов">
-          <Icon name="arrow-left" />
-          Все проекты
-        </button>
         <div className="ph-hero-id">
           <div className="ph-hero-titlerow">
             <h1>
