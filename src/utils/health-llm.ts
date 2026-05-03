@@ -11,6 +11,7 @@ import type {
   HealthFinding,
   ProjectClassification,
 } from "../types/health";
+import { checkClaudeMdFreshness } from "./checks/claudeMdFreshness";
 import { checkContractMilestonesSync } from "./checks/contractMilestonesSync";
 import { checkDocCodeSync } from "./checks/docCodeSync";
 import { checkKnowledgeCoverage } from "./checks/knowledgeCoverage";
@@ -64,12 +65,8 @@ function findingBase(rule: ChecklistRule): Omit<HealthFinding, "status" | "detai
   };
 }
 
-// ── Detector stubs (task-03..07 will replace these) ───────────────────
-// Each TBD detector accepts the same signature as a real one will so the
-// switchboard below doesn't need to change when a real impl lands.
-
-// Common stub helpers — keep `claudeKey` typed even though we don't use it
-// yet, so swapping in the real impl doesn't change the signature.
+// Detector signature shared by every Layer-4 check. Each implementation lives
+// under `./checks/` and is wired into the routing switch below.
 export type DetectorArgs = {
   rule: ChecklistRule;
   token: string;
@@ -79,10 +76,6 @@ export type DetectorArgs = {
   classification: ProjectClassification;
   claudeKey: string;
 };
-
-async function checkClaudeMdFreshness_TBD(args: DetectorArgs): Promise<HealthFinding> {
-  return { ...findingBase(args.rule), status: "unknown", detail: "Будет реализовано в task-07" };
-}
 
 // Routing: rule → detector. We dispatch on `rule.check.type` because that's
 // the existing convention used by health-engine.ts for the synchronous layers
@@ -102,7 +95,7 @@ function detectorFor(rule: ChecklistRule): Detector | null {
     case "ai_knowledge_coverage":
       return checkKnowledgeCoverage;
     case "ai_claude_md_freshness":
-      return checkClaudeMdFreshness_TBD;
+      return checkClaudeMdFreshness;
     default:
       return null;
   }
