@@ -1,0 +1,18 @@
+# Pre-commit hooks for makeit-dashboard.
+#
+# Install once per clone:
+#   pip install pre-commit && pre-commit install
+#
+# Required by MakeIT GLOBAL_CLAUDE.md (Security): detect-private-key.
+# Other hooks are safety-only (no automatic re-formatting) so the config can
+# land cleanly without churning unrelated files. Style/formatting hooks
+# (end-of-file-fixer, trailing-whitespace) tracked separately.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: check-merge-conflict
+      - id: check-yaml
