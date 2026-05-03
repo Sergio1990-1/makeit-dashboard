@@ -87,7 +87,19 @@ export interface PipelineQueueItem {
   title: string;
   status: string;
   priority: number;
+  // V2 fields — issue #797 (Phase-1.4). All optional for back-compat with
+  // older Pipeline backends; older builds simply leave the corresponding
+  // UI columns / badges off.
   risk_level?: "low" | "medium" | "high";
+  complexity?: "auto" | "assisted" | "manual";
+  model?: string;
+  attempt?: number;
+  max_attempts?: number;
+  budget_spent_usd?: number;
+  budget_cap_usd?: number;
+  labels?: string[];
+  pr_url?: string | null;
+  issue_url?: string | null;
 }
 
 /**

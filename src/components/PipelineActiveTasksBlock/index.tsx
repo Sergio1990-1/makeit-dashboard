@@ -69,6 +69,9 @@ function mapToActiveTasks(
 
   const tasks: ActiveTask[] = allItems.map((item) => {
     const stages: PipelineStageEntry[] = issueStages[item.number] ?? [];
+    // V2 fields (issue #797): backend now ships budget/attempt/model/etc. on
+    // each queue item. Fall back to per-stage sum for budgetSpent so older
+    // backends (pre-#797) still surface a non-zero spend in the card.
     return {
       number: item.number,
       title: item.title,
@@ -76,15 +79,15 @@ function mapToActiveTasks(
       risk_level: item.risk_level,
       priority: item.priority || undefined,
       status: item.status,
-      complexity: undefined,
-      model: undefined,
-      attempt: undefined,
-      maxAttempts: undefined,
-      budgetSpent: sumStageCost(stages),
-      budgetCap: undefined,
-      issueUrl: buildIssueUrl(repo, item.number),
-      prUrl: null,
-      labels: [],
+      complexity: item.complexity,
+      model: item.model,
+      attempt: item.attempt,
+      maxAttempts: item.max_attempts,
+      budgetSpent: item.budget_spent_usd ?? sumStageCost(stages),
+      budgetCap: item.budget_cap_usd,
+      issueUrl: item.issue_url ?? buildIssueUrl(repo, item.number),
+      prUrl: item.pr_url ?? null,
+      labels: item.labels ?? [],
       stages,
     };
   });

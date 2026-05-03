@@ -306,6 +306,7 @@ export function PipelineView({
             {running && status ? (
               <PipelineActiveTasksBlock
                 status={status}
+                showV2
                 onOpenContext={repoForContext ? (n) => setOpenContextIssue(n) : undefined}
               />
             ) : (

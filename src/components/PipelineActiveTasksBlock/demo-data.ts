@@ -86,12 +86,30 @@ const ISSUE_STAGES_NORMAL: Record<number, PipelineStageEntry[]> = {
 };
 
 const QUEUE = [
-  { number: 1618, title: "Add billing webhook with retry-on-429", status: "in_progress", priority: 1, risk_level: "low" as const },
-  { number: 1602, title: "Sewing-ERP: orders.list pagination cursor", status: "in_review", priority: 2, risk_level: "medium" as const },
-  { number: 1591, title: "mankassa-app: i18n fallback for unknown locale", status: "in_progress", priority: 3, risk_level: "low" as const },
-  { number: 1577, title: "makeit-pipeline: stale lock cleanup on crash", status: "in_progress", priority: 1, risk_level: "high" as const },
-  { number: 1623, title: "solotax-kg: tax rates table sync", status: "in_progress", priority: 2, risk_level: "high" as const },
-  { number: 1574, title: "Sewing-ERP: migrate auth to JWKS rotation", status: "in_progress", priority: 1, risk_level: "medium" as const },
+  { number: 1618, title: "Add billing webhook with retry-on-429", status: "in_progress", priority: 1,
+    risk_level: "low" as const, complexity: "auto" as const, model: "sonnet", attempt: 1, max_attempts: 3,
+    budget_spent_usd: 0.42, budget_cap_usd: 2.5, labels: ["P1-critical", "feature"],
+    pr_url: null, issue_url: "https://github.com/Sergio1990-1/moliyakg/issues/1618" },
+  { number: 1602, title: "Sewing-ERP: orders.list pagination cursor", status: "in_review", priority: 2,
+    risk_level: "medium" as const, complexity: "assisted" as const, model: "sonnet", attempt: 1, max_attempts: 3,
+    budget_spent_usd: 1.18, budget_cap_usd: 2.5, labels: ["P2-high", "feature"],
+    pr_url: "https://github.com/Sergio1990-1/Sewing-ERP/pull/1602", issue_url: "https://github.com/Sergio1990-1/Sewing-ERP/issues/1602" },
+  { number: 1591, title: "mankassa-app: i18n fallback for unknown locale", status: "in_progress", priority: 3,
+    risk_level: "low" as const, complexity: "auto" as const, model: "haiku", attempt: 1, max_attempts: 3,
+    budget_spent_usd: 1.86, budget_cap_usd: 2.5, labels: ["P3-medium", "tech-debt"],
+    pr_url: "https://github.com/Sergio1990-1/mankassa-app/pull/1591", issue_url: "https://github.com/Sergio1990-1/mankassa-app/issues/1591" },
+  { number: 1577, title: "makeit-pipeline: stale lock cleanup on crash", status: "in_progress", priority: 1,
+    risk_level: "high" as const, complexity: "manual" as const, model: "opus", attempt: 3, max_attempts: 3,
+    budget_spent_usd: 2.34, budget_cap_usd: 2.5, labels: ["P1-critical", "security"],
+    pr_url: "https://github.com/Sergio1990-1/makeit-pipeline/pull/1577", issue_url: "https://github.com/Sergio1990-1/makeit-pipeline/issues/1577" },
+  { number: 1623, title: "solotax-kg: tax rates table sync", status: "in_progress", priority: 2,
+    risk_level: "high" as const, complexity: "manual" as const, model: "opus", attempt: 2, max_attempts: 3,
+    budget_spent_usd: 1.80, budget_cap_usd: 2.5, labels: ["P2-high"],
+    pr_url: null, issue_url: "https://github.com/Sergio1990-1/solotax-kg/issues/1623" },
+  { number: 1574, title: "Sewing-ERP: migrate auth to JWKS rotation", status: "in_progress", priority: 1,
+    risk_level: "medium" as const, complexity: "assisted" as const, model: "sonnet", attempt: 1, max_attempts: 3,
+    budget_spent_usd: 1.31, budget_cap_usd: 2.5, labels: ["P1-critical", "security"],
+    pr_url: null, issue_url: "https://github.com/Sergio1990-1/Sewing-ERP/issues/1574" },
 ];
 
 export const DEMO_STATUS_RUNNING: PipelineStatus = {
