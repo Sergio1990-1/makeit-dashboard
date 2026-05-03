@@ -160,10 +160,19 @@ function AppInner() {
   const [healthRepo, setHealthRepo] = useState<string | null>(null);
   // Switching tabs should always land on the tab's main view — clear the
   // drill-down before changing tabs so the user never returns to a stale
-  // sub-page on tab re-entry.
+  // sub-page on tab re-entry. Also strip `?repo=` from the URL: ProjectsView
+  // owns that query param while it is mounted, but once we navigate away it
+  // becomes orphaned and would mislead the next refresh.
   const navigateTab = useCallback(
     (next: TabId) => {
       setHealthRepo(null);
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("repo")) {
+          url.searchParams.delete("repo");
+          window.history.replaceState(null, "", url.pathname + url.search);
+        }
+      }
       setTab(next);
     },
     [setTab],

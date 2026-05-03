@@ -150,6 +150,72 @@ export function ProjectsView({
     saveState(state);
   }, [state]);
 
+  // ─── URL persistence (Epic-008 Task-01, #156) ──────────────────────
+  // Sync `selectedRepo` ↔ `?repo=` query so a refresh on the Health page
+  // restores the drill-down and Browser back/forward navigates between the
+  // list and the open project. Implemented with the History API directly —
+  // adding react-router for one parameter would be overkill.
+  //
+  // `lastSyncedRepoRef` tracks the URL we last wrote (or read) so the
+  // pushState effect skips redundant entries: e.g. on initial mount we read
+  // `?repo=Beer_bot` and call onSelectRepo, then the same value comes back
+  // through props — without the ref we would push a duplicate history
+  // entry, breaking the back button.
+  const lastSyncedRepoRef = useRef<string | null | undefined>(undefined);
+
+  // On mount: hydrate state from URL. Validate against the known project
+  // list — a stale `?repo=foo` from a deleted project should fall back to
+  // the list view rather than render an empty Health page.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get("repo");
+    if (fromUrl && projects.some((p) => p.repo === fromUrl)) {
+      lastSyncedRepoRef.current = fromUrl;
+      onSelectRepo(fromUrl);
+    } else {
+      lastSyncedRepoRef.current = null;
+      // If the URL contains an unknown `?repo=`, strip it so back/forward
+      // history entries stay consistent with what the UI shows.
+      if (fromUrl) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("repo");
+        window.history.replaceState(null, "", url.pathname + url.search);
+      }
+    }
+    // Run only once on mount; we don't want to reset selection if the
+    // projects list later reloads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Push URL whenever the selection changes (skipping re-syncs from the
+  // mount/popstate paths).
+  useEffect(() => {
+    if (lastSyncedRepoRef.current === selectedRepo) return;
+    lastSyncedRepoRef.current = selectedRepo;
+    const url = new URL(window.location.href);
+    if (selectedRepo) {
+      url.searchParams.set("repo", selectedRepo);
+    } else {
+      url.searchParams.delete("repo");
+    }
+    window.history.pushState({ repo: selectedRepo }, "", url.pathname + url.search);
+  }, [selectedRepo]);
+
+  // Browser back/forward: read the URL fresh and push the change up. Using
+  // `location.search` (not the event's state) keeps us correct even when
+  // another piece of code wrote the entry without a state object.
+  useEffect(() => {
+    const onPop = () => {
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("repo");
+      const valid = next && projects.some((p) => p.repo === next) ? next : null;
+      lastSyncedRepoRef.current = valid;
+      onSelectRepo(valid);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [projects, onSelectRepo]);
+
   // Close sort menu on outside click / Escape
   useEffect(() => {
     if (!sortMenuOpen) return;
