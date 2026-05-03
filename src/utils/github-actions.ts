@@ -182,6 +182,48 @@ export async function createIssue(
   return { number: data.number, url: data.html_url };
 }
 
+// Look up an existing open issue with the exact title under the `tech-debt`
+// label. Used by the health → issue flow to dedup before creating duplicates.
+//
+// Returns `null` only when no open `tech-debt` issue with this exact title is
+// found within the scanned pages. `rest()` throws on auth/network/HTTP errors
+// (4xx/5xx) — those bubble up so the caller can decide whether to retry or
+// proceed without dedup.
+//
+// Title comparison is exact (case-sensitive). We paginate up to MAX_PAGES so
+// repos with >100 open tech-debt issues still get correctly deduped instead of
+// silently creating duplicates for issues pushed off page 1. Sorted by
+// `updated` desc so freshly-touched dups land first and we can short-circuit.
+export async function findOpenIssueByTitle(
+  token: string,
+  owner: string,
+  repo: string,
+  title: string,
+): Promise<{ number: number; url: string } | null> {
+  const PER_PAGE = 100;
+  const MAX_PAGES = 5; // 500 issues max — enough for any realistic health surface area
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/issues?state=open&per_page=${PER_PAGE}&labels=tech-debt&sort=updated&direction=desc&page=${page}`,
+    );
+    if (!Array.isArray(data)) return null;
+    for (const issue of data as Array<{
+      number: number;
+      title: string;
+      html_url: string;
+      pull_request?: unknown;
+    }>) {
+      if (issue.pull_request) continue;
+      if (issue.title === title) {
+        return { number: issue.number, url: issue.html_url };
+      }
+    }
+    if (data.length < PER_PAGE) return null; // last page reached
+  }
+  return null;
+}
+
 export async function closeIssue(
   token: string,
   owner: string,
