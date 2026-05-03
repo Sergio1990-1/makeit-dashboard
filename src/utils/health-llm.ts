@@ -12,6 +12,7 @@ import type {
   ProjectClassification,
 } from "../types/health";
 import { checkContractMilestonesSync } from "./checks/contractMilestonesSync";
+import { checkDocCodeSync } from "./checks/docCodeSync";
 import { checkTemplateFilled } from "./checks/templateFilled";
 import { getRepoTreeSha } from "./github-actions";
 import { getCached, setCached } from "./health-llm-cache";
@@ -78,10 +79,6 @@ export type DetectorArgs = {
   claudeKey: string;
 };
 
-async function checkDocCodeSync_TBD(args: DetectorArgs): Promise<HealthFinding> {
-  return { ...findingBase(args.rule), status: "unknown", detail: "Будет реализовано в task-05" };
-}
-
 async function checkKnowledgeCoverage_TBD(args: DetectorArgs): Promise<HealthFinding> {
   return { ...findingBase(args.rule), status: "unknown", detail: "Будет реализовано в task-06" };
 }
@@ -104,7 +101,7 @@ function detectorFor(rule: ChecklistRule): Detector | null {
     case "ai_contract_milestones_sync":
       return checkContractMilestonesSync;
     case "ai_doc_code_sync":
-      return checkDocCodeSync_TBD;
+      return checkDocCodeSync;
     case "ai_knowledge_coverage":
       return checkKnowledgeCoverage_TBD;
     case "ai_claude_md_freshness":
