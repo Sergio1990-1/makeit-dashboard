@@ -30,6 +30,10 @@ import type { DetectorArgs } from "../health-llm";
 const MAX_CLAUDE_MD_CHARS = 8000;
 const MAX_MAKEFILE_CHARS = 4000;
 const MAX_SCRIPTS_CHARS = 1000;
+// Skip parsing pathologically large package.json files — bound the work done
+// before we know whether we'll use the result. 100 KB covers any realistic
+// dependency-heavy package.json with room to spare.
+const MAX_PACKAGE_JSON_CHARS = 100_000;
 const MAX_PATHS = 500;
 const MAX_DETAIL_CHARS = 250;
 const CONFIDENCE_THRESHOLD = 0.7;
@@ -100,6 +104,8 @@ async function readScripts(
 ): Promise<string> {
   try {
     const raw = await readRepoFile(token, owner, repo, "package.json");
+    // Bound parse work for adversarial / accidentally-huge files.
+    if (raw.length > MAX_PACKAGE_JSON_CHARS) return "";
     const parsed = JSON.parse(raw) as { scripts?: Record<string, string> };
     if (!parsed.scripts || typeof parsed.scripts !== "object") return "";
     const json = JSON.stringify(parsed.scripts);
@@ -186,7 +192,19 @@ export async function checkClaudeMdFreshness(
     readScripts(token, owner, repo),
   ]);
 
-  const truncatedMarkdown = markdown.slice(0, MAX_CLAUDE_MD_CHARS);
+  // Truncate at the last newline before the cap so a path mention straddling
+  // the boundary doesn't reach the LLM as a partial token (which would cause
+  // a false-fail when it can't find e.g. "src/utils/foo" in the tree).
+  // Falls back to the hard cap if no newline is present in the prefix.
+  const markdownTruncated = markdown.length > MAX_CLAUDE_MD_CHARS;
+  let truncatedMarkdown = markdown.slice(0, MAX_CLAUDE_MD_CHARS);
+  if (markdownTruncated) {
+    const lastNl = truncatedMarkdown.lastIndexOf("\n");
+    if (lastNl > 0) truncatedMarkdown = truncatedMarkdown.slice(0, lastNl);
+  }
+  const markdownNote = markdownTruncated
+    ? "\n[note: CLAUDE.md обрезан по последней строке]"
+    : "";
   const treeText = treePaths.join("\n");
   const truncationNote =
     truncated || filteredPaths.length > MAX_PATHS
@@ -194,7 +212,7 @@ export async function checkClaudeMdFreshness(
       : "";
 
   const userMessage = `<claude_md>
-${truncatedMarkdown}
+${truncatedMarkdown}${markdownNote}
 </claude_md>
 <repo_tree>
 ${treeText}${truncationNote}
@@ -216,7 +234,8 @@ ${scripts || "(не найден)"}
 3. Если все проверяемые упоминания валидны → status pass, detail «N путей и команд проверено, все актуальны».
 4. Если есть устаревшие → status fail, detail с конкретными примерами (≤ 200 chars), например «\`./scripts/old-deploy.sh\` не найден; \`npm run prepare\` не в scripts».
 5. Не придирайся к опечаткам или общим описаниям — только к конкретным упоминаниям пути/команды, которые легко проверить.
-6. Если в repo_tree есть note о неполноте, и упомянутый путь не виден в сэмпле — НЕ помечай как fail; снизь confidence (0.4–0.6).`;
+6. Если в repo_tree есть note о неполноте, и упомянутый путь не виден в сэмпле — НЕ помечай как fail; снизь confidence (0.4–0.6).
+7. Если в claude_md есть note об обрезке — игнорируй упоминания которые могут быть частично обрезаны на границе.`;
 
   let result: LLMResult;
   try {
