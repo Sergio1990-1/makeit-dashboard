@@ -230,6 +230,111 @@ export const STAGE_LABEL: Record<string, string> = {
   ci_monitor: "CI",
 };
 
+/* ══════════════════════════════════════════
+   ISSUE CONTEXT (epic-027)
+   ══════════════════════════════════════════ */
+
+// Issue lifecycle status — kept loose (string) so a new pipeline-side enum
+// value renders as raw text rather than crashing the panel. The known values
+// at the time of writing are listed in IssueStatus on the pipeline side.
+export type IssueLifecycleStatus =
+  | "queued"
+  | "in_dev"
+  | "reviewing"
+  | "resolving"
+  | "qa_verifying"
+  | "polishing"
+  | "ready_to_merge"
+  | "ci_verifying"
+  | "merged"
+  | "needs_human"
+  | "failed"
+  | (string & {}); // tolerate unknown enum values added later
+
+export interface IssueContextRetryBudget {
+  attempts: number;
+  max_attempts: number;
+  cost_usd: number;
+  max_cost_usd: number;
+  exhausted?: boolean;
+}
+
+// `structured_result` is a discriminated envelope on the pipeline side
+// (DevResult / ReviewResult / QAResult). The dashboard renders it tolerantly,
+// so we keep the type open and key off `kind`.
+export interface IssueContextStructuredResult {
+  kind: string;
+  [k: string]: unknown;
+}
+
+export interface IssueContextPhaseEntry {
+  phase: string;
+  status: PhaseStatus | string;
+  started_at: string; // ISO 8601
+  duration_seconds: number;
+  cost_usd: number;
+  event: string;
+  error?: string | null;
+  artifacts?: Record<string, unknown>;
+  structured_result?: IssueContextStructuredResult | null;
+}
+
+export interface IssueContext {
+  repo: string;
+  issue_number: number;
+  status: IssueLifecycleStatus;
+  attempts: number;
+  cost_usd: number;
+  phase_history: IssueContextPhaseEntry[];
+  artifacts: Record<string, unknown>;
+  retry_budget: IssueContextRetryBudget;
+  created_at: string;
+  updated_at: string;
+  pr_url?: string | null;
+  branch?: string | null;
+}
+
+/**
+ * Fetch the full IssueContext (phase history, retry budget, status, FSM
+ * artifacts) for a given pipeline issue.
+ *
+ * @param repo "owner/name" — must contain exactly one `/`. The pipeline API
+ *   route uses `{repo:path}` so the slash is fine to pass through; we still
+ *   validate before sending so a malformed value gets a useful client-side
+ *   error instead of a confusing 400 from the server.
+ *
+ * Throws on HTTP error / network failure; callers should surface the message
+ * to the user.
+ */
+export async function fetchIssueContext(
+  repo: string,
+  issueNumber: number,
+  signal?: AbortSignal,
+): Promise<IssueContext> {
+  if (!repo.includes("/")) {
+    throw new Error(`Invalid repo "${repo}" — expected "owner/name"`);
+  }
+  if (!Number.isInteger(issueNumber) || issueNumber <= 0) {
+    throw new Error(`Invalid issue number ${issueNumber} — must be a positive integer`);
+  }
+  // The repo path may include reserved characters in either segment; encode
+  // each owner / name part separately to keep the slash that the pipeline
+  // route's `{repo:path}` converter expects.
+  const [owner, name] = repo.split("/", 2);
+  const encodedRepo = `${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
+  const res = await fetch(
+    `${PIPELINE_BASE_URL}/issue/${encodedRepo}/${issueNumber}/context`,
+    { cache: "no-store", signal },
+  );
+  if (!res.ok) {
+    if (res.status === 404) throw new Error("Контекст не найден");
+    if (res.status === 400) throw new Error("Неверный формат repo / номера");
+    if (res.status === 500) throw new Error("Хранилище контекстов недоступно");
+    throw new Error(`HTTP ${res.status}`);
+  }
+  return res.json() as Promise<IssueContext>;
+}
+
 export async function isPipelineRunning(): Promise<boolean> {
   try {
     const controller = new AbortController();
