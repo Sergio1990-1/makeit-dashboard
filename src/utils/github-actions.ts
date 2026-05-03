@@ -463,6 +463,31 @@ export async function getRepoMeta(token: string, owner: string, repo: string): P
   };
 }
 
+/** Resolve `{commitSha, treeSha}` for a branch. Falls back to `default_branch` when omitted. */
+export async function getRepoTreeSha(
+  token: string,
+  owner: string,
+  repo: string,
+  branch?: string,
+): Promise<{ commitSha: string; treeSha: string }> {
+  let ref = branch;
+  if (!ref) {
+    const meta = await getRepoMeta(token, owner, repo);
+    ref = meta.default_branch || "main";
+  }
+  // Encode each path segment so branch names with reserved chars (e.g. `#`)
+  // don't break the URL. Slash-separated branch names like `feat/x` keep their
+  // slashes — GitHub's git/refs/heads endpoint accepts the suffix as a path.
+  const refPath = ref.split("/").map(encodeURIComponent).join("/");
+  const refData = await rest(token, `/repos/${owner}/${repo}/git/refs/heads/${refPath}`);
+  const commitSha: string | undefined = refData?.object?.sha;
+  if (!commitSha) throw new Error(`getRepoTreeSha: missing object.sha for ${owner}/${repo}@${ref}`);
+  const commitData = await rest(token, `/repos/${owner}/${repo}/git/commits/${commitSha}`);
+  const treeSha: string | undefined = commitData?.tree?.sha;
+  if (!treeSha) throw new Error(`getRepoTreeSha: missing tree.sha for commit ${commitSha}`);
+  return { commitSha, treeSha };
+}
+
 export async function listRepoLabels(token: string, owner: string, repo: string): Promise<string[]> {
   const out: string[] = [];
   for (let page = 1; page <= 5; page++) {

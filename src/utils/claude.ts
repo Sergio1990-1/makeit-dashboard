@@ -639,6 +639,51 @@ export async function generateIssuesFromFindings(
   return allIssues;
 }
 
+// ── Generic tool-use wrapper (single forced tool call) ──
+
+/**
+ * Call Claude with `tool_choice` forcing exactly one tool invocation and return
+ * the parsed `input` of that tool, typed as `T`.
+ *
+ * Used by drift-checks and other features that want structured output without
+ * JSON-string parsing — Anthropic validates the input against `toolDef.input_schema`,
+ * so the returned value already conforms to the declared shape.
+ *
+ * Throws `Error("model did not call tool")` if no `tool_use` block is present.
+ */
+export async function callClaudeWithTool<T>(
+  apiKey: string,
+  systemPrompt: string,
+  userMessage: string,
+  toolDef: { name: string; description: string; input_schema: object },
+  model: "claude-haiku-4-5-20251001" | "claude-opus-4-7",
+  maxTokens = 1024,
+): Promise<T> {
+  const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+
+  const response = await client.messages
+    .create({
+      model,
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userMessage }],
+      tools: [toolDef as Anthropic.Tool],
+      tool_choice: { type: "tool", name: toolDef.name },
+    })
+    .catch((e) => {
+      throw maybeDispatchAuthLostFromError("claude", e);
+    });
+
+  for (const block of response.content) {
+    if (block.type === "tool_use" && block.name === toolDef.name) {
+      return block.input as T;
+    }
+  }
+  throw new Error(
+    `model did not call tool "${toolDef.name}" (model=${model})`,
+  );
+}
+
 // ── Chat with tool use loop ──
 
 export interface ClaudeMessage {
