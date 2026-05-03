@@ -27,12 +27,12 @@ export async function isAuditorRunning(): Promise<boolean> {
     // Timeout applied via AbortController to avoid hanging on connection refused
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
-    
+
     const res = await fetch(`${AUDITOR_BASE_URL}/api/projects`, {
       signal: controller.signal,
       cache: "no-store",
     });
-    
+
     clearTimeout(timeoutId);
     return res.ok;
   } catch {

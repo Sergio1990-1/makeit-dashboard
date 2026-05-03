@@ -414,4 +414,3 @@ function CleanCelebration({ repo, count }: { repo: string; count: number }) {
     </div>
   );
 }
-
