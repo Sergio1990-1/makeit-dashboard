@@ -10,6 +10,7 @@ import { ClosedChart30d } from "./ClosedChart30d";
 import { MilestonesStrip } from "./MilestonesStrip";
 import { CommitsHeatmapPanel } from "./CommitsHeatmapPanel";
 import { StaleBanner } from "./StaleBanner";
+import { usePortfolioHealth } from "../../hooks/usePortfolioHealth";
 
 interface Props {
   projects: ProjectData[];
@@ -20,6 +21,12 @@ interface Props {
   /** Switch to "projects" tab */
   onSeeAllProjects: () => void;
   onFinanceClick?: () => void;
+  /**
+   * Open the Project Health drilldown for a given repo.
+   * Implemented in App.tsx as `setHealthRepo(repo); setTab("projects")`,
+   * bypassing `navigateTab` (which would clear `healthRepo`).
+   */
+  onOpenHealth: (repo: string) => void;
 }
 
 type PhaseFilter = "all" | "pre-dev" | "development" | "support";
@@ -39,8 +46,18 @@ export function DashboardView({
   lastUpdated,
   onSeeAllProjects,
   onFinanceClick,
+  onOpenHealth,
 }: Props) {
   const [phaseFilter, setPhaseFilter] = useState<PhaseFilter>("all");
+
+  // Portfolio health drives the AI-insights panel. The hook is self-cached
+  // (30 min TTL in localStorage), so mounting it here doesn't re-scan on
+  // every dashboard re-render.
+  const portfolio = usePortfolioHealth();
+  const portfolioLastUpdated = useMemo(
+    () => (portfolio.lastUpdated ? new Date(portfolio.lastUpdated) : null),
+    [portfolio.lastUpdated],
+  );
 
   const filtered = useMemo(
     () =>
@@ -149,7 +166,12 @@ export function DashboardView({
           )}
         </div>
 
-        <AIInsightsPanel projects={filtered} blockedIssues={blockedIssues} />
+        <AIInsightsPanel
+          reports={portfolio.reports}
+          loading={portfolio.loading}
+          lastUpdated={portfolioLastUpdated}
+          onOpenHealth={onOpenHealth}
+        />
       </div>
 
       {/* Row: stacked + blocked */}
