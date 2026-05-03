@@ -1,16 +1,31 @@
 import { useState } from "react";
-import type { HealthFinding, HealthReport } from "../../../types/health";
+import type { HealthFinding, HealthReport, ProjectClassification } from "../../../types/health";
 import { LAYER_NAMES } from "../../../types/health";
 import { Icon, type IconName } from "./Icon";
 import { groupByLayer, pluralize, sortFindings } from "./utils";
 
-interface BoardProps {
+// Per-finding action state machine for the «→ issue» button.
+// Lives in ProjectHealthPage so re-renders of FindingsBoard don't reset it
+// and a finding's terminal state (created/duplicate) is preserved.
+export type FindingActionState =
+  | { kind: "idle" }
+  | { kind: "creating" }
+  | { kind: "created"; number: number; url: string }
+  | { kind: "duplicate"; number: number; url: string }
+  | { kind: "error"; message: string };
+
+export interface FindingsBoardProps {
   report: HealthReport;
+  // Optional: when omitted (e.g. tests / preview) the «→ issue» button is
+  // not rendered at all — the board stays a pure presentational component.
+  actionStates?: Map<string, FindingActionState>;
+  onCreateIssue?: (finding: HealthFinding) => void;
+  hasToken?: boolean;
 }
 
 // Top-level findings layout. fails + unknowns get rich grouped views;
 // pass and skipped collapse into compact lists below.
-export function FindingsBoard({ report }: BoardProps) {
+export function FindingsBoard({ report, actionStates, onCreateIssue, hasToken }: FindingsBoardProps) {
   const fails = sortFindings(report.findings.filter((f) => f.status === "fail"));
   const unknowns = sortFindings(report.findings.filter((f) => f.status === "unknown"));
   const passes = report.findings.filter((f) => f.status === "pass");
@@ -30,6 +45,9 @@ export function FindingsBoard({ report }: BoardProps) {
           findings={fails}
           showActions
           defaultOpen
+          actionStates={actionStates}
+          onCreateIssue={onCreateIssue}
+          hasToken={hasToken}
         />
       )}
       {unknowns.length > 0 && (
@@ -64,9 +82,23 @@ interface ActionGroupProps {
   findings: HealthFinding[];
   showActions?: boolean;
   defaultOpen?: boolean;
+  actionStates?: Map<string, FindingActionState>;
+  onCreateIssue?: (finding: HealthFinding) => void;
+  hasToken?: boolean;
 }
 
-function ActionGroup({ title, subtitle, tone, icon, findings, showActions, defaultOpen }: ActionGroupProps) {
+function ActionGroup({
+  title,
+  subtitle,
+  tone,
+  icon,
+  findings,
+  showActions,
+  defaultOpen,
+  actionStates,
+  onCreateIssue,
+  hasToken,
+}: ActionGroupProps) {
   const [open, setOpen] = useState(!!defaultOpen);
   const byLayer = groupByLayer(findings);
   const layerIds = (Object.keys(byLayer) as unknown as Array<keyof typeof byLayer>)
@@ -86,7 +118,15 @@ function ActionGroup({ title, subtitle, tone, icon, findings, showActions, defau
       {open && (
         <div className="ph-group-body">
           {layerIds.map((layerId) => (
-            <LayerBlock key={layerId} layerId={layerId} findings={byLayer[layerId]} showActions={showActions} />
+            <LayerBlock
+              key={layerId}
+              layerId={layerId}
+              findings={byLayer[layerId]}
+              showActions={showActions}
+              actionStates={actionStates}
+              onCreateIssue={onCreateIssue}
+              hasToken={hasToken}
+            />
           ))}
         </div>
       )}
@@ -98,9 +138,12 @@ interface LayerBlockProps {
   layerId: 1 | 2 | 3 | 4;
   findings: HealthFinding[];
   showActions?: boolean;
+  actionStates?: Map<string, FindingActionState>;
+  onCreateIssue?: (finding: HealthFinding) => void;
+  hasToken?: boolean;
 }
 
-function LayerBlock({ layerId, findings, showActions }: LayerBlockProps) {
+function LayerBlock({ layerId, findings, showActions, actionStates, onCreateIssue, hasToken }: LayerBlockProps) {
   return (
     <div className="ph-layerblock">
       <div className="ph-layerblock-h">
@@ -112,7 +155,15 @@ function LayerBlock({ layerId, findings, showActions }: LayerBlockProps) {
       </div>
       <ul className="ph-finding-list">
         {findings.map((f, i) => (
-          <FindingItem key={f.rule_id} f={f} showActions={showActions} idx={i} />
+          <FindingItem
+            key={f.rule_id}
+            f={f}
+            showActions={showActions}
+            idx={i}
+            actionState={actionStates?.get(f.rule_id) ?? { kind: "idle" }}
+            onCreateIssue={onCreateIssue}
+            hasToken={hasToken}
+          />
         ))}
       </ul>
     </div>
@@ -123,10 +174,17 @@ interface FindingItemProps {
   f: HealthFinding;
   showActions?: boolean;
   idx: number;
+  actionState: FindingActionState;
+  onCreateIssue?: (finding: HealthFinding) => void;
+  hasToken?: boolean;
 }
 
-function FindingItem({ f, showActions, idx }: FindingItemProps) {
+function FindingItem({ f, showActions, idx, actionState, onCreateIssue, hasToken }: FindingItemProps) {
   const [open, setOpen] = useState(false);
+  // The «→ issue» button is only meaningful for fails. unknown/pass/skipped
+  // all live outside the actionable groups, but defend in depth so future
+  // refactors don't accidentally show it.
+  const canCreateIssue = showActions && f.status === "fail" && !!onCreateIssue;
   return (
     <li
       className={`ph-fi ph-fi--${f.status} ph-fi--sev-${f.severity}`}
@@ -153,10 +211,12 @@ function FindingItem({ f, showActions, idx }: FindingItemProps) {
               {open ? "Скрыть" : "Что делать"}
             </button>
           )}
-          {showActions && (
-            <button type="button" className="v4-btn v4-btn--pri ph-fi-issue" disabled title="Доступно после iteration 4">
-              <Icon name="git-branch" /> Создать issue
-            </button>
+          {canCreateIssue && (
+            <IssueButton
+              state={actionState}
+              hasToken={!!hasToken}
+              onCreate={() => onCreateIssue!(f)}
+            />
           )}
         </div>
       </div>
@@ -168,6 +228,86 @@ function FindingItem({ f, showActions, idx }: FindingItemProps) {
       )}
     </li>
   );
+}
+
+interface IssueButtonProps {
+  state: FindingActionState;
+  hasToken: boolean;
+  onCreate: () => void;
+}
+
+// Visual states:
+//   idle      — clickable «→ issue»
+//   creating  — disabled spinner
+//   created /
+//   duplicate — anchor «#{N} ✓» opening the issue in a new tab; second click
+//               just opens the existing issue, never creates a duplicate.
+//   error     — clickable «↻ повторить»; calling onCreate flips back to creating.
+//
+// When no GitHub token is present we render a disabled button with a tooltip
+// instead of trying to act and exploding inside github-actions.ts.
+function IssueButton({ state, hasToken, onCreate }: IssueButtonProps) {
+  if (!hasToken) {
+    return (
+      <button
+        type="button"
+        className="v4-btn v4-btn--pri ph-fi-issue"
+        disabled
+        title="Нужен GitHub токен — добавьте его в настройках"
+      >
+        <Icon name="git-branch" /> → issue
+      </button>
+    );
+  }
+
+  switch (state.kind) {
+    case "creating":
+      return (
+        <button
+          type="button"
+          className="v4-btn v4-btn--pri ph-fi-issue is-loading"
+          disabled
+          aria-label="Создаю issue…"
+        >
+          <span className="ph-fi-issue-spin" /> Создаю…
+        </button>
+      );
+    case "created":
+    case "duplicate":
+      return (
+        <a
+          href={state.url}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="v4-btn v4-btn--pri ph-fi-issue is-linked"
+          title={state.kind === "duplicate" ? `Issue уже существует: #${state.number}` : `Создан issue #${state.number}`}
+        >
+          <Icon name="check" /> #{state.number}
+        </a>
+      );
+    case "error":
+      return (
+        <button
+          type="button"
+          className="v4-btn ph-fi-issue is-error"
+          onClick={onCreate}
+          title={state.message}
+        >
+          <Icon name="refresh" /> Повторить
+        </button>
+      );
+    case "idle":
+    default:
+      return (
+        <button
+          type="button"
+          className="v4-btn v4-btn--pri ph-fi-issue"
+          onClick={onCreate}
+        >
+          <Icon name="git-branch" /> → issue
+        </button>
+      );
+  }
 }
 
 interface SeverityTagProps {
@@ -274,3 +414,7 @@ function CleanCelebration({ repo, count }: { repo: string; count: number }) {
     </div>
   );
 }
+
+// Re-export for tests / external users that build a custom container around
+// FindingsBoard but still want to type the action map / classification.
+export type { ProjectClassification };
