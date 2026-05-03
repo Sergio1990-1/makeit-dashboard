@@ -11,9 +11,43 @@ import type { ToastAction, ToastContextValue, ToastInput, ToastKind } from "./to
 
 interface Toast extends Required<Omit<ToastInput, "description" | "action">> {
   id: number;
-  description?: string;
+  description?: string | { text: string; url: string };
   action?: ToastAction;
   leaving: boolean;
+}
+
+function safeHttpUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.href;
+    }
+  } catch {
+    // ignore — URL constructor throws on malformed input
+  }
+  return null;
+}
+
+function ToastDescription({
+  description,
+}: {
+  description: string | { text: string; url: string };
+}) {
+  if (typeof description === "string") {
+    return <span>{description}</span>;
+  }
+  const safeUrl = safeHttpUrl(description.url);
+  if (!safeUrl) {
+    // Block javascript: / data: / other non-http schemes — render plain text.
+    return <span>{description.text}</span>;
+  }
+  return (
+    <span>
+      <a href={safeUrl} target="_blank" rel="noreferrer noopener">
+        {description.text}
+      </a>
+    </span>
+  );
 }
 
 const ICONS: Record<ToastKind, ReactNode> = {
@@ -102,7 +136,7 @@ export function ToastHost({ children }: { children: ReactNode }) {
             <span className="wow-toast-ic">{ICONS[t.kind]}</span>
             <div className="wow-toast-body">
               <b>{t.title}</b>
-              {t.description && <span>{t.description}</span>}
+              {t.description && <ToastDescription description={t.description} />}
               {t.action && (
                 <button
                   type="button"

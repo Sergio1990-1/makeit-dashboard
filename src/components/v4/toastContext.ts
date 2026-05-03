@@ -9,7 +9,7 @@ export interface ToastAction {
 
 export interface ToastInput {
   title: string;
-  description?: string;
+  description?: string | { text: string; url: string };
   kind?: ToastKind;
   /** Auto-dismiss delay in ms; 0 disables. Defaults to 3500. */
   duration?: number;
