@@ -244,23 +244,22 @@ export function IssueContextPanel({ open, repo, issueNumber, onClose }: Props) {
                   </div>
                   {ctx.pr_url && (() => {
                     const safe = safeHttpUrl(ctx.pr_url);
+                    // When the URL fails the http(s) scheme check, hide it
+                    // entirely instead of rendering raw garbage — keeps the
+                    // grid clean and signals "no actionable PR link" rather
+                    // than dumping a `javascript:`-style string into the UI.
+                    if (!safe) return null;
                     return (
                       <div>
                         <span className="v4-pl-ctx-lbl">PR</span>
-                        {safe ? (
-                          <a
-                            className="v4-pl-ctx-val"
-                            href={safe}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                          >
-                            {ctx.pr_url}
-                          </a>
-                        ) : (
-                          <span className="v4-pl-ctx-val v4-pl-mono">
-                            {ctx.pr_url}
-                          </span>
-                        )}
+                        <a
+                          className="v4-pl-ctx-val"
+                          href={safe}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                        >
+                          {safe}
+                        </a>
                       </div>
                     );
                   })()}

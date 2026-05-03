@@ -311,16 +311,21 @@ export async function fetchIssueContext(
   issueNumber: number,
   signal?: AbortSignal,
 ): Promise<IssueContext> {
-  if (!repo.includes("/")) {
+  // Reject anything that's not exactly "owner/name" — the prior loose
+  // `includes("/")` check accepted "a/b/c" and silently dropped the tail
+  // via split, so the request landed on /issue/a/b/.../context. Today's
+  // only caller is `${GITHUB_OWNER}/${current_project}` so this is
+  // defence-in-depth, not a live bug.
+  const repoParts = repo.split("/");
+  if (repoParts.length !== 2 || !repoParts[0] || !repoParts[1]) {
     throw new Error(`Invalid repo "${repo}" — expected "owner/name"`);
   }
   if (!Number.isInteger(issueNumber) || issueNumber <= 0) {
     throw new Error(`Invalid issue number ${issueNumber} — must be a positive integer`);
   }
-  // The repo path may include reserved characters in either segment; encode
-  // each owner / name part separately to keep the slash that the pipeline
+  const [owner, name] = repoParts;
+  // Encode each segment separately to keep the slash that the pipeline
   // route's `{repo:path}` converter expects.
-  const [owner, name] = repo.split("/", 2);
   const encodedRepo = `${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
   const res = await fetch(
     `${PIPELINE_BASE_URL}/issue/${encodedRepo}/${issueNumber}/context`,
