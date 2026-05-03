@@ -137,6 +137,11 @@ export function PipelineActiveTasks({ status, runEpoch }: Props) {
                 className="v4-pl-active-row v4-pl-active-row-btn"
                 onClick={() => setOpenIssue(item.number)}
                 disabled={!repoForContext}
+                title={
+                  repoForContext
+                    ? "Открыть контекст задачи"
+                    : "Нет активного проекта pipeline — контекст недоступен"
+                }
                 aria-label={`Контекст задачи #${item.number}: ${item.title}`}
               >
                 <span className="v4-pl-mono v4-pl-active-num">#{item.number}</span>

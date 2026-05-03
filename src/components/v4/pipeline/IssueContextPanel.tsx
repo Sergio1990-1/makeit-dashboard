@@ -88,6 +88,17 @@ function PhaseRow({ entry }: { entry: IssueContextPhaseEntry }) {
   );
 }
 
+function stringifySafe(value: unknown): string {
+  // Pydantic JSON is acyclic so JSON.stringify never realistically throws on
+  // pipeline payloads, but defending against a circular ref keeps the modal
+  // from crashing on unexpected upstream changes.
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "[unserializable]";
+  }
+}
+
 function ArtifactRow({ k, value }: { k: string; value: unknown }) {
   // Prefer rendering URLs as anchors so users can click through. The pipeline
   // store is local and trusted today, but the type allows any string — go
@@ -97,7 +108,7 @@ function ArtifactRow({ k, value }: { k: string; value: unknown }) {
       ? value
       : value === null || value === undefined
         ? "—"
-        : JSON.stringify(value);
+        : stringifySafe(value);
   const safeUrl = typeof value === "string" ? safeHttpUrl(value) : null;
   return (
     <div className="v4-pl-ctx-art-row">
