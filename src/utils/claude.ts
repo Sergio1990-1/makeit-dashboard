@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { ProjectData, SummaryMetrics, Issue, AuditFinding, GeneratedIssue, Verdict } from "../types";
 import { GITHUB_OWNER, GITHUB_PROJECT_NUMBER, getToken } from "./config";
+import { maybeDispatchAuthLostFromError } from "./external-auth-events";
 import { selectFindingsForVerification } from "./verification";
 import {
   listRepoFiles,
@@ -605,6 +606,10 @@ export async function generateIssuesFromFindings(
             content: `Theme: ${call.theme.label}\nRepository: ${repoName}\n\nFindings (${call.findings.length}):\n${findingsJson}${reviewNote}\n\nCreate 1-5 grouped issues. Return JSON array.`,
           },
         ],
+      }).catch((e) => {
+        // FR-8: surface invalid Claude key as auth-lost. Re-throw so the
+        // outer try/catch's existing log-and-continue logic still runs.
+        throw maybeDispatchAuthLostFromError("claude", e);
       });
 
       const text = response.content
@@ -663,16 +668,23 @@ export async function sendChatMessage(
 
   // Tool use loop — max 20 iterations
   for (let i = 0; i < 20; i++) {
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 4096,
-      system: [
-        { type: "text", text: SYSTEM_RULES, cache_control: { type: "ephemeral" } },
-        { type: "text", text: dynamicData },
-      ],
-      tools: TOOLS,
-      messages: currentMessages,
-    });
+    const response = await client.messages
+      .create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 4096,
+        system: [
+          { type: "text", text: SYSTEM_RULES, cache_control: { type: "ephemeral" } },
+          { type: "text", text: dynamicData },
+        ],
+        tools: TOOLS,
+        messages: currentMessages,
+      })
+      .catch((e) => {
+        // FR-8: invalid/expired Claude API key → emit auth-lost so the user
+        // can rotate the secret in SettingsPanel. Re-throw to preserve the
+        // chat panel's existing error UX.
+        throw maybeDispatchAuthLostFromError("claude", e);
+      });
 
     // Check if we need to handle tool calls
     if (response.stop_reason === "tool_use") {

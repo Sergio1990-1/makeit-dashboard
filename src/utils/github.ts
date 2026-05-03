@@ -1,5 +1,6 @@
 import type { Issue, IssueStatus, Priority, Phase, ProjectData, Milestone, CommitActivity } from "../types";
 import { getProjects, GITHUB_OWNER, GITHUB_PROJECT_NUMBER, DEFAULT_PROJECTS, loadFinances } from "./config";
+import { dispatchExternalAuthLost } from "./external-auth-events";
 
 function getCacheUrl(): string {
   return (window as unknown as { __MAKEIT_CONFIG__?: { CACHE_URL?: string } }).__MAKEIT_CONFIG__?.CACHE_URL ?? "";
@@ -12,6 +13,11 @@ async function restGet<T>(token: string, path: string): Promise<T | null> {
     const res = await fetch(`${GITHUB_REST}${path}`, {
       headers: { Authorization: `bearer ${token}`, Accept: "application/vnd.github.v3+json" },
     });
+    if (res.status === 401) {
+      // FR-8: signal that the GitHub PAT was rejected so App.tsx can prompt
+      // the user to rotate it via SettingsPanel.
+      dispatchExternalAuthLost("github");
+    }
     if (!res.ok) return null;
     return res.json() as Promise<T>;
   } catch {
@@ -109,6 +115,9 @@ async function graphql<T>(token: string, query: string, variables: Record<string
   });
 
   if (res.status === 401 || res.status === 403) {
+    // FR-8: surface the auth-lost event in addition to the thrown error so
+    // App.tsx can show an actionable toast pointing to SettingsPanel.
+    dispatchExternalAuthLost("github");
     throw new Error("GitHub token истёк или недостаточно прав. Сбросьте токен и введите новый.");
   }
   if (!res.ok) {

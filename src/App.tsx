@@ -29,8 +29,14 @@ import type { PipelineAbortReason, PipelineLimits } from "./utils/pipeline";
 import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH, PROJECTS } from "./utils/config";
 import { PasswordGate } from "./components/PasswordGate";
 import { SettingsBootstrap, SettingsUnavailable } from "./components/v4/SettingsBootstrap";
+import { SettingsPanel } from "./components/v4/SettingsPanel";
 import { useSettings } from "./hooks/useSettings";
 import { runOneTimeMigration } from "./utils/settings-migration";
+import {
+  EXTERNAL_AUTH_LOST_EVENT,
+  type ExternalAuthLostDetail,
+  type ExternalAuthService,
+} from "./utils/external-auth-events";
 import type { TabId, Monitor } from "./types";
 import "./App.css";
 import "./styles/v4.css";
@@ -144,6 +150,10 @@ function AppInner() {
   const [financeOpen, setFinanceOpen] = useState(false);
   const [sideOpen, setSideOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  // SettingsPanel (Epic-004 Task-04). Modal state lives at App.tsx so the
+  // FR-8 toast action and Topbar gear icon can both open it without a
+  // round-trip through context.
+  const [settingsOpen, setSettingsOpen] = useState(false);
   // Selected repo for the Project Health sub-page on the Projects tab. Lifted
   // here so the topbar breadcrumb can include the project name and let the
   // user navigate back via "Проекты".
@@ -182,6 +192,49 @@ function AppInner() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // FR-8 (Epic-004 Task-04): when an upstream API (GitHub / Claude /
+  // BetterStack) returns 401, fetch wrappers in utils/* dispatch
+  // `external-api:auth-lost`. Surface a one-shot toast with an action that
+  // opens SettingsPanel so the user can rotate the bad secret.
+  //
+  // Debounced via a ref so a burst of failed requests (a polling loop hitting
+  // 401 repeatedly) does not stack toasts — we re-arm only after the user
+  // acknowledges or 30s elapses.
+  const lastAuthLostAtRef = useRef<Map<ExternalAuthService, number>>(new Map());
+  useEffect(() => {
+    const SERVICE_LABELS: Record<ExternalAuthService, string> = {
+      github: "GitHub PAT",
+      claude: "Claude API key",
+      betterstack: "BetterStack token",
+    };
+    const onAuthLost = (e: Event) => {
+      const detail = (e as CustomEvent<ExternalAuthLostDetail>).detail;
+      const service = detail?.service;
+      if (!service) return;
+      const now = Date.now();
+      const lastAt = lastAuthLostAtRef.current.get(service) ?? 0;
+      // 30s debounce per service — long enough to ride out a polling burst,
+      // short enough to re-prompt if the user dismisses without acting.
+      if (now - lastAt < 30_000) return;
+      lastAuthLostAtRef.current.set(service, now);
+      const label = SERVICE_LABELS[service] ?? service;
+      toast.push({
+        kind: "error",
+        title: `Токен ${label} истёк`,
+        description: "Откройте Настройки и обновите значение секрета.",
+        // Sticky until the user dismisses or opens Settings — auth issues
+        // shouldn't auto-vanish.
+        duration: 0,
+        action: {
+          label: "Открыть Настройки",
+          onClick: () => setSettingsOpen(true),
+        },
+      });
+    };
+    window.addEventListener(EXTERNAL_AUTH_LOST_EVENT, onAuthLost);
+    return () => window.removeEventListener(EXTERNAL_AUTH_LOST_EVENT, onAuthLost);
+  }, [toast]);
 
   // Track visited tabs so stateful components mount lazily but stay alive.
   // Uses the React-recommended "setState during render" pattern for derived
@@ -435,6 +488,7 @@ function AppInner() {
           onRefresh={handleRefresh}
           refreshing={loading}
           onLogout={handleLogout}
+          onSettings={() => setSettingsOpen(true)}
           onBurger={() => setSideOpen(true)}
         />
 
@@ -583,6 +637,17 @@ function AppInner() {
           onRefresh={() => { setPaletteOpen(false); handleRefresh(); }}
           onLogout={() => { setPaletteOpen(false); handleLogout(); }}
           onOpenFinance={() => { setPaletteOpen(false); setFinanceOpen(true); }}
+        />
+      )}
+
+      {settingsOpen && (
+        <SettingsPanel
+          onClose={() => setSettingsOpen(false)}
+          onBootstrapCleared={() => {
+            // Hard reload so SettingsGate re-mounts useSettings(), sees no
+            // bootstrap token, and renders SettingsBootstrap again.
+            window.location.reload();
+          }}
         />
       )}
     </div>

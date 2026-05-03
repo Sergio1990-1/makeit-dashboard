@@ -1,4 +1,5 @@
 import type { Monitor, MonitorStatus } from "../types";
+import { dispatchExternalAuthLost } from "./external-auth-events";
 
 interface BetterStackMonitor {
   id: string;
@@ -24,6 +25,12 @@ function mapStatus(raw: string): MonitorStatus {
 
 export async function fetchMonitors(workerUrl: string): Promise<Monitor[]> {
   const res = await fetch(workerUrl);
+
+  if (res.status === 401 || res.status === 403) {
+    // FR-8: BetterStack token was rejected (forwarded by the worker proxy).
+    // Notify App.tsx so it can prompt the user via SettingsPanel.
+    dispatchExternalAuthLost("betterstack");
+  }
 
   if (!res.ok) {
     throw new Error(`Proxy error: ${res.status}`);
