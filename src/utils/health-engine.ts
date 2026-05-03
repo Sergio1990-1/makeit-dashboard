@@ -748,7 +748,10 @@ export async function runHealthCheck(
   // Semaphore gives smooth concurrency — a new rule starts as soon as a slot
   // frees, instead of waiting for the whole batch to finish.
   const applicable = doc.rules.filter((r) => ruleApplies(r, cls));
-  const sem = new Semaphore(5);
+  const RULE_CONCURRENCY = 5;
+  const sem = new Semaphore(RULE_CONCURRENCY);
+  // executeCheck is total — its global try/catch maps any throw to an
+  // `unknown` finding — so this Promise.all never rejects in practice.
   const findings: HealthFinding[] = await Promise.all(
     applicable.map((rule) => sem.run(() => executeCheck(rule, ctx))),
   );
