@@ -38,13 +38,13 @@ import { useToast } from "./toastContext";
 const KEY_LABELS: Record<string, string> = {
   github_token: "GitHub PAT",
   anthropic_api_key: "Claude API key",
-  betterstack_token: "BetterStack token",
+  betterstack_worker_url: "BetterStack Worker URL",
 };
 
 const KEY_HINTS: Record<string, string> = {
   github_token: "Personal Access Token с правами repo, read:project",
   anthropic_api_key: "API key с https://console.anthropic.com/settings/keys",
-  betterstack_token:
+  betterstack_worker_url:
     "Cloudflare Worker URL (proxies BetterStack API to bypass CORS)",
 };
 

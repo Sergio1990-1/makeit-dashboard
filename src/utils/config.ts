@@ -1,5 +1,5 @@
 import type { ProjectConfig } from "../types";
-import { getSetting } from "./settings";
+import { deleteSetting, getSetting } from "./settings";
 
 export const GITHUB_OWNER = "Sergio1990-1";
 export const GITHUB_PROJECT_NUMBER = 1;
@@ -87,8 +87,14 @@ export function setToken(token: string): void {
   localStorage.setItem("github_token", token);
 }
 
+// Logout / "Очистить" must wipe BOTH the legacy localStorage entry AND the
+// Pipeline-side copy — otherwise the next page load would resurrect the
+// secret via `getSetting()` from the server-side cache, defeating logout.
+// `deleteSetting` is fire-and-forget: failures are non-fatal (the local
+// removal already prevents this session from using the token).
 export function clearToken(): void {
   localStorage.removeItem("github_token");
+  void deleteSetting("github_token").catch(() => {});
 }
 
 export function getClaudeKey(): string | null {
@@ -107,12 +113,16 @@ export function setClaudeKey(key: string): void {
 
 export function clearClaudeKey(): void {
   localStorage.removeItem("claude_api_key");
+  void deleteSetting("anthropic_api_key").catch(() => {});
 }
 
-// Cloudflare Worker URL (proxies Better Stack API to avoid CORS)
+// Cloudflare Worker URL (proxies Better Stack API to avoid CORS).
+// IMPORTANT: this is a URL, not a BetterStack API token. The server-side
+// settings key is `betterstack_worker_url`, kept distinct from any future
+// `betterstack_token` setting that would hold the actual API credential.
 export function getWorkerUrl(): string | null {
   return (
-    getSetting("betterstack_token") ??
+    getSetting("betterstack_worker_url") ??
     localStorage.getItem("betterstack_worker_url")
   );
 }
@@ -123,6 +133,7 @@ export function setWorkerUrl(url: string): void {
 
 export function clearWorkerUrl(): void {
   localStorage.removeItem("betterstack_worker_url");
+  void deleteSetting("betterstack_worker_url").catch(() => {});
 }
 
 // SPA authentication
