@@ -271,7 +271,7 @@ function AppInner() {
       <main className="v4-main">
         <Topbar
           crumbs={crumbs}
-          onCrumbClick={handleCrumbClick}
+          onCrumbClick={tab === "projects" && healthRepo ? handleCrumbClick : undefined}
           showLive={true}
           lastUpdated={lastUpdated}
           onRefresh={() => {
