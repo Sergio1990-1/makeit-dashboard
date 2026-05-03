@@ -36,14 +36,18 @@ function param<T>(obj: Record<string, unknown>, key: string, fallback: T): T {
 // (shields.io) where transient 5xx / network blips are common. Last attempt's
 // response is returned as-is so the caller can decide what to do with non-OK
 // statuses; only thrown errors propagate after retries are exhausted.
+//
+// AbortError short-circuits the retry loop — once a scan is cancelled there is
+// no point burning the backoff timer.
 async function fetchWithRetry(
   url: string,
   retries = 1,
   baseDelay = 250,
+  signal?: AbortSignal,
 ): Promise<Response> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const r = await fetch(url);
+      const r = await fetch(url, { signal });
       if (r.ok) return r;
       if (attempt < retries) {
         await new Promise((res) => setTimeout(res, baseDelay * Math.pow(4, attempt)));
@@ -51,6 +55,7 @@ async function fetchWithRetry(
       }
       return r;
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") throw err;
       if (attempt < retries) {
         await new Promise((res) => setTimeout(res, baseDelay * Math.pow(4, attempt)));
         continue;
@@ -143,6 +148,7 @@ async function listDirCached(
   repo: string,
   dir: string,
   cache: DirCache,
+  signal?: AbortSignal,
 ): Promise<{ name: string; type: string; path: string }[]> {
   const key = `${owner}/${repo}`;
   let m = cache.get(key);
@@ -153,10 +159,13 @@ async function listDirCached(
   const hit = m.get(dir);
   if (hit) return hit;
   try {
-    const items = await listRepoFiles(token, owner, repo, dir);
+    const items = await listRepoFiles(token, owner, repo, dir, signal);
     m.set(dir, items);
     return items;
-  } catch {
+  } catch (err) {
+    // AbortError must propagate — caching `[]` for a cancelled scan would
+    // poison the cache for any subsequent scan that tries to reuse it.
+    if (err instanceof Error && err.name === "AbortError") throw err;
     m.set(dir, []);
     return [];
   }
@@ -181,9 +190,10 @@ async function pathExists(
   cache: DirCache,
   expect?: "file" | "dir",
   caseInsensitive: boolean = false,
+  signal?: AbortSignal,
 ): Promise<boolean> {
   const { dir, name } = splitPath(path);
-  const items = await listDirCached(token, owner, repo, dir, cache);
+  const items = await listDirCached(token, owner, repo, dir, cache, signal);
   const found = caseInsensitive
     ? items.find((i) => i.name.toLowerCase() === name.toLowerCase())
     : items.find((i) => i.name === name);
@@ -229,6 +239,9 @@ interface RunCtx {
   doc: ChecklistDocument;
   dirCache: DirCache;
   inGrace: boolean;
+  // Forwarded to every fetch helper. When this aborts, all in-flight rule
+  // checks reject with AbortError and the top-level Promise.all reflects it.
+  signal?: AbortSignal;
 }
 
 async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFinding> {
@@ -252,20 +265,21 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
       case "file_exists": {
         const path = param(c, "path", "");
         const caseInsensitive = param<boolean>(c, "case_insensitive", false);
-        const ok = await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file", caseInsensitive);
+        const ok = await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file", caseInsensitive, ctx.signal);
         return { ...base, status: ok ? "pass" : "fail", detail: ok ? path : `Нет файла ${path}` };
       }
 
       case "file_not_empty": {
         const path = param(c, "path", "");
         const minBytes = param<number>(c, "min_bytes", 1);
-        const ok = await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file");
+        const ok = await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file", false, ctx.signal);
         if (!ok) return { ...base, status: "fail", detail: `Нет файла ${path}` };
         try {
-          const text = await readRepoFile(ctx.token, ctx.owner, ctx.repo, path);
+          const text = await readRepoFile(ctx.token, ctx.owner, ctx.repo, path, ctx.signal);
           const isOk = text.length >= minBytes;
           return { ...base, status: isOk ? "pass" : "fail", detail: isOk ? path : `${path}: ${text.length} байт` };
-        } catch {
+        } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") throw err;
           return { ...base, status: "unknown", detail: `Не удалось прочитать ${path}` };
         }
       }
@@ -275,11 +289,11 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         const contains = param<string | undefined>(c, "contains", undefined);
         const containsAny = param<string[] | undefined>(c, "contains_any", undefined);
         const caseInsensitive = param<boolean>(c, "case_insensitive", false);
-        if (!(await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file", caseInsensitive))) {
+        if (!(await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file", caseInsensitive, ctx.signal))) {
           return { ...base, status: "fail", detail: `Нет файла ${path}` };
         }
         try {
-          const text = await readRepoFile(ctx.token, ctx.owner, ctx.repo, path);
+          const text = await readRepoFile(ctx.token, ctx.owner, ctx.repo, path, ctx.signal);
           const ok = contains
             ? text.includes(contains)
             : Array.isArray(containsAny) && containsAny.some((s) => text.includes(s));
@@ -288,7 +302,8 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
             status: ok ? "pass" : "fail",
             detail: ok ? `${path} ✓` : `${path} не содержит «${contains ?? containsAny?.join(" / ")}»`,
           };
-        } catch {
+        } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") throw err;
           return { ...base, status: "unknown", detail: `Не удалось прочитать ${path}` };
         }
       }
@@ -298,7 +313,7 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         // на уровне корня + поиск по всему дереву через GitHub git tree, если
         // нужно). MVP — проверяем только корень репо.
         const globAny = param<string[]>(c, "glob_any", [param<string>(c, "glob", "")]);
-        const items = await listDirCached(ctx.token, ctx.owner, ctx.repo, "", ctx.dirCache);
+        const items = await listDirCached(ctx.token, ctx.owner, ctx.repo, "", ctx.dirCache, ctx.signal);
         const found = items.find((i) => globAny.includes(i.name));
         return {
           ...base,
@@ -309,7 +324,7 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
 
       case "dir_not_empty": {
         const path = param(c, "path", "");
-        const items = await listDirCached(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache);
+        const items = await listDirCached(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, ctx.signal);
         const ok = items.length > 0;
         return {
           ...base,
@@ -320,7 +335,7 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
 
       case "repo_label_present": {
         const required = param<string[]>(c, "names_all_of", []);
-        const labels = await listRepoLabels(ctx.token, ctx.owner, ctx.repo);
+        const labels = await listRepoLabels(ctx.token, ctx.owner, ctx.repo, ctx.signal);
         const set = new Set(labels);
         const missing = required.filter((n) => !set.has(n));
         return {
@@ -332,7 +347,7 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
 
       case "repo_label_absent": {
         const forbidden = param<string[]>(c, "names_any_of", []);
-        const labels = await listRepoLabels(ctx.token, ctx.owner, ctx.repo);
+        const labels = await listRepoLabels(ctx.token, ctx.owner, ctx.repo, ctx.signal);
         const set = new Set(labels);
         const found = forbidden.filter((n) => set.has(n));
         return {
@@ -344,7 +359,7 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
 
       case "workflow_with_tests": {
         const matches = param<string[]>(c, "filename_match", ["test", "ci"]);
-        const workflows = await listWorkflows(ctx.token, ctx.owner, ctx.repo);
+        const workflows = await listWorkflows(ctx.token, ctx.owner, ctx.repo, ctx.signal);
         const hit = workflows.find((w) => {
           const haystack = `${w.name} ${w.path}`.toLowerCase();
           return matches.some((m) => haystack.includes(m.toLowerCase()));
@@ -359,13 +374,13 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
       case "workflow_recent_run_status": {
         const matches = param<string[]>(c, "workflow_match", ["test", "ci"]);
         const wantStatus = param<string>(c, "status", "success");
-        const workflows = await listWorkflows(ctx.token, ctx.owner, ctx.repo);
+        const workflows = await listWorkflows(ctx.token, ctx.owner, ctx.repo, ctx.signal);
         const wf = workflows.find((w) => {
           const haystack = `${w.name} ${w.path}`.toLowerCase();
           return matches.some((m) => haystack.includes(m.toLowerCase()));
         });
         if (!wf) return { ...base, status: "fail", detail: "Нет workflow с тестами" };
-        const run = await getLatestWorkflowRun(ctx.token, ctx.owner, ctx.repo, wf.id);
+        const run = await getLatestWorkflowRun(ctx.token, ctx.owner, ctx.repo, wf.id, ctx.signal);
         if (!run) return { ...base, status: "unknown", detail: `Нет запусков ${wf.name}` };
         const ok = run.conclusion === wantStatus;
         return {
@@ -381,7 +396,7 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
           ctx.doc.settings,
           ctx.doc.settings.issues_no_milestone_threshold,
         );
-        const numbers = await listIssuesWithoutMilestone(ctx.token, ctx.owner, ctx.repo);
+        const numbers = await listIssuesWithoutMilestone(ctx.token, ctx.owner, ctx.repo, ctx.signal);
         const ok = numbers.length <= max;
         return {
           ...base,
@@ -394,7 +409,7 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
 
       case "stale_milestones": {
         const max = param<number>(c, "max_count", 0);
-        const ms = await listMilestones(ctx.token, ctx.owner, ctx.repo);
+        const ms = await listMilestones(ctx.token, ctx.owner, ctx.repo, ctx.signal);
         const today = new Date().toISOString().slice(0, 10);
         const stale = ms.filter(
           (m) => m.state === "open" && m.due_on && m.due_on.slice(0, 10) < today,
@@ -415,7 +430,7 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         const path = resolveExternalPath(externalRepo, pathTpl, ctx.classification, ctx.repo);
         const [extOwner, extRepoName] = externalRepo.split("/");
         if (!extOwner || !extRepoName) return { ...base, status: "unknown", detail: "Bad external repo" };
-        const ok = await pathExists(ctx.token, extOwner, extRepoName, path, ctx.dirCache, "file");
+        const ok = await pathExists(ctx.token, extOwner, extRepoName, path, ctx.dirCache, "file", false, ctx.signal);
         return {
           ...base,
           status: ok ? "pass" : "fail",
@@ -428,14 +443,14 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         const pathTpl = param<string>(c, "path_template", "");
         const ageMin = param<number>(c, "project_age_days_min", 7);
         const path = resolveExternalPath(externalRepo, pathTpl, ctx.classification, ctx.repo);
-        const meta = await getRepoMeta(ctx.token, ctx.owner, ctx.repo);
+        const meta = await getRepoMeta(ctx.token, ctx.owner, ctx.repo, ctx.signal);
         const ageDays = (Date.now() - new Date(meta.created_at).getTime()) / 86400000;
         if (ageDays < ageMin) {
           return { ...base, status: "skipped", detail: `Проект ${Math.floor(ageDays)} дн., grace ${ageMin}` };
         }
         const [extOwner, extRepoName] = externalRepo.split("/");
         if (!extOwner || !extRepoName) return { ...base, status: "unknown", detail: "Bad external repo" };
-        const ok = await pathExists(ctx.token, extOwner, extRepoName, path, ctx.dirCache, "file");
+        const ok = await pathExists(ctx.token, extOwner, extRepoName, path, ctx.dirCache, "file", false, ctx.signal);
         return {
           ...base,
           status: ok ? "pass" : "fail",
@@ -478,7 +493,7 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
           0,
         );
 
-        const commits = await listCommitsForPath(ctx.token, owner, repo, path, 10);
+        const commits = await listCommitsForPath(ctx.token, owner, repo, path, 10, ctx.signal);
         if (commits.length === 0) {
           // Без коммитов нельзя ни о чём судить — file_exists ловит реальное
           // отсутствие файла, здесь возвращаем unknown.
@@ -493,7 +508,7 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
           meaningfulDate = commits[0].date;
         } else {
           for (const cm of commits) {
-            const files = await getCommitFiles(ctx.token, owner, repo, cm.sha);
+            const files = await getCommitFiles(ctx.token, owner, repo, cm.sha, ctx.signal);
             const f = files.find((x) => x.filename === path);
             if (f) cumulative += f.additions + f.deletions;
             if (cumulative >= minLines) {
@@ -528,6 +543,7 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
             ctx.owner,
             ctx.repo,
             refDate,
+            ctx.signal,
           );
           if (closedCount >= maxClosedSince) {
             reasons.push(`закрыто ${closedCount} issues с правки (порог ${maxClosedSince})`);
@@ -546,11 +562,11 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
 
       case "coverage_badge_present": {
         const path = param<string>(c, "path", "README.md");
-        if (!(await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file"))) {
+        if (!(await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file", false, ctx.signal))) {
           return { ...base, status: "fail", detail: `Нет ${path}` };
         }
         try {
-          const text = await readRepoFile(ctx.token, ctx.owner, ctx.repo, path);
+          const text = await readRepoFile(ctx.token, ctx.owner, ctx.repo, path, ctx.signal);
           const re = /(codecov|coveralls)\.io|shields\.io\/(codecov|coveralls)|img\.shields\.io\/codecov/i;
           const ok = re.test(text);
           return {
@@ -558,7 +574,8 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
             status: ok ? "pass" : "fail",
             detail: ok ? "Coverage badge найден в README" : "В README нет coverage-бейджа (codecov/coveralls)",
           };
-        } catch {
+        } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") throw err;
           return { ...base, status: "unknown", detail: `Не удалось прочитать ${path}` };
         }
       }
@@ -582,7 +599,7 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         // exponential backoff before giving up as `unknown`.
         const url = `https://img.shields.io/codecov/c/github/${ctx.owner}/${ctx.repo}.json`;
         try {
-          const r = await fetchWithRetry(url);
+          const r = await fetchWithRetry(url, 1, 250, ctx.signal);
           if (!r.ok) {
             return { ...base, status: "unknown", detail: `coverage сервис недоступен (HTTP ${r.status})` };
           }
@@ -600,6 +617,7 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
             detail: `${pct}% (порог tier ${tier}${ctx.classification.complex ? " complex" : ""}: ${threshold}%)`,
           };
         } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") throw err;
           const msg = err instanceof Error ? err.message : "fetch error";
           return { ...base, status: "unknown", detail: `coverage сервис недоступен: ${msg}` };
         }
@@ -610,14 +628,14 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         const maxCount = resolveRef<number>(c.max_count, ctx.doc.settings, 3);
         const codeGlobs = param<string[]>(c, "code_globs", ["app/**", "src/**"]);
         const docGlobs = param<string[]>(c, "doc_globs", ["docs/**", "README.md", "CLAUDE.md"]);
-        const prs = await listMergedPRsInWindow(ctx.token, ctx.owner, ctx.repo, windowDays, 30);
+        const prs = await listMergedPRsInWindow(ctx.token, ctx.owner, ctx.repo, windowDays, 30, ctx.signal);
         if (prs.length === 0) {
           return { ...base, status: "pass", detail: `Нет смерженных PR за ${windowDays} дн.` };
         }
         let driftCount = 0;
         const driftPrs: number[] = [];
         for (const pr of prs) {
-          const files = await getPRFiles(ctx.token, ctx.owner, ctx.repo, pr.number);
+          const files = await getPRFiles(ctx.token, ctx.owner, ctx.repo, pr.number, ctx.signal);
           const touchesCode = files.some((f) => pathMatchesAny(f, codeGlobs));
           const touchesDocs = files.some((f) => pathMatchesAny(f, docGlobs));
           if (touchesCode && !touchesDocs) {
@@ -647,6 +665,10 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         return { ...base, status: "unknown", detail: `Неизвестный тип проверки ${c.type}` };
     }
   } catch (err) {
+    // AbortError must propagate up to runHealthCheck → the consumer hook,
+    // otherwise a cancelled scan looks like a successful run with N "Ошибка
+    // проверки: aborted" findings and gets persisted to cache.
+    if (err instanceof Error && err.name === "AbortError") throw err;
     const msg = err instanceof Error ? err.message : "ошибка";
     return { ...base, status: "unknown", detail: `Ошибка проверки: ${msg}` };
   }
@@ -727,6 +749,7 @@ export async function runHealthCheck(
   owner: string,
   repo: string,
   doc: ChecklistDocument,
+  signal?: AbortSignal,
 ): Promise<HealthReport> {
   const cls = resolveClassification(doc, repo);
   if (!cls) {
@@ -736,10 +759,13 @@ export async function runHealthCheck(
   // Grace check — uses repo creation date.
   let inGrace = false;
   try {
-    const meta = await getRepoMeta(token, owner, repo);
+    const meta = await getRepoMeta(token, owner, repo, signal);
     const ageDays = (Date.now() - new Date(meta.created_at).getTime()) / 86400000;
     inGrace = ageDays < doc.settings.grace_period_days;
-  } catch {
+  } catch (err) {
+    // Cancellation must abort the whole scan, not silently flip into a
+    // non-grace run that fans out N more rule fetches before failing.
+    if (err instanceof Error && err.name === "AbortError") throw err;
     inGrace = false;
   }
 
@@ -751,6 +777,7 @@ export async function runHealthCheck(
     doc,
     dirCache: new Map(),
     inGrace,
+    signal,
   };
 
   // Apply applicable rules. We run with limited concurrency so a single repo

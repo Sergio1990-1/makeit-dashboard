@@ -30,14 +30,17 @@ interface UsePortfolioHealthResult extends Omit<PortfolioScanState<HealthReport>
 // Thin wrapper around `usePortfolioScan` (see issue #170) — the cache,
 // concurrency, race-protection, and initial-delay machinery lives there.
 export function usePortfolioHealth(): UsePortfolioHealthResult {
-  const enumerate = useCallback(async (token: string, force: boolean): Promise<HealthScanItem[]> => {
-    const doc = await loadChecklist(token, force);
-    return Object.keys(doc.project_classification).map((repo) => ({ repo, doc }));
-  }, []);
+  const enumerate = useCallback(
+    async (token: string, force: boolean, signal: AbortSignal): Promise<HealthScanItem[]> => {
+      const doc = await loadChecklist(token, force, signal);
+      return Object.keys(doc.project_classification).map((repo) => ({ repo, doc }));
+    },
+    [],
+  );
 
   const scanItem = useCallback(
-    (token: string, item: HealthScanItem): Promise<HealthReport> =>
-      runHealthCheck(token, GITHUB_OWNER, item.repo, item.doc),
+    (token: string, item: HealthScanItem, signal: AbortSignal): Promise<HealthReport> =>
+      runHealthCheck(token, GITHUB_OWNER, item.repo, item.doc, signal),
     [],
   );
 
