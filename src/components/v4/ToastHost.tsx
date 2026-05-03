@@ -11,7 +11,7 @@ import type { ToastAction, ToastContextValue, ToastInput, ToastKind } from "./to
 
 interface Toast extends Required<Omit<ToastInput, "description" | "action">> {
   id: number;
-  description?: string;
+  description?: string | { text: string; url: string };
   action?: ToastAction;
   leaving: boolean;
 }
@@ -102,7 +102,20 @@ export function ToastHost({ children }: { children: ReactNode }) {
             <span className="wow-toast-ic">{ICONS[t.kind]}</span>
             <div className="wow-toast-body">
               <b>{t.title}</b>
-              {t.description && <span>{t.description}</span>}
+              {t.description &&
+                (typeof t.description === "string" ? (
+                  <span>{t.description}</span>
+                ) : (
+                  <span>
+                    <a
+                      href={t.description.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      {t.description.text}
+                    </a>
+                  </span>
+                ))}
               {t.action && (
                 <button
                   type="button"

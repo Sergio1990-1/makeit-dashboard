@@ -317,15 +317,15 @@ export function BulkCreateModal({ report, repo, onClose, onActionStateChange }: 
       const remaining = workList.length - (created + dups + errors);
       toast.push({
         kind: "info",
-        title: `Создание прервано: ${created} created, ${remaining} skipped`,
-        description: `Дублей: ${dups}, ошибок: ${errors}. ${filterUrl}`,
+        title: `Создание прервано: ${created} created, ${remaining} skipped (дублей ${dups}, ошибок ${errors})`,
+        description: { text: "Открыть в трекере", url: filterUrl },
         duration: 0,
       });
     } else {
       toast.push({
         kind: errors > 0 ? "info" : "success",
         title: `Создано ${created}, дублей ${dups}, ошибок ${errors}`,
-        description: filterUrl,
+        description: { text: "Открыть в трекере", url: filterUrl },
         duration: 0,
       });
     }
