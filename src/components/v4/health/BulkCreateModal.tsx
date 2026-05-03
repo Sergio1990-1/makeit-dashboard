@@ -349,7 +349,9 @@ export function BulkCreateModal({ report, repo, onClose, onActionStateChange }: 
   // ─── Render ──────────────────────────────────────────────────────────
   const selectedCount = selected.size;
   const showWarning = selectedCount > WARNING_THRESHOLD;
-  const projectedSeconds = selectedCount; // 1 req/sec ⇒ N findings ≈ N seconds.
+  // 1 req/sec ⇒ N findings ≈ N seconds. Cap by MAX_BATCH_SIZE because the
+  // submit loop itself caps the slice at MAX_BATCH_SIZE (line 206).
+  const projectedSeconds = Math.min(selectedCount, MAX_BATCH_SIZE);
   const submitDisabled = submitting || selectedCount === 0 || !hasToken;
   const progressPct =
     progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
