@@ -52,12 +52,21 @@ export function getBootstrapToken(): string | null {
   }
 }
 
+export class SettingsStorageError extends Error {
+  constructor() {
+    super("Браузер блокирует localStorage (приватный режим / отключённое хранилище)");
+    this.name = "SettingsStorageError";
+  }
+}
+
 export function setBootstrapToken(token: string): void {
   try {
     localStorage.setItem(BOOTSTRAP_TOKEN_KEY, token.trim());
   } catch {
-    // Storage may be disabled (private mode, quota). Caller handles failures
-    // implicitly via subsequent SettingsAuthError on the next request.
+    // Storage may be disabled (private mode, quota). Surface a distinct error
+    // so the bootstrap form can show a helpful message instead of the misleading
+    // "token rejected" path that fires when the very next request reads back null.
+    throw new SettingsStorageError();
   }
 }
 
