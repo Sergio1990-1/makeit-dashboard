@@ -473,6 +473,38 @@ export async function getRepoMeta(token: string, owner: string, repo: string, si
   };
 }
 
+// Flat list of all blob paths in a repo tree (recursive). One REST call —
+// preferred over multiple `listRepoFiles` recursions when a check needs the
+// full file inventory (e.g. ai_claude_md_freshness verifying that every path
+// mentioned in CLAUDE.md still exists).
+//
+// GitHub truncates trees with >100k entries; in that case `data.truncated` is
+// true and the listing is partial. We surface the partial list anyway and let
+// the caller decide whether the truncation matters — for our scale (≤ a few
+// thousand files) it never trips. Only `blob` (file) entries are returned;
+// `tree` (directory) entries are omitted because the typical caller wants
+// "is this path a real file" semantics.
+export async function getRepoTreeFlat(
+  token: string,
+  owner: string,
+  repo: string,
+  treeSha: string,
+  signal?: AbortSignal,
+): Promise<{ paths: string[]; truncated: boolean }> {
+  const data = await rest(
+    token,
+    `/repos/${owner}/${repo}/git/trees/${treeSha}?recursive=1`,
+    "GET",
+    undefined,
+    signal,
+  );
+  if (!Array.isArray(data?.tree)) return { paths: [], truncated: false };
+  const paths = (data.tree as Array<{ type: string; path: string }>)
+    .filter((e) => e.type === "blob")
+    .map((e) => e.path);
+  return { paths, truncated: Boolean(data.truncated) };
+}
+
 /** Resolve `{commitSha, treeSha}` for a branch. Falls back to `default_branch` when omitted. */
 export async function getRepoTreeSha(
   token: string,
