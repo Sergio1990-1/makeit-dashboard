@@ -90,6 +90,26 @@ export interface PipelineQueueItem {
   risk_level?: "low" | "medium" | "high";
 }
 
+/**
+ * Phase-0.7 (TD-architect, 2026-04-30) — populated by the pipeline API
+ * (`/pipeline/status`) when the previous /pipeline/start aborted before
+ * any dev work started.  Lets the dashboard show "next attempt at HH:MM"
+ * instead of an opaque ``running=False``.  Empty `{}` = no recent abort.
+ *
+ * Fields:
+ * - category: ``graphql_rate_limit`` (recognised) or ``other``;
+ * - message: raw exception text (may be long);
+ * - at_ts: unix-seconds when the abort happened;
+ * - retry_after_ts: unix-seconds when the underlying constraint clears
+ *   (only set for known-recoverable categories, e.g. graphql_rate_limit).
+ */
+export interface PipelineAbortReason {
+  category: "graphql_rate_limit" | "other";
+  message: string;
+  at_ts: number;
+  retry_after_ts: number | null;
+}
+
 export interface PipelineStatus {
   running: boolean;
   stopping: boolean;
@@ -98,6 +118,40 @@ export interface PipelineStatus {
   results: PipelineResult[];
   queue: PipelineQueueItem[];
   issue_stages?: Record<number, PipelineStageEntry[]>;
+  /** Phase-0.7: empty `{}` when no recent abort. */
+  last_abort_reason?: PipelineAbortReason | Record<string, never>;
+}
+
+/**
+ * Phase-0.7: GitHub rate-limit bucket (REST or GraphQL) surfaced via
+ * `/pipeline/limits`.  Pre-batch ``run_batch`` aborts when GraphQL drops
+ * below 500 — surfacing the bucket lets the dashboard warn before the
+ * user's Start click bounces.
+ */
+export interface GitHubRateLimitBucket {
+  limit: number;
+  remaining: number;
+  reset_at: number;       // unix-ts
+  reset_seconds: number;  // server-side computed
+}
+
+export interface PipelineLimits {
+  // Anthropic / Claude CLI rate-limiter (existing).
+  paused: boolean;
+  call_count: number;
+  max_calls: number;
+  remaining_pct: number;
+  rate_limit_hits: number;
+  session_elapsed_hours: number;
+  session_hours: number;
+  session_expired: boolean;
+  api_fallback_enabled: boolean;
+  api_fallback_confirmed: boolean;
+  /** Phase-0.7: GitHub rate-limit buckets.  `null` = probe unavailable. */
+  github?: {
+    graphql?: GitHubRateLimitBucket | null;
+    rest?: GitHubRateLimitBucket | null;
+  } | null;
 }
 
 export interface ComplexityBreakdown {
@@ -201,6 +255,28 @@ export async function fetchPipelineStatus(): Promise<PipelineStatus> {
     throw new Error(`HTTP ${res.status}`);
   }
   return res.json() as Promise<PipelineStatus>;
+}
+
+/**
+ * Phase-0.7: fetch combined Claude + GitHub rate-limits.  Returns `null`
+ * on any error so callers can render a "limits unavailable" state without
+ * crashing the panel.
+ */
+export async function fetchPipelineLimits(): Promise<PipelineLimits | null> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`${PIPELINE_BASE_URL}/pipeline/limits`, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) return null;
+    return (await res.json()) as PipelineLimits;
+  } catch (e) {
+    if (import.meta.env.DEV) console.error("[pipeline] limits fetch failed:", e);
+    return null;
+  }
 }
 
 export async function fetchPipelineStats(project: string): Promise<PipelineStats> {

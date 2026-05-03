@@ -22,6 +22,8 @@ import { ProjectsView } from "./components/v4/ProjectsView";
 import { MilestonesView } from "./components/v4/milestones/MilestonesView";
 import { useDashboard } from "./hooks/useDashboard";
 import { useMonitors } from "./hooks/useMonitors";
+import { fetchPipelineStatus, fetchPipelineLimits } from "./utils/pipeline";
+import type { PipelineAbortReason, PipelineLimits } from "./utils/pipeline";
 import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH, PROJECTS } from "./utils/config";
 import { PasswordGate } from "./components/PasswordGate";
 import type { TabId, Monitor } from "./types";
@@ -176,6 +178,57 @@ function AppInner() {
     return () => { document.body.classList.remove("v4"); };
   }, []);
 
+  // Phase-0.7 (TD-architect, 2026-04-30): App-level lightweight pipeline state.
+  // Drives the sidebar Pipeline pulse + the rate-limit warning shown on the
+  // Pipeline tab.  This is a SEPARATE polling loop from ``usePipeline`` (which
+  // PipelineView mounts for detailed UI) — App needs only ``running`` and
+  // ``limits``, and a coarser cadence is fine (12s when idle, 5s when running)
+  // because the only consumers here are the sidebar dot + a banner that
+  // renders even when the user is on a different tab.
+  const [pipelineRunning, setPipelineRunning] = useState(false);
+  const [pipelineAbort, setPipelineAbort] =
+    useState<PipelineAbortReason | null>(null);
+  const [pipelineLimits, setPipelineLimits] = useState<PipelineLimits | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const poll = async () => {
+      try {
+        const [status, limits] = await Promise.all([
+          fetchPipelineStatus().catch(() => null),
+          fetchPipelineLimits(),
+        ]);
+        if (cancelled) return;
+        if (status) {
+          setPipelineRunning(Boolean(status.running));
+          const reason = status.last_abort_reason;
+          if (reason && "category" in reason) {
+            setPipelineAbort(reason as PipelineAbortReason);
+          } else {
+            setPipelineAbort(null);
+          }
+        }
+        setPipelineLimits(limits);
+      } finally {
+        if (!cancelled) {
+          // Faster cadence when running so the sidebar pulse drops promptly.
+          const next = pipelineRunning ? 5000 : 12000;
+          timer = setTimeout(() => void poll(), next);
+        }
+      }
+    };
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timer !== null) clearTimeout(timer);
+    };
+    // pipelineRunning intentionally NOT in deps — it's read only to pick the
+    // next delay, and including it would restart the polling loop on every
+    // toggle and create overlapping timers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Live activity pulses on the sidebar. Auto-clears for the active tab.
   // Declared above the no-token early return so hook order is stable.
   const pulses = useMemo(() => {
@@ -183,9 +236,24 @@ function AppInner() {
     const downCount = monitors.filter((m) => m.status === "down").length;
     if (downCount > 0) out.uptime = "danger";
     if (blockedIssues.length >= 5) out.dashboard = "warn";
+    // Phase-0.7: green pulse on Pipeline while a batch is running.  Distinct
+    // colour from the warn/danger pulses on other tabs so operators can tell
+    // "active work" from "needs attention" at a glance.
+    if (pipelineRunning) out.pipeline = "success";
+    // Phase-0.7: warn pulse on Pipeline when the previous /pipeline/start
+    // aborted on a recoverable rate-limit (graphql) and the reset time has
+    // not passed yet — invites the operator to wait rather than retry.
+    else if (
+      pipelineAbort &&
+      pipelineAbort.category === "graphql_rate_limit" &&
+      pipelineAbort.retry_after_ts !== null &&
+      pipelineAbort.retry_after_ts * 1000 > Date.now()
+    ) {
+      out.pipeline = "warn";
+    }
     if (tab in out) delete out[tab];
     return out;
-  }, [monitors, blockedIssues.length, tab]);
+  }, [monitors, blockedIssues.length, tab, pipelineRunning, pipelineAbort]);
 
   // Memoized so child components (e.g. ProjectsView) can include this in
   // memo dep arrays without re-running on every parent render.
@@ -351,7 +419,12 @@ function AppInner() {
         <div style={{ display: tab === "pipeline" ? undefined : "none" }}>
           {visitedTabs.has("pipeline") && (
             <ErrorBoundary fallback="Ошибка вкладки Pipeline">
-              <PipelineView projects={projects} lastUpdated={lastUpdated} />
+              <PipelineView
+                projects={projects}
+                lastUpdated={lastUpdated}
+                githubLimits={pipelineLimits?.github ?? null}
+                lastAbort={pipelineAbort}
+              />
             </ErrorBoundary>
           )}
         </div>
