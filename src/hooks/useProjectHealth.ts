@@ -80,11 +80,12 @@ export function useProjectHealth(repo: string | null): State & { refresh: () => 
   );
 
   useEffect(() => {
-    if (!repo) {
-      setState({ report: null, loading: false, error: null, classificationMissing: false });
-      return;
-    }
-    run(repo, false);
+    // Fetch-on-prop-change. setState inside `run` is intentional —
+    // discriminates loading/error/cache-hit. The lint rule errs on any
+    // setState reachable from an effect, but here it's the canonical
+    // "kick off async work when input changes" pattern.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (repo) run(repo, false);
   }, [repo, run]);
 
   const refresh = useCallback(() => {
@@ -94,5 +95,11 @@ export function useProjectHealth(repo: string | null): State & { refresh: () => 
     }
   }, [repo, run]);
 
+  // When `repo` is null we expose an empty/idle state without touching the
+  // internal store — keeps state-from-effect linting happy and avoids extra
+  // renders on null transitions.
+  if (!repo) {
+    return { report: null, loading: false, error: null, classificationMissing: false, refresh };
+  }
   return { ...state, refresh };
 }
