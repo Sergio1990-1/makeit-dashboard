@@ -87,9 +87,14 @@ export function createPortfolioCache<T>(key: string): PortfolioCache<T> {
       try {
         const entry: PortfolioCacheEntry<T> = { generated_at: generatedAt, payload };
         localStorage.setItem(key, JSON.stringify(entry));
-      } catch {
-        // Quota exceeded / serialization error — drop silently. The next
-        // refresh will retry and the in-memory state already has the data.
+      } catch (err) {
+        // Quota exceeded / serialization error — drop silently in production:
+        // the next refresh will retry and the in-memory state already has the
+        // data. In DEV we log so a developer notices when the cache budget is
+        // chronically exceeded (issue #165).
+        if (import.meta.env.DEV) {
+          console.warn(`[portfolio-scan] localStorage write failed for "${key}":`, err);
+        }
       }
       return generatedAt;
     },
