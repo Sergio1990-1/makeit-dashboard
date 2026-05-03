@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { ReactElement } from "react";
 import type { TabId } from "../../types";
+import { usePortfolioHealth } from "../../hooks/usePortfolioHealth";
 
 type PulseKind = "accent" | "success" | "warn" | "danger";
 
@@ -108,10 +109,36 @@ export function Sidebar({
   onClose,
 }: Props) {
   const p = pulses ?? {};
+
+  // Portfolio-wide critical fails badge on the «Дашборд» nav item.
+  // The hook is cached in localStorage (30 min TTL), so calling it here on
+  // every mount is effectively free — no extra network calls when fresh.
+  // We deliberately swallow `loading` / `error`: the badge stays hidden until
+  // real data arrives, avoiding a 0 → N flash on first scan.
+  const { reports } = usePortfolioHealth();
+  const criticalCount = useMemo(
+    () =>
+      reports.reduce(
+        (acc, r) =>
+          acc +
+          r.findings.filter(
+            (f) => f.status === "fail" && f.severity === "critical",
+          ).length,
+        0,
+      ),
+    [reports],
+  );
+
   const sections: NavSection[] = [
     {
       items: [
-        { id: "dashboard", label: "Дашборд", icon: ICON_DASH, pulse: p.dashboard },
+        {
+          id: "dashboard",
+          label: "Дашборд",
+          icon: ICON_DASH,
+          pulse: p.dashboard,
+          badge: criticalCount > 0 ? criticalCount : undefined,
+        },
         { id: "projects", label: "Проекты", count: projectsCount, icon: ICON_LIST, pulse: p.projects },
         { id: "milestones", label: "Milestones", count: milestonesCount, icon: ICON_CLOCK, pulse: p.milestones },
         { id: "uptime", label: "Мониторинг", count: monitorsCount || undefined, icon: ICON_MONITOR, pulse: p.uptime },
