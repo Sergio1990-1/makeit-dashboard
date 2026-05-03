@@ -10,18 +10,47 @@ interface Props {
   rulesCount: number;
   /** Optional — wired from ProjectHealthPage to open the BulkCreateModal. */
   onBulkCreate?: () => void;
+  /** Drift scan handler (Layer 4). When omitted the button is hidden. */
+  onScanDrift?: () => void;
+  /** True while a drift scan is in flight — disables the button + shows progress. */
+  driftScanning?: boolean;
+  /** Progress emitted by `runDriftScan`. null when idle. */
+  driftProgress?: { done: number; total: number; currentRule?: string } | null;
+  /** True when a Claude API key is configured. Drives disabled-with-tooltip. */
+  hasClaudeKey?: boolean;
 }
 
 // Header of the report — repo name with classification chips, sub-row with
 // scan time and rules-version link, action buttons (drift scan placeholder
 // + rescan), and the 3-tile KPI row. Navigation back to the projects list
 // happens via the topbar breadcrumb.
-export function Hero({ report, onRescan, refreshing, rulesCount, onBulkCreate }: Props) {
+export function Hero({
+  report,
+  onRescan,
+  refreshing,
+  rulesCount,
+  onBulkCreate,
+  onScanDrift,
+  driftScanning = false,
+  driftProgress = null,
+  hasClaudeKey = false,
+}: Props) {
   const cls = report.classification;
   // Bulk-create only makes sense when there's something to file. Hiding the
   // button (rather than disabling) keeps the toolbar visually clean for
   // healthy projects.
   const hasFails = report.findings.some((f) => f.status === "fail");
+
+  // Drift button label / progress logic. We render the same button whether
+  // we're idle, scanning, or disabled-without-key — only the title attribute
+  // and the inner content change.
+  const driftDisabled = !hasClaudeKey || driftScanning || !onScanDrift;
+  const driftTitle = !hasClaudeKey
+    ? "Нужен Claude API key — настрой в шапке"
+    : driftScanning
+      ? "Drift-скан в процессе…"
+      : "Layer 4 — AI drift-проверки";
+
   return (
     <section className="ph-hero-block">
       <div className="ph-hero-top">
@@ -70,8 +99,24 @@ export function Hero({ report, onRescan, refreshing, rulesCount, onBulkCreate }:
               <Icon name="git-branch" /> Создать issues по всем
             </button>
           )}
-          <button type="button" className="v4-btn" disabled title="Layer 4 — следующая итерация">
-            <Icon name="zap" /> Просканировать drift
+          <button
+            type="button"
+            className={`v4-btn ${driftScanning ? "is-spin" : ""}`}
+            disabled={driftDisabled}
+            onClick={driftDisabled ? undefined : onScanDrift}
+            title={driftTitle}
+            aria-label={
+              driftScanning && driftProgress
+                ? `Drift ${driftProgress.done}/${driftProgress.total}${
+                    driftProgress.currentRule ? ` · ${driftProgress.currentRule}` : ""
+                  }`
+                : "Просканировать drift"
+            }
+          >
+            <Icon name="zap" />
+            {driftScanning && driftProgress
+              ? `Drift ${driftProgress.done}/${driftProgress.total}`
+              : "Просканировать drift"}
           </button>
           <button
             type="button"
