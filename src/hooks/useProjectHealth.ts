@@ -80,6 +80,13 @@ export function useProjectHealth(
   // double-click protection because setState is async — two clicks in the
   // same tick both read the same false snapshot. The ref flips immediately.
   const driftRunning = useRef(false);
+  // Current `repo` mirrored as a ref so scanDrift can detect the user
+  // navigating to a different project mid-scan (in which case we must NOT
+  // commit drift findings into the new report).
+  const repoRef = useRef(repo);
+  useEffect(() => {
+    repoRef.current = repo;
+  }, [repo]);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -200,11 +207,16 @@ export function useProjectHealth(
     const claudeKey = getClaudeKey();
     if (!claudeKey) return { kind: "no-key" };
 
-    // Snapshot the current report — we need its classification and we'll
-    // merge new findings into it. Reading from `state` here captures the
-    // latest sync via the closure update on each render.
-    const currentReport = state.report;
-    if (!currentReport) return { kind: "no-report" };
+    // Capture the repo we're scanning so the post-await merge can detect
+    // a navigation away (`repoRef.current !== scanRepo`) and abandon.
+    const scanRepo = repo;
+
+    // Snapshot the current report ONLY for read-only inputs to runDriftScan
+    // (classification). The merge at the end reads `s.report` from setState
+    // so it picks up any fresher report written by Refresh while we awaited.
+    const initialReport = state.report;
+    if (!initialReport) return { kind: "no-report" };
+    const classification = initialReport.classification;
 
     // Re-entrancy guard via ref so double-clicks within the same render tick
     // can't both pass — setState's async nature makes a state-read insufficient.
@@ -224,12 +236,12 @@ export function useProjectHealth(
       const result = await runDriftScan(
         token,
         GITHUB_OWNER,
-        repo,
+        scanRepo,
         doc,
-        currentReport.classification,
+        classification,
         claudeKey,
         (p) => {
-          if (!mounted.current) return;
+          if (!mounted.current || repoRef.current !== scanRepo) return;
           setState((s) => {
             // Stale-progress guard: if a newer scan started, drop this update.
             if (!s.driftScanning) return s;
@@ -241,48 +253,53 @@ export function useProjectHealth(
         },
       );
 
-      if (!mounted.current) {
-        return { kind: "ok", addedFails: 0, cachedHits: 0, total: 0 };
+      if (!mounted.current || repoRef.current !== scanRepo) {
+        // Component unmounted or user navigated away — drop the result.
+        // Findings are already in the localStorage drift cache (keyed by
+        // treeSha) and will be picked up on the next scan.
+        return { kind: "ok", addedFails: 0, cachedHits: result.cachedRuleIds.size, total: result.findings.length };
       }
 
-      // Track cache hits BEFORE the merge — by counting how many findings
-      // were already present (with non-`unknown` status) in the previous
-      // Layer-4 set. Approximate but useful for the toast.
-      const prevLayer4 = currentReport.findings.filter((f) => f.layer === 4);
-      const prevCachedIds = new Set(
-        prevLayer4.filter((f) => f.status !== "unknown").map((f) => f.rule_id),
-      );
-      const cachedHits = result.findings.filter(
-        (f) => prevCachedIds.has(f.rule_id) && f.status !== "unknown",
-      ).length;
+      // Real cache-hit count comes from `runDriftScan` directly — this counts
+      // entries served via `getCached`, not heuristics over previous findings.
+      const cachedHits = result.cachedRuleIds.size;
       const addedFails = result.findings.filter((f) => f.status === "fail").length;
 
-      // Merge: drop ALL existing Layer-4 findings (incl. "skipped" placeholders)
-      // and append the freshly-scanned set. This keeps the per-layer counters
-      // honest after the swap.
-      const nonLayer4 = currentReport.findings.filter((f) => f.layer !== 4);
-      const mergedFindings = [...nonLayer4, ...result.findings];
-      const merged: HealthReport = {
-        ...currentReport,
-        findings: mergedFindings,
-        by_layer: summarizeByLayer(mergedFindings),
-        // Note: we deliberately don't re-compute `score` here — drift checks
-        // are advisory and shouldn't impact the score until task-08 wires
-        // them in. `generated_at` likewise stays anchored to the sync scan.
-      };
+      // Merge against the LATEST report — Refresh may have written a fresher
+      // sync result while drift was running; merging against `initialReport`
+      // would silently overwrite it. We commit only if a base report still
+      // exists (Refresh-then-error could leave it null).
+      let mergedFindings: HealthFinding[] | null = null;
+      let merged: HealthReport | null = null;
+      setState((s) => {
+        if (!s.report) {
+          // No base to merge into — drop drift findings (they're cached on
+          // disk; next scan picks them up). Just clear the scanning flag.
+          return { ...s, driftScanning: false, driftProgress: null };
+        }
+        const nonLayer4 = s.report.findings.filter((f) => f.layer !== 4);
+        mergedFindings = [...nonLayer4, ...result.findings];
+        merged = {
+          ...s.report,
+          findings: mergedFindings,
+          by_layer: summarizeByLayer(mergedFindings),
+          // Note: we deliberately don't re-compute `score` here — drift checks
+          // are advisory and shouldn't impact the score until task-08 wires
+          // them in. `generated_at` likewise stays anchored to the sync scan.
+        };
+        return { ...s, report: merged, driftScanning: false, driftProgress: null };
+      });
 
-      try {
-        sessionStorage.setItem(SESSION_PREFIX + repo, JSON.stringify(merged));
-      } catch {
-        // Quota exceeded — non-fatal.
+      // Persist the merged report iff we actually merged. Reading the
+      // closed-over `merged` after the setState is safe because React invokes
+      // the updater synchronously during dispatch.
+      if (merged) {
+        try {
+          sessionStorage.setItem(SESSION_PREFIX + scanRepo, JSON.stringify(merged));
+        } catch {
+          // Quota exceeded — non-fatal.
+        }
       }
-
-      setState((s) => ({
-        ...s,
-        report: merged,
-        driftScanning: false,
-        driftProgress: null,
-      }));
 
       return {
         kind: "ok",

@@ -49,7 +49,9 @@ export function Hero({
     ? "Нужен Claude API key — настрой в шапке"
     : driftScanning
       ? "Drift-скан в процессе…"
-      : "Layer 4 — AI drift-проверки";
+      : !onScanDrift
+        ? "Drift-скан недоступен на этой странице"
+        : "Layer 4 — AI drift-проверки";
 
   return (
     <section className="ph-hero-block">

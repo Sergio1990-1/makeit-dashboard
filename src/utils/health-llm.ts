@@ -27,6 +27,8 @@ export interface DriftScanResult {
   scannedAt: string;
   /** Cumulative cost (USD) — populated once detectors track real LLM spend. */
   costEstimate?: number;
+  /** Rule ids that were served from cache (no detector invocation). */
+  cachedRuleIds: Set<string>;
 }
 
 // Mirror health-engine.ts:ruleApplies — duplicated rather than exported to
@@ -150,7 +152,7 @@ export async function runDriftScan(
 
   // Graceful no-op when the repo has no Layer-4 surface area.
   if (applicable.length === 0) {
-    return { findings: [], scannedAt: new Date().toISOString() };
+    return { findings: [], scannedAt: new Date().toISOString(), cachedRuleIds: new Set() };
   }
 
   // Resolve the tree sha once per scan — drives the cache key and lets
@@ -168,13 +170,14 @@ export async function runDriftScan(
 
   const total = applicable.length;
   let done = 0;
-  // Mutex over the progress counter — Semaphore parallelism means callbacks
-  // can fire from concurrent slots; we still want monotonic `done` reads.
+  // JS is single-threaded — `done += 1` is atomic. Ordering is by completion,
+  // not by rule index, so `currentRule` reflects the rule that just finished.
   const reportProgress = (currentRule: string) => {
     done += 1;
     onProgress?.({ done, total, currentRule });
   };
 
+  const cachedRuleIds = new Set<string>();
   const sem = new Semaphore(DRIFT_CONCURRENCY);
   const findings: HealthFinding[] = await Promise.all(
     applicable.map((rule) =>
@@ -183,12 +186,19 @@ export async function runDriftScan(
         // Skip entirely when treeSha couldn't be resolved (uncached run).
         const cached = treeSha ? getCached(repo, treeSha, rule.id) : null;
         if (cached) {
+          cachedRuleIds.add(rule.id);
           reportProgress(rule.id);
           return cached;
         }
 
         const detector = detectorFor(rule);
+        // We only cache findings produced by a successful detector call.
+        // Stub-routing failures (`detector === null`) and detector throws are
+        // transient configuration / environmental problems — caching them
+        // would leave the rule wedged on `unknown` until the target repo's
+        // tree changes, even after the YAML or LLM service is fixed.
         let finding: HealthFinding;
+        let cacheable = false;
         if (!detector) {
           // Layer-4 rule with an unknown check.type — surface as unknown so
           // missing routes don't silently disappear. This is the same
@@ -209,6 +219,7 @@ export async function runDriftScan(
               classification,
               claudeKey,
             });
+            cacheable = true;
           } catch (err) {
             const msg = err instanceof Error ? err.message : "ошибка";
             finding = {
@@ -219,15 +230,17 @@ export async function runDriftScan(
           }
         }
 
-        // Persist to cache only when we have a real tree sha — otherwise
-        // a cache entry would survive the repo-change it was supposed to
-        // be invalidated by. setCached swallows storage errors internally.
-        if (treeSha) setCached(repo, treeSha, rule.id, finding);
+        // Persist to cache only when:
+        //  - we have a real tree sha (otherwise the cache entry would survive
+        //    the repo-change it was supposed to be invalidated by), and
+        //  - the finding came from a successful detector run.
+        // setCached swallows storage errors internally.
+        if (treeSha && cacheable) setCached(repo, treeSha, rule.id, finding);
         reportProgress(rule.id);
         return finding;
       }),
     ),
   );
 
-  return { findings, scannedAt: new Date().toISOString() };
+  return { findings, scannedAt: new Date().toISOString(), cachedRuleIds };
 }
