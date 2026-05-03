@@ -30,6 +30,7 @@ import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH
 import { PasswordGate } from "./components/PasswordGate";
 import { SettingsBootstrap, SettingsUnavailable } from "./components/v4/SettingsBootstrap";
 import { useSettings } from "./hooks/useSettings";
+import { runOneTimeMigration } from "./utils/settings-migration";
 import type { TabId, Monitor } from "./types";
 import "./App.css";
 import "./styles/v4.css";
@@ -299,6 +300,40 @@ function AppInner() {
     if (getToken()) refresh(false); // use cache on initial load
     refreshMonitors();
   }, [refresh, refreshMonitors]);
+
+  // Epic-004 Task-05: one-time port of legacy `localStorage` secrets to the
+  // server-side settings store. Runs once per page session AFTER the gate has
+  // already confirmed `useSettings().ready === true` (AppInner only mounts in
+  // that state), so it's safe to hit `/settings` here. The module itself is
+  // idempotent — the `settings_migration_v1_done` flag short-circuits repeats.
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const result = await runOneTimeMigration();
+        if (!active) return;
+        if (import.meta.env.DEV) {
+          console.info("[settings-migration]", result);
+        }
+        if (result.failed.length > 0) {
+          toast.push({
+            kind: "error",
+            title: "Не все секреты мигрированы",
+            description: `${result.failed.length} ключей не удалось перенести. Попробуйте перезагрузить страницу или открыть Настройки.`,
+          });
+        }
+      } catch (e) {
+        // The migration module already swallows internal errors and returns a
+        // result; this catch is purely defensive against truly unexpected throws.
+        if (import.meta.env.DEV) {
+          console.error("[settings-migration] unexpected:", e);
+        }
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [toast]);
 
   // Topbar "Обновить" must invalidate every long-lived dashboard cache, not
   // just useDashboard's. Depend on the individual `.refresh` callbacks (each
