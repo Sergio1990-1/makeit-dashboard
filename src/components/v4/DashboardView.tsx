@@ -91,11 +91,10 @@ export function DashboardView({
     [projects]
   );
 
-  // Top-2 active by recent closed activity (last 3 days). Uses lastUpdated as
+  // Top-4 active by recent closed activity (last 3 days). Uses lastUpdated as
   // the time anchor so sorting is stable until the data refreshes — avoids
   // calling Date.now() inside useMemo (react-hooks/purity).
-  // 2 cards (one row) keeps the panel compact and serves as the height
-  // anchor for the AI insights panel rendered next to it.
+  // 4 cards (2×2) — matches the height anchor for the AI insights panel.
   const topProjects = useMemo(() => {
     const anchor = lastUpdated ? lastUpdated.getTime() : 0;
     const cutoff = anchor > 0 ? anchor - 3 * 24 * 60 * 60 * 1000 : 0;
@@ -110,7 +109,7 @@ export function DashboardView({
         if (recentB !== recentA) return recentB - recentA;
         return b.openCount - a.openCount;
       })
-      .slice(0, 2);
+      .slice(0, 4);
   }, [filtered, lastUpdated]);
 
   const subText = useMemo(() => {
@@ -160,7 +159,7 @@ export function DashboardView({
 
       <KpiRow projects={filtered} summary={summary} onFinanceClick={onFinanceClick} />
 
-      {/* Row: top-4 projects + AI insights */}
+      {/* Row: top-4 projects (2×2) + AI insights */}
       <div className="v4-grid">
         <div className="v4-panel">
           <div className="v4-panel-h">

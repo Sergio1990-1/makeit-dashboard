@@ -1092,11 +1092,11 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
    ──────────────────────────────────────── */
 .v4-ai-list {
   padding: 6px 0;
-  /* Cap aligned with the "Активные проекты" panel (1 row of 2 cards).
+  /* Cap aligned with the "Активные проекты" panel (2×2 cards).
      Surplus insight rows scroll inside the panel instead of stretching
      the row vertically. Tuned in tandem with .v4-pcard heights — adjust
      both if cards get taller. */
-  max-height: 280px;
+  max-height: 420px;
   overflow-y: auto;
   scrollbar-width: thin;
 }
