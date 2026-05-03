@@ -207,7 +207,7 @@ export function ProjectHealthPage({ repo, project }: Props) {
           toast.push({
             kind: "info",
             title: `Уже есть #${existing.number}`,
-            description: existing.url,
+            description: { text: "Открыть issue", url: existing.url },
           });
           return;
         }
@@ -239,7 +239,7 @@ export function ProjectHealthPage({ repo, project }: Props) {
         toast.push({
           kind: "success",
           title: `Создан #${created.number}`,
-          description: created.url,
+          description: { text: "Открыть issue", url: created.url },
         });
       } catch (err) {
         const message = friendlyError(err);
