@@ -153,15 +153,26 @@ export function ProjectsView({
   // ─── URL persistence (Epic-008 Task-01, #156) ──────────────────────
   // Sync `selectedRepo` ↔ `?repo=` query so a refresh on the Health page
   // restores the drill-down and Browser back/forward navigates between the
-  // list and the open project. Implemented with the History API directly —
-  // adding react-router for one parameter would be overkill.
+  // list and the open project. History API directly — react-router would
+  // be overkill for one parameter.
   //
-  // `lastSyncedRepoRef` tracks the URL we last wrote (or read) so the
-  // pushState effect skips redundant entries: e.g. on initial mount we read
-  // `?repo=Beer_bot` and call onSelectRepo, then the same value comes back
-  // through props — without the ref we would push a duplicate history
-  // entry, breaking the back button.
-  const lastSyncedRepoRef = useRef<string | null | undefined>(undefined);
+  // `lastSyncedRepoRef` records the URL value last written/read so the
+  // pushState effect can skip re-syncs that came from mount or popstate
+  // (otherwise we would push a duplicate entry and break the back button).
+  // `didMountPushRef` suppresses the very first run of the pushState effect:
+  // on initial render its closure sees `selectedRepo = null` while the
+  // mount effect (which runs before it per React's effect ordering) may
+  // have already pointed the ref at `?repo=X` from the URL. Without the
+  // skip we would push an empty URL once, then push `?repo=X` again on
+  // the rerender — adding a spurious history entry on every direct link.
+  const lastSyncedRepoRef = useRef<string | null>(null);
+  const didMountPushRef = useRef(false);
+  // Mirror `projects` in a ref so the popstate listener can validate
+  // against the latest list without resubscribing on every refresh.
+  const projectsRef = useRef(projects);
+  useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
 
   // On mount: hydrate state from URL. Validate against the known project
   // list — a stale `?repo=foo` from a deleted project should fall back to
@@ -188,8 +199,13 @@ export function ProjectsView({
   }, []);
 
   // Push URL whenever the selection changes (skipping re-syncs from the
-  // mount/popstate paths).
+  // mount/popstate paths). The first run is always a no-op — see the
+  // `didMountPushRef` comment above.
   useEffect(() => {
+    if (!didMountPushRef.current) {
+      didMountPushRef.current = true;
+      return;
+    }
     if (lastSyncedRepoRef.current === selectedRepo) return;
     lastSyncedRepoRef.current = selectedRepo;
     const url = new URL(window.location.href);
@@ -201,20 +217,22 @@ export function ProjectsView({
     window.history.pushState({ repo: selectedRepo }, "", url.pathname + url.search);
   }, [selectedRepo]);
 
-  // Browser back/forward: read the URL fresh and push the change up. Using
-  // `location.search` (not the event's state) keeps us correct even when
-  // another piece of code wrote the entry without a state object.
+  // Browser back/forward: read the URL fresh and push the change up.
+  // Reading `location.search` directly (not the event's state) keeps us
+  // correct even when another piece of code wrote the entry without a
+  // state object.
   useEffect(() => {
     const onPop = () => {
       const params = new URLSearchParams(window.location.search);
       const next = params.get("repo");
-      const valid = next && projects.some((p) => p.repo === next) ? next : null;
+      const valid =
+        next && projectsRef.current.some((p) => p.repo === next) ? next : null;
       lastSyncedRepoRef.current = valid;
       onSelectRepo(valid);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, [projects, onSelectRepo]);
+  }, [onSelectRepo]);
 
   // Close sort menu on outside click / Escape
   useEffect(() => {
