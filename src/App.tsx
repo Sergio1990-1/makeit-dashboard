@@ -299,16 +299,19 @@ function AppInner() {
   }, [refresh, refreshMonitors]);
 
   // Topbar "Обновить" must invalidate every long-lived dashboard cache, not
-  // just useDashboard's. Wrapped in useCallback so the Topbar prop identity
-  // is stable across renders. The optional-chaining guards against the
-  // brief window where portfolio.refresh / orphans.refresh haven't been
-  // assigned yet on the very first render.
+  // just useDashboard's. Depend on the individual `.refresh` callbacks (each
+  // is `useCallback`'d inside its hook with stable identity) rather than the
+  // whole hook return objects — the latter would churn handleRefresh's
+  // identity on every state tick (loading flip, lastUpdated update),
+  // defeating Topbar/CommandPalette memoization.
+  const portfolioRefresh = portfolio.refresh;
+  const orphansRefresh = orphans.refresh;
   const handleRefresh = useCallback(() => {
     refresh(true);
     refreshMonitors();
-    portfolio.refresh?.();
-    orphans.refresh?.();
-  }, [refresh, refreshMonitors, portfolio, orphans]);
+    portfolioRefresh();
+    orphansRefresh();
+  }, [refresh, refreshMonitors, portfolioRefresh, orphansRefresh]);
 
   const hasToken = !!getToken();
 
