@@ -11,6 +11,7 @@ import type {
   HealthFinding,
   ProjectClassification,
 } from "../types/health";
+import { checkTemplateFilled } from "./checks/templateFilled";
 import { getRepoTreeSha } from "./github-actions";
 import { getCached, setCached } from "./health-llm-cache";
 import { Semaphore } from "./semaphore";
@@ -76,10 +77,6 @@ type DetectorArgs = {
   claudeKey: string;
 };
 
-async function checkTemplateFilled_TBD(args: DetectorArgs): Promise<HealthFinding> {
-  return { ...findingBase(args.rule), status: "unknown", detail: "Будет реализовано в task-03" };
-}
-
 async function checkContractMilestonesSync_TBD(args: DetectorArgs): Promise<HealthFinding> {
   return { ...findingBase(args.rule), status: "unknown", detail: "Будет реализовано в task-04" };
 }
@@ -106,7 +103,7 @@ function detectorFor(rule: ChecklistRule): Detector | null {
   const checkType = String(rule.check?.type ?? "");
   switch (checkType) {
     case "ai_template_filled":
-      return checkTemplateFilled_TBD;
+      return checkTemplateFilled;
     case "ai_contract_milestones_sync":
       return checkContractMilestonesSync_TBD;
     case "ai_doc_code_sync":
