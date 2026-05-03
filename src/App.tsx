@@ -22,6 +22,8 @@ import { ProjectsView } from "./components/v4/ProjectsView";
 import { MilestonesView } from "./components/v4/milestones/MilestonesView";
 import { useDashboard } from "./hooks/useDashboard";
 import { useMonitors } from "./hooks/useMonitors";
+import { usePortfolioHealth } from "./hooks/usePortfolioHealth";
+import { usePortfolioOrphans } from "./hooks/usePortfolioOrphans";
 import { fetchPipelineStatus, fetchPipelineLimits } from "./utils/pipeline";
 import type { PipelineAbortReason, PipelineLimits } from "./utils/pipeline";
 import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH, PROJECTS } from "./utils/config";
@@ -58,6 +60,14 @@ function AppInner() {
   } = useDashboard();
 
   const { monitors, loading: monitorsLoading, error: monitorsError, refresh: refreshMonitors } = useMonitors();
+
+  // Portfolio scans are mounted at the App level (rather than inside
+  // DashboardView) so the Topbar "Обновить" button can trigger a rescan
+  // alongside useDashboard.refresh. Both hooks are self-cached with a 30
+  // min TTL — mounting them up here is free on initial load and ensures a
+  // single source of truth for the dashboard panels.
+  const portfolio = usePortfolioHealth();
+  const orphans = usePortfolioOrphans();
 
   // Toast on refresh result. Skip both the very first effect run AND the
   // first transition from no-data → has-data (initial fetch). We only want
@@ -288,6 +298,18 @@ function AppInner() {
     refreshMonitors();
   }, [refresh, refreshMonitors]);
 
+  // Topbar "Обновить" must invalidate every long-lived dashboard cache, not
+  // just useDashboard's. Wrapped in useCallback so the Topbar prop identity
+  // is stable across renders. The optional-chaining guards against the
+  // brief window where portfolio.refresh / orphans.refresh haven't been
+  // assigned yet on the very first render.
+  const handleRefresh = useCallback(() => {
+    refresh(true);
+    refreshMonitors();
+    portfolio.refresh?.();
+    orphans.refresh?.();
+  }, [refresh, refreshMonitors, portfolio, orphans]);
+
   const hasToken = !!getToken();
 
   const allMilestones = projects.flatMap((p) => p.milestones);
@@ -353,10 +375,7 @@ function AppInner() {
           onCrumbClick={tab === "projects" && healthRepo ? handleCrumbClick : undefined}
           showLive={true}
           lastUpdated={lastUpdated}
-          onRefresh={() => {
-            refresh(true);
-            refreshMonitors();
-          }}
+          onRefresh={handleRefresh}
           refreshing={loading}
           onLogout={handleLogout}
           onBurger={() => setSideOpen(true)}
@@ -386,6 +405,8 @@ function AppInner() {
               onSeeAllProjects={() => navigateTab("projects")}
               onFinanceClick={() => setFinanceOpen(true)}
               onOpenHealth={openHealthForRepo}
+              portfolio={portfolio}
+              orphans={orphans}
             />
           </ErrorBoundary>
         )}
@@ -502,7 +523,7 @@ function AppInner() {
           activeTab={tab}
           onClose={() => setPaletteOpen(false)}
           onJumpTab={(t) => { setPaletteOpen(false); navigateTab(t); }}
-          onRefresh={() => { setPaletteOpen(false); refresh(true); refreshMonitors(); }}
+          onRefresh={() => { setPaletteOpen(false); handleRefresh(); }}
           onLogout={() => { setPaletteOpen(false); handleLogout(); }}
           onOpenFinance={() => { setPaletteOpen(false); setFinanceOpen(true); }}
         />
