@@ -107,7 +107,7 @@ export function Sidebar({
   auditAlerts,
   criticalFails,
   pulses,
-  user = { initials: "SK", name: "Сергей К.", role: "owner · MakeIT" },
+  user = { initials: "SM", name: "Сергей М.", role: "owner · MakeIT" },
   isOpen,
   onClose,
 }: Props) {
