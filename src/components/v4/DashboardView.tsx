@@ -11,8 +11,8 @@ import { MilestonesStrip } from "./MilestonesStrip";
 import { CommitsHeatmapPanel } from "./CommitsHeatmapPanel";
 import { StaleBanner } from "./StaleBanner";
 import { OrphanIssuesPanel } from "./OrphanIssuesPanel";
-import { usePortfolioHealth } from "../../hooks/usePortfolioHealth";
-import { usePortfolioOrphans } from "../../hooks/usePortfolioOrphans";
+import type { usePortfolioHealth } from "../../hooks/usePortfolioHealth";
+import type { usePortfolioOrphans } from "../../hooks/usePortfolioOrphans";
 
 interface Props {
   projects: ProjectData[];
@@ -29,6 +29,14 @@ interface Props {
    * bypassing `navigateTab` (which would clear `healthRepo`).
    */
   onOpenHealth: (repo: string) => void;
+  /**
+   * Portfolio scans are mounted in App.tsx so the Topbar "Обновить" button
+   * can trigger a rescan alongside useDashboard.refetch. Passing the hook
+   * results down avoids a duplicate mount (and a duplicate health scan)
+   * when other components also need this data.
+   */
+  portfolio: ReturnType<typeof usePortfolioHealth>;
+  orphans: ReturnType<typeof usePortfolioOrphans>;
 }
 
 type PhaseFilter = "all" | "pre-dev" | "development" | "support";
@@ -49,22 +57,22 @@ export function DashboardView({
   onSeeAllProjects,
   onFinanceClick,
   onOpenHealth,
+  portfolio,
+  orphans,
 }: Props) {
   const [phaseFilter, setPhaseFilter] = useState<PhaseFilter>("all");
 
-  // Portfolio health drives the AI-insights panel. The hook is self-cached
-  // (30 min TTL in localStorage), so mounting it here doesn't re-scan on
-  // every dashboard re-render.
-  const portfolio = usePortfolioHealth();
+  // Portfolio health drives the AI-insights panel. The hook is mounted in
+  // App.tsx so the Topbar refresh button can trigger a rescan alongside
+  // useDashboard.refetch — passed down here as a prop.
   const portfolioLastUpdated = useMemo(
     () => (portfolio.lastUpdated ? new Date(portfolio.lastUpdated) : null),
     [portfolio.lastUpdated],
   );
 
-  // Orphan-issues trend uses its own hook (separate cache/refresh cadence
-  // from health) so a slow health scan doesn't block the chart and a
-  // forced "обновить orphans" doesn't trigger a 50-call health re-scan.
-  const orphans = usePortfolioOrphans();
+  // Orphan-issues trend has its own hook (separate cache/refresh cadence
+  // from health) so a slow health scan doesn't block the chart. Also
+  // mounted in App.tsx for the same Topbar-refresh wiring.
   const orphansLastUpdated = useMemo(
     () => (orphans.lastUpdated ? new Date(orphans.lastUpdated) : null),
     [orphans.lastUpdated],
