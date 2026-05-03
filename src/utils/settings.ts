@@ -23,6 +23,17 @@ import { PIPELINE_BASE_URL } from "./config";
 
 const BOOTSTRAP_TOKEN_KEY = "pipeline_settings_token";
 
+/**
+ * Fired when a Pipeline request returns 401/403 mid-session — the bootstrap
+ * token has been rejected by the server. `useSettings()` listens for this and
+ * transitions the app back into the bootstrap UI so consumers calling sync
+ * `getSetting()` aren't stuck reading `null` mid-render.
+ *
+ * Use a global window event (rather than a React-side pub/sub) so this works
+ * from utils that aren't part of the component tree, with zero prop-drilling.
+ */
+export const SETTINGS_AUTH_LOST_EVENT = "settings:auth-lost";
+
 /** 401 from the pipeline — bootstrap token is missing or invalid. */
 export class SettingsAuthError extends Error {
   constructor(message = "Pipeline settings: unauthorized") {
@@ -137,8 +148,15 @@ async function request(path: string, init: RequestInit = {}): Promise<Response> 
   }
   if (res.status === 401 || res.status === 403) {
     // Server rejected the bootstrap token. Drop it locally so the next mount
-    // of useSettings() shows the bootstrap form instead of looping.
+    // of useSettings() shows the bootstrap form instead of looping. Fire a
+    // global event so any in-flight `useSettings()` instance can re-transition
+    // to the auth-lost screen mid-session — without this, sync `getSetting()`
+    // consumers (Task-04 wiring) would silently read `null` from the wiped
+    // cache without any UI signal.
     clearBootstrapToken();
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event(SETTINGS_AUTH_LOST_EVENT));
+    }
     throw new SettingsAuthError();
   }
   if (res.status >= 500) {
