@@ -11,6 +11,7 @@ import type {
   HealthFinding,
   ProjectClassification,
 } from "../types/health";
+import { checkContractMilestonesSync } from "./checks/contractMilestonesSync";
 import { checkTemplateFilled } from "./checks/templateFilled";
 import { getRepoTreeSha } from "./github-actions";
 import { getCached, setCached } from "./health-llm-cache";
@@ -67,7 +68,7 @@ function findingBase(rule: ChecklistRule): Omit<HealthFinding, "status" | "detai
 
 // Common stub helpers — keep `claudeKey` typed even though we don't use it
 // yet, so swapping in the real impl doesn't change the signature.
-type DetectorArgs = {
+export type DetectorArgs = {
   rule: ChecklistRule;
   token: string;
   owner: string;
@@ -76,10 +77,6 @@ type DetectorArgs = {
   classification: ProjectClassification;
   claudeKey: string;
 };
-
-async function checkContractMilestonesSync_TBD(args: DetectorArgs): Promise<HealthFinding> {
-  return { ...findingBase(args.rule), status: "unknown", detail: "Будет реализовано в task-04" };
-}
 
 async function checkDocCodeSync_TBD(args: DetectorArgs): Promise<HealthFinding> {
   return { ...findingBase(args.rule), status: "unknown", detail: "Будет реализовано в task-05" };
@@ -105,7 +102,7 @@ function detectorFor(rule: ChecklistRule): Detector | null {
     case "ai_template_filled":
       return checkTemplateFilled;
     case "ai_contract_milestones_sync":
-      return checkContractMilestonesSync_TBD;
+      return checkContractMilestonesSync;
     case "ai_doc_code_sync":
       return checkDocCodeSync_TBD;
     case "ai_knowledge_coverage":
