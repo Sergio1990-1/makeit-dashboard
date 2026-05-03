@@ -23,7 +23,7 @@ interface Props {
 // Most of these collapse to "render the report with banners on top".
 
 export function ProjectHealthPage({ repo, project, onBack }: Props) {
-  const { report, loading, error, refresh } = useProjectHealth(repo);
+  const { report, loading, error, classificationMissing, refresh } = useProjectHealth(repo);
 
   // Load the rules count for the hero "N правил · makeit-knowledge" link.
   // Fire once when the page opens; the value is cached by loadChecklist.
@@ -45,20 +45,20 @@ export function ProjectHealthPage({ repo, project, onBack }: Props) {
   }, []);
 
   // ─── Edge states first ─────────────────────────────────────────────
-  if (error) {
-    // Classification-missing surfaces as an error message from the engine.
-    if (error.includes("not in project_classification")) {
-      return (
-        <div className="v4-content">
-          <PageHeaderForState repo={repo} onBack={onBack} />
-          <div className="ph-page">
-            <div className="ph-main">
-              <ClassificationMissing repo={repo} onRetry={refresh} />
-            </div>
+  if (classificationMissing) {
+    return (
+      <div className="v4-content">
+        <PageHeaderForState repo={repo} onBack={onBack} />
+        <div className="ph-page">
+          <div className="ph-main">
+            <ClassificationMissing repo={repo} onRetry={refresh} />
           </div>
         </div>
-      );
-    }
+      </div>
+    );
+  }
+
+  if (error) {
     return (
       <div className="v4-content">
         <PageHeaderForState repo={repo} onBack={onBack} />
@@ -120,7 +120,13 @@ export function ProjectHealthPage({ repo, project, onBack }: Props) {
             <div className="ph-grace-banner">
               <Icon name="seedling" />
               <span>
-                <b>Льготный период.</b> Проект младше 3 дней — нарушения отображаются, но не штрафуют (кроме критических).
+                <b>Льготный период.</b> Проект младше {report.grace_period_days}{" "}
+                {report.grace_period_days === 1
+                  ? "дня"
+                  : report.grace_period_days < 5
+                    ? "дней"
+                    : "дней"}{" "}
+                — нарушения отображаются, но не штрафуют (кроме критических).
               </span>
             </div>
           )}

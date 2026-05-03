@@ -99,6 +99,9 @@ export interface HealthReport {
   generated_at: string;
   classification: ProjectClassification;
   in_grace_period: boolean;
+  // Echoes settings.grace_period_days from the checklist so the UI can
+  // render "grace · N дней" without a second source of truth.
+  grace_period_days: number;
   findings: HealthFinding[];
   score: HealthScore;
   by_layer: Record<HealthLayer, HealthLayerSummary>;

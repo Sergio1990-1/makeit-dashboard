@@ -38,7 +38,8 @@ export function Hero({ report, onBack, onRescan, refreshing, rulesCount }: Props
               )}
               {report.in_grace_period && (
                 <span className="ph-tag ph-tag--grace">
-                  <Icon name="seedling" /> grace · 3 дня
+                  <Icon name="seedling" /> grace · {report.grace_period_days}{" "}
+                  {report.grace_period_days === 1 ? "день" : report.grace_period_days < 5 ? "дня" : "дней"}
                 </span>
               )}
             </div>

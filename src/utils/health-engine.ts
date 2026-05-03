@@ -64,12 +64,15 @@ function pathMatchesGlob(path: string, glob: string): boolean {
     return !path.slice(prefix.length + 1).includes("/");
   }
   if (glob.includes("*")) {
+    // Single-segment wildcard — `*` does NOT cross path separators, so
+    // `*.md` matches `foo.md` but not `docs/foo.md`. Use the dedicated
+    // `**` shortcuts above for cross-segment matching.
     const re = new RegExp(
       "^" +
         glob
           .split("*")
           .map((s) => s.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
-          .join(".*") +
+          .join("[^/]*") +
         "$",
     );
     return re.test(path);
@@ -162,9 +165,22 @@ function resolveClassification(
 function ruleApplies(rule: ChecklistRule, cls: ProjectClassification): boolean {
   const a = rule.applies_to ?? {};
   if (a.tiers && !a.tiers.includes(cls.tier)) return false;
-  if (a.complex && !cls.complex) return false;
-  if (a.client && !cls.client) return false;
+  // Tri-state: undefined = no constraint, true = only complex, false = only NOT complex.
+  if (a.complex !== undefined && a.complex !== cls.complex) return false;
+  if (a.client !== undefined && a.client !== cls.client) return false;
   return true;
+}
+
+// Sentinel so the UI can distinguish "this repo isn't classified yet" from
+// generic GitHub/network errors without relying on substring matches against
+// human-readable error text.
+export class ClassificationMissingError extends Error {
+  readonly repo: string;
+  constructor(repo: string) {
+    super(`Repo ${repo} is not classified in PROJECT_CHECKLIST.yaml`);
+    this.name = "ClassificationMissingError";
+    this.repo = repo;
+  }
 }
 
 interface RunCtx {
@@ -446,14 +462,22 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
             }
           }
         }
-        // If we never reached the threshold within the 10-commit window,
-        // treat the oldest commit as a soft signal — the doc has only had
-        // typo-level edits for a long time.
+        // If we never reached the threshold within the 10-commit window —
+        // the doc has only had typo-level edits. We anchor to the oldest
+        // commit in the window so "age" reflects "since the last truly
+        // meaningful edit", not "since the last keystroke".
+        const onlyTrivialEdits = meaningfulDate === null;
         const refDate = meaningfulDate ?? commits[commits.length - 1].date;
         const ageDays = Math.floor((Date.now() - new Date(refDate).getTime()) / 86400000);
 
         const reasons: string[] = [];
-        if (ageDays > maxAge) reasons.push(`${ageDays} дн. без правок (порог ${maxAge})`);
+        if (ageDays > maxAge) {
+          reasons.push(
+            onlyTrivialEdits
+              ? `${ageDays} дн. без содержательных правок (только typo-уровень, порог ${maxAge})`
+              : `${ageDays} дн. без правок (порог ${maxAge})`,
+          );
+        }
 
         // Closed-issue counter against the *target* repo (the project itself,
         // even if the doc lives in makeit-knowledge — issues are closed in
@@ -502,13 +526,14 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
       case "coverage_threshold": {
         const thresholds = ctx.doc.settings.coverage_thresholds;
         const tier = ctx.classification.tier;
+        if (tier === 3) {
+          return { ...base, status: "skipped", detail: "Tier 3 — coverage не требуется" };
+        }
         let threshold = 0;
         if (tier === 1) {
           threshold = ctx.classification.complex ? thresholds.tier_1_complex : thresholds.tier_1;
         } else if (tier === 2) {
           threshold = thresholds.tier_2;
-        } else {
-          threshold = 0;
         }
 
         // Try shields.io public JSON for codecov first; works even when the
@@ -607,7 +632,13 @@ function loadTrendHistory(repo: string): number[] {
     const raw = localStorage.getItem(TREND_PREFIX + repo);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((n) => typeof n === "number") : [];
+    if (!Array.isArray(parsed)) return [];
+    // Reject NaN/Infinity and out-of-range values — protects sparkline math
+    // (Math.min/max with NaN poisons the result) and any future mistakes
+    // where score wasn't clamped before persistence.
+    return parsed.filter(
+      (n) => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 100,
+    );
   } catch {
     return [];
   }
@@ -657,7 +688,7 @@ export async function runHealthCheck(
 ): Promise<HealthReport> {
   const cls = resolveClassification(doc, repo);
   if (!cls) {
-    throw new Error(`Repo ${repo} not in project_classification`);
+    throw new ClassificationMissingError(repo);
   }
 
   // Grace check — uses repo creation date.
@@ -713,6 +744,7 @@ export async function runHealthCheck(
     generated_at: new Date().toISOString(),
     classification: cls,
     in_grace_period: inGrace,
+    grace_period_days: doc.settings.grace_period_days,
     findings,
     score,
     by_layer: summarizeByLayer(findings),

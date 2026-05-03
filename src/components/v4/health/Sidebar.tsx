@@ -19,6 +19,7 @@ const PHASE_LABEL: Record<string, string> = {
 // and a link to the rules source. Sticky on wide viewports.
 export function Sidebar({ report, project }: Props) {
   const oldest = report.trend.points[0] ?? report.score.raw;
+  const isFirstScan = report.trend.points.length < 2;
   const repoUrl = `https://github.com/${GITHUB_OWNER}/${report.repo}`;
   return (
     <aside className="ph-side">
@@ -26,18 +27,29 @@ export function Sidebar({ report, project }: Props) {
         <div className="ph-side-h"><Icon name="trend" /> История health-score</div>
         <div className="ph-side-body">
           <FancySpark trend={report.trend} />
-          <div className="ph-side-spark-meta">
-            <div>
-              <span className="ph-side-meta-l">первый скан</span>
-              <span className="v4-mono">{oldest}</span>
+          {!isFirstScan ? (
+            <div className="ph-side-spark-meta">
+              <div>
+                <span className="ph-side-meta-l">первый скан</span>
+                <span className="v4-mono">{oldest}</span>
+              </div>
+              <div>
+                <span className="ph-side-meta-l">сейчас</span>
+                <span className="v4-mono ph-side-meta-now">{report.score.raw}</span>
+              </div>
             </div>
-            <div>
-              <span className="ph-side-meta-l">сейчас</span>
-              <span className="v4-mono ph-side-meta-now">{report.score.raw}</span>
+          ) : (
+            <div className="ph-side-spark-meta">
+              <div>
+                <span className="ph-side-meta-l">первый скан</span>
+                <span className="v4-mono ph-side-meta-now">{report.score.raw}</span>
+              </div>
             </div>
-          </div>
+          )}
           <div className="ph-side-future v4-mono">
-            История накапливается между сканами — каждый rescan добавляет точку
+            {isFirstScan
+              ? "Это первый скан — история нарастёт после следующих rescan'ов"
+              : "История накапливается между сканами — каждый rescan добавляет точку"}
           </div>
         </div>
       </section>
@@ -93,7 +105,7 @@ export function Sidebar({ report, project }: Props) {
           </p>
           <ul className="ph-rule-tree">
             <li><span className="v4-mono">L1</span> Гигиена · GLOBAL_CLAUDE.md</li>
-            <li><span className="v4-mono">L2</span> Документация · SKILLMakeIT Init</li>
+            <li><span className="v4-mono">L2</span> Документация · SKILL MakeIT Init</li>
             <li><span className="v4-mono">L3</span> Свежесть · ops/freshness</li>
             <li><span className="v4-mono">L4</span> Drift (AI) · LLM-проверки</li>
           </ul>
