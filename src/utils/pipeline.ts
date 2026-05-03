@@ -90,6 +90,26 @@ export interface PipelineQueueItem {
   risk_level?: "low" | "medium" | "high";
 }
 
+/**
+ * Phase-0.7 (TD-architect, 2026-04-30) — populated by the pipeline API
+ * (`/pipeline/status`) when the previous /pipeline/start aborted before
+ * any dev work started.  Lets the dashboard show "next attempt at HH:MM"
+ * instead of an opaque ``running=False``.  Empty `{}` = no recent abort.
+ *
+ * Fields:
+ * - category: ``graphql_rate_limit`` (recognised) or ``other``;
+ * - message: raw exception text (may be long);
+ * - at_ts: unix-seconds when the abort happened;
+ * - retry_after_ts: unix-seconds when the underlying constraint clears
+ *   (only set for known-recoverable categories, e.g. graphql_rate_limit).
+ */
+export interface PipelineAbortReason {
+  category: "graphql_rate_limit" | "other";
+  message: string;
+  at_ts: number;
+  retry_after_ts: number | null;
+}
+
 export interface PipelineStatus {
   running: boolean;
   stopping: boolean;
@@ -98,6 +118,40 @@ export interface PipelineStatus {
   results: PipelineResult[];
   queue: PipelineQueueItem[];
   issue_stages?: Record<number, PipelineStageEntry[]>;
+  /** Phase-0.7: empty `{}` when no recent abort. */
+  last_abort_reason?: PipelineAbortReason | Record<string, never>;
+}
+
+/**
+ * Phase-0.7: GitHub rate-limit bucket (REST or GraphQL) surfaced via
+ * `/pipeline/limits`.  Pre-batch ``run_batch`` aborts when GraphQL drops
+ * below 500 — surfacing the bucket lets the dashboard warn before the
+ * user's Start click bounces.
+ */
+export interface GitHubRateLimitBucket {
+  limit: number;
+  remaining: number;
+  reset_at: number;       // unix-ts
+  reset_seconds: number;  // server-side computed
+}
+
+export interface PipelineLimits {
+  // Anthropic / Claude CLI rate-limiter (existing).
+  paused: boolean;
+  call_count: number;
+  max_calls: number;
+  remaining_pct: number;
+  rate_limit_hits: number;
+  session_elapsed_hours: number;
+  session_hours: number;
+  session_expired: boolean;
+  api_fallback_enabled: boolean;
+  api_fallback_confirmed: boolean;
+  /** Phase-0.7: GitHub rate-limit buckets.  `null` = probe unavailable. */
+  github?: {
+    graphql?: GitHubRateLimitBucket | null;
+    rest?: GitHubRateLimitBucket | null;
+  } | null;
 }
 
 export interface ComplexityBreakdown {
@@ -176,6 +230,116 @@ export const STAGE_LABEL: Record<string, string> = {
   ci_monitor: "CI",
 };
 
+/* ══════════════════════════════════════════
+   ISSUE CONTEXT (epic-027)
+   ══════════════════════════════════════════ */
+
+// Issue lifecycle status — kept loose (string) so a new pipeline-side enum
+// value renders as raw text rather than crashing the panel. The known values
+// at the time of writing are listed in IssueStatus on the pipeline side.
+export type IssueLifecycleStatus =
+  | "queued"
+  | "in_dev"
+  | "reviewing"
+  | "resolving"
+  | "qa_verifying"
+  | "polishing"
+  | "ready_to_merge"
+  | "ci_verifying"
+  | "merged"
+  | "needs_human"
+  | "failed"
+  | (string & {}); // tolerate unknown enum values added later
+
+export interface IssueContextRetryBudget {
+  attempts: number;
+  max_attempts: number;
+  cost_usd: number;
+  max_cost_usd: number;
+  exhausted?: boolean;
+}
+
+// `structured_result` is a discriminated envelope on the pipeline side
+// (DevResult / ReviewResult / QAResult). The dashboard renders it tolerantly,
+// so we keep the type open and key off `kind`.
+export interface IssueContextStructuredResult {
+  kind: string;
+  [k: string]: unknown;
+}
+
+export interface IssueContextPhaseEntry {
+  phase: string;
+  status: PhaseStatus | string;
+  started_at: string; // ISO 8601
+  duration_seconds: number;
+  cost_usd: number;
+  event: string;
+  error?: string | null;
+  artifacts?: Record<string, unknown>;
+  structured_result?: IssueContextStructuredResult | null;
+}
+
+export interface IssueContext {
+  repo: string;
+  issue_number: number;
+  status: IssueLifecycleStatus;
+  attempts: number;
+  cost_usd: number;
+  phase_history: IssueContextPhaseEntry[];
+  artifacts: Record<string, unknown>;
+  retry_budget: IssueContextRetryBudget;
+  created_at: string;
+  updated_at: string;
+  pr_url?: string | null;
+  branch?: string | null;
+}
+
+/**
+ * Fetch the full IssueContext (phase history, retry budget, status, FSM
+ * artifacts) for a given pipeline issue.
+ *
+ * @param repo "owner/name" — must contain exactly one `/`. The pipeline API
+ *   route uses `{repo:path}` so the slash is fine to pass through; we still
+ *   validate before sending so a malformed value gets a useful client-side
+ *   error instead of a confusing 400 from the server.
+ *
+ * Throws on HTTP error / network failure; callers should surface the message
+ * to the user.
+ */
+export async function fetchIssueContext(
+  repo: string,
+  issueNumber: number,
+  signal?: AbortSignal,
+): Promise<IssueContext> {
+  // Reject anything that's not exactly "owner/name" — the prior loose
+  // `includes("/")` check accepted "a/b/c" and silently dropped the tail
+  // via split, so the request landed on /issue/a/b/.../context. Today's
+  // only caller is `${GITHUB_OWNER}/${current_project}` so this is
+  // defence-in-depth, not a live bug.
+  const repoParts = repo.split("/");
+  if (repoParts.length !== 2 || !repoParts[0] || !repoParts[1]) {
+    throw new Error(`Invalid repo "${repo}" — expected "owner/name"`);
+  }
+  if (!Number.isInteger(issueNumber) || issueNumber <= 0) {
+    throw new Error(`Invalid issue number ${issueNumber} — must be a positive integer`);
+  }
+  const [owner, name] = repoParts;
+  // Encode each segment separately to keep the slash that the pipeline
+  // route's `{repo:path}` converter expects.
+  const encodedRepo = `${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
+  const res = await fetch(
+    `${PIPELINE_BASE_URL}/issue/${encodedRepo}/${issueNumber}/context`,
+    { cache: "no-store", signal },
+  );
+  if (!res.ok) {
+    if (res.status === 404) throw new Error("Контекст не найден");
+    if (res.status === 400) throw new Error("Неверный формат repo / номера");
+    if (res.status === 500) throw new Error("Хранилище контекстов недоступно");
+    throw new Error(`HTTP ${res.status}`);
+  }
+  return res.json() as Promise<IssueContext>;
+}
+
 export async function isPipelineRunning(): Promise<boolean> {
   try {
     const controller = new AbortController();
@@ -201,6 +365,28 @@ export async function fetchPipelineStatus(): Promise<PipelineStatus> {
     throw new Error(`HTTP ${res.status}`);
   }
   return res.json() as Promise<PipelineStatus>;
+}
+
+/**
+ * Phase-0.7: fetch combined Claude + GitHub rate-limits.  Returns `null`
+ * on any error so callers can render a "limits unavailable" state without
+ * crashing the panel.
+ */
+export async function fetchPipelineLimits(): Promise<PipelineLimits | null> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`${PIPELINE_BASE_URL}/pipeline/limits`, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) return null;
+    return (await res.json()) as PipelineLimits;
+  } catch (e) {
+    if (import.meta.env.DEV) console.error("[pipeline] limits fetch failed:", e);
+    return null;
+  }
 }
 
 export async function fetchPipelineStats(project: string): Promise<PipelineStats> {

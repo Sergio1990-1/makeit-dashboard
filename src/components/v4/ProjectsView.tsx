@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ProjectData, Monitor, Phase } from "../../types";
 import { ProjectCardV4 } from "./ProjectCardV4";
+import { ProjectHealthPage } from "./health/ProjectHealthPage";
 import { calcRiskScore } from "../../utils/riskScore";
 
 interface Props {
@@ -8,6 +9,10 @@ interface Props {
   getMonitor: (repo: string) => Monitor | undefined;
   onFinanceClick: () => void;
   onJumpToTab?: (tab: "pipeline" | "audit") => void;
+  /** Selected repo for the embedded ProjectHealthPage. Lifted to the parent
+   *  so the topbar breadcrumb can include the project name. */
+  selectedRepo: string | null;
+  onSelectRepo: (repo: string | null) => void;
 }
 
 type PhaseFilter = "all" | Phase | "stale";
@@ -129,14 +134,105 @@ export function ProjectsView({
   getMonitor,
   onFinanceClick,
   onJumpToTab,
+  selectedRepo,
+  onSelectRepo,
 }: Props) {
   const [state, setState] = useState<ToolbarState>(() => loadState());
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
 
+  const selectedProject = useMemo(
+    () => (selectedRepo ? projects.find((p) => p.repo === selectedRepo) : undefined),
+    [projects, selectedRepo],
+  );
+
   useEffect(() => {
     saveState(state);
   }, [state]);
+
+  // ─── URL persistence (Epic-008 Task-01, #156) ──────────────────────
+  // Sync `selectedRepo` ↔ `?repo=` query so a refresh on the Health page
+  // restores the drill-down and Browser back/forward navigates between the
+  // list and the open project. History API directly — react-router would
+  // be overkill for one parameter.
+  //
+  // `lastSyncedRepoRef` records the URL value last written/read so the
+  // pushState effect can skip re-syncs that came from mount or popstate
+  // (otherwise we would push a duplicate entry and break the back button).
+  // `didMountPushRef` suppresses the very first run of the pushState effect:
+  // on initial render its closure sees `selectedRepo = null` while the
+  // mount effect (which runs before it per React's effect ordering) may
+  // have already pointed the ref at `?repo=X` from the URL. Without the
+  // skip we would push an empty URL once, then push `?repo=X` again on
+  // the rerender — adding a spurious history entry on every direct link.
+  const lastSyncedRepoRef = useRef<string | null>(null);
+  const didMountPushRef = useRef(false);
+  // Mirror `projects` in a ref so the popstate listener can validate
+  // against the latest list without resubscribing on every refresh.
+  const projectsRef = useRef(projects);
+  useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
+
+  // On mount: hydrate state from URL. Validate against the known project
+  // list — a stale `?repo=foo` from a deleted project should fall back to
+  // the list view rather than render an empty Health page.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get("repo");
+    if (fromUrl && projects.some((p) => p.repo === fromUrl)) {
+      lastSyncedRepoRef.current = fromUrl;
+      onSelectRepo(fromUrl);
+    } else {
+      lastSyncedRepoRef.current = null;
+      // If the URL contains an unknown `?repo=`, strip it so back/forward
+      // history entries stay consistent with what the UI shows.
+      if (fromUrl) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("repo");
+        window.history.replaceState(null, "", url.pathname + url.search);
+      }
+    }
+    // Run only once on mount; we don't want to reset selection if the
+    // projects list later reloads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Push URL whenever the selection changes (skipping re-syncs from the
+  // mount/popstate paths). The first run is always a no-op — see the
+  // `didMountPushRef` comment above.
+  useEffect(() => {
+    if (!didMountPushRef.current) {
+      didMountPushRef.current = true;
+      return;
+    }
+    if (lastSyncedRepoRef.current === selectedRepo) return;
+    lastSyncedRepoRef.current = selectedRepo;
+    const url = new URL(window.location.href);
+    if (selectedRepo) {
+      url.searchParams.set("repo", selectedRepo);
+    } else {
+      url.searchParams.delete("repo");
+    }
+    window.history.pushState({ repo: selectedRepo }, "", url.pathname + url.search);
+  }, [selectedRepo]);
+
+  // Browser back/forward: read the URL fresh and push the change up.
+  // Reading `location.search` directly (not the event's state) keeps us
+  // correct even when another piece of code wrote the entry without a
+  // state object.
+  useEffect(() => {
+    const onPop = () => {
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("repo");
+      const valid =
+        next && projectsRef.current.some((p) => p.repo === next) ? next : null;
+      lastSyncedRepoRef.current = valid;
+      onSelectRepo(valid);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [onSelectRepo]);
 
   // Close sort menu on outside click / Escape
   useEffect(() => {
@@ -227,6 +323,15 @@ export function ProjectsView({
       }))
       .filter((g) => g.items.length > 0);
   }, [sorted, state.groupByPhase]);
+
+  if (selectedRepo) {
+    return (
+      <ProjectHealthPage
+        repo={selectedRepo}
+        project={selectedProject}
+      />
+    );
+  }
 
   return (
     <div className="v4-content">
@@ -398,13 +503,25 @@ export function ProjectsView({
               )}
               <div className="v4-projects-grid">
                 {g.items.map((p) => (
-                  <ProjectCardV4
-                    key={p.repo}
-                    project={p}
-                    monitor={getMonitor(p.repo)}
-                    onJumpToTab={onJumpToTab}
-                    onEditFinance={onFinanceClick}
-                  />
+                  <div key={p.repo} className="v4-project-cell">
+                    <ProjectCardV4
+                      project={p}
+                      monitor={getMonitor(p.repo)}
+                      onJumpToTab={onJumpToTab}
+                      onEditFinance={onFinanceClick}
+                    />
+                    <button
+                      type="button"
+                      className="v4-btn v4-project-health-btn"
+                      onClick={() => onSelectRepo(p.repo)}
+                      aria-label={`Открыть Health для ${p.repo}`}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>
+                        <path d="M12 22s-8-4.5-8-11.8A5 5 0 0 1 12 5a5 5 0 0 1 8 5.2c0 7.3-8 11.8-8 11.8z" />
+                      </svg>
+                      Health
+                    </button>
+                  </div>
                 ))}
               </div>
             </section>

@@ -1,10 +1,20 @@
+import type { CSSProperties, MouseEvent } from "react";
 import type { ProjectData, Monitor, MonitorStatus } from "../../types";
 import { calcRiskScore } from "../../utils/riskScore";
 import { GITHUB_OWNER } from "../../utils/config";
+import { TweenedNumber } from "./TweenedNumber";
 
 interface Props {
   project: ProjectData;
   monitor?: Monitor;
+  /** Index in the parent grid, used for stagger entrance. */
+  index?: number;
+}
+
+interface CardStyle extends CSSProperties {
+  "--i"?: number;
+  "--mx"?: string;
+  "--my"?: string;
 }
 
 const STATUS_LABEL: Record<MonitorStatus, string> = {
@@ -51,7 +61,21 @@ function formatEta(etaDays: number | null, etaDate: string | null): { label: str
   return { label };
 }
 
-export function DashboardProjectCard({ project, monitor }: Props) {
+export function DashboardProjectCard({ project, monitor, index = 0 }: Props) {
+  const handleMove = (e: MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    e.currentTarget.style.setProperty("--mx", `${x}%`);
+    e.currentTarget.style.setProperty("--my", `${y}%`);
+  };
+  // Reset the spotlight position so a stale hover hotspot doesn't linger
+  // when the cursor leaves the card or the window.
+  const handleLeave = (e: MouseEvent<HTMLDivElement>) => {
+    e.currentTarget.style.setProperty("--mx", "50%");
+    e.currentTarget.style.setProperty("--my", "50%");
+  };
+  const cardStyle: CardStyle = { "--i": index };
   const risk = calcRiskScore(project, monitor);
   // Mockup uses 2 visible levels: med/high. Map: critical→high, high→high, medium→med, low→none.
   const riskClass =
@@ -81,7 +105,12 @@ export function DashboardProjectCard({ project, monitor }: Props) {
   const eta = formatEta(project.etaDays, project.etaDate);
 
   return (
-    <div className={`v4-pcard ${riskClass}`}>
+    <div
+      className={`v4-pcard ${riskClass}`}
+      style={cardStyle}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+    >
       <div className="v4-pcard-row">
         <a className="v4-pcard-name" href={buildRepoUrl(project.repo)} target="_blank" rel="noopener noreferrer">
           {project.repo}
@@ -101,7 +130,7 @@ export function DashboardProjectCard({ project, monitor }: Props) {
 
       <div className="v4-pcard-open-row">
         <div className="v4-pcard-open-num num">
-          {project.openCount}
+          <TweenedNumber value={project.openCount} />
           <span>открытых</span>
         </div>
         <div className="v4-pcard-pri-group">
@@ -138,7 +167,7 @@ export function DashboardProjectCard({ project, monitor }: Props) {
             <div className="v4-pfill" style={{ width: `${pct}%`, background: fillColor }} />
           </div>
           <span className="v4-ppct num">
-            {done}/{total} ({pct}%)
+            <TweenedNumber value={done} />/<TweenedNumber value={total} /> (<TweenedNumber value={pct} />%)
           </span>
         </div>
       )}

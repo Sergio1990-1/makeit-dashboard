@@ -1,11 +1,17 @@
 const GITHUB_GRAPHQL = "https://api.github.com/graphql";
 const GITHUB_REST = "https://api.github.com";
 
-async function graphql<T>(token: string, query: string, variables: Record<string, unknown> = {}): Promise<T> {
+async function graphql<T>(
+  token: string,
+  query: string,
+  variables: Record<string, unknown> = {},
+  signal?: AbortSignal,
+): Promise<T> {
   const res = await fetch(GITHUB_GRAPHQL, {
     method: "POST",
     headers: { Authorization: `bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({ query, variables }),
+    signal,
   });
   if (res.status === 401 || res.status === 403) {
     throw new Error("GitHub token истёк или недостаточно прав. Сбросьте токен и введите новый.");
@@ -16,7 +22,7 @@ async function graphql<T>(token: string, query: string, variables: Record<string
   return json.data as T;
 }
 
-async function rest(token: string, path: string, method = "GET", body?: unknown) {
+async function rest(token: string, path: string, method = "GET", body?: unknown, signal?: AbortSignal) {
   const res = await fetch(`${GITHUB_REST}${path}`, {
     method,
     headers: {
@@ -25,6 +31,7 @@ async function rest(token: string, path: string, method = "GET", body?: unknown)
       Accept: "application/vnd.github.v3+json",
     },
     body: body ? JSON.stringify(body) : undefined,
+    signal,
   });
   if (res.status === 401 || res.status === 403) {
     throw new Error("GitHub token истёк или недостаточно прав. Сбросьте токен и введите новый.");
@@ -49,9 +56,10 @@ export async function listRepoFiles(
   token: string,
   owner: string,
   repo: string,
-  path = ""
+  path = "",
+  signal?: AbortSignal,
 ): Promise<{ name: string; type: string; path: string }[]> {
-  const data = await rest(token, `/repos/${owner}/${repo}/contents/${path}`);
+  const data = await rest(token, `/repos/${owner}/${repo}/contents/${path}`, "GET", undefined, signal);
   if (!Array.isArray(data)) return [];
   return data.map((f: { name: string; type: string; path: string }) => ({
     name: f.name,
@@ -64,9 +72,10 @@ export async function readRepoFile(
   token: string,
   owner: string,
   repo: string,
-  path: string
+  path: string,
+  signal?: AbortSignal,
 ): Promise<string> {
-  const data = await rest(token, `/repos/${owner}/${repo}/contents/${path}`);
+  const data = await rest(token, `/repos/${owner}/${repo}/contents/${path}`, "GET", undefined, signal);
   if (data.encoding === "base64" && data.content) {
     const bytes = Uint8Array.from(atob(data.content.replace(/\s/g, "")), (c) => c.charCodeAt(0));
     return new TextDecoder().decode(bytes);
@@ -182,6 +191,48 @@ export async function createIssue(
   return { number: data.number, url: data.html_url };
 }
 
+// Look up an existing open issue with the exact title under the `tech-debt`
+// label. Used by the health → issue flow to dedup before creating duplicates.
+//
+// Returns `null` only when no open `tech-debt` issue with this exact title is
+// found within the scanned pages. `rest()` throws on auth/network/HTTP errors
+// (4xx/5xx) — those bubble up so the caller can decide whether to retry or
+// proceed without dedup.
+//
+// Title comparison is exact (case-sensitive). We paginate up to MAX_PAGES so
+// repos with >100 open tech-debt issues still get correctly deduped instead of
+// silently creating duplicates for issues pushed off page 1. Sorted by
+// `updated` desc so freshly-touched dups land first and we can short-circuit.
+export async function findOpenIssueByTitle(
+  token: string,
+  owner: string,
+  repo: string,
+  title: string,
+): Promise<{ number: number; url: string } | null> {
+  const PER_PAGE = 100;
+  const MAX_PAGES = 5; // 500 issues max — enough for any realistic health surface area
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/issues?state=open&per_page=${PER_PAGE}&labels=tech-debt&sort=updated&direction=desc&page=${page}`,
+    );
+    if (!Array.isArray(data)) return null;
+    for (const issue of data as Array<{
+      number: number;
+      title: string;
+      html_url: string;
+      pull_request?: unknown;
+    }>) {
+      if (issue.pull_request) continue;
+      if (issue.title === title) {
+        return { number: issue.number, url: issue.html_url };
+      }
+    }
+    if (data.length < PER_PAGE) return null; // last page reached
+  }
+  return null;
+}
+
 export async function closeIssue(
   token: string,
   owner: string,
@@ -244,9 +295,10 @@ export async function addComment(
 export async function listMilestones(
   token: string,
   owner: string,
-  repo: string
+  repo: string,
+  signal?: AbortSignal,
 ): Promise<{ number: number; title: string; state: string; due_on: string | null; open_issues: number; closed_issues: number }[]> {
-  const data = await rest(token, `/repos/${owner}/${repo}/milestones?state=all&per_page=100`);
+  const data = await rest(token, `/repos/${owner}/${repo}/milestones?state=all&per_page=100`, "GET", undefined, signal);
   return data.map((m: { number: number; title: string; state: string; due_on: string | null; open_issues: number; closed_issues: number }) => ({
     number: m.number,
     title: m.title,
@@ -399,3 +451,398 @@ export async function addIssueToProject(
     contentId: issueData.repository.issue.id,
   });
 }
+
+// ── Project Health helpers ─────────────────────────────────────────────
+// REST endpoints used by the health-engine. Kept here so all GitHub access
+// goes through one auth/error path.
+
+export interface RepoMeta {
+  created_at: string;
+  pushed_at: string;
+  default_branch: string;
+  open_issues_count: number;
+}
+
+export async function getRepoMeta(token: string, owner: string, repo: string, signal?: AbortSignal): Promise<RepoMeta> {
+  const data = await rest(token, `/repos/${owner}/${repo}`, "GET", undefined, signal);
+  return {
+    created_at: data.created_at,
+    pushed_at: data.pushed_at,
+    default_branch: data.default_branch,
+    open_issues_count: data.open_issues_count,
+  };
+}
+
+// Flat list of all blob paths in a repo tree (recursive). One REST call —
+// preferred over multiple `listRepoFiles` recursions when a check needs the
+// full file inventory (e.g. ai_claude_md_freshness verifying that every path
+// mentioned in CLAUDE.md still exists).
+//
+// GitHub truncates trees with >100k entries; in that case `data.truncated` is
+// true and the listing is partial. We surface the partial list anyway and let
+// the caller decide whether the truncation matters — for our scale (≤ a few
+// thousand files) it never trips. Only `blob` (file) entries are returned;
+// `tree` (directory) entries are omitted because the typical caller wants
+// "is this path a real file" semantics.
+export async function getRepoTreeFlat(
+  token: string,
+  owner: string,
+  repo: string,
+  treeSha: string,
+  signal?: AbortSignal,
+): Promise<{ paths: string[]; truncated: boolean }> {
+  const data = await rest(
+    token,
+    `/repos/${owner}/${repo}/git/trees/${treeSha}?recursive=1`,
+    "GET",
+    undefined,
+    signal,
+  );
+  if (!Array.isArray(data?.tree)) return { paths: [], truncated: false };
+  const paths = (data.tree as Array<{ type: string; path: string }>)
+    .filter((e) => e.type === "blob")
+    .map((e) => e.path);
+  return { paths, truncated: Boolean(data.truncated) };
+}
+
+/** Resolve `{commitSha, treeSha}` for a branch. Falls back to `default_branch` when omitted. */
+export async function getRepoTreeSha(
+  token: string,
+  owner: string,
+  repo: string,
+  branch?: string,
+): Promise<{ commitSha: string; treeSha: string }> {
+  let ref = branch;
+  if (!ref) {
+    const meta = await getRepoMeta(token, owner, repo);
+    ref = meta.default_branch || "main";
+  }
+  // Encode each path segment so branch names with reserved chars (e.g. `#`)
+  // don't break the URL. Slash-separated branch names like `feat/x` keep their
+  // slashes — GitHub's git/refs/heads endpoint accepts the suffix as a path.
+  const refPath = ref.split("/").map(encodeURIComponent).join("/");
+  const refData = await rest(token, `/repos/${owner}/${repo}/git/refs/heads/${refPath}`);
+  const commitSha: string | undefined = refData?.object?.sha;
+  if (!commitSha) throw new Error(`getRepoTreeSha: missing object.sha for ${owner}/${repo}@${ref}`);
+  const commitData = await rest(token, `/repos/${owner}/${repo}/git/commits/${commitSha}`);
+  const treeSha: string | undefined = commitData?.tree?.sha;
+  if (!treeSha) throw new Error(`getRepoTreeSha: missing tree.sha for commit ${commitSha}`);
+  return { commitSha, treeSha };
+}
+
+export async function listRepoLabels(token: string, owner: string, repo: string, signal?: AbortSignal): Promise<string[]> {
+  const out: string[] = [];
+  for (let page = 1; page <= 5; page++) {
+    const data = await rest(token, `/repos/${owner}/${repo}/labels?per_page=100&page=${page}`, "GET", undefined, signal);
+    if (!Array.isArray(data) || data.length === 0) break;
+    out.push(...data.map((l: { name: string }) => l.name));
+    if (data.length < 100) break;
+  }
+  return out;
+}
+
+export interface Workflow {
+  id: number;
+  name: string;
+  path: string;
+  state: string;
+}
+
+export async function listWorkflows(token: string, owner: string, repo: string, signal?: AbortSignal): Promise<Workflow[]> {
+  try {
+    const data = await rest(token, `/repos/${owner}/${repo}/actions/workflows?per_page=100`, "GET", undefined, signal);
+    return Array.isArray(data.workflows) ? data.workflows : [];
+  } catch (err) {
+    // Re-throw AbortError so callers higher up the stack can distinguish a
+    // cancelled scan from a transient API failure (which is what the broad
+    // `catch → []` was designed for). DOMException with `name === "AbortError"`
+    // is what fetch raises when its signal aborts.
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    return [];
+  }
+}
+
+export interface WorkflowRun {
+  id: number;
+  status: string;
+  conclusion: string | null;
+  created_at: string;
+}
+
+export async function getLatestWorkflowRun(
+  token: string,
+  owner: string,
+  repo: string,
+  workflowId: number,
+  signal?: AbortSignal,
+): Promise<WorkflowRun | null> {
+  try {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/actions/workflows/${workflowId}/runs?per_page=1`,
+      "GET",
+      undefined,
+      signal,
+    );
+    const runs = Array.isArray(data.workflow_runs) ? data.workflow_runs : [];
+    return runs[0] ?? null;
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    return null;
+  }
+}
+
+// Last commit that touched a path. Used by doc_freshness checks (when
+// implemented) and to verify a file actually exists when we want commit
+// metadata as well as content.
+export async function getLatestCommitForPath(
+  token: string,
+  owner: string,
+  repo: string,
+  path: string,
+  signal?: AbortSignal,
+): Promise<{ sha: string; date: string } | null> {
+  try {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/commits?path=${encodeURIComponent(path)}&per_page=1`,
+      "GET",
+      undefined,
+      signal,
+    );
+    const commit = Array.isArray(data) ? data[0] : null;
+    if (!commit) return null;
+    return { sha: commit.sha, date: commit.commit.author?.date ?? commit.commit.committer?.date };
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    return null;
+  }
+}
+
+// Count issues closed since `since` (ISO date). Excludes PRs.
+export async function countClosedIssuesSince(
+  token: string,
+  owner: string,
+  repo: string,
+  since: string,
+  signal?: AbortSignal,
+): Promise<number> {
+  let count = 0;
+  for (let page = 1; page <= 10; page++) {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/issues?state=closed&since=${encodeURIComponent(since)}&per_page=100&page=${page}`,
+      "GET",
+      undefined,
+      signal,
+    );
+    if (!Array.isArray(data) || data.length === 0) break;
+    for (const i of data as Array<{ pull_request?: unknown; closed_at: string | null }>) {
+      if (i.pull_request) continue;
+      if (i.closed_at && new Date(i.closed_at) >= new Date(since)) count++;
+    }
+    if (data.length < 100) break;
+  }
+  return count;
+}
+
+// Detail for a single commit — additions/deletions for each touched file.
+// Used by doc_freshness to find the last "meaningful" edit (typo fixes do
+// not reset the freshness clock).
+export async function getCommitFiles(
+  token: string,
+  owner: string,
+  repo: string,
+  sha: string,
+  signal?: AbortSignal,
+): Promise<Array<{ filename: string; additions: number; deletions: number }>> {
+  try {
+    const data = await rest(token, `/repos/${owner}/${repo}/commits/${sha}`, "GET", undefined, signal);
+    return Array.isArray(data.files)
+      ? data.files.map((f: { filename: string; additions: number; deletions: number }) => ({
+          filename: f.filename,
+          additions: f.additions,
+          deletions: f.deletions,
+        }))
+      : [];
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    return [];
+  }
+}
+
+// Up to `limit` most-recent commits touching path. Used by doc_freshness.
+export async function listCommitsForPath(
+  token: string,
+  owner: string,
+  repo: string,
+  path: string,
+  limit = 10,
+  signal?: AbortSignal,
+): Promise<Array<{ sha: string; date: string }>> {
+  try {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/commits?path=${encodeURIComponent(path)}&per_page=${limit}`,
+      "GET",
+      undefined,
+      signal,
+    );
+    if (!Array.isArray(data)) return [];
+    return data.map((c: { sha: string; commit: { author?: { date?: string }; committer?: { date?: string } } }) => ({
+      sha: c.sha,
+      date: c.commit.author?.date ?? c.commit.committer?.date ?? "",
+    })).filter((c) => c.date);
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    return [];
+  }
+}
+
+export interface MergedPR {
+  number: number;
+  merged_at: string;
+}
+
+// Merged PRs in the last N days (descending by updated_at). Excludes still-open.
+export async function listMergedPRsInWindow(
+  token: string,
+  owner: string,
+  repo: string,
+  windowDays: number,
+  hardLimit = 50,
+  signal?: AbortSignal,
+): Promise<MergedPR[]> {
+  const cutoff = Date.now() - windowDays * 86400000;
+  const out: MergedPR[] = [];
+  for (let page = 1; page <= 5 && out.length < hardLimit; page++) {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/pulls?state=closed&per_page=30&page=${page}&sort=updated&direction=desc`,
+      "GET",
+      undefined,
+      signal,
+    );
+    if (!Array.isArray(data) || data.length === 0) break;
+    let any = false;
+    for (const pr of data as Array<{ number: number; merged_at: string | null; updated_at: string }>) {
+      const upd = new Date(pr.updated_at).getTime();
+      if (upd < cutoff) {
+        // List is sorted by updated desc; once we cross the window, stop
+        // pagination too — older pages can only be older.
+        return out;
+      }
+      any = true;
+      if (!pr.merged_at) continue;
+      const merged = new Date(pr.merged_at).getTime();
+      if (merged < cutoff) continue;
+      out.push({ number: pr.number, merged_at: pr.merged_at });
+      if (out.length >= hardLimit) return out;
+    }
+    if (!any) break;
+  }
+  return out;
+}
+
+export async function getPRFiles(
+  token: string,
+  owner: string,
+  repo: string,
+  number: number,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  try {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/pulls/${number}/files?per_page=300`,
+      "GET",
+      undefined,
+      signal,
+    );
+    return Array.isArray(data)
+      ? data.map((f: { filename: string }) => f.filename)
+      : [];
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    return [];
+  }
+}
+
+// All open issues that have no milestone assigned. Returns issue numbers.
+export async function listIssuesWithoutMilestone(
+  token: string,
+  owner: string,
+  repo: string,
+  signal?: AbortSignal,
+): Promise<number[]> {
+  const out: number[] = [];
+  for (let page = 1; page <= 10; page++) {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/issues?state=open&milestone=none&per_page=100&page=${page}`,
+      "GET",
+      undefined,
+      signal,
+    );
+    if (!Array.isArray(data) || data.length === 0) break;
+    for (const i of data as Array<{ number: number; pull_request?: unknown; milestone: unknown }>) {
+      if (i.pull_request) continue;
+      if (i.milestone == null) out.push(i.number);
+    }
+    if (data.length < 100) break;
+  }
+  return out;
+}
+
+// Same query as listIssuesWithoutMilestone, but returns the metadata callers
+// need to plot a 30-day orphan trend (created_at + originating repo). Kept as
+// a separate function so existing call-sites keep their compact `number[]`
+// shape.
+//
+// Pagination caps at 5 pages × 100 = 500 orphans per repo — same envelope as
+// findOpenIssueByTitle. If a project ever exceeds that, the chart will
+// undercount but never crash.
+export interface OrphanIssueMeta {
+  number: number;
+  created_at: string;
+  repo: string;
+}
+
+export async function listOrphanIssuesWithMeta(
+  token: string,
+  owner: string,
+  repo: string,
+  signal?: AbortSignal,
+): Promise<OrphanIssueMeta[]> {
+  const PER_PAGE = 100;
+  const MAX_PAGES = 5;
+  const out: OrphanIssueMeta[] = [];
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/issues?state=open&milestone=none&per_page=${PER_PAGE}&page=${page}`,
+      "GET",
+      undefined,
+      signal,
+    );
+    if (!Array.isArray(data) || data.length === 0) break;
+    for (const i of data as Array<{
+      number: number;
+      pull_request?: unknown;
+      milestone: unknown;
+      created_at: string;
+    }>) {
+      // The /issues endpoint returns PRs interleaved — drop them or the
+      // count balloons with merged-but-milestone-less PRs.
+      if (i.pull_request) continue;
+      // GitHub's `milestone=none` filter is server-side, but we re-check on
+      // the client too: defence-in-depth against an API quirk where the
+      // filter occasionally ships an issue with a stale milestone object.
+      if (i.milestone != null) continue;
+      out.push({ number: i.number, created_at: i.created_at, repo });
+    }
+    if (data.length < PER_PAGE) break;
+  }
+  return out;
+}
+

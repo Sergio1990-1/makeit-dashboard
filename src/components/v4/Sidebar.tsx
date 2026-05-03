@@ -2,11 +2,15 @@ import { useEffect } from "react";
 import type { ReactElement } from "react";
 import type { TabId } from "../../types";
 
+type PulseKind = "accent" | "success" | "warn" | "danger";
+
 interface NavItem {
   id: TabId;
   label: string;
   count?: number;
   badge?: number;
+  /** Optional pulsing dot for "new activity since last visit". */
+  pulse?: PulseKind;
   icon: ReactElement;
 }
 
@@ -22,6 +26,11 @@ interface Props {
   milestonesCount: number;
   monitorsCount: number;
   auditAlerts?: number;
+  /** Number of portfolio-wide critical health fails. Shown as a red badge
+   *  on the «Дашборд» nav item. 0/undefined → no badge rendered. */
+  criticalFails?: number;
+  /** Per-tab activity pulses (null = no dot). */
+  pulses?: Partial<Record<TabId, PulseKind>>;
   user?: { initials: string; name: string; role: string };
   isOpen?: boolean;
   onClose?: () => void;
@@ -96,34 +105,47 @@ export function Sidebar({
   milestonesCount,
   monitorsCount,
   auditAlerts,
+  criticalFails,
+  pulses,
   user = { initials: "SK", name: "Сергей К.", role: "owner · MakeIT" },
   isOpen,
   onClose,
 }: Props) {
+  const p = pulses ?? {};
+
   const sections: NavSection[] = [
     {
       items: [
-        { id: "dashboard", label: "Дашборд", icon: ICON_DASH },
-        { id: "projects", label: "Проекты", count: projectsCount, icon: ICON_LIST },
-        { id: "milestones", label: "Milestones", count: milestonesCount, icon: ICON_CLOCK },
-        { id: "uptime", label: "Мониторинг", count: monitorsCount || undefined, icon: ICON_MONITOR },
+        {
+          id: "dashboard",
+          label: "Дашборд",
+          icon: ICON_DASH,
+          pulse: p.dashboard,
+          // Portfolio-wide critical health fails. App.tsx mounts
+          // usePortfolioHealth (single source of truth) and passes the
+          // count down so we don't double-mount the hook here.
+          badge: criticalFails && criticalFails > 0 ? criticalFails : undefined,
+        },
+        { id: "projects", label: "Проекты", count: projectsCount, icon: ICON_LIST, pulse: p.projects },
+        { id: "milestones", label: "Milestones", count: milestonesCount, icon: ICON_CLOCK, pulse: p.milestones },
+        { id: "uptime", label: "Мониторинг", count: monitorsCount || undefined, icon: ICON_MONITOR, pulse: p.uptime },
       ],
     },
     {
       title: "Workflow",
       items: [
-        { id: "pipeline", label: "Pipeline", icon: ICON_PIPELINE },
-        { id: "transcripts", label: "Транскрипты", icon: ICON_TRANSCRIPT },
-        { id: "research", label: "Research", icon: ICON_SEARCH },
-        { id: "specs", label: "Specs", icon: ICON_SPECS },
+        { id: "pipeline", label: "Pipeline", icon: ICON_PIPELINE, pulse: p.pipeline },
+        { id: "transcripts", label: "Транскрипты", icon: ICON_TRANSCRIPT, pulse: p.transcripts },
+        { id: "research", label: "Research", icon: ICON_SEARCH, pulse: p.research },
+        { id: "specs", label: "Specs", icon: ICON_SPECS, pulse: p.specs },
       ],
     },
     {
       title: "Контроль",
       items: [
-        { id: "audit", label: "Аудит", badge: auditAlerts, icon: ICON_AUDIT },
-        { id: "quality", label: "Quality", icon: ICON_QUALITY },
-        { id: "debate", label: "Debate", icon: ICON_DEBATE },
+        { id: "audit", label: "Аудит", badge: auditAlerts, icon: ICON_AUDIT, pulse: p.audit },
+        { id: "quality", label: "Quality", icon: ICON_QUALITY, pulse: p.quality },
+        { id: "debate", label: "Debate", icon: ICON_DEBATE, pulse: p.debate },
       ],
     },
   ];
@@ -172,6 +194,12 @@ export function Sidebar({
                   {item.count !== undefined && <span className="v4-nav-count">{item.count}</span>}
                   {item.badge !== undefined && item.badge > 0 && (
                     <span className="v4-nav-badge">{item.badge}</span>
+                  )}
+                  {item.pulse && item.badge === undefined && (
+                    <span
+                      className={`v4-nav-pulse ${item.pulse === "accent" ? "" : `v4-nav-pulse--${item.pulse}`}`}
+                      aria-label="новые события"
+                    />
                   )}
                 </button>
               ))}

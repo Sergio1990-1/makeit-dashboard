@@ -38,3 +38,10 @@ coverage/
 # Backups
 *.backup
 *.backup2
+
+# Local design references (extracted handoff zips)
+.design-ref/
+
+# Claude session locks
+.claude/scheduled_tasks.lock
+.claude/worktrees/

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TokenForm } from "./components/TokenForm";
 import { ChatPanel } from "./components/ChatPanel";
 import { ChatButton } from "./components/ChatButton";
@@ -14,16 +14,33 @@ import { QualityView } from "./components/v4/quality/QualityView";
 import { DebateView } from "./components/v4/debate/DebateView";
 import { Sidebar } from "./components/v4/Sidebar";
 import { Topbar } from "./components/v4/Topbar";
+import { ToastHost } from "./components/v4/ToastHost";
+import { useToast } from "./components/v4/toastContext";
+import { CommandPalette } from "./components/v4/CommandPalette";
 import { DashboardView } from "./components/v4/DashboardView";
 import { ProjectsView } from "./components/v4/ProjectsView";
 import { MilestonesView } from "./components/v4/milestones/MilestonesView";
 import { useDashboard } from "./hooks/useDashboard";
 import { useMonitors } from "./hooks/useMonitors";
+import { usePortfolioHealth } from "./hooks/usePortfolioHealth";
+import { usePortfolioOrphans } from "./hooks/usePortfolioOrphans";
+import { fetchPipelineStatus, fetchPipelineLimits } from "./utils/pipeline";
+import type { PipelineAbortReason, PipelineLimits } from "./utils/pipeline";
 import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH, PROJECTS } from "./utils/config";
 import { PasswordGate } from "./components/PasswordGate";
+import { SettingsBootstrap, SettingsUnavailable } from "./components/v4/SettingsBootstrap";
+import { SettingsPanel } from "./components/v4/SettingsPanel";
+import { useSettings } from "./hooks/useSettings";
+import { runOneTimeMigration } from "./utils/settings-migration";
+import {
+  EXTERNAL_AUTH_LOST_EVENT,
+  type ExternalAuthLostDetail,
+  type ExternalAuthService,
+} from "./utils/external-auth-events";
 import type { TabId, Monitor } from "./types";
 import "./App.css";
 import "./styles/v4.css";
+import "./styles/v4-health.css";
 
 const TAB_CRUMBS: Record<TabId, string> = {
   dashboard: "Дашборд",
@@ -40,6 +57,7 @@ const TAB_CRUMBS: Record<TabId, string> = {
 };
 
 function AppInner() {
+  const toast = useToast();
   const {
     projects,
     summary,
@@ -52,12 +70,51 @@ function AppInner() {
 
   const { monitors, loading: monitorsLoading, error: monitorsError, refresh: refreshMonitors } = useMonitors();
 
+  // Portfolio scans are mounted at the App level (rather than inside
+  // DashboardView) so the Topbar "Обновить" button can trigger a rescan
+  // alongside useDashboard.refresh. Both hooks are self-cached with a 30
+  // min TTL — mounting them up here is free on initial load and ensures a
+  // single source of truth for the dashboard panels.
+  const portfolio = usePortfolioHealth();
+  const orphans = usePortfolioOrphans();
+
+  // Toast on refresh result. Skip both the very first effect run AND the
+  // first transition from no-data → has-data (initial fetch). We only want
+  // to notify on subsequent refreshes, so a real prior `lastUpdated` Date
+  // must already be in the ref before the success branch fires.
+  const lastUpdatedRef = useRef<Date | null>(null);
+  const errorRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (errorRef.current === undefined) {
+      errorRef.current = error;
+      lastUpdatedRef.current = lastUpdated;
+      return;
+    }
+    if (error && error !== errorRef.current) {
+      toast.push({ kind: "error", title: "Не удалось обновить данные", description: error });
+    } else if (
+      !error &&
+      lastUpdated &&
+      lastUpdatedRef.current !== null &&
+      lastUpdated !== lastUpdatedRef.current &&
+      projects.length > 0
+    ) {
+      toast.push({
+        kind: "success",
+        title: "Данные обновлены",
+        description: `${projects.length} проектов · ${lastUpdated.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}`,
+      });
+    }
+    errorRef.current = error;
+    lastUpdatedRef.current = lastUpdated;
+  }, [lastUpdated, error, projects.length, toast]);
+
   const VALID_TABS: TabId[] = [
     "dashboard", "projects", "milestones", "uptime", "audit",
     "pipeline", "transcripts", "research", "specs", "quality", "debate",
   ];
   const ACTIVE_TAB_KEY = "makeit.activeTab";
-  const [tab, setTab] = useState<TabId>(() => {
+  const [tab, setTabRaw] = useState<TabId>(() => {
     try {
       const stored = localStorage.getItem(ACTIVE_TAB_KEY);
       if (stored && (VALID_TABS as string[]).includes(stored)) {
@@ -68,6 +125,19 @@ function AppInner() {
     }
     return "dashboard";
   });
+  // Wrap state setter with View Transitions API for a smooth cross-fade
+  // between tabs. Falls back to plain setState in browsers without support
+  // (e.g. Firefox today) — tabs still switch, just without the animation.
+  const setTab = useCallback((next: TabId) => {
+    type DocVT = Document & { startViewTransition?: (cb: () => void) => unknown };
+    const doc = document as DocVT;
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (typeof doc.startViewTransition === "function" && !reduced) {
+      doc.startViewTransition(() => setTabRaw(next));
+    } else {
+      setTabRaw(next);
+    }
+  }, []);
   useEffect(() => {
     try {
       localStorage.setItem(ACTIVE_TAB_KEY, tab);
@@ -79,6 +149,101 @@ function AppInner() {
   const [chatOpen, setChatOpen] = useState(false);
   const [financeOpen, setFinanceOpen] = useState(false);
   const [sideOpen, setSideOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  // SettingsPanel (Epic-004 Task-04). Modal state lives at App.tsx so the
+  // FR-8 toast action and Topbar gear icon can both open it without a
+  // round-trip through context.
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // Selected repo for the Project Health sub-page on the Projects tab. Lifted
+  // here so the topbar breadcrumb can include the project name and let the
+  // user navigate back via "Проекты".
+  const [healthRepo, setHealthRepo] = useState<string | null>(null);
+  // Switching tabs should always land on the tab's main view — clear the
+  // drill-down before changing tabs so the user never returns to a stale
+  // sub-page on tab re-entry. Also strip `?repo=` from the URL: ProjectsView
+  // owns that query param while it is mounted, but once we navigate away it
+  // becomes orphaned and would mislead the next refresh.
+  const navigateTab = useCallback(
+    (next: TabId) => {
+      setHealthRepo(null);
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("repo")) {
+          url.searchParams.delete("repo");
+          window.history.replaceState(null, "", url.pathname + url.search);
+        }
+      }
+      setTab(next);
+    },
+    [setTab],
+  );
+
+  // Open the Project Health drilldown for a specific repo from outside the
+  // Projects tab (currently invoked by AIInsightsPanel). Bypasses
+  // `navigateTab` because that one explicitly clears `healthRepo`.
+  const openHealthForRepo = useCallback(
+    (repo: string) => {
+      setHealthRepo(repo);
+      setTab("projects");
+    },
+    [setTab],
+  );
+
+  // Cmd-K opens command palette (works alongside the existing Topbar shortcut
+  // since both register handlers — palette wins because it's an overlay).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // FR-8 (Epic-004 Task-04): when an upstream API (GitHub / Claude /
+  // BetterStack) returns 401, fetch wrappers in utils/* dispatch
+  // `external-api:auth-lost`. Surface a one-shot toast with an action that
+  // opens SettingsPanel so the user can rotate the bad secret.
+  //
+  // Debounced via a ref so a burst of failed requests (a polling loop hitting
+  // 401 repeatedly) does not stack toasts — we re-arm only after the user
+  // acknowledges or 30s elapses.
+  const lastAuthLostAtRef = useRef<Map<ExternalAuthService, number>>(new Map());
+  useEffect(() => {
+    const SERVICE_LABELS: Record<ExternalAuthService, string> = {
+      github: "GitHub PAT",
+      claude: "Claude API key",
+      betterstack: "BetterStack token",
+    };
+    const onAuthLost = (e: Event) => {
+      const detail = (e as CustomEvent<ExternalAuthLostDetail>).detail;
+      const service = detail?.service;
+      if (!service) return;
+      const now = Date.now();
+      const lastAt = lastAuthLostAtRef.current.get(service) ?? 0;
+      // 30s debounce per service — long enough to ride out a polling burst,
+      // short enough to re-prompt if the user dismisses without acting.
+      if (now - lastAt < 30_000) return;
+      lastAuthLostAtRef.current.set(service, now);
+      const label = SERVICE_LABELS[service] ?? service;
+      toast.push({
+        kind: "error",
+        title: `Токен ${label} истёк`,
+        description: "Откройте Настройки и обновите значение секрета.",
+        // Sticky until the user dismisses or opens Settings — auth issues
+        // shouldn't auto-vanish.
+        duration: 0,
+        action: {
+          label: "Открыть Настройки",
+          onClick: () => setSettingsOpen(true),
+        },
+      });
+    };
+    window.addEventListener(EXTERNAL_AUTH_LOST_EVENT, onAuthLost);
+    return () => window.removeEventListener(EXTERNAL_AUTH_LOST_EVENT, onAuthLost);
+  }, [toast]);
 
   // Track visited tabs so stateful components mount lazily but stay alive.
   // Uses the React-recommended "setState during render" pattern for derived
@@ -98,6 +263,83 @@ function AppInner() {
     document.body.classList.add("v4");
     return () => { document.body.classList.remove("v4"); };
   }, []);
+
+  // Phase-0.7 (TD-architect, 2026-04-30): App-level lightweight pipeline state.
+  // Drives the sidebar Pipeline pulse + the rate-limit warning shown on the
+  // Pipeline tab.  This is a SEPARATE polling loop from ``usePipeline`` (which
+  // PipelineView mounts for detailed UI) — App needs only ``running`` and
+  // ``limits``, and a coarser cadence is fine (12s when idle, 5s when running)
+  // because the only consumers here are the sidebar dot + a banner that
+  // renders even when the user is on a different tab.
+  const [pipelineRunning, setPipelineRunning] = useState(false);
+  const [pipelineAbort, setPipelineAbort] =
+    useState<PipelineAbortReason | null>(null);
+  const [pipelineLimits, setPipelineLimits] = useState<PipelineLimits | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const poll = async () => {
+      try {
+        const [status, limits] = await Promise.all([
+          fetchPipelineStatus().catch(() => null),
+          fetchPipelineLimits(),
+        ]);
+        if (cancelled) return;
+        if (status) {
+          setPipelineRunning(Boolean(status.running));
+          const reason = status.last_abort_reason;
+          if (reason && "category" in reason) {
+            setPipelineAbort(reason as PipelineAbortReason);
+          } else {
+            setPipelineAbort(null);
+          }
+        }
+        setPipelineLimits(limits);
+      } finally {
+        if (!cancelled) {
+          // Faster cadence when running so the sidebar pulse drops promptly.
+          const next = pipelineRunning ? 5000 : 12000;
+          timer = setTimeout(() => void poll(), next);
+        }
+      }
+    };
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timer !== null) clearTimeout(timer);
+    };
+    // pipelineRunning intentionally NOT in deps — it's read only to pick the
+    // next delay, and including it would restart the polling loop on every
+    // toggle and create overlapping timers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Live activity pulses on the sidebar. Auto-clears for the active tab.
+  // Declared above the no-token early return so hook order is stable.
+  const pulses = useMemo(() => {
+    const out: Partial<Record<TabId, "accent" | "success" | "warn" | "danger">> = {};
+    const downCount = monitors.filter((m) => m.status === "down").length;
+    if (downCount > 0) out.uptime = "danger";
+    if (blockedIssues.length >= 5) out.dashboard = "warn";
+    // Phase-0.7: green pulse on Pipeline while a batch is running.  Distinct
+    // colour from the warn/danger pulses on other tabs so operators can tell
+    // "active work" from "needs attention" at a glance.
+    if (pipelineRunning) out.pipeline = "success";
+    // Phase-0.7: warn pulse on Pipeline when the previous /pipeline/start
+    // aborted on a recoverable rate-limit (graphql) and the reset time has
+    // not passed yet — invites the operator to wait rather than retry.
+    else if (
+      pipelineAbort &&
+      pipelineAbort.category === "graphql_rate_limit" &&
+      pipelineAbort.retry_after_ts !== null &&
+      pipelineAbort.retry_after_ts * 1000 > Date.now()
+    ) {
+      out.pipeline = "warn";
+    }
+    if (tab in out) delete out[tab];
+    return out;
+  }, [monitors, blockedIssues.length, tab, pipelineRunning, pipelineAbort]);
 
   // Memoized so child components (e.g. ProjectsView) can include this in
   // memo dep arrays without re-running on every parent render.
@@ -120,6 +362,71 @@ function AppInner() {
     if (getToken()) refresh(false); // use cache on initial load
     refreshMonitors();
   }, [refresh, refreshMonitors]);
+
+  // Epic-004 Task-05: one-time port of legacy `localStorage` secrets to the
+  // server-side settings store. Runs once per page session AFTER the gate has
+  // already confirmed `useSettings().ready === true` (AppInner only mounts in
+  // that state), so it's safe to hit `/settings` here. The module itself is
+  // idempotent — the `settings_migration_v1_done` flag short-circuits repeats.
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const result = await runOneTimeMigration();
+        if (!active) return;
+        if (import.meta.env.DEV) {
+          console.info("[settings-migration]", result);
+        }
+        if (result.failed.length > 0) {
+          toast.push({
+            kind: "error",
+            title: "Не все секреты мигрированы",
+            description: `${result.failed.length} ключей не удалось перенести. Попробуйте перезагрузить страницу или открыть Настройки.`,
+          });
+        }
+      } catch (e) {
+        // The migration module already swallows internal errors and returns a
+        // result; this catch is purely defensive against truly unexpected throws.
+        if (import.meta.env.DEV) {
+          console.error("[settings-migration] unexpected:", e);
+        }
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [toast]);
+
+  // Topbar "Обновить" must invalidate every long-lived dashboard cache, not
+  // just useDashboard's. Depend on the individual `.refresh` callbacks (each
+  // is `useCallback`'d inside its hook with stable identity) rather than the
+  // whole hook return objects — the latter would churn handleRefresh's
+  // identity on every state tick (loading flip, lastUpdated update),
+  // defeating Topbar/CommandPalette memoization.
+  const portfolioRefresh = portfolio.refresh;
+  const orphansRefresh = orphans.refresh;
+
+  // Critical health-fails across the portfolio — drives the red badge on the
+  // «Дашборд» nav item. Reads from the same single-source-of-truth portfolio
+  // hook so we don't double-mount the heavy scan in Sidebar.
+  const criticalFails = useMemo(
+    () =>
+      portfolio.reports.reduce(
+        (acc, r) =>
+          acc +
+          r.findings.filter(
+            (f) => f.status === "fail" && f.severity === "critical",
+          ).length,
+        0,
+      ),
+    [portfolio.reports],
+  );
+  const handleRefresh = useCallback(() => {
+    refresh(true);
+    refreshMonitors();
+    portfolioRefresh();
+    orphansRefresh();
+  }, [refresh, refreshMonitors, portfolioRefresh, orphansRefresh]);
 
   const hasToken = !!getToken();
 
@@ -149,7 +456,18 @@ function AppInner() {
     window.location.reload();
   };
 
-  const crumbs = ["Все проекты", TAB_CRUMBS[tab] ?? tab];
+  const crumbs =
+    tab === "projects" && healthRepo
+      ? ["Все проекты", TAB_CRUMBS.projects, healthRepo]
+      : ["Все проекты", TAB_CRUMBS[tab] ?? tab];
+
+  // When on the health sub-page, clicking the "Проекты" crumb (index 1)
+  // returns to the projects list. Other intermediate crumbs are inert.
+  const handleCrumbClick = (i: number) => {
+    if (tab === "projects" && healthRepo && i === 1) {
+      setHealthRepo(null);
+    }
+  };
 
   // Audit alerts placeholder — could read from useAudit later. We expose a
   // dot when there are critical findings; for now keep as undefined to avoid
@@ -160,25 +478,26 @@ function AppInner() {
     <div className="v4-app">
       <Sidebar
         activeTab={tab}
-        onTabChange={setTab}
+        onTabChange={navigateTab}
         projectsCount={projects.length}
         milestonesCount={allMilestones.length}
         monitorsCount={monitors.length}
         auditAlerts={auditAlerts}
+        criticalFails={criticalFails}
+        pulses={pulses}
         isOpen={sideOpen}
         onClose={() => setSideOpen(false)}
       />
       <main className="v4-main">
         <Topbar
           crumbs={crumbs}
+          onCrumbClick={tab === "projects" && healthRepo ? handleCrumbClick : undefined}
           showLive={true}
           lastUpdated={lastUpdated}
-          onRefresh={() => {
-            refresh(true);
-            refreshMonitors();
-          }}
+          onRefresh={handleRefresh}
           refreshing={loading}
           onLogout={handleLogout}
+          onSettings={() => setSettingsOpen(true)}
           onBurger={() => setSideOpen(true)}
         />
 
@@ -203,8 +522,11 @@ function AppInner() {
               blockedIssues={blockedIssues}
               getMonitor={getMonitorForRepo}
               lastUpdated={lastUpdated}
-              onSeeAllProjects={() => setTab("projects")}
+              onSeeAllProjects={() => navigateTab("projects")}
               onFinanceClick={() => setFinanceOpen(true)}
+              onOpenHealth={openHealthForRepo}
+              portfolio={portfolio}
+              orphans={orphans}
             />
           </ErrorBoundary>
         )}
@@ -215,7 +537,9 @@ function AppInner() {
               projects={projects}
               getMonitor={getMonitorForRepo}
               onFinanceClick={() => setFinanceOpen(true)}
-              onJumpToTab={(t) => setTab(t)}
+              onJumpToTab={(t) => navigateTab(t)}
+              selectedRepo={healthRepo}
+              onSelectRepo={setHealthRepo}
             />
           </ErrorBoundary>
         )}
@@ -248,7 +572,12 @@ function AppInner() {
         <div style={{ display: tab === "pipeline" ? undefined : "none" }}>
           {visitedTabs.has("pipeline") && (
             <ErrorBoundary fallback="Ошибка вкладки Pipeline">
-              <PipelineView projects={projects} lastUpdated={lastUpdated} />
+              <PipelineView
+                projects={projects}
+                lastUpdated={lastUpdated}
+                githubLimits={pipelineLimits?.github ?? null}
+                lastAbort={pipelineAbort}
+              />
             </ErrorBoundary>
           )}
         </div>
@@ -306,8 +635,54 @@ function AppInner() {
           onClose={() => setFinanceOpen(false)}
         />
       )}
+
+      {paletteOpen && (
+        <CommandPalette
+          projects={projects}
+          milestones={allMilestones}
+          activeTab={tab}
+          onClose={() => setPaletteOpen(false)}
+          onJumpTab={(t) => { setPaletteOpen(false); navigateTab(t); }}
+          onRefresh={() => { setPaletteOpen(false); handleRefresh(); }}
+          onLogout={() => { setPaletteOpen(false); handleLogout(); }}
+          onOpenFinance={() => { setPaletteOpen(false); setFinanceOpen(true); }}
+        />
+      )}
+
+      {settingsOpen && (
+        <SettingsPanel
+          onClose={() => setSettingsOpen(false)}
+          onBootstrapCleared={() => {
+            // Hard reload so SettingsGate re-mounts useSettings(), sees no
+            // bootstrap token, and renders SettingsBootstrap again.
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
+}
+
+function SettingsGate() {
+  const settings = useSettings();
+  if (!settings.ready) {
+    if (settings.error === "auth") {
+      return <SettingsBootstrap onSuccess={settings.retry} />;
+    }
+    if (settings.error === "unavailable") {
+      return <SettingsUnavailable onRetry={settings.retry} />;
+    }
+    // Initial loading state — short, but render something rather than a blank
+    // page so the user knows the app is alive while loadAllSettings() resolves.
+    return (
+      <div className="v4-app" style={{ gridTemplateColumns: "1fr", minHeight: "100vh" }}>
+        <main className="v4-main">
+          <div className="v4-loading">Загрузка настроек…</div>
+        </main>
+      </div>
+    );
+  }
+  return <AppInner />;
 }
 
 function App() {
@@ -317,7 +692,11 @@ function App() {
     return <PasswordGate onAuth={() => setAuthed(true)} />;
   }
 
-  return <AppInner />;
+  return (
+    <ToastHost>
+      <SettingsGate />
+    </ToastHost>
+  );
 }
 
 export default App;

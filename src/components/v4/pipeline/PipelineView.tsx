@@ -6,6 +6,8 @@ import {
   type ClassifyProgress,
   type ClassifyResponse,
   type ComplexityFilter,
+  type PipelineAbortReason,
+  type PipelineLimits,
   type PipelineResult,
 } from "../../../utils/pipeline";
 import type { ProjectData } from "../../../types";
@@ -13,6 +15,7 @@ import { IssueTimeline } from "../../IssueTimeline";
 import { QualityPanel } from "../../QualityPanel";
 import { ConfigPanel, type LabelOption } from "./ConfigPanel";
 import { PipelineHero } from "./PipelineHero";
+import { PipelineStatusBanners } from "./PipelineStatusBanners";
 import { PipelineKpiStrip } from "./PipelineKpiStrip";
 import { PipelineActiveTasksBlock } from "../../PipelineActiveTasksBlock";
 import { PipelineResults } from "./PipelineResults";
@@ -24,6 +27,10 @@ import { sumCost } from "./utils";
 interface Props {
   projects: ProjectData[];
   lastUpdated: Date | null;
+  /** Phase-0.7: GitHub rate-limit buckets; ``null`` when probe unavailable. */
+  githubLimits?: PipelineLimits["github"];
+  /** Phase-0.7: structured reason for the previous /pipeline/start abort. */
+  lastAbort?: PipelineAbortReason | null;
 }
 
 const STORAGE = {
@@ -34,7 +41,12 @@ const STORAGE = {
   configOpen: "pipeline_v4_config_open",
 };
 
-export function PipelineView({ projects, lastUpdated }: Props) {
+export function PipelineView({
+  projects,
+  lastUpdated,
+  githubLimits,
+  lastAbort,
+}: Props) {
   const {
     available,
     status,
@@ -237,6 +249,8 @@ export function PipelineView({ projects, lastUpdated }: Props) {
       </div>
 
       <div style={{ height: 10 }} />
+
+      <PipelineStatusBanners githubLimits={githubLimits} lastAbort={lastAbort} />
 
       <PipelineHero
         available={available}

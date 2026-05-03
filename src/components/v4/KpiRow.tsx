@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { ProjectData, SummaryMetrics } from "../../types";
 import {
   calcPortfolioVelocity,
@@ -6,6 +7,11 @@ import {
   calcProgressDelta,
   sumOpenPriorities,
 } from "../../utils/dashboardMetrics";
+import { TweenedNumber } from "./TweenedNumber";
+
+interface IndexedStyle extends CSSProperties {
+  "--i"?: number;
+}
 
 interface Props {
   projects: ProjectData[];
@@ -21,24 +27,175 @@ function compactUSD(n: number): string {
   return `$${n}`;
 }
 
-function formatNumber1d(n: number): string {
-  return (Math.round(n * 10) / 10).toString().replace(".", ",");
+const SPARK_W = 240;
+const SPARK_H = 52;
+const SPARK_P = 4;
+
+interface SparkGeom {
+  line: string;
+  area: string;
+  pts: ReadonlyArray<readonly [number, number]>;
 }
 
-function buildSparkPath(values: number[], width: number, height: number): { line: string; area: string } {
-  if (values.length === 0) return { line: "", area: "" };
+function buildSpark(values: number[]): SparkGeom {
+  if (values.length === 0) return { line: "", area: "", pts: [] };
   const max = Math.max(...values, 1);
-  const stepX = values.length > 1 ? width / (values.length - 1) : width;
-  const points = values.map((v, i) => {
-    const x = i * stepX;
-    const y = height - (v / max) * (height - 2) - 1;
-    return [x, y] as const;
+  const min = Math.min(...values, 0);
+  const span = max - min || 1;
+  const stepX = (SPARK_W - SPARK_P * 2) / Math.max(1, values.length - 1);
+  const pts = values.map<readonly [number, number]>((v, i) => {
+    const x = SPARK_P + i * stepX;
+    const y = SPARK_P + (SPARK_H - SPARK_P * 2) - ((v - min) / span) * (SPARK_H - SPARK_P * 2);
+    return [x, y];
   });
-  const line = points
-    .map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`)
-    .join(" ");
-  const area = `${line} L${points[points.length - 1][0].toFixed(1)},${height} L0,${height} Z`;
-  return { line, area };
+  let line = `M ${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 1; i < pts.length; i++) {
+    const [px, py] = pts[i - 1];
+    const [x, y] = pts[i];
+    const cx = (px + x) / 2;
+    line += ` C ${cx} ${py}, ${cx} ${y}, ${x} ${y}`;
+  }
+  const last = pts[pts.length - 1];
+  const area = `${line} L ${last[0]} ${SPARK_H} L ${pts[0][0]} ${SPARK_H} Z`;
+  return { line, area, pts };
+}
+
+function VelocitySpark({ values }: { values: number[] }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [hover, setHover] = useState<{ idx: number; x: number; y: number } | null>(null);
+  const geom = useMemo(() => buildSpark(values), [values]);
+  if (!geom.pts.length) return <div className="v4-kpi-spark" />;
+
+  const handleMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const relX = ((e.clientX - rect.left) / rect.width) * SPARK_W;
+    let best = 0;
+    let bd = Infinity;
+    for (let i = 0; i < geom.pts.length; i++) {
+      const d = Math.abs(geom.pts[i][0] - relX);
+      if (d < bd) {
+        bd = d;
+        best = i;
+      }
+    }
+    setHover({ idx: best, x: geom.pts[best][0], y: geom.pts[best][1] });
+  };
+
+  const daysAgo = (idx: number) => {
+    const back = values.length - 1 - idx;
+    if (back === 0) return "сегодня";
+    if (back === 1) return "вчера";
+    return `${back} дн. назад`;
+  };
+
+  const pctX = hover ? (hover.x / SPARK_W) * 100 : 0;
+  const flip = pctX > 65;
+
+  return (
+    <div
+      ref={ref}
+      className="v4-kpi-spark"
+      onMouseMove={handleMove}
+      onMouseLeave={() => setHover(null)}
+    >
+      <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="kpi-vel-area" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#12B76A" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="#12B76A" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        <path d={geom.area} fill="url(#kpi-vel-area)" />
+        <path
+          d={geom.line}
+          fill="none"
+          stroke="var(--v4-success-500)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {hover && (
+          <g pointerEvents="none">
+            <line
+              x1={hover.x}
+              x2={hover.x}
+              y1={SPARK_P}
+              y2={SPARK_H}
+              stroke="var(--v4-success-500)"
+              strokeWidth="1"
+              strokeDasharray="2 2"
+              opacity="0.5"
+            />
+            <circle cx={hover.x} cy={hover.y} r="6" fill="var(--v4-success-500)" opacity="0.18" />
+            <circle
+              cx={hover.x}
+              cy={hover.y}
+              r="3.5"
+              fill="#fff"
+              stroke="var(--v4-success-500)"
+              strokeWidth="2"
+            />
+          </g>
+        )}
+      </svg>
+      {hover && (
+        <div
+          className="v4-kpi-spark-tip"
+          style={{
+            left: `${pctX}%`,
+            transform: flip
+              ? "translate(calc(-100% - 10px), 0)"
+              : "translate(10px, 0)",
+          }}
+        >
+          <div className="v4-kpi-spark-tip-l">{daysAgo(hover.idx)}</div>
+          <div className="v4-kpi-spark-tip-v">
+            {values[hover.idx]}
+            <small>задач/день</small>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface SplitItem {
+  key: string;
+  n: ReactNode;
+  l: string;
+  color?: string;
+}
+
+function SplitsRow({
+  items,
+  accent = false,
+}: {
+  items: SplitItem[];
+  accent?: boolean;
+}) {
+  const [hovered, setHovered] = useState<string | null>(null);
+  return (
+    <div className={`v4-kpi-splits${accent ? " v4-kpi-splits--acc" : ""}`}>
+      {items.map((s) => (
+        <div
+          key={s.key}
+          className={`v4-kpi-split${hovered === s.key ? " is-on" : ""}`}
+          onMouseEnter={() => setHovered(s.key)}
+          onMouseLeave={() => setHovered(null)}
+        >
+          <div
+            className="v4-kpi-split-n"
+            style={s.color ? { color: s.color } : undefined}
+          >
+            {s.n}
+          </div>
+          <div className="v4-kpi-split-l">{s.l}</div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function KpiRow({ projects, summary, onFinanceClick }: Props) {
@@ -47,149 +204,184 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
   const progressDelta = useMemo(() => calcProgressDelta(projects), [projects]);
   const priorityTotals = useMemo(() => sumOpenPriorities(projects), [projects]);
 
-  const pctDone = summary.totalIssues > 0
-    ? Math.round((summary.doneCount / summary.totalIssues) * 100)
-    : 0;
-
-  const spark = buildSparkPath(velocity.daily28d, 200, 42);
+  const pctDone =
+    summary.totalIssues > 0
+      ? Math.round((summary.doneCount / summary.totalIssues) * 100)
+      : 0;
 
   const hasFinances = summary.totalBudget > 0;
-  const paidPct = hasFinances ? Math.round((summary.totalPaid / summary.totalBudget) * 100) : 0;
-  const remainingPct = hasFinances ? 100 - paidPct : 0;
+  const paidPct = hasFinances
+    ? Math.round((summary.totalPaid / summary.totalBudget) * 100)
+    : 0;
+  const remPct = hasFinances ? 100 - paidPct : 0;
 
-  const monthName = new Date().toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+  const monthName = new Date().toLocaleDateString("ru-RU", {
+    month: "long",
+    year: "numeric",
+  });
 
-  const velocityDeltaSign = velocity.delta7dVsPrev >= 0 ? "↑" : "↓";
-  const velocityDeltaAbs = Math.abs(velocity.delta7dVsPrev);
-
-  const openDeltaSign = openDelta.netDelta7d > 0 ? "↑" : openDelta.netDelta7d < 0 ? "↓" : "→";
-  const openDeltaClass =
-    openDelta.netDelta7d > 0 ? "v4-kpi-delta--neg" : "v4-kpi-delta--pos";
+  const [budgetSeg, setBudgetSeg] = useState<"paid" | "rem" | null>(null);
+  const isVelDown = velocity.delta7dVsPrev < 0;
+  const isVelUp = velocity.delta7dVsPrev > 0;
 
   return (
     <div className="v4-kpi-row">
       {/* 1. Прогресс портфеля (accent) */}
-      <div className="v4-kpi v4-kpi--acc">
+      <div className="v4-kpi v4-kpi--acc" style={{ "--i": 0 } as IndexedStyle}>
         <div className="v4-kpi-lbl">
           <span className="v4-kpi-ic">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 11 12 14 22 4" />
               <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
             </svg>
           </span>
           Прогресс портфеля
         </div>
-        <div className="v4-kpi-val num">
-          {pctDone}
-          <span className="v4-u">%</span>
-        </div>
-        <div className="v4-kpi-meta">
-          {progressDelta.pointsDelta7d !== 0 ? (
-            <>
-              <span className={progressDelta.pointsDelta7d >= 0 ? "v4-kpi-delta--pos" : "v4-kpi-delta--neg"}>
-                {progressDelta.pointsDelta7d >= 0 ? "↑" : "↓"}{" "}
-                {Math.abs(progressDelta.pointsDelta7d).toString().replace(".", ",")} п.п.
-              </span>
-              <span className="v4-kpi-vs">за 7 дней</span>
-            </>
-          ) : (
-            <span className="v4-kpi-vs">без изменений за 7 дней</span>
+        <div className="v4-kpi-num-row">
+          <span className="v4-kpi-num num">
+            <TweenedNumber value={pctDone} />
+          </span>
+          <span className="v4-kpi-num-u">%</span>
+          {progressDelta.pointsDelta7d !== 0 && (
+            <span
+              className={`v4-kpi-delta-chip v4-kpi-delta-chip--${
+                progressDelta.pointsDelta7d >= 0 ? "pos" : "neg"
+              } v4-kpi-delta-chip--on-acc`}
+            >
+              {progressDelta.pointsDelta7d >= 0 ? "↑" : "↓"}{" "}
+              {Math.abs(progressDelta.pointsDelta7d)
+                .toString()
+                .replace(".", ",")}{" "}
+              п.п.
+            </span>
           )}
         </div>
-        <div className="v4-kpi-splits">
-          <div className="v4-kpi-split">
-            <div className="v4-kpi-split-n">{summary.totalIssues}</div>
-            <div className="v4-kpi-split-l">Всего</div>
-          </div>
-          <div className="v4-kpi-split">
-            <div className="v4-kpi-split-n">{summary.doneCount}</div>
-            <div className="v4-kpi-split-l">Сделано</div>
-          </div>
-          <div className="v4-kpi-split">
-            <div className="v4-kpi-split-n">{summary.openCount}</div>
-            <div className="v4-kpi-split-l">Открыто</div>
-          </div>
+        <div className="v4-kpi-sub">
+          {progressDelta.pointsDelta7d === 0 ? "без изменений за 7 дней" : "за 7 дней"}
         </div>
+        <SplitsRow
+          accent
+          items={[
+            {
+              key: "total",
+              n: <TweenedNumber value={summary.totalIssues} />,
+              l: "Всего",
+            },
+            {
+              key: "done",
+              n: <TweenedNumber value={summary.doneCount} />,
+              l: "Сделано",
+            },
+            {
+              key: "open",
+              n: <TweenedNumber value={summary.openCount} />,
+              l: "Открыто",
+            },
+          ]}
+        />
       </div>
 
       {/* 2. Открытые задачи */}
-      <div className="v4-kpi">
+      <div className="v4-kpi" style={{ "--i": 1 } as IndexedStyle}>
         <div className="v4-kpi-lbl">
           <span className="v4-kpi-ic v4-kpi-ic--b">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M9 12l2 2 4-4M12 22a10 10 0 110-20 10 10 0 010 20z" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M9 12l2 2 4-4" />
             </svg>
           </span>
           Открытые задачи
         </div>
-        <div className="v4-kpi-val num">{summary.openCount}</div>
-        <div className="v4-kpi-meta">
-          {openDelta.netDelta7d !== 0 ? (
-            <>
-              <span className={openDeltaClass}>
-                {openDeltaSign} {Math.abs(openDelta.netDelta7d)}
-              </span>
-              <span className="v4-kpi-vs">net за 7 дней</span>
-            </>
-          ) : (
-            <span className="v4-kpi-vs">без изменений за 7 дней</span>
+        <div className="v4-kpi-num-row">
+          <span className="v4-kpi-num num">
+            <TweenedNumber value={summary.openCount} />
+          </span>
+          {openDelta.netDelta7d !== 0 && (
+            <span
+              className={`v4-kpi-delta-chip v4-kpi-delta-chip--${
+                openDelta.netDelta7d > 0 ? "neg" : "pos"
+              }`}
+            >
+              {openDelta.netDelta7d > 0 ? "↑" : "↓"}{" "}
+              {Math.abs(openDelta.netDelta7d)}
+            </span>
           )}
         </div>
-        <div className="v4-kpi-splits">
-          <div className="v4-kpi-split">
-            <div className="v4-kpi-split-n" style={{ color: "var(--v4-p1)" }}>{priorityTotals.P1}</div>
-            <div className="v4-kpi-split-l">P1</div>
-          </div>
-          <div className="v4-kpi-split">
-            <div className="v4-kpi-split-n" style={{ color: "var(--v4-p2)" }}>{priorityTotals.P2}</div>
-            <div className="v4-kpi-split-l">P2</div>
-          </div>
-          <div className="v4-kpi-split">
-            <div className="v4-kpi-split-n" style={{ color: "var(--v4-p3)" }}>{priorityTotals.P3}</div>
-            <div className="v4-kpi-split-l">P3</div>
-          </div>
+        <div className="v4-kpi-sub">
+          {openDelta.netDelta7d === 0
+            ? "без изменений за 7 дней"
+            : "net за 7 дней"}
         </div>
+        <SplitsRow
+          items={[
+            {
+              key: "P1",
+              n: <TweenedNumber value={priorityTotals.P1} />,
+              l: "P1",
+              color: "var(--v4-p1)",
+            },
+            {
+              key: "P2",
+              n: <TweenedNumber value={priorityTotals.P2} />,
+              l: "P2",
+              color: "var(--v4-p2)",
+            },
+            {
+              key: "P3",
+              n: <TweenedNumber value={priorityTotals.P3} />,
+              l: "P3",
+              color: "var(--v4-p3)",
+            },
+          ]}
+        />
       </div>
 
-      {/* 3. Velocity 7д + sparkline */}
-      <div className="v4-kpi">
+      {/* 3. Velocity 7д + sparkline (hover tooltip) */}
+      <div className="v4-kpi" style={{ "--i": 2 } as IndexedStyle}>
         <div className="v4-kpi-lbl">
           <span className="v4-kpi-ic v4-kpi-ic--p">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M13 2L3 14h7l-1 8 11-13h-8l1-7z" />
             </svg>
           </span>
           Velocity · 7 дней
         </div>
-        <div className="v4-kpi-val num">
-          {formatNumber1d(velocity.perDay7d)}
-          <span className="v4-u">/день</span>
-        </div>
-        <div className="v4-kpi-meta">
-          {velocity.delta7dVsPrev !== 0 ? (
-            <>
-              <span className={velocity.delta7dVsPrev >= 0 ? "v4-kpi-delta--pos" : "v4-kpi-delta--neg"}>
-                {velocityDeltaSign} {velocityDeltaAbs}%
-              </span>
-              <span className="v4-kpi-vs">vs. предыдущая неделя</span>
-            </>
-          ) : (
-            <span className="v4-kpi-vs">28-дн. ритм закрытия</span>
+        <div className="v4-kpi-num-row">
+          <span className="v4-kpi-num num">
+            <TweenedNumber
+              value={velocity.perDay7d}
+              decimals={1}
+              decimalSeparator=","
+            />
+          </span>
+          <span className="v4-kpi-num-u">issue/день</span>
+          {velocity.delta7dVsPrev !== 0 && (
+            <span
+              className={`v4-kpi-delta-chip v4-kpi-delta-chip--${
+                isVelDown ? "neg" : "pos"
+              }`}
+            >
+              {isVelUp ? "↑" : "↓"} {Math.abs(velocity.delta7dVsPrev)}%
+            </span>
           )}
         </div>
-        <div className="v4-kpi-spark">
-          <svg viewBox="0 0 200 42" preserveAspectRatio="none">
-            {spark.area && <path d={spark.area} fill="rgba(18,183,106,0.12)" />}
-            {spark.line && (
-              <path d={spark.line} fill="none" stroke="var(--v4-success-500)" strokeWidth="2" />
-            )}
-          </svg>
+        <div className="v4-kpi-sub">
+          {velocity.delta7dVsPrev === 0
+            ? "28-дн. ритм закрытия"
+            : "vs. предыдущая неделя"}
         </div>
+        <VelocitySpark values={velocity.daily28d} />
       </div>
 
       {/* 4. Бюджет */}
       <div
         className="v4-kpi"
+        style={
+          {
+            "--i": 3,
+            ...(onFinanceClick ? { cursor: "pointer" } : null),
+          } as IndexedStyle
+        }
         onClick={onFinanceClick}
         role={onFinanceClick ? "button" : undefined}
         tabIndex={onFinanceClick ? 0 : undefined}
@@ -199,51 +391,75 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
             onFinanceClick();
           }
         }}
-        style={onFinanceClick ? { cursor: "pointer" } : undefined}
         aria-label={onFinanceClick ? "Открыть редактор финансов" : undefined}
       >
         <div className="v4-kpi-lbl">
           <span className="v4-kpi-ic v4-kpi-ic--g">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v20" />
+              <path d="M17 6H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
             </svg>
           </span>
           Бюджет портфеля
         </div>
-        <div className="v4-kpi-val num">{compactUSD(summary.totalBudget)}</div>
-        <div className="v4-kpi-meta">
-          <span className="v4-kpi-vs">
-            {monthName} · оплачено {paidPct}%
-          </span>
+        <div className="v4-kpi-num-row">
+          <span className="v4-kpi-num num">{compactUSD(summary.totalBudget)}</span>
+        </div>
+        <div className="v4-kpi-sub">
+          {monthName} · оплачено {paidPct}%
         </div>
         {hasFinances ? (
           <div className="v4-fin-bar">
             <div className="v4-fin-bar-stk">
-              <div className="v4-pp" style={{ width: `${paidPct}%` }} />
-              <div className="v4-ip" style={{ width: `${remainingPct}%`, background: "var(--v4-surface-3)" }} />
+              <div
+                className={`v4-pp${budgetSeg === "paid" ? " is-on" : ""}`}
+                style={{ width: `${paidPct}%` }}
+                onMouseEnter={() => setBudgetSeg("paid")}
+                onMouseLeave={() => setBudgetSeg(null)}
+              />
+              <div
+                className={`v4-ip${budgetSeg === "rem" ? " is-on" : ""}`}
+                style={{ width: `${remPct}%` }}
+                onMouseEnter={() => setBudgetSeg("rem")}
+                onMouseLeave={() => setBudgetSeg(null)}
+              />
             </div>
             <div className="v4-fin-lg">
-              <span className="v4-fin-lg-i">
-                <span className="v4-fin-lg-sw" style={{ background: "var(--v4-success-500)" }} />
+              <span
+                className={`v4-fin-lg-i${budgetSeg === "paid" ? " is-on" : ""}`}
+              >
+                <span
+                  className="v4-fin-lg-sw"
+                  style={{ background: "var(--v4-success-500)" }}
+                />
                 Оплачено <b>{compactUSD(summary.totalPaid)}</b>
               </span>
-              <span className="v4-fin-lg-i">
-                <span className="v4-fin-lg-sw" style={{ background: "var(--v4-surface-3)" }} />
+              <span
+                className={`v4-fin-lg-i${budgetSeg === "rem" ? " is-on" : ""}`}
+              >
+                <span
+                  className="v4-fin-lg-sw v4-fin-lg-sw--out"
+                />
                 Остаток <b>{compactUSD(summary.totalRemaining)}</b>
               </span>
             </div>
           </div>
         ) : (
-          <div className="v4-kpi-splits">
-            <div className="v4-kpi-split">
-              <div className="v4-kpi-split-n" style={{ color: "var(--v4-success-700)" }}>{compactUSD(summary.totalPaid)}</div>
-              <div className="v4-kpi-split-l">Оплачено</div>
-            </div>
-            <div className="v4-kpi-split">
-              <div className="v4-kpi-split-n">{compactUSD(summary.totalRemaining)}</div>
-              <div className="v4-kpi-split-l">Остаток</div>
-            </div>
-          </div>
+          <SplitsRow
+            items={[
+              {
+                key: "paid",
+                n: compactUSD(summary.totalPaid),
+                l: "Оплачено",
+                color: "var(--v4-success-700)",
+              },
+              {
+                key: "rem",
+                n: compactUSD(summary.totalRemaining),
+                l: "Остаток",
+              },
+            ]}
+          />
         )}
       </div>
     </div>

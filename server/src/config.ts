@@ -4,7 +4,11 @@ import type { ProjectConfig } from "./types";
 export const GITHUB_TOKEN = process.env.GITHUB_TOKEN || "";
 export const GITHUB_OWNER = process.env.GITHUB_OWNER || "Sergio1990-1";
 export const GITHUB_PROJECT_NUMBER = parseInt(process.env.GITHUB_PROJECT_NUMBER || "1", 10);
-export const SYNC_INTERVAL = parseInt(process.env.SYNC_INTERVAL || "300000", 10); // 5 min default
+// 15 min default keeps GitHub GraphQL load under the 5 000-points/hour budget
+// after the milestone-issues hydration optimization. At 1 097 points per sync,
+// 4 syncs/hour ≈ 4 388 points — fits with headroom for the dashboard's
+// occasional direct fallback.
+export const SYNC_INTERVAL = parseInt(process.env.SYNC_INTERVAL || "900000", 10);
 export const PORT = parseInt(process.env.PORT || "8767", 10);
 export const SYNC_API_KEY = process.env.SYNC_API_KEY || ""; // empty = no auth required
 

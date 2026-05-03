@@ -12,12 +12,14 @@ export type IssueStatus = "Todo" | "In Progress" | "Review" | "Done";
 
 export interface Issue {
   id: string;
+  number: number | null;
   title: string;
   url: string;
   status: IssueStatus;
   priority: Priority | null;
   labels: string[];
   repo: string;
+  milestoneTitle: string | null;
   isBlocked: boolean;
   createdAt: string;
   updatedAt: string;

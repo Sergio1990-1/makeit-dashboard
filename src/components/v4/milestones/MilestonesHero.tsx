@@ -1,9 +1,9 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Milestone, ProjectData } from "../../../types";
 import { daysUntil } from "../../../utils/date";
 import { calcPortfolioVelocity } from "../../../utils/dashboardMetrics";
 import { classifyMilestone } from "./classifyMilestone";
-import { buildSparkPath, stripEpicPrefix } from "./utils";
+import { stripEpicPrefix } from "./utils";
 
 interface Props {
   /** Open milestones — drives portfolio stats, deadlines, status counts. */
@@ -18,8 +18,135 @@ interface Props {
   now: Date;
 }
 
-const RING_R = 46;
+const RING_R = 48;
 const RING_C = 2 * Math.PI * RING_R;
+
+const SPARK_W = 220;
+const SPARK_H = 44;
+const SPARK_P = 4;
+
+interface SparkGeom {
+  line: string;
+  area: string;
+  pts: ReadonlyArray<readonly [number, number]>;
+}
+
+function buildSpark(values: number[]): SparkGeom {
+  if (values.length === 0) return { line: "", area: "", pts: [] };
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
+  const span = max - min || 1;
+  const stepX = (SPARK_W - SPARK_P * 2) / Math.max(1, values.length - 1);
+  const pts = values.map<readonly [number, number]>((v, i) => {
+    const x = SPARK_P + i * stepX;
+    const y =
+      SPARK_P + (SPARK_H - SPARK_P * 2) - ((v - min) / span) * (SPARK_H - SPARK_P * 2);
+    return [x, y];
+  });
+  let line = `M ${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 1; i < pts.length; i++) {
+    const [px, py] = pts[i - 1];
+    const [x, y] = pts[i];
+    const cx = (px + x) / 2;
+    line += ` C ${cx} ${py}, ${cx} ${y}, ${x} ${y}`;
+  }
+  const last = pts[pts.length - 1];
+  const area = `${line} L ${last[0]} ${SPARK_H} L ${pts[0][0]} ${SPARK_H} Z`;
+  return { line, area, pts };
+}
+
+function VelocitySpark({ values }: { values: number[] }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [hover, setHover] = useState<{ idx: number; x: number; y: number } | null>(null);
+  const geom = useMemo(() => buildSpark(values), [values]);
+  if (!geom.pts.length) return <div className="v4-mshero-spark" />;
+
+  const handleMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const relX = ((e.clientX - rect.left) / rect.width) * SPARK_W;
+    let best = 0;
+    let bd = Infinity;
+    for (let i = 0; i < geom.pts.length; i++) {
+      const d = Math.abs(geom.pts[i][0] - relX);
+      if (d < bd) {
+        bd = d;
+        best = i;
+      }
+    }
+    setHover({ idx: best, x: geom.pts[best][0], y: geom.pts[best][1] });
+  };
+
+  const daysAgo = (idx: number) => {
+    const back = values.length - 1 - idx;
+    if (back === 0) return "сегодня";
+    if (back === 1) return "вчера";
+    return `${back} дн. назад`;
+  };
+
+  const pctX = hover ? (hover.x / SPARK_W) * 100 : 0;
+  const flip = pctX > 65;
+
+  return (
+    <div
+      ref={ref}
+      className="v4-mshero-spark"
+      onMouseMove={handleMove}
+      onMouseLeave={() => setHover(null)}
+    >
+      <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="ms-vel-area" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#12B76A" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="#12B76A" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        <path d={geom.area} className="v4-mshero-spark-area" fill="url(#ms-vel-area)" />
+        <path d={geom.line} className="v4-mshero-spark-line" />
+        {hover && (
+          <g pointerEvents="none">
+            <line
+              x1={hover.x}
+              x2={hover.x}
+              y1={SPARK_P}
+              y2={SPARK_H}
+              stroke="var(--v4-success-500)"
+              strokeWidth="1"
+              strokeDasharray="2 2"
+              opacity="0.5"
+            />
+            <circle cx={hover.x} cy={hover.y} r="6" fill="var(--v4-success-500)" opacity="0.18" />
+            <circle
+              cx={hover.x}
+              cy={hover.y}
+              r="3.5"
+              fill="#fff"
+              stroke="var(--v4-success-500)"
+              strokeWidth="2"
+            />
+          </g>
+        )}
+      </svg>
+      {hover && (
+        <div
+          className="v4-mshero-spark-tip is-on"
+          style={{
+            left: `${pctX}%`,
+            transform: flip
+              ? "translate(calc(-100% - 10px), 0)"
+              : "translate(10px, 0)",
+          }}
+        >
+          <div className="v4-mshero-spark-tip-l">{daysAgo(hover.idx)}</div>
+          <div className="v4-mshero-spark-tip-v">
+            {values[hover.idx]} <small>задач/день</small>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function MilestonesHero({ milestones, projects, now }: Props) {
   const stats = useMemo(() => {
@@ -40,9 +167,6 @@ export function MilestonesHero({ milestones, projects, now }: Props) {
     ).length;
     const done = enriched.filter((x) => x.cls === "done").length;
 
-    // Velocity — reuse the dashboard's portfolio calc against project-items
-    // (full set of issues with closedAt, no first:50 limit). Falls back to a
-    // milestone-issue scan if no projects passed in.
     let velocityPerDay = 0;
     let velocityDelta = 0;
     let daily14: number[] = new Array(14).fill(0);
@@ -50,11 +174,9 @@ export function MilestonesHero({ milestones, projects, now }: Props) {
       const v = calcPortfolioVelocity(projects);
       velocityPerDay = v.perDay7d;
       velocityDelta = v.delta7dVsPrev;
-      // calcPortfolioVelocity returns daily28d — use the trailing 14 for spark
       daily14 = v.daily28d.slice(-14);
     }
 
-    // Next deadline (skip done & noeta, only future or today)
     const upcoming = enriched
       .filter((x) => x.cls !== "done" && x.days !== null && x.days >= 0)
       .sort((a, b) => (a.days ?? 0) - (b.days ?? 0))[0];
@@ -88,41 +210,54 @@ export function MilestonesHero({ milestones, projects, now }: Props) {
     };
   }, [milestones, projects, now]);
 
-  const spark = buildSparkPath(stats.daily14, 220, 36);
   const velocityStr = stats.velocityPerDay.toFixed(1).replace(".", ",");
+
+  // Animate the ring stroke once stats settle. Drive the offset through React
+  // state so we don't fight the JSX `strokeDashoffset` prop on re-render. On
+  // stat refreshes the CSS transition tweens directly from the previous offset
+  // to the new one — no need to reset to RING_C in between.
+  const targetOffset = RING_C * (1 - stats.pct / 100);
+  const [ringOffset, setRingOffset] = useState(RING_C);
+  useEffect(() => {
+    const t = window.setTimeout(() => setRingOffset(targetOffset), 50);
+    return () => window.clearTimeout(t);
+  }, [targetOffset]);
 
   return (
     <div className="v4-mshero">
       {/* DOMINANT: portfolio progress */}
       <div className="v4-mshero-tile v4-mshero-tile--main">
         <div className="v4-mshero-lbl">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="9 11 12 14 22 4" />
-            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
-          </svg>
+          <span className="v4-mshero-lbl-ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 11 12 14 22 4" />
+              <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+            </svg>
+          </span>
           Портфель milestones
         </div>
         <div className="v4-mshero-main-body">
           <div className="v4-mshero-ring">
-            <svg viewBox="0 0 110 110" aria-hidden="true">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
               <circle
-                cx="55"
-                cy="55"
+                cx="60"
+                cy="60"
                 r={RING_R}
                 fill="none"
-                stroke="rgba(255,255,255,0.15)"
-                strokeWidth="8"
+                stroke="rgba(255,255,255,0.18)"
+                strokeWidth="9"
               />
               <circle
-                cx="55"
-                cy="55"
+                className="v4-mshero-ring-fg"
+                cx="60"
+                cy="60"
                 r={RING_R}
                 fill="none"
                 stroke="#fff"
-                strokeWidth="8"
-                strokeDasharray={RING_C}
-                strokeDashoffset={RING_C * (1 - stats.pct / 100)}
+                strokeWidth="9"
                 strokeLinecap="round"
+                strokeDasharray={RING_C}
+                strokeDashoffset={ringOffset}
               />
             </svg>
             <div className="v4-mshero-ring-c">
@@ -159,59 +294,51 @@ export function MilestonesHero({ milestones, projects, now }: Props) {
       {/* SUPPORT 1: velocity */}
       <div className="v4-mshero-tile">
         <div className="v4-mshero-lbl">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-          </svg>
+          <span className="v4-mshero-lbl-ic" style={{ color: "#7C3AED" }}>
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M13 2L3 14h7l-1 8 11-13h-8l1-7z" />
+            </svg>
+          </span>
           Velocity · 7 дней
         </div>
-        <div className="v4-mshero-num num">
-          {velocityStr}
+        <div className="v4-mshero-num-row">
+          <span className="v4-mshero-num num">{velocityStr}</span>
           <span className="v4-mshero-num-u">issue/день</span>
-        </div>
-        <div className="v4-mshero-meta">
           {stats.velocityDelta !== 0 && (
             <span
-              className={
-                stats.velocityDelta >= 0
-                  ? "v4-mshero-delta-pos"
-                  : "v4-mshero-delta-neg"
-              }
+              className={`v4-mshero-delta-chip v4-mshero-delta-chip--${
+                stats.velocityDelta >= 0 ? "pos" : "neg"
+              }`}
             >
               {stats.velocityDelta >= 0 ? "↑" : "↓"} {Math.abs(stats.velocityDelta)}%
             </span>
           )}
-          <span>vs предыдущая неделя</span>
         </div>
-        <div className="v4-mshero-spark">
-          <svg viewBox="0 0 220 36" preserveAspectRatio="none" aria-hidden="true">
-            <path d={spark.area} fill="rgba(18,183,106,0.12)" />
-            <path
-              d={spark.line}
-              fill="none"
-              stroke="var(--v4-success-500)"
-              strokeWidth="2"
-            />
-          </svg>
-        </div>
+        <div className="v4-mshero-meta">vs. предыдущая неделя</div>
+        <VelocitySpark values={stats.daily14} />
       </div>
 
       {/* SUPPORT 2: next deadline */}
       <div className="v4-mshero-tile">
         <div className="v4-mshero-lbl">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" />
-            <path d="M16 2v4M8 2v4M3 10h18" />
-          </svg>
+          <span className="v4-mshero-lbl-ic" style={{ color: "#16A34A" }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="M16 2v4M8 2v4M3 10h18" />
+            </svg>
+          </span>
           Ближайший дедлайн
         </div>
-        <div className="v4-mshero-num num">
+        <div className="v4-mshero-num-row">
           {stats.upcoming === undefined ? (
-            "—"
+            <span className="v4-mshero-num num">—</span>
           ) : stats.upcoming.days === 0 ? (
-            "сегодня"
+            <span className="v4-mshero-num num" style={{ fontSize: 32 }}>
+              сегодня
+            </span>
           ) : (
             <>
-              {stats.upcoming.days}
+              <span className="v4-mshero-num num">{stats.upcoming.days}</span>
               <span className="v4-mshero-num-u">дн</span>
             </>
           )}

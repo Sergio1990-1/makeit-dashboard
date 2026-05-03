@@ -55,6 +55,30 @@ export function buildProjectData(
   repoIssues: Issue[],
   repoInfo: RepoInfo
 ): ProjectData {
+  // Hydrate milestone.issues from PROJECT_ITEMS_QUERY data instead of pulling
+  // them inside REPO_INFO_QUERY (which previously cost ~10× more per repo).
+  const issuesByMilestone = new Map<string, Issue[]>();
+  for (const i of repoIssues) {
+    if (!i.milestoneTitle) continue;
+    const arr = issuesByMilestone.get(i.milestoneTitle);
+    if (arr) arr.push(i); else issuesByMilestone.set(i.milestoneTitle, [i]);
+  }
+  const hydratedMilestones = repoInfo.milestones.map((m) => ({
+    ...m,
+    // Sort by createdAt ASC to match the previous REPO_INFO_QUERY ordering.
+    issues: (issuesByMilestone.get(m.title) ?? [])
+      .filter((i) => i.number !== null)
+      .slice()
+      .sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""))
+      .map((i) => ({
+        number: i.number as number,
+        title: i.title,
+        state: (i.closedAt ? "CLOSED" : "OPEN") as "OPEN" | "CLOSED",
+        labels: i.labels,
+        url: i.url,
+      })),
+  }));
+
   // Priority counts — only for non-Done issues (line 470-473)
   const priorityCounts: Record<Priority, number> = { P1: 0, P2: 0, P3: 0, P4: 0 };
   for (const issue of repoIssues) {
@@ -121,7 +145,7 @@ export function buildProjectData(
     openCount,
     doneCount,
     totalCount,
-    milestones: repoInfo.milestones,
+    milestones: hydratedMilestones,
     // Financial data is client-side only; backend returns zeros
     budget: 0,
     paid: 0,

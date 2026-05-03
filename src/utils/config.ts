@@ -1,4 +1,5 @@
 import type { ProjectConfig } from "../types";
+import { deleteSetting, getSetting } from "./settings";
 
 export const GITHUB_OWNER = "Sergio1990-1";
 export const GITHUB_PROJECT_NUMBER = 1;
@@ -60,22 +61,50 @@ export function getProjectFinance(repo: string): { budget: number; paid: number 
   return finances[repo] ?? null;
 }
 
-// Token management
+// ── Secret accessors ──────────────────────────────────────────────────
+//
+// Source of truth is the Pipeline settings store (Epic-004 Task-03), accessed
+// through `getSetting()` (sync read from in-memory cache populated on app
+// boot via `loadAllSettings()`).
+//
+// We retain a `localStorage` fallback so users on older browsers / sessions
+// where the migration (Task-05) hasn't yet completed continue to work without
+// being kicked back to the bootstrap screen. Once Task-05 wipes the legacy
+// keys, the fallback becomes dormant and all reads go through the settings
+// cache.
+//
+// Setters intentionally still write to localStorage. The SettingsPanel
+// (Task-04) writes through `setSetting()` directly, which is the new
+// canonical path. These local setters remain only for components that
+// pre-date the panel (e.g. legacy ChatPanel / TokenForm) — they are
+// scheduled for removal in a follow-up cleanup once those forms are gone.
+
 export function getToken(): string | null {
-  return localStorage.getItem("github_token");
+  return getSetting("github_token") ?? localStorage.getItem("github_token");
 }
 
 export function setToken(token: string): void {
   localStorage.setItem("github_token", token);
 }
 
+// Logout / "Очистить" must wipe BOTH the legacy localStorage entry AND the
+// Pipeline-side copy — otherwise the next page load would resurrect the
+// secret via `getSetting()` from the server-side cache, defeating logout.
+// `deleteSetting` is fire-and-forget: failures are non-fatal (the local
+// removal already prevents this session from using the token).
 export function clearToken(): void {
   localStorage.removeItem("github_token");
+  void deleteSetting("github_token").catch(() => {});
 }
 
-// Claude API key
 export function getClaudeKey(): string | null {
-  return localStorage.getItem("claude_api_key");
+  // Pipeline settings store standardised on `anthropic_api_key`; legacy
+  // localStorage key was `claude_api_key`. Try both for back-compat until
+  // Task-05 migration wipes the legacy entry.
+  return (
+    getSetting("anthropic_api_key") ??
+    localStorage.getItem("claude_api_key")
+  );
 }
 
 export function setClaudeKey(key: string): void {
@@ -84,11 +113,18 @@ export function setClaudeKey(key: string): void {
 
 export function clearClaudeKey(): void {
   localStorage.removeItem("claude_api_key");
+  void deleteSetting("anthropic_api_key").catch(() => {});
 }
 
-// Cloudflare Worker URL (proxies Better Stack API to avoid CORS)
+// Cloudflare Worker URL (proxies Better Stack API to avoid CORS).
+// IMPORTANT: this is a URL, not a BetterStack API token. The server-side
+// settings key is `betterstack_worker_url`, kept distinct from any future
+// `betterstack_token` setting that would hold the actual API credential.
 export function getWorkerUrl(): string | null {
-  return localStorage.getItem("betterstack_worker_url");
+  return (
+    getSetting("betterstack_worker_url") ??
+    localStorage.getItem("betterstack_worker_url")
+  );
 }
 
 export function setWorkerUrl(url: string): void {
@@ -97,6 +133,7 @@ export function setWorkerUrl(url: string): void {
 
 export function clearWorkerUrl(): void {
   localStorage.removeItem("betterstack_worker_url");
+  void deleteSetting("betterstack_worker_url").catch(() => {});
 }
 
 // SPA authentication

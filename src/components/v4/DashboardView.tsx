@@ -3,13 +3,16 @@ import type { ProjectData, SummaryMetrics, Issue, Monitor } from "../../types";
 import { KpiRow } from "./KpiRow";
 import { DashboardProjectCard } from "./DashboardProjectCard";
 import { AIInsightsPanel } from "./AIInsightsPanel";
-import { StackedDistribution } from "./StackedDistribution";
+import { ProgressMatrix } from "./ProgressMatrix";
 import { BlockedPanel } from "./BlockedPanel";
 import { UrgentDeadlinesPanel } from "./UrgentDeadlinesPanel";
 import { ClosedChart30d } from "./ClosedChart30d";
 import { MilestonesStrip } from "./MilestonesStrip";
 import { CommitsHeatmapPanel } from "./CommitsHeatmapPanel";
 import { StaleBanner } from "./StaleBanner";
+import { OrphanIssuesPanel } from "./OrphanIssuesPanel";
+import type { usePortfolioHealth } from "../../hooks/usePortfolioHealth";
+import type { usePortfolioOrphans } from "../../hooks/usePortfolioOrphans";
 
 interface Props {
   projects: ProjectData[];
@@ -20,6 +23,20 @@ interface Props {
   /** Switch to "projects" tab */
   onSeeAllProjects: () => void;
   onFinanceClick?: () => void;
+  /**
+   * Open the Project Health drilldown for a given repo.
+   * Implemented in App.tsx as `setHealthRepo(repo); setTab("projects")`,
+   * bypassing `navigateTab` (which would clear `healthRepo`).
+   */
+  onOpenHealth: (repo: string) => void;
+  /**
+   * Portfolio scans are mounted in App.tsx so the Topbar "Обновить" button
+   * can trigger a rescan alongside useDashboard.refetch. Passing the hook
+   * results down avoids a duplicate mount (and a duplicate health scan)
+   * when other components also need this data.
+   */
+  portfolio: ReturnType<typeof usePortfolioHealth>;
+  orphans: ReturnType<typeof usePortfolioOrphans>;
 }
 
 type PhaseFilter = "all" | "pre-dev" | "development" | "support";
@@ -39,8 +56,27 @@ export function DashboardView({
   lastUpdated,
   onSeeAllProjects,
   onFinanceClick,
+  onOpenHealth,
+  portfolio,
+  orphans,
 }: Props) {
   const [phaseFilter, setPhaseFilter] = useState<PhaseFilter>("all");
+
+  // Portfolio health drives the AI-insights panel. The hook is mounted in
+  // App.tsx so the Topbar refresh button can trigger a rescan alongside
+  // useDashboard.refetch — passed down here as a prop.
+  const portfolioLastUpdated = useMemo(
+    () => (portfolio.lastUpdated ? new Date(portfolio.lastUpdated) : null),
+    [portfolio.lastUpdated],
+  );
+
+  // Orphan-issues trend has its own hook (separate cache/refresh cadence
+  // from health) so a slow health scan doesn't block the chart. Also
+  // mounted in App.tsx for the same Topbar-refresh wiring.
+  const orphansLastUpdated = useMemo(
+    () => (orphans.lastUpdated ? new Date(orphans.lastUpdated) : null),
+    [orphans.lastUpdated],
+  );
 
   const filtered = useMemo(
     () =>
@@ -137,23 +173,36 @@ export function DashboardView({
             <div className="v4-empty">Нет проектов в текущем фильтре</div>
           ) : (
             <div className="v4-proj-grid">
-              {top4.map((p) => (
+              {top4.map((p, i) => (
                 <DashboardProjectCard
                   key={p.repo}
                   project={p}
                   monitor={getMonitor(p.repo)}
+                  index={i}
                 />
               ))}
             </div>
           )}
         </div>
 
-        <AIInsightsPanel projects={filtered} blockedIssues={blockedIssues} />
+        <AIInsightsPanel
+          reports={portfolio.reports}
+          loading={portfolio.loading}
+          lastUpdated={portfolioLastUpdated}
+          onOpenHealth={onOpenHealth}
+        />
       </div>
+
+      {/* Full-width orphan-issues trend */}
+      <OrphanIssuesPanel
+        items={orphans.items}
+        loading={orphans.loading}
+        lastUpdated={orphansLastUpdated}
+      />
 
       {/* Row: stacked + blocked */}
       <div className="v4-grid">
-        <StackedDistribution projects={filtered} />
+        <ProgressMatrix projects={filtered} />
         <BlockedPanel issues={blockedIssues} />
       </div>
 

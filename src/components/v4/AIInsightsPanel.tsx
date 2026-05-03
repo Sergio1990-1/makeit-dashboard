@@ -1,149 +1,154 @@
-import { useMemo } from "react";
-import type { ReactElement } from "react";
-import type { ProjectData, Issue } from "../../types";
-
-type InsightKind = "an" | "gr" | "rk" | "fc";
-
-interface Insight {
-  kind: InsightKind;
-  code: string;
-  title: string;
-  description: string;
-  /** 0..1 — confidence */
-  prob: number;
-}
+import { useEffect, useMemo, useState } from "react";
+import type { HealthFinding, HealthReport, HealthSeverity } from "../../types/health";
 
 interface Props {
-  projects: ProjectData[];
-  blockedIssues: Issue[];
+  reports: HealthReport[];
+  loading: boolean;
+  /** Timestamp of the most recent successful scan; null while we have no data yet. */
+  lastUpdated: Date | null;
+  /** Switches to the Projects tab and opens the Project Health drilldown for `repo`. */
+  onOpenHealth: (repo: string) => void;
 }
 
-/**
- * Heuristic placeholder insights, derived locally from dashboard data.
- * Replaced by a real LLM-driven advisor in a follow-up task — see
- * the linked GitHub issue tagged `feature` in makeit-dashboard.
- */
-function generateInsights(projects: ProjectData[], blockedIssues: Issue[]): Insight[] {
-  const out: Insight[] = [];
+// Sorting / filtering knobs — single source of truth so a designer tweak is
+// one edit instead of grep-and-replace through the file.
+const MAX_CARDS = 5;
+const MIN_SEVERITY: HealthSeverity = "medium";
+// 90 chars keeps each card to one visual line on the dashboard column at the
+// narrowest layout width (~480px). Longer content is truncated with «…».
+const TRUNCATE_LEN = 90;
+// Skeleton placeholder count during a cold load (no cached reports yet).
+const SKELETON_COUNT = 4;
 
-  // Slowing-down project (high open count, very low velocity)
-  const slowing = projects
-    .filter((p) => p.openCount >= 5 && p.velocity7d < 0.5)
-    .sort((a, b) => b.openCount - a.openCount)[0];
-  if (slowing) {
-    out.push({
-      kind: "rk",
-      code: "RSK-VEL",
-      title: `${slowing.repo} замедляется`,
-      description: `${slowing.openCount} открытых, velocity ${slowing.velocity7d.toFixed(2)}/д. Стоит провести debate-сессию или разблокировать.`,
-      prob: 0.82,
-    });
-  }
+// Sorted by descending priority so we can compare-by-index and drop anything
+// below MIN_SEVERITY.
+const SEVERITY_ORDER: HealthSeverity[] = ["critical", "high", "medium", "low"];
 
-  // Almost-done project (>=85% progress)
-  const nearlyDone = projects
-    .filter((p) => p.totalCount >= 5 && p.doneCount / p.totalCount >= 0.85)
-    .sort((a, b) => b.doneCount / b.totalCount - a.doneCount / a.totalCount)[0];
-  if (nearlyDone) {
-    const pct = Math.round((nearlyDone.doneCount / nearlyDone.totalCount) * 100);
-    out.push({
-      kind: "gr",
-      code: "GRO-CLS",
-      title: `${nearlyDone.repo} готов к закрытию фазы`,
-      description: `${pct}% задач закрыто. Можно переводить в support и фокусировать ресурсы на других проектах.`,
-      prob: 0.88,
-    });
-  }
-
-  // Stale P1 anomaly
-  if (blockedIssues.length > 0) {
-    const p1Blocked = blockedIssues.filter((i) => i.priority === "P1").length;
-    if (p1Blocked > 0) {
-      out.push({
-        kind: "an",
-        code: "ANO-P1B",
-        title: `${p1Blocked} P1-задач заблокировано`,
-        description: `Есть критичные задачи без движения. Возможно, требуется внешнее решение или переключение приоритета.`,
-        prob: 0.91,
-      });
-    }
-  }
-
-  // Forecast: portfolio progress trend
-  const totalIssues = projects.reduce((s, p) => s + p.totalCount, 0);
-  const totalDone = projects.reduce((s, p) => s + p.doneCount, 0);
-  if (totalIssues > 0) {
-    const pctDone = Math.round((totalDone / totalIssues) * 100);
-    const totalVelocity = projects.reduce((s, p) => s + p.velocity7d, 0);
-    if (totalVelocity > 0) {
-      const open = totalIssues - totalDone;
-      const daysToFinish = Math.round(open / totalVelocity);
-      const targetDate = new Date(Date.now() + daysToFinish * 86400000);
-      out.push({
-        kind: "fc",
-        code: "FCT-ETA",
-        title: `Прогноз: портфель ${pctDone}% → 100% к ${targetDate.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}`,
-        description: `При сохранении velocity ${totalVelocity.toFixed(1)}/день и без новых backlogged задач. Эвристика — не учитывает приоритеты.`,
-        prob: 0.74,
-      });
-    }
-  }
-
-  // Fallback if nothing actionable
-  if (out.length === 0) {
-    out.push({
-      kind: "fc",
-      code: "FCT-OK",
-      title: "Портфель в норме",
-      description: "Нет критических аномалий в данных. AI-анализ будет включён в следующем релизе.",
-      prob: 0.6,
-    });
-  }
-
-  return out.slice(0, 4);
-}
-
-const KIND_ICONS: Record<InsightKind, ReactElement> = {
-  rk: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" />
-    </svg>
-  ),
-  gr: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 17l6-6 4 4 8-9" />
-    </svg>
-  ),
-  an: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-      <line x1="11" y1="8" x2="11" y2="14" />
-    </svg>
-  ),
-  fc: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <line x1="12" y1="20" x2="12" y2="10" />
-      <line x1="18" y1="20" x2="18" y2="4" />
-    </svg>
-  ),
+// Local weights for sort priority. The checklist YAML has its own
+// `severity_weights` for the score deduction (different domain — score math
+// vs. card sorting), so these two intentionally don't share a constant.
+const SEVERITY_WEIGHT: Record<HealthSeverity, number> = {
+  critical: 3,
+  high: 2,
+  medium: 1,
+  low: 0.5,
 };
 
-export function AIInsightsPanel({ projects, blockedIssues }: Props) {
-  // Compute insights and the "generated at" timestamp together — so the
-  // displayed time actually corresponds to when the insights were derived,
-  // not to the most recent unrelated parent re-render.
-  const { insights, time } = useMemo(
-    () => ({
-      insights: generateInsights(projects, blockedIssues),
-      time: new Date().toLocaleTimeString("ru-RU", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      }),
-    }),
-    [projects, blockedIssues]
+interface RankedFail {
+  finding: HealthFinding;
+  repo: string;
+  generatedAt: string;
+  score: number;
+}
+
+// One day in ms — used for the age-factor calculation. age_factor caps at
+// 2 (after 7 days) so very old findings can't dominate forever.
+const DAY_MS = 86_400_000;
+
+function severityAtLeast(s: HealthSeverity, min: HealthSeverity): boolean {
+  const idx = SEVERITY_ORDER.indexOf(s);
+  if (idx === -1) return false; // unknown severity → drop
+  return idx <= SEVERITY_ORDER.indexOf(min);
+}
+
+// How often the "обновлено N мин назад" label refreshes. 30s keeps the
+// "0 сек назад" → "30 сек назад" → "1 мин назад" transitions snappy without
+// flooding React with re-renders.
+const META_TICK_MS = 30_000;
+
+// Truncate by code-point (Array.from splits surrogate pairs correctly) so
+// we never slice through the middle of a multi-byte glyph.
+function truncate(text: string, max: number): string {
+  const chars = Array.from(text);
+  if (chars.length <= max) return text;
+  return chars.slice(0, max).join("").trimEnd() + "…";
+}
+
+// "обновлено N мин назад". For lastUpdated=null returns null so the caller
+// can omit the meta line entirely. Times under a minute show seconds.
+function formatRelativeTime(d: Date | null, now: number): string | null {
+  if (!d) return null;
+  const diffMs = now - d.getTime();
+  if (!Number.isFinite(diffMs) || diffMs < 0) return "только что";
+  const sec = Math.round(diffMs / 1000);
+  if (sec < 60) return `обновлено ${sec} сек назад`;
+  const min = Math.round(sec / 60);
+  if (min < 60) return `обновлено ${min} мин назад`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `обновлено ${hr} ч назад`;
+  const days = Math.round(hr / 24);
+  return `обновлено ${days} д назад`;
+}
+
+// Collect every fail across reports, score by severity × age, and return the
+// top-N. Tie-break by repo name so the order is stable across renders.
+//
+// TODO(epic-006): swap `days_since_first_seen` for an actual "first seen" lookup
+// once we persist finding history. For MVP we approximate with the report
+// generation timestamp, which means a fresh scan resets the age factor — fine
+// while findings tend to repeat across scans.
+function rankFails(reports: HealthReport[], nowMs: number): RankedFail[] {
+  const out: RankedFail[] = [];
+  for (const report of reports) {
+    const generatedAtMs = new Date(report.generated_at).getTime();
+    const ageDays = Number.isFinite(generatedAtMs)
+      ? Math.max(0, (nowMs - generatedAtMs) / DAY_MS)
+      : 0;
+    const ageFactor = 1 + Math.min(7, ageDays) / 7;
+    for (const finding of report.findings) {
+      if (finding.status !== "fail") continue;
+      if (!severityAtLeast(finding.severity, MIN_SEVERITY)) continue;
+      const weight = SEVERITY_WEIGHT[finding.severity] ?? 0;
+      out.push({
+        finding,
+        repo: report.repo,
+        generatedAt: report.generated_at,
+        score: weight * ageFactor,
+      });
+    }
+  }
+  // Stable-by-name tie-break — important for visual continuity across
+  // refreshes when two findings tie on score.
+  return out
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      if (a.repo !== b.repo) return a.repo.localeCompare(b.repo);
+      return a.finding.rule_id.localeCompare(b.finding.rule_id);
+    })
+    .slice(0, MAX_CARDS);
+}
+
+export function AIInsightsPanel({ reports, loading, lastUpdated, onOpenHealth }: Props) {
+  // We freeze the "now" used for *scoring* at lastUpdated so cards don't
+  // reorder on every parent re-render. Without lastUpdated we fall back to
+  // 0 — ageDays then clamps to 0 and ageFactor collapses to 1× uniformly,
+  // so sort order reduces to severity × name (intended behaviour for the
+  // "no data yet" state).
+  const sortNowMs = useMemo(
+    () => (lastUpdated ? lastUpdated.getTime() : 0),
+    [lastUpdated],
   );
+
+  const top = useMemo(() => rankFails(reports, sortNowMs), [reports, sortNowMs]);
+
+  // The meta label needs a *live* clock — using sortNowMs would render
+  // "обновлено 0 сек назад" forever. We tick a state every 30s while
+  // mounted. On a fresh `lastUpdated` the diff momentarily goes negative
+  // → formatRelativeTime falls back to "только что", which is correct UX
+  // until the next tick aligns.
+  const [metaTickMs, setMetaTickMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setMetaTickMs(Date.now()), META_TICK_MS);
+    return () => clearInterval(id);
+  }, []);
+
+  const meta = formatRelativeTime(lastUpdated, metaTickMs);
+
+  // Cold load: no cached data yet → show skeleton rows.
+  // Warm load (loading + we already have something to show) → render data
+  // with a small "обновляется" indicator so the user knows it isn't stale.
+  const showSkeleton = loading && reports.length === 0;
+  const showRefreshing = loading && reports.length > 0;
 
   return (
     <div className="v4-panel">
@@ -159,26 +164,117 @@ export function AIInsightsPanel({ projects, blockedIssues }: Props) {
             <path d="M12 2a3 3 0 00-3 3v1.27A4 4 0 005 10v1.5a3.5 3.5 0 00-1 6.66V20a2 2 0 002 2h12a2 2 0 002-2v-1.84a3.5 3.5 0 00-1-6.66V10a4 4 0 00-4-3.73V5a3 3 0 00-3-3z" />
           </svg>
           AI-инсайты по портфелю
-          <span className="v4-tag">эвристика · MVP</span>
+          <span className="v4-tag">health · top-{MAX_CARDS}</span>
+          {showRefreshing && <span className="v4-tag">обновляется…</span>}
         </div>
-        <div className="v4-panel-meta">{time}</div>
+        {meta && <div className="v4-panel-meta">{meta}</div>}
       </div>
+
       <div className="v4-ai-list">
-        {insights.map((it, idx) => (
-          <div key={idx} className={`v4-ai-item v4-ai-item--${it.kind}`}>
-            <div className="v4-ai-item-ic">{KIND_ICONS[it.kind]}</div>
-            <div>
-              <div className="v4-ai-item-ttl">{it.title}</div>
-              <div className="v4-ai-item-ds">{it.description}</div>
-            </div>
-            <div className="v4-ai-item-meta">
-              {it.code}
-              <br />
-              P {it.prob.toFixed(2).replace(".", ",")}
-            </div>
-          </div>
-        ))}
+        {showSkeleton ? (
+          <SkeletonList count={SKELETON_COUNT} />
+        ) : top.length === 0 ? (
+          <EmptyState hasReports={reports.length > 0} />
+        ) : (
+          top.map((entry) => (
+            <InsightCard
+              // rule_id alone isn't unique across repos (same rule can fail
+              // in many projects), so the composite key keeps React happy
+              // and avoids a remount-on-reorder.
+              key={`${entry.repo}::${entry.finding.rule_id}`}
+              entry={entry}
+              onOpenHealth={onOpenHealth}
+            />
+          ))
+        )}
       </div>
+    </div>
+  );
+}
+
+interface CardProps {
+  entry: RankedFail;
+  onOpenHealth: (repo: string) => void;
+}
+
+function InsightCard({ entry, onOpenHealth }: CardProps) {
+  const { finding, repo } = entry;
+  // Detail is optional in the type; fall back to remediation to avoid an
+  // empty grey strip under the title for findings that only ship a fix.
+  const rawDetail = finding.detail ?? finding.remediation ?? "";
+  const detail = truncate(rawDetail, TRUNCATE_LEN);
+
+  return (
+    <div className="v4-ai-item v4-ai-fail">
+      <div className={`v4-ai-sev v4-ai-sev--${finding.severity}`}>
+        <span className="v4-ai-sev-dot" />
+        {finding.severity}
+      </div>
+      <div className="v4-ai-body">
+        <div className="v4-ai-item-ttl">
+          <span>{finding.title}</span>
+          <span className="v4-ai-repo v4-mono">{repo}</span>
+        </div>
+        {detail && <div className="v4-ai-item-ds">{detail}</div>}
+        <div className="v4-ai-actions">
+          <button
+            type="button"
+            className="v4-btn v4-btn--pri v4-ai-btn"
+            // Defensive: even though `repo` always comes from the report,
+            // keep the closure explicit so a future refactor can't pass
+            // undefined accidentally.
+            onClick={() => onOpenHealth(repo)}
+          >
+            Открыть Health
+          </button>
+          <button
+            type="button"
+            className="v4-btn v4-ai-btn"
+            disabled
+            title="Доступно после Epic-006"
+          >
+            → issue
+          </button>
+        </div>
+      </div>
+      <div className="v4-ai-item-meta">
+        <span className="v4-mono">{finding.rule_id}</span>
+        <br />L{finding.layer}
+      </div>
+    </div>
+  );
+}
+
+function SkeletonList({ count }: { count: number }) {
+  // `useMemo` would be overkill — Array.from is cheap, the render is rare,
+  // and the array doesn't escape the component.
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="v4-ai-item v4-ai-skel" aria-hidden>
+          <div className="v4-ai-skel-sev" />
+          <div className="v4-ai-body">
+            <div className="v4-ai-skel-line v4-ai-skel-line--ttl" />
+            <div className="v4-ai-skel-line v4-ai-skel-line--ds" />
+          </div>
+          <div className="v4-ai-skel-meta" />
+        </div>
+      ))}
+    </>
+  );
+}
+
+function EmptyState({ hasReports }: { hasReports: boolean }) {
+  // Two distinct empty cases:
+  //  - we have reports but no qualifying fails → portfolio is clean
+  //  - we have no reports at all (no token, scan failed entirely) → silent;
+  //    the parent surface already shows the error banner, so we keep this
+  //    inline copy minimal.
+  return (
+    <div className="v4-empty v4-ai-empty">
+      {hasReports
+        ? `Нет фейлов severity ≥ ${MIN_SEVERITY}. Портфель в зелёной зоне.`
+        : "Нет данных health-сканирования."}
     </div>
   );
 }
