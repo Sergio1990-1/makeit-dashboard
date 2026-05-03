@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { HealthFinding, HealthReport, HealthSeverity } from "../../types/health";
 
 interface Props {
@@ -46,8 +46,15 @@ interface RankedFail {
 const DAY_MS = 86_400_000;
 
 function severityAtLeast(s: HealthSeverity, min: HealthSeverity): boolean {
-  return SEVERITY_ORDER.indexOf(s) <= SEVERITY_ORDER.indexOf(min);
+  const idx = SEVERITY_ORDER.indexOf(s);
+  if (idx === -1) return false; // unknown severity → drop
+  return idx <= SEVERITY_ORDER.indexOf(min);
 }
+
+// How often the "обновлено N мин назад" label refreshes. 30s keeps the
+// "0 сек назад" → "30 сек назад" → "1 мин назад" transitions snappy without
+// flooding React with re-renders.
+const META_TICK_MS = 30_000;
 
 // Truncate by code-point (Array.from splits surrogate pairs correctly) so
 // we never slice through the middle of a multi-byte glyph.
@@ -112,21 +119,30 @@ function rankFails(reports: HealthReport[], nowMs: number): RankedFail[] {
 }
 
 export function AIInsightsPanel({ reports, loading, lastUpdated, onOpenHealth }: Props) {
-  // We freeze "now" at the moment we compute insights so the displayed
-  // relative time matches the scoring math, and so cards don't reorder on
-  // every parent re-render. Using `lastUpdated` (or 0 when absent) instead
-  // of `Date.now()` keeps the function pure — no clock reads in render.
-  // Side-effect: when `lastUpdated` is null, age_factor saturates to its
-  // 2× cap for every finding, which is fine — sort order then collapses
-  // to severity weight × name, exactly what we want for "no data yet".
-  const nowMs = useMemo(
+  // We freeze the "now" used for *scoring* at lastUpdated so cards don't
+  // reorder on every parent re-render. Without lastUpdated we fall back to
+  // 0 — ageDays then clamps to 0 and ageFactor collapses to 1× uniformly,
+  // so sort order reduces to severity × name (intended behaviour for the
+  // "no data yet" state).
+  const sortNowMs = useMemo(
     () => (lastUpdated ? lastUpdated.getTime() : 0),
     [lastUpdated],
   );
 
-  const top = useMemo(() => rankFails(reports, nowMs), [reports, nowMs]);
+  const top = useMemo(() => rankFails(reports, sortNowMs), [reports, sortNowMs]);
 
-  const meta = formatRelativeTime(lastUpdated, nowMs);
+  // The meta label needs a *live* clock — using sortNowMs would render
+  // "обновлено 0 сек назад" forever. We tick a state every 30s while
+  // mounted. On a fresh `lastUpdated` the diff momentarily goes negative
+  // → formatRelativeTime falls back to "только что", which is correct UX
+  // until the next tick aligns.
+  const [metaTickMs, setMetaTickMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setMetaTickMs(Date.now()), META_TICK_MS);
+    return () => clearInterval(id);
+  }, []);
+
+  const meta = formatRelativeTime(lastUpdated, metaTickMs);
 
   // Cold load: no cached data yet → show skeleton rows.
   // Warm load (loading + we already have something to show) → render data
