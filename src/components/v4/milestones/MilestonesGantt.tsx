@@ -248,9 +248,12 @@ export function MilestonesGantt({
       document.body.style.cursor = "";
       setDragGhost(null);
       if (!drag) return;
-      // Always suppress the `click` synthesized after mousedown+mouseup on a
-      // drag — even a 0-day drag (mouseup without movement) shouldn't open
-      // the popup because the user committed to "drag" intent.
+      if (!ghost) return;
+      const moved =
+        ghost.leftIdx !== drag.origStartIdx || ghost.rightIdx !== drag.origEndIdx;
+      if (!moved) return;
+      // Suppress the `click` synthesized after mousedown+mouseup only when the
+      // user actually dragged — a plain click should still open the popup.
       suppressClickRef.current = true;
       // Drop the flag on the next macrotask so legitimate clicks elsewhere
       // are unaffected. setTimeout(0) > requestAnimationFrame here because
@@ -258,10 +261,6 @@ export function MilestonesGantt({
       window.setTimeout(() => {
         suppressClickRef.current = false;
       }, 0);
-      if (!ghost) return;
-      const moved =
-        ghost.leftIdx !== drag.origStartIdx || ghost.rightIdx !== drag.origEndIdx;
-      if (!moved) return;
       const target = data.enriched.find((x) => x.m.url === drag.url);
       if (!target) return;
       const newStartD = addDays(data.startWindow, ghost.leftIdx);
