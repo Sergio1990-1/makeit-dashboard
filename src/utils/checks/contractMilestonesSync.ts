@@ -28,7 +28,7 @@ const TOOL_DEF = {
   input_schema: {
     type: "object",
     properties: {
-      status: { enum: ["pass", "fail"] },
+      status: { type: "string", enum: ["pass", "fail"] },
       detail: { type: "string", maxLength: 250 },
       remediation: { type: "string", maxLength: 400 },
       confidence: { type: "number" },
@@ -148,7 +148,14 @@ ${milestonesJson}
     return unknownFinding(rule, `Ошибка LLM: ${msg}`);
   }
 
+  // Defensive: tool-use schema marks `detail` and `confidence` as required,
+  // but the model could in theory return a malformed payload. Mirror the
+  // existing confidence guard for detail so a missing field never causes
+  // a TypeError to escape — the detector contract is "never throws".
   const confidence = typeof result.confidence === "number" ? result.confidence : 0;
+  if (typeof result.detail !== "string") {
+    return unknownFinding(rule, "LLM не вернул detail");
+  }
   const remediation =
     typeof result.remediation === "string" && result.remediation.trim()
       ? result.remediation
