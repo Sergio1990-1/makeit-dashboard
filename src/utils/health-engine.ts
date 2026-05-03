@@ -168,6 +168,11 @@ function splitPath(path: string): { dir: string; name: string } {
   return { dir: path.slice(0, idx), name: path.slice(idx + 1) };
 }
 
+// `caseInsensitive` only normalizes the basename — the directory portion is
+// passed verbatim to GitHub's `/contents/{dir}` endpoint, which is
+// case-sensitive. For YAML rules currently using the flag (root-level docs
+// like README.md / CHANGELOG.md) this is sufficient; nested paths with
+// uncertain dir casing would need a per-segment walk.
 async function pathExists(
   token: string,
   owner: string,
@@ -175,10 +180,13 @@ async function pathExists(
   path: string,
   cache: DirCache,
   expect?: "file" | "dir",
+  caseInsensitive: boolean = false,
 ): Promise<boolean> {
   const { dir, name } = splitPath(path);
   const items = await listDirCached(token, owner, repo, dir, cache);
-  const found = items.find((i) => i.name === name);
+  const found = caseInsensitive
+    ? items.find((i) => i.name.toLowerCase() === name.toLowerCase())
+    : items.find((i) => i.name === name);
   if (!found) return false;
   if (expect === "file" && found.type !== "file") return false;
   if (expect === "dir" && found.type !== "dir") return false;
@@ -243,7 +251,8 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
     switch (c.type) {
       case "file_exists": {
         const path = param(c, "path", "");
-        const ok = await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file");
+        const caseInsensitive = param<boolean>(c, "case_insensitive", false);
+        const ok = await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file", caseInsensitive);
         return { ...base, status: ok ? "pass" : "fail", detail: ok ? path : `Нет файла ${path}` };
       }
 
@@ -265,7 +274,8 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         const path = param(c, "path", "");
         const contains = param<string | undefined>(c, "contains", undefined);
         const containsAny = param<string[] | undefined>(c, "contains_any", undefined);
-        if (!(await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file"))) {
+        const caseInsensitive = param<boolean>(c, "case_insensitive", false);
+        if (!(await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file", caseInsensitive))) {
           return { ...base, status: "fail", detail: `Нет файла ${path}` };
         }
         try {
