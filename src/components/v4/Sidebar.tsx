@@ -26,6 +26,9 @@ interface Props {
   milestonesCount: number;
   monitorsCount: number;
   auditAlerts?: number;
+  /** Number of portfolio-wide critical health fails. Shown as a red badge
+   *  on the «Дашборд» nav item. 0/undefined → no badge rendered. */
+  criticalFails?: number;
   /** Per-tab activity pulses (null = no dot). */
   pulses?: Partial<Record<TabId, PulseKind>>;
   user?: { initials: string; name: string; role: string };
@@ -102,16 +105,27 @@ export function Sidebar({
   milestonesCount,
   monitorsCount,
   auditAlerts,
+  criticalFails,
   pulses,
   user = { initials: "SK", name: "Сергей К.", role: "owner · MakeIT" },
   isOpen,
   onClose,
 }: Props) {
   const p = pulses ?? {};
+
   const sections: NavSection[] = [
     {
       items: [
-        { id: "dashboard", label: "Дашборд", icon: ICON_DASH, pulse: p.dashboard },
+        {
+          id: "dashboard",
+          label: "Дашборд",
+          icon: ICON_DASH,
+          pulse: p.dashboard,
+          // Portfolio-wide critical health fails. App.tsx mounts
+          // usePortfolioHealth (single source of truth) and passes the
+          // count down so we don't double-mount the hook here.
+          badge: criticalFails && criticalFails > 0 ? criticalFails : undefined,
+        },
         { id: "projects", label: "Проекты", count: projectsCount, icon: ICON_LIST, pulse: p.projects },
         { id: "milestones", label: "Milestones", count: milestonesCount, icon: ICON_CLOCK, pulse: p.milestones },
         { id: "uptime", label: "Мониторинг", count: monitorsCount || undefined, icon: ICON_MONITOR, pulse: p.uptime },
