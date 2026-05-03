@@ -168,6 +168,11 @@ function splitPath(path: string): { dir: string; name: string } {
   return { dir: path.slice(0, idx), name: path.slice(idx + 1) };
 }
 
+// `caseInsensitive` only normalizes the basename — the directory portion is
+// passed verbatim to GitHub's `/contents/{dir}` endpoint, which is
+// case-sensitive. For YAML rules currently using the flag (root-level docs
+// like README.md / CHANGELOG.md) this is sufficient; nested paths with
+// uncertain dir casing would need a per-segment walk.
 async function pathExists(
   token: string,
   owner: string,
@@ -179,10 +184,9 @@ async function pathExists(
 ): Promise<boolean> {
   const { dir, name } = splitPath(path);
   const items = await listDirCached(token, owner, repo, dir, cache);
-  const target = caseInsensitive ? name.toLowerCase() : name;
-  const found = items.find((i) =>
-    caseInsensitive ? i.name.toLowerCase() === target : i.name === target,
-  );
+  const found = caseInsensitive
+    ? items.find((i) => i.name.toLowerCase() === name.toLowerCase())
+    : items.find((i) => i.name === name);
   if (!found) return false;
   if (expect === "file" && found.type !== "file") return false;
   if (expect === "dir" && found.type !== "dir") return false;
