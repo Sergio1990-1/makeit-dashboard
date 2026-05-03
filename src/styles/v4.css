@@ -7964,3 +7964,22 @@ ul.v4-rsh-list {
   .v4-mspopup-issue-date { display: none; }
 }
 
+
+
+/* ── Project card → Health button overlay ──────────────────────────────
+   The card itself comes from ProjectCardV4 untouched; this is a small
+   floating CTA pinned to its top-right corner so the user can drill into
+   the health page without disturbing the card's existing layout. */
+.v4-project-cell { position: relative; }
+.v4-project-health-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  padding: 4px 10px;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  backdrop-filter: blur(4px);
+}

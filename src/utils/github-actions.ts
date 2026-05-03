@@ -399,3 +399,250 @@ export async function addIssueToProject(
     contentId: issueData.repository.issue.id,
   });
 }
+
+// ── Project Health helpers ─────────────────────────────────────────────
+// REST endpoints used by the health-engine. Kept here so all GitHub access
+// goes through one auth/error path.
+
+export interface RepoMeta {
+  created_at: string;
+  pushed_at: string;
+  default_branch: string;
+  open_issues_count: number;
+}
+
+export async function getRepoMeta(token: string, owner: string, repo: string): Promise<RepoMeta> {
+  const data = await rest(token, `/repos/${owner}/${repo}`);
+  return {
+    created_at: data.created_at,
+    pushed_at: data.pushed_at,
+    default_branch: data.default_branch,
+    open_issues_count: data.open_issues_count,
+  };
+}
+
+export async function listRepoLabels(token: string, owner: string, repo: string): Promise<string[]> {
+  const out: string[] = [];
+  for (let page = 1; page <= 5; page++) {
+    const data = await rest(token, `/repos/${owner}/${repo}/labels?per_page=100&page=${page}`);
+    if (!Array.isArray(data) || data.length === 0) break;
+    out.push(...data.map((l: { name: string }) => l.name));
+    if (data.length < 100) break;
+  }
+  return out;
+}
+
+export interface Workflow {
+  id: number;
+  name: string;
+  path: string;
+  state: string;
+}
+
+export async function listWorkflows(token: string, owner: string, repo: string): Promise<Workflow[]> {
+  try {
+    const data = await rest(token, `/repos/${owner}/${repo}/actions/workflows?per_page=100`);
+    return Array.isArray(data.workflows) ? data.workflows : [];
+  } catch {
+    return [];
+  }
+}
+
+export interface WorkflowRun {
+  id: number;
+  status: string;
+  conclusion: string | null;
+  created_at: string;
+}
+
+export async function getLatestWorkflowRun(
+  token: string,
+  owner: string,
+  repo: string,
+  workflowId: number,
+): Promise<WorkflowRun | null> {
+  try {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/actions/workflows/${workflowId}/runs?per_page=1`,
+    );
+    const runs = Array.isArray(data.workflow_runs) ? data.workflow_runs : [];
+    return runs[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// Last commit that touched a path. Used by doc_freshness checks (when
+// implemented) and to verify a file actually exists when we want commit
+// metadata as well as content.
+export async function getLatestCommitForPath(
+  token: string,
+  owner: string,
+  repo: string,
+  path: string,
+): Promise<{ sha: string; date: string } | null> {
+  try {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/commits?path=${encodeURIComponent(path)}&per_page=1`,
+    );
+    const commit = Array.isArray(data) ? data[0] : null;
+    if (!commit) return null;
+    return { sha: commit.sha, date: commit.commit.author?.date ?? commit.commit.committer?.date };
+  } catch {
+    return null;
+  }
+}
+
+// Count issues closed since `since` (ISO date). Excludes PRs.
+export async function countClosedIssuesSince(
+  token: string,
+  owner: string,
+  repo: string,
+  since: string,
+): Promise<number> {
+  let count = 0;
+  for (let page = 1; page <= 10; page++) {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/issues?state=closed&since=${encodeURIComponent(since)}&per_page=100&page=${page}`,
+    );
+    if (!Array.isArray(data) || data.length === 0) break;
+    for (const i of data as Array<{ pull_request?: unknown; closed_at: string | null }>) {
+      if (i.pull_request) continue;
+      if (i.closed_at && new Date(i.closed_at) >= new Date(since)) count++;
+    }
+    if (data.length < 100) break;
+  }
+  return count;
+}
+
+// Detail for a single commit — additions/deletions for each touched file.
+// Used by doc_freshness to find the last "meaningful" edit (typo fixes do
+// not reset the freshness clock).
+export async function getCommitFiles(
+  token: string,
+  owner: string,
+  repo: string,
+  sha: string,
+): Promise<Array<{ filename: string; additions: number; deletions: number }>> {
+  try {
+    const data = await rest(token, `/repos/${owner}/${repo}/commits/${sha}`);
+    return Array.isArray(data.files)
+      ? data.files.map((f: { filename: string; additions: number; deletions: number }) => ({
+          filename: f.filename,
+          additions: f.additions,
+          deletions: f.deletions,
+        }))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+// Up to `limit` most-recent commits touching path. Used by doc_freshness.
+export async function listCommitsForPath(
+  token: string,
+  owner: string,
+  repo: string,
+  path: string,
+  limit = 10,
+): Promise<Array<{ sha: string; date: string }>> {
+  try {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/commits?path=${encodeURIComponent(path)}&per_page=${limit}`,
+    );
+    if (!Array.isArray(data)) return [];
+    return data.map((c: { sha: string; commit: { author?: { date?: string }; committer?: { date?: string } } }) => ({
+      sha: c.sha,
+      date: c.commit.author?.date ?? c.commit.committer?.date ?? "",
+    })).filter((c) => c.date);
+  } catch {
+    return [];
+  }
+}
+
+export interface MergedPR {
+  number: number;
+  merged_at: string;
+}
+
+// Merged PRs in the last N days (descending by updated_at). Excludes still-open.
+export async function listMergedPRsInWindow(
+  token: string,
+  owner: string,
+  repo: string,
+  windowDays: number,
+  hardLimit = 50,
+): Promise<MergedPR[]> {
+  const cutoff = Date.now() - windowDays * 86400000;
+  const out: MergedPR[] = [];
+  for (let page = 1; page <= 5 && out.length < hardLimit; page++) {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/pulls?state=closed&per_page=30&page=${page}&sort=updated&direction=desc`,
+    );
+    if (!Array.isArray(data) || data.length === 0) break;
+    let any = false;
+    for (const pr of data as Array<{ number: number; merged_at: string | null; updated_at: string }>) {
+      const upd = new Date(pr.updated_at).getTime();
+      if (upd < cutoff) {
+        // List is sorted by updated desc; once we cross the window, stop
+        // pagination too — older pages can only be older.
+        return out;
+      }
+      any = true;
+      if (!pr.merged_at) continue;
+      const merged = new Date(pr.merged_at).getTime();
+      if (merged < cutoff) continue;
+      out.push({ number: pr.number, merged_at: pr.merged_at });
+      if (out.length >= hardLimit) return out;
+    }
+    if (!any) break;
+  }
+  return out;
+}
+
+export async function getPRFiles(
+  token: string,
+  owner: string,
+  repo: string,
+  number: number,
+): Promise<string[]> {
+  try {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/pulls/${number}/files?per_page=300`,
+    );
+    return Array.isArray(data)
+      ? data.map((f: { filename: string }) => f.filename)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+// All open issues that have no milestone assigned. Returns issue numbers.
+export async function listIssuesWithoutMilestone(
+  token: string,
+  owner: string,
+  repo: string,
+): Promise<number[]> {
+  const out: number[] = [];
+  for (let page = 1; page <= 10; page++) {
+    const data = await rest(
+      token,
+      `/repos/${owner}/${repo}/issues?state=open&milestone=none&per_page=100&page=${page}`,
+    );
+    if (!Array.isArray(data) || data.length === 0) break;
+    for (const i of data as Array<{ number: number; pull_request?: unknown; milestone: unknown }>) {
+      if (i.pull_request) continue;
+      if (i.milestone == null) out.push(i.number);
+    }
+    if (data.length < 100) break;
+  }
+  return out;
+}
+
