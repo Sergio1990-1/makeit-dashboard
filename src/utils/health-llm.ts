@@ -13,6 +13,7 @@ import type {
 } from "../types/health";
 import { checkContractMilestonesSync } from "./checks/contractMilestonesSync";
 import { checkDocCodeSync } from "./checks/docCodeSync";
+import { checkKnowledgeCoverage } from "./checks/knowledgeCoverage";
 import { checkTemplateFilled } from "./checks/templateFilled";
 import { getRepoTreeSha } from "./github-actions";
 import { getCached, setCached } from "./health-llm-cache";
@@ -79,10 +80,6 @@ export type DetectorArgs = {
   claudeKey: string;
 };
 
-async function checkKnowledgeCoverage_TBD(args: DetectorArgs): Promise<HealthFinding> {
-  return { ...findingBase(args.rule), status: "unknown", detail: "Будет реализовано в task-06" };
-}
-
 async function checkClaudeMdFreshness_TBD(args: DetectorArgs): Promise<HealthFinding> {
   return { ...findingBase(args.rule), status: "unknown", detail: "Будет реализовано в task-07" };
 }
@@ -103,7 +100,7 @@ function detectorFor(rule: ChecklistRule): Detector | null {
     case "ai_doc_code_sync":
       return checkDocCodeSync;
     case "ai_knowledge_coverage":
-      return checkKnowledgeCoverage_TBD;
+      return checkKnowledgeCoverage;
     case "ai_claude_md_freshness":
       return checkClaudeMdFreshness_TBD;
     default:
