@@ -7567,6 +7567,21 @@ ul.v4-rsh-list {
   border-radius: 4px;
 }
 .wow-toast-close:hover { color: var(--v4-ink-700); background: var(--v4-surface-2); }
+.wow-toast-action {
+  display: inline-block;
+  margin-top: 6px;
+  appearance: none;
+  background: var(--v4-surface-2, rgba(0,0,0,0.04));
+  border: 1px solid var(--v4-border, rgba(0,0,0,0.08));
+  color: var(--v4-ink-900);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  line-height: 1.2;
+}
+.wow-toast-action:hover { background: var(--v4-surface-3, rgba(0,0,0,0.07)); }
 @keyframes wow-toast-in {
   from { opacity: 0; transform: translateX(40px) scale(0.95); }
   to   { opacity: 1; transform: translateX(0)    scale(1); }

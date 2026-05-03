@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { AuditFinding, Verdict, VerificationResult } from "../types";
+import { maybeDispatchAuthLostFromError } from "./external-auth-events";
 import {
   CodeSearchRateLimitError,
   CodeSearchUnavailableError,
@@ -632,16 +633,22 @@ Verify it now.`;
 
     try {
       for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
-        const response = await client.messages.create(
-          {
-            model: VERIFY_MODEL,
-            max_tokens: 1024,
-            system: VERIFY_SYSTEM_PROMPT,
-            tools: [VERIFY_TOOL, VERIFY_GREP_TOOL, VERIFY_FIND_SYMBOL_TOOL],
-            messages: currentMessages,
-          },
-          { signal },
-        );
+        const response = await client.messages
+          .create(
+            {
+              model: VERIFY_MODEL,
+              max_tokens: 1024,
+              system: VERIFY_SYSTEM_PROMPT,
+              tools: [VERIFY_TOOL, VERIFY_GREP_TOOL, VERIFY_FIND_SYMBOL_TOOL],
+              messages: currentMessages,
+            },
+            { signal },
+          )
+          .catch((e) => {
+            // FR-8: notify SettingsPanel watchers that the Claude key was
+            // rejected. Re-throw to preserve the existing retry / error path.
+            throw maybeDispatchAuthLostFromError("claude", e);
+          });
 
         if (response.stop_reason === "tool_use") {
           currentMessages = [

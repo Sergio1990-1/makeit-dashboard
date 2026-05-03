@@ -2,12 +2,22 @@ import { createContext, useContext } from "react";
 
 export type ToastKind = "success" | "error" | "info";
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface ToastInput {
   title: string;
   description?: string;
   kind?: ToastKind;
   /** Auto-dismiss delay in ms; 0 disables. Defaults to 3500. */
   duration?: number;
+  /**
+   * Optional inline action button (e.g. "Открыть Настройки" for FR-8).
+   * Clicking the action runs `onClick` AND dismisses the toast.
+   */
+  action?: ToastAction;
 }
 
 export interface ToastContextValue {

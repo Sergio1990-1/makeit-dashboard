@@ -7,11 +7,12 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import { ToastCtx } from "./toastContext";
-import type { ToastContextValue, ToastInput, ToastKind } from "./toastContext";
+import type { ToastAction, ToastContextValue, ToastInput, ToastKind } from "./toastContext";
 
-interface Toast extends Required<Omit<ToastInput, "description">> {
+interface Toast extends Required<Omit<ToastInput, "description" | "action">> {
   id: number;
   description?: string;
+  action?: ToastAction;
   leaving: boolean;
 }
 
@@ -63,6 +64,7 @@ export function ToastHost({ children }: { children: ReactNode }) {
         description: input.description,
         kind: input.kind ?? "info",
         duration: input.duration ?? 3500,
+        action: input.action,
         leaving: false,
       };
       setToasts((prev) => [...prev, toast]);
@@ -101,6 +103,20 @@ export function ToastHost({ children }: { children: ReactNode }) {
             <div className="wow-toast-body">
               <b>{t.title}</b>
               {t.description && <span>{t.description}</span>}
+              {t.action && (
+                <button
+                  type="button"
+                  className="wow-toast-action"
+                  onClick={() => {
+                    // Run action first so the click is honoured even if a
+                    // re-render races the removal animation.
+                    t.action?.onClick();
+                    remove(t.id);
+                  }}
+                >
+                  {t.action.label}
+                </button>
+              )}
             </div>
             <button
               type="button"
