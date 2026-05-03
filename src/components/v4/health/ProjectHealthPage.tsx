@@ -15,6 +15,7 @@ import {
   buildIssueTitle,
 } from "../../../utils/health-issue";
 import { useToast } from "../toastContext";
+import { BulkCreateModal } from "./BulkCreateModal";
 import { Hero } from "./Hero";
 import { LayerStrip } from "./LayerStrip";
 import { FindingsBoard, type FindingActionState } from "./FindingsBoard";
@@ -72,6 +73,11 @@ export function ProjectHealthPage({ repo, project }: Props) {
       return m;
     });
   }, []);
+
+  // ─── Bulk-create modal toggle ──────────────────────────────────────
+  // Lives here (not in Hero) so the modal can read `report` and write into
+  // the shared `actionStates` map.
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   // Friendly text for the most common failure modes. The raw error message
   // from rest() is intentionally short ("GitHub API 422") because we don't
@@ -249,6 +255,7 @@ export function ProjectHealthPage({ repo, project }: Props) {
         onRescan={refresh}
         refreshing={refreshing}
         rulesCount={rulesCount}
+        onBulkCreate={() => setBulkOpen(true)}
       />
       <div className="ph-page">
         <div className="ph-main">
@@ -282,6 +289,14 @@ export function ProjectHealthPage({ repo, project }: Props) {
         </div>
         <Sidebar report={report} project={project} />
       </div>
+      {bulkOpen && (
+        <BulkCreateModal
+          report={report}
+          repo={repo}
+          onClose={() => setBulkOpen(false)}
+          onActionStateChange={setActionState}
+        />
+      )}
     </div>
   );
 }
