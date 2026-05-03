@@ -321,4 +321,3 @@ export function MilestoneIssuesPopup({ milestone, onClose, onEdited }: Props) {
     document.body,
   );
 }
-

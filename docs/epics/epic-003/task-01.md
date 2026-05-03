@@ -34,12 +34,12 @@
      quality: "pass" | "warning" | "needs_review" | null;  // NEW
      quality_report: QualityReport | null;                   // NEW
    }
-   
+
    export interface QualityReport {
      checks: QualityCheck[];
      score: number;
    }
-   
+
    export interface QualityCheck {
      name: string;
      status: "pass" | "warning" | "fail";

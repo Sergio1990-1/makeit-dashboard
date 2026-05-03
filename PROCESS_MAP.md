@@ -130,8 +130,8 @@ Knowledge (makeit-knowledge):
 
 ### Процесс 1: Автоматическая разработка (Pipeline)
 
-**Статус:** ✅ Реализован  
-**Компоненты:** Pipeline (orchestrator), Dashboard (UI), GitHub (Issues/PRs)  
+**Статус:** ✅ Реализован
+**Компоненты:** Pipeline (orchestrator), Dashboard (UI), GitHub (Issues/PRs)
 **Ключевые файлы:**
 - Pipeline: `simple_orchestrator.py`, `workflow.py`, `phase_machine.py`, `dev_agent.py`, `review_agent.py`, `git_ops.py`, `qa_client.py`
 - Dashboard: `PipelineControlPanel.tsx`, `usePipeline.ts`, `pipeline.ts`
@@ -191,8 +191,8 @@ Knowledge (makeit-knowledge):
 
 ### Процесс 2: Code Audit
 
-**Статус:** ✅ Реализован  
-**Компоненты:** Auditor (backend), Dashboard (UI), GitHub (код + issues)  
+**Статус:** ✅ Реализован
+**Компоненты:** Auditor (backend), Dashboard (UI), GitHub (код + issues)
 **Ключевые файлы:**
 - Auditor: `pipeline.py`, `runners/`, `indexer/`, `llm/`, `report/`, `api.py`
 - Dashboard: `AuditTab.tsx`, `AuditVerifyDialog.tsx`, `useAudit.ts`, `auditor.ts`, `verify-agent.ts`, `claude.ts`
@@ -253,8 +253,8 @@ Knowledge (makeit-knowledge):
 
 ### Процесс 3: Транскрипция и обработка встреч
 
-**Статус:** ✅ Реализован  
-**Компоненты:** Pipeline (backend), Dashboard (UI)  
+**Статус:** ✅ Реализован
+**Компоненты:** Pipeline (backend), Dashboard (UI)
 **Ключевые файлы:**
 - Pipeline: `transcription_engine.py`, `transcript_processor.py`, `domain_dictionary.py`, `manifest.py`, `api.py`
 - Dashboard: `TranscriptsTab.tsx`, `TranscriptEditor.tsx`, `TranscriptProgress.tsx`, `transcript.ts`
@@ -292,8 +292,8 @@ Knowledge (makeit-knowledge):
 
 ### Процесс 4: Research & Discovery
 
-**Статус:** ✅ Реализован  
-**Компоненты:** Pipeline (agents), Dashboard (UI), GitHub (RESEARCH.md, DISCOVERY.md)  
+**Статус:** ✅ Реализован
+**Компоненты:** Pipeline (agents), Dashboard (UI), GitHub (RESEARCH.md, DISCOVERY.md)
 **Ключевые файлы:**
 - Pipeline: `research.py`, `discovery.py`, `api.py`
 - Dashboard: `ResearchTab.tsx`, `StartResearchModal.tsx`, `useResearch.ts`, `research-parser.ts`
@@ -323,8 +323,8 @@ Knowledge (makeit-knowledge):
 
 ### Процесс 5: Quality Management
 
-**Статус:** ✅ Реализован  
-**Компоненты:** Pipeline (metrics, retro, autotuner), Dashboard (UI)  
+**Статус:** ✅ Реализован
+**Компоненты:** Pipeline (metrics, retro, autotuner), Dashboard (UI)
 **Ключевые файлы:**
 - Pipeline: `quality_metrics.py`, `retro_agent.py`, `auto_tuning.py`, `quality_gate.py`, `quality_signals.py`
 - Dashboard: `QualityTab.tsx`, `QualityPanel.tsx`, `QualityBarCharts.tsx`, `QualityTrendsChart.tsx`, `QualityPendingChanges.tsx`, `QualityRetros.tsx`, `quality.ts`
@@ -363,8 +363,8 @@ Tier 3 (manual review):   config.yaml, major changes → ожидает чело
 
 ### Процесс 6: Debate Engine
 
-**Статус:** ✅ Реализован  
-**Компоненты:** Pipeline (debate/), Dashboard (UI)  
+**Статус:** ✅ Реализован
+**Компоненты:** Pipeline (debate/), Dashboard (UI)
 **Ключевые файлы:**
 - Pipeline: `debate/engine.py`, `debate/providers.py`, `debate/adr.py`, `debate/context_gatherer.py`
 - Dashboard: `DebateTab.tsx`, `StartDebateModal.tsx`, `debate.ts`, `useDebate.ts`
@@ -399,8 +399,8 @@ Tier 3 (manual review):   config.yaml, major changes → ожидает чело
 
 ### Процесс 7: Specs Tracking (PRD → Epic → Tasks)
 
-**Статус:** ✅ Реализован  
-**Компоненты:** Dashboard (UI), Pipeline (docs/), Knowledge (шаблоны)  
+**Статус:** ✅ Реализован
+**Компоненты:** Dashboard (UI), Pipeline (docs/), Knowledge (шаблоны)
 **Ключевые файлы:**
 - Dashboard: `SpecsTab.tsx`, `useSpecs.ts`, `specs-parser.ts`
 - Pipeline: `docs/prds/PRD-*.md`, `docs/epics/epic-*/`
@@ -425,8 +425,8 @@ Tier 3 (manual review):   config.yaml, major changes → ожидает чело
 
 ### Процесс 8: Мониторинг и наблюдаемость
 
-**Статус:** ✅ Реализован  
-**Компоненты:** Dashboard (UI), BetterStack (uptime), GitHub (activity)  
+**Статус:** ✅ Реализован
+**Компоненты:** Dashboard (UI), BetterStack (uptime), GitHub (activity)
 **Ключевые файлы:**
 - Dashboard: `UptimeBar.tsx`, `CommitHeatmap.tsx`, `StaleAlert.tsx`, `MilestoneCard.tsx`, `UrgentDeadlines.tsx`, `betterstack.ts`, `useMonitors.ts`
 
@@ -452,8 +452,8 @@ Tier 3 (manual review):   config.yaml, major changes → ожидает чело
 
 ### Процесс 9: UX Audit
 
-**Статус:** ✅ Реализован  
-**Компоненты:** Auditor (UX runners + Vision LLM), Dashboard (UI)  
+**Статус:** ✅ Реализован
+**Компоненты:** Auditor (UX runners + Vision LLM), Dashboard (UI)
 **Ключевые файлы:**
 - Auditor: `runners/ux_orchestrator.py`, `runners/lighthouse.py`, `runners/axe_core.py`, `llm/ux_auditor.py`, `llm/vision_client.py`, `screenshotter.py`
 - Dashboard: `UXAuditTab.tsx`, `ux-auditor.ts`
@@ -471,8 +471,8 @@ Tier 3 (manual review):   config.yaml, major changes → ожидает чело
 
 ### Процесс 10: Chat / Project Manager Agent
 
-**Статус:** ✅ Реализован  
-**Компоненты:** Dashboard (ChatPanel + Claude API)  
+**Статус:** ✅ Реализован
+**Компоненты:** Dashboard (ChatPanel + Claude API)
 **Ключевые файлы:**
 - Dashboard: `ChatPanel.tsx`, `ChatButton.tsx`, `useChat.ts`, `claude.ts`
 
@@ -494,8 +494,8 @@ Tier 3 (manual review):   config.yaml, major changes → ожидает чело
 
 ### Процесс 11: Complexity Classification
 
-**Статус:** ✅ Реализован  
-**Компоненты:** Pipeline (classifier), Dashboard (UI)  
+**Статус:** ✅ Реализован
+**Компоненты:** Pipeline (classifier), Dashboard (UI)
 **Ключевые файлы:**
 - Pipeline: `complexity_classifier.py`, `api.py`
 - Dashboard: `pipeline.ts` (classify endpoint), `PipelineControlPanel.tsx`

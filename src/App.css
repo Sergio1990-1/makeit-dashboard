@@ -148,7 +148,7 @@
     --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
     --shadow-md: 0 8px 20px rgba(0,0,0,0.04);
     --shadow-lg: 0 16px 32px rgba(15, 23, 42, 0.08); /* slight blue tint shadow */
-    
+
     --bg-pattern: radial-gradient(circle, rgba(0,0,0,0.05) 1px, transparent 1px);
   }
 }
@@ -303,12 +303,12 @@ body::after {
   font-weight: 700;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em; 
+  letter-spacing: 0.06em;
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin: 0 0 var(--sp-4) 0;
-  height: 20px; 
+  height: 20px;
   line-height: 1;
 }
 
@@ -354,8 +354,8 @@ body::after {
   border-radius: 50%;
   /* Apple-style Blue to Cyan gradient */
   background: conic-gradient(
-    #3b82f6 0%, 
-    #06b6d4 var(--pct, 0%), 
+    #3b82f6 0%,
+    #06b6d4 var(--pct, 0%),
     var(--color-neutral-tint-4) 0
   );
   display: flex;
@@ -1433,7 +1433,7 @@ body::after {
   padding: var(--sp-1) var(--sp-2);
   margin-top: 0; /* Margin managed by group flex */
   border-radius: var(--radius-sm);
-  background: var(--color-neutral-tint-2); 
+  background: var(--color-neutral-tint-2);
   flex-wrap: nowrap; /* Force 1 line as requested before */
 }
 .pc-stat {
@@ -1878,9 +1878,9 @@ body::after {
   min-width: 0;
 }
 
-.blocked-repo { 
-  font-size: 11px; 
-  color: var(--color-text-muted); 
+.blocked-repo {
+  font-size: 11px;
+  color: var(--color-text-muted);
   font-family: var(--font-mono);
   margin-bottom: 1px;
 }
