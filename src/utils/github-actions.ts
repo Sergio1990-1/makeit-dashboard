@@ -182,6 +182,44 @@ export async function createIssue(
   return { number: data.number, url: data.html_url };
 }
 
+// Look up an existing open issue with the exact title under the `tech-debt`
+// label. Used by the health → issue flow to dedup before creating duplicates.
+//
+// Returns `null` when:
+//   - no open `tech-debt` issue with this exact title exists; or
+//   - the GitHub call returns a non-2xx (we treat this as "couldn't confirm,
+//     don't dedup" — `rest()` already throws on auth/network errors which we
+//     let bubble up so the caller can decide).
+//
+// Title comparison is exact (case-sensitive). GitHub's `?labels=` filter is
+// already an AND, so the returned page only contains tech-debt issues; we
+// scan the first 100 (per_page max) which is plenty for the per-repo health
+// surface area.
+export async function findOpenIssueByTitle(
+  token: string,
+  owner: string,
+  repo: string,
+  title: string,
+): Promise<{ number: number; url: string } | null> {
+  const data = await rest(
+    token,
+    `/repos/${owner}/${repo}/issues?state=open&per_page=100&labels=tech-debt`,
+  );
+  if (!Array.isArray(data)) return null;
+  for (const issue of data as Array<{
+    number: number;
+    title: string;
+    html_url: string;
+    pull_request?: unknown;
+  }>) {
+    if (issue.pull_request) continue;
+    if (issue.title === title) {
+      return { number: issue.number, url: issue.html_url };
+    }
+  }
+  return null;
+}
+
 export async function closeIssue(
   token: string,
   owner: string,
