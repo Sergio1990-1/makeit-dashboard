@@ -306,6 +306,22 @@ function AppInner() {
   // defeating Topbar/CommandPalette memoization.
   const portfolioRefresh = portfolio.refresh;
   const orphansRefresh = orphans.refresh;
+
+  // Critical health-fails across the portfolio — drives the red badge on the
+  // «Дашборд» nav item. Reads from the same single-source-of-truth portfolio
+  // hook so we don't double-mount the heavy scan in Sidebar.
+  const criticalFails = useMemo(
+    () =>
+      portfolio.reports.reduce(
+        (acc, r) =>
+          acc +
+          r.findings.filter(
+            (f) => f.status === "fail" && f.severity === "critical",
+          ).length,
+        0,
+      ),
+    [portfolio.reports],
+  );
   const handleRefresh = useCallback(() => {
     refresh(true);
     refreshMonitors();
@@ -368,6 +384,7 @@ function AppInner() {
         milestonesCount={allMilestones.length}
         monitorsCount={monitors.length}
         auditAlerts={auditAlerts}
+        criticalFails={criticalFails}
         pulses={pulses}
         isOpen={sideOpen}
         onClose={() => setSideOpen(false)}
