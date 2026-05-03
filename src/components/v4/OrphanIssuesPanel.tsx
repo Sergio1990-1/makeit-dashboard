@@ -336,7 +336,7 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated }: Props) {
                   ))}
                   {overflow > 0 && (
                     <div className="v4-orphan-tip-more">
-                      и ещё {overflow} {overflow === 1 ? "репо" : "репо"}
+                      и ещё {overflow} репо
                     </div>
                   )}
                 </div>
