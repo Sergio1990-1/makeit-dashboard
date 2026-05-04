@@ -33,6 +33,8 @@ export function poolHealth(monitors: Monitor[]): MonitorHealth {
   if (monitors.some((m) => m.status === "down")) return "danger";
   if (monitors.some((m) => m.status === "pending")) return "warn";
   if (monitors.some((m) => m.uptimePct !== null && m.uptimePct < 99)) return "warn";
+  // All monitors paused -> no signal; align with monitorHealth("paused") = "unknown".
+  if (monitors.every((m) => m.status === "paused")) return "unknown";
   return "ok";
 }
 
