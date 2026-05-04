@@ -245,6 +245,16 @@ export function TranscriptHistoryV4({ onOpen, onResume, onRetry, refreshKey }: P
     [items]
   );
 
+  // If a stale persisted project filter is no longer present in the dataset,
+  // reset it to "" — otherwise the user may see zero rows with no way to clear
+  // the filter (the selector is hidden when projects.length <= 1).
+  useEffect(() => {
+    if (loading) return;
+    if (state.project && !projects.includes(state.project)) {
+      setState((s) => (s.project ? { ...s, project: "" } : s));
+    }
+  }, [projects, state.project, loading]);
+
   const counts = useMemo(() => {
     const c = { all: items.length, active: 0, done: 0, error: 0 };
     for (const i of items) {
