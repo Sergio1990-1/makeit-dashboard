@@ -371,23 +371,32 @@ async function executeGrepFileTool(
  */
 function guessSymbolPaths(symbol: string, hintFile?: string): string[] {
   const lower = symbol.toLowerCase();
+  // Python convention: `QueueManager` lives in `queue_manager.py`, not `queuemanager.py`.
+  // Generate a snake_case variant alongside the lowercase one. When the symbol is
+  // already lowercase (e.g. `queue`), `snake === lower` and the Set dedupes.
+  const snake = symbol.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
   const out = new Set<string>();
   if (hintFile) {
     const lastSlash = hintFile.lastIndexOf("/");
     const dir = lastSlash >= 0 ? hintFile.slice(0, lastSlash) : "";
     if (dir) {
       out.add(`${dir}/${lower}.py`);
+      out.add(`${dir}/${snake}.py`);
       // Walk up one directory level too.
       const parentSlash = dir.lastIndexOf("/");
       const parent = parentSlash >= 0 ? dir.slice(0, parentSlash) : "";
       if (parent) {
         out.add(`${parent}/${lower}.py`);
+        out.add(`${parent}/${snake}.py`);
         out.add(`${parent}/${lower}/__init__.py`);
+        out.add(`${parent}/${snake}/__init__.py`);
       }
     }
   }
   out.add(`src/${lower}.py`);
+  out.add(`src/${snake}.py`);
   out.add(`${lower}.py`);
+  out.add(`${snake}.py`);
   return Array.from(out);
 }
 
