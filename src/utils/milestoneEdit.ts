@@ -13,6 +13,8 @@ const GITHUB_REST = "https://api.github.com";
 const OVERRIDE_KEY = "makeit.milestoneOverrides.v1";
 const DUE_OVERRIDE_TTL_MS = 30 * 60 * 1000; // 30 min — long enough for a sync cycle
 const START_OVERRIDE_TTL_MS = 30 * 60 * 1000;
+const TITLE_OVERRIDE_TTL_MS = 30 * 60 * 1000;
+const DELETED_OVERRIDE_TTL_MS = 60 * 60 * 1000; // 1h — deletion is destructive, hide longer
 
 // HTML comment marker in milestone descriptions — invisible in GitHub's
 // rendered Markdown, but parseable for cross-device sync of start dates.
@@ -101,6 +103,61 @@ export async function patchMilestoneDueOn(
 }
 
 /**
+ * PATCH the milestone title on GitHub. Returns the updated payload, or null
+ * on any failure.
+ */
+export async function patchMilestoneTitle(
+  token: string,
+  ref: MilestoneRef,
+  title: string,
+): Promise<unknown | null> {
+  try {
+    const res = await fetch(
+      `${GITHUB_REST}/repos/${ref.owner}/${ref.repo}/milestones/${ref.number}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `bearer ${token}`,
+          Accept: "application/vnd.github.v3+json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title }),
+      },
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * DELETE the milestone on GitHub. Returns true on success (204), false on any
+ * failure. The issues attached to the milestone are NOT deleted — GitHub just
+ * unsets their milestone field.
+ */
+export async function deleteMilestone(
+  token: string,
+  ref: MilestoneRef,
+): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${GITHUB_REST}/repos/${ref.owner}/${ref.repo}/milestones/${ref.number}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `bearer ${token}`,
+          Accept: "application/vnd.github.v3+json",
+        },
+      },
+    );
+    return res.ok || res.status === 204;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * PATCH the milestone description on GitHub. Used to tunnel the start date
  * via an HTML comment marker — see injectStartIntoDescription().
  */
@@ -159,6 +216,15 @@ interface OverrideEntry {
    *  cache sync pulls the updated description back. */
   start?: string;
   startExpiresAt?: number;
+  /** Optimistic title rename — server is authoritative, this just hides the
+   *  stale value until the cache catches up. */
+  title?: string;
+  titleExpiresAt?: number;
+  /** Marker that the milestone was deleted on GitHub. The cache may keep
+   *  serving it for ~30s after deletion; this hides it from the UI in the
+   *  meantime so it doesn't reappear. */
+  deleted?: boolean;
+  deletedExpiresAt?: number;
 }
 
 type OverrideMap = Record<string, OverrideEntry>;
@@ -187,6 +253,19 @@ function writeAll(map: OverrideMap): void {
  * out without needing a background timer. Both due and start overrides have
  * their own TTL.
  */
+function isEntryEmpty(entry: OverrideEntry): boolean {
+  return (
+    entry.start === undefined &&
+    entry.dueOn === undefined &&
+    entry.dueExpiresAt === undefined &&
+    entry.startExpiresAt === undefined &&
+    entry.title === undefined &&
+    entry.titleExpiresAt === undefined &&
+    entry.deleted === undefined &&
+    entry.deletedExpiresAt === undefined
+  );
+}
+
 function pruneExpired(map: OverrideMap): OverrideMap {
   const now = Date.now();
   let mutated = false;
@@ -201,12 +280,17 @@ function pruneExpired(map: OverrideMap): OverrideMap {
       delete entry.startExpiresAt;
       mutated = true;
     }
-    if (
-      entry.start === undefined &&
-      entry.dueOn === undefined &&
-      entry.dueExpiresAt === undefined &&
-      entry.startExpiresAt === undefined
-    ) {
+    if (entry.titleExpiresAt !== undefined && entry.titleExpiresAt < now) {
+      delete entry.title;
+      delete entry.titleExpiresAt;
+      mutated = true;
+    }
+    if (entry.deletedExpiresAt !== undefined && entry.deletedExpiresAt < now) {
+      delete entry.deleted;
+      delete entry.deletedExpiresAt;
+      mutated = true;
+    }
+    if (isEntryEmpty(entry)) {
       delete map[url];
     }
   }
@@ -256,8 +340,26 @@ export function clearDueOverride(url: string): void {
   if (!entry) return;
   delete entry.dueOn;
   delete entry.dueExpiresAt;
-  if (entry.start === undefined) delete map[url];
+  if (isEntryEmpty(entry)) delete map[url];
   else map[url] = entry;
+  writeAll(map);
+}
+
+export function setTitleOverride(url: string, title: string): void {
+  const map = readAll();
+  const entry = map[url] ?? {};
+  entry.title = title;
+  entry.titleExpiresAt = Date.now() + TITLE_OVERRIDE_TTL_MS;
+  map[url] = entry;
+  writeAll(map);
+}
+
+export function setDeletedOverride(url: string): void {
+  const map = readAll();
+  const entry = map[url] ?? {};
+  entry.deleted = true;
+  entry.deletedExpiresAt = Date.now() + DELETED_OVERRIDE_TTL_MS;
+  map[url] = entry;
   writeAll(map);
 }
 
@@ -275,6 +377,30 @@ export function applyDueOverrides(milestones: Milestone[]): Milestone[] {
     if (!o || o.dueOn === undefined) return m;
     return { ...m, dueOn: o.dueOn };
   });
+}
+
+/**
+ * Apply ALL local milestone overrides (due, title, deletion) in one pass.
+ * Deleted milestones are filtered out entirely. Use this in the milestones
+ * view layer so every downstream tile sees the same effective list.
+ */
+export function applyMilestoneOverrides(milestones: Milestone[]): Milestone[] {
+  const overrides = getMilestoneOverrides();
+  if (Object.keys(overrides).length === 0) return milestones;
+  const out: Milestone[] = [];
+  for (const m of milestones) {
+    const o = overrides[m.url];
+    if (!o) {
+      out.push(m);
+      continue;
+    }
+    if (o.deleted) continue;
+    let next = m;
+    if (o.dueOn !== undefined) next = { ...next, dueOn: o.dueOn };
+    if (o.title !== undefined) next = { ...next, title: o.title };
+    out.push(next);
+  }
+  return out;
 }
 
 export function getStartOverride(url: string): string | undefined {

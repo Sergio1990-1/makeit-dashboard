@@ -13,7 +13,7 @@ import { MilestonesStatusBar } from "./MilestonesStatusBar";
 import { MilestoneIssuesPopup } from "./MilestoneIssuesPopup";
 import { classifyMilestone } from "./classifyMilestone";
 import { deadlineBucket } from "./utils";
-import { applyDueOverrides } from "../../../utils/milestoneEdit";
+import { applyMilestoneOverrides } from "../../../utils/milestoneEdit";
 
 interface Props {
   milestones: Milestone[];
@@ -102,19 +102,21 @@ export function MilestonesView({ milestones: rawMilestones, projects, lastUpdate
     saveState(state);
   }, [state]);
 
-  // Apply local due-date overrides to the milestone array so every downstream
-  // tile (Gantt, Hero, cards, popup) sees the same effective due date.
+  // Apply ALL local milestone overrides (due, title, deletion) so every
+  // downstream tile (Gantt, Hero, cards, popup) sees the same effective list.
   const milestones = useMemo(
-    () => applyDueOverrides(rawMilestones),
+    () => applyMilestoneOverrides(rawMilestones),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [rawMilestones, overrideTick],
   );
 
   // Re-resolve the popup milestone against the latest data so issue counts
   // refresh while the popup is open. Match by URL — stable across refreshes.
+  // If the milestone vanished (deletion), return null so the popup closes
+  // automatically instead of holding onto a stale snapshot.
   const popupMsLive = useMemo(() => {
     if (!popupMs) return null;
-    return milestones.find((m) => m.url === popupMs.url) ?? popupMs;
+    return milestones.find((m) => m.url === popupMs.url) ?? null;
   }, [milestones, popupMs]);
 
   // Anchor "now" to lastUpdated so daysUntil/Gantt today line stay consistent
