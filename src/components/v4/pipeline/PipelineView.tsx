@@ -126,13 +126,30 @@ export function PipelineView({
     finishedAt: number | null;
   } | null>(null);
   const wasRunningRef = useRef<boolean>(false);
+  // Latest status snapshot for handleStart to read synchronously, without
+  // putting `status` on the start handler's dep list. Issue #239.
+  const statusRef = useRef(status);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+  // Set when handleStart captures the baseline synchronously on Run click.
+  // Tells the running-transition effect to skip its own baseline capture so
+  // results that arrive between the click and the first `running=true` poll
+  // are still counted toward currentRunCost and the final run summary.
+  const baselineSetByClickRef = useRef(false);
 
   useEffect(() => {
     if (!status) return;
     if (status.running && !wasRunningRef.current) {
-      // New run started — set baseline BEFORE the cost memo sees the next status
-      setRunStartedAt(Date.now());
-      setBaselineResultCount(status.results.length);
+      // New run started. If handleStart already captured the baseline
+      // synchronously, keep it — otherwise this is a mid-run mount and we
+      // take the current results length as the best-effort baseline.
+      if (baselineSetByClickRef.current) {
+        baselineSetByClickRef.current = false;
+      } else {
+        setRunStartedAt(Date.now());
+        setBaselineResultCount(status.results.length);
+      }
     } else if (!status.running && wasRunningRef.current) {
       // Run ended — snapshot summary using the baseline that was set on start
       const newResults = status.results.slice(baselineResultCount);
@@ -209,6 +226,12 @@ export function PipelineView({
     : null;
 
   function handleStart() {
+    // Capture the baseline at click time so results produced between this
+    // moment and the first poll observing `running=true` are still attributed
+    // to the new run. Issue #239.
+    baselineSetByClickRef.current = true;
+    setBaselineResultCount(statusRef.current?.results.length ?? 0);
+    setRunStartedAt(Date.now());
     void start({
       project: selectedProject || undefined,
       labels: selectedLabels.length > 0 ? selectedLabels : undefined,
