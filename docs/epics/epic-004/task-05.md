@@ -40,7 +40,7 @@
      - Если `localStorage.getItem(legacyKey)` пустой → skip
      - Если уже на сервере → skip + удалить из localStorage
      - Иначе → `setSetting(settingsKey, value)`, при успехе → `localStorage.removeItem(legacyKey)`
-   - В конце ставим `localStorage.setItem(MIGRATION_FLAG, 'true')`
+   - В конце ставим `localStorage.setItem(MIGRATION_FLAG, 'true')` ТОЛЬКО если `failed.length === 0`. При partial failure флаг НЕ ставим — на следующем page load миграция повторится для оставшихся keys (transient network/5xx не должен permanently suppress retries).
    - При любой ошибке для конкретного ключа — записать в `failed[]`, не прерывать общий процесс
 
 3. **Запуск:**
