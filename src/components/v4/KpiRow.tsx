@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { ProjectData, SummaryMetrics } from "../../types";
 import {
@@ -12,6 +12,13 @@ import { TweenedNumber } from "./TweenedNumber";
 interface IndexedStyle extends CSSProperties {
   "--i"?: number;
 }
+
+// One-shot entrance animation per browser session. Switching tabs unmounts
+// DashboardView, so KpiRow re-mounts and the entrance animation re-played
+// on every return — the staggered fade + 12 number tweens collided with
+// React reconciliation and felt janky. This flag keeps the entrance only
+// on the very first dashboard view; subsequent re-mounts render instantly.
+let kpiEntrancePlayed = false;
 
 interface Props {
   projects: ProjectData[];
@@ -228,10 +235,17 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
   const isVelDown = velocity.delta7dVsPrev < 0;
   const isVelUp = velocity.delta7dVsPrev > 0;
 
+  // Skip the .v4-kpi-enter keyframe on every mount after the first.
+  const skipEntrance = kpiEntrancePlayed;
+  useEffect(() => {
+    kpiEntrancePlayed = true;
+  }, []);
+  const tileClass = skipEntrance ? " v4-kpi--no-anim" : "";
+
   return (
     <div className="v4-kpi-row">
       {/* 1. Прогресс портфеля (accent) */}
-      <div className="v4-kpi v4-kpi--acc" style={{ "--i": 0 } as IndexedStyle}>
+      <div className={`v4-kpi v4-kpi--acc${tileClass}`} style={{ "--i": 0 } as IndexedStyle}>
         <div className="v4-kpi-lbl">
           <span className="v4-kpi-ic">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -286,7 +300,7 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
       </div>
 
       {/* 2. Открытые задачи */}
-      <div className="v4-kpi" style={{ "--i": 1 } as IndexedStyle}>
+      <div className={`v4-kpi${tileClass}`} style={{ "--i": 1 } as IndexedStyle}>
         <div className="v4-kpi-lbl">
           <span className="v4-kpi-ic v4-kpi-ic--b">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -341,7 +355,7 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
       </div>
 
       {/* 3. Velocity 7д + sparkline (hover tooltip) */}
-      <div className="v4-kpi" style={{ "--i": 2 } as IndexedStyle}>
+      <div className={`v4-kpi${tileClass}`} style={{ "--i": 2 } as IndexedStyle}>
         <div className="v4-kpi-lbl">
           <span className="v4-kpi-ic v4-kpi-ic--p">
             <svg viewBox="0 0 24 24" fill="currentColor">
@@ -379,7 +393,7 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
 
       {/* 4. Бюджет */}
       <div
-        className="v4-kpi"
+        className={`v4-kpi${tileClass}`}
         style={
           {
             "--i": 3,

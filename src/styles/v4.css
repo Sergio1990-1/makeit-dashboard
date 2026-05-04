@@ -529,6 +529,14 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 @keyframes v4-kpi-enter {
   to { opacity: 1; transform: translateY(0); }
 }
+/* Tab switches re-mount KpiRow; the entrance animation is suppressed on
+   subsequent mounts via this class so the staggered fade doesn't replay
+   each time the user returns to the dashboard. */
+.v4-kpi.v4-kpi--no-anim {
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
 .v4-kpi:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 28px rgba(11, 16, 32, 0.07);
@@ -1888,6 +1896,25 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
   text-align: center;
   color: var(--v4-ink-500);
   font-size: 14px;
+}
+
+/* Inline brick-build loader for the in-app empty-data state.
+   Mirrors BrandedLoader visually but lives inside the main content
+   area (no fixed positioning) so the sidebar/topbar stay usable. */
+.v4-inline-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 100px 28px 80px;
+  text-align: center;
+  color: var(--v4-ink-900);
+}
+.v4-inline-loader-caption {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--v4-ink-600);
+  letter-spacing: 0.01em;
 }
 
 /* ────────────────────────────────────────

@@ -31,6 +31,7 @@ import { PasswordGate } from "./components/PasswordGate";
 import { SettingsBootstrap, SettingsUnavailable } from "./components/v4/SettingsBootstrap";
 import { SettingsPanel } from "./components/v4/SettingsPanel";
 import { BrandedLoader, type LoaderStage } from "./components/v4/BrandedLoader";
+import { MakeItLoader } from "./components/v4/MakeItLoader";
 import { useSettings } from "./hooks/useSettings";
 import { runOneTimeMigration } from "./utils/settings-migration";
 import {
@@ -385,6 +386,26 @@ function AppInner({ onFirstFetchDone }: AppInnerProps = {}) {
     refreshMonitors();
   }, [refresh, refreshMonitors]);
 
+  // Auto-retry once if we land in the empty-no-error state after the initial
+  // fetch (e.g. cache backend returned nothing). Without this, the inline
+  // brick-build loader below would imply data is incoming when nothing is
+  // actually being requested. Gated by a ref so a persistently empty state
+  // can't loop.
+  const autoRetryRef = useRef(false);
+  useEffect(() => {
+    if (autoRetryRef.current) return;
+    if (
+      projects.length === 0 &&
+      !loading &&
+      !error &&
+      lastUpdated !== null &&
+      getToken()
+    ) {
+      autoRetryRef.current = true;
+      void refresh(true);
+    }
+  }, [projects.length, loading, error, lastUpdated, refresh]);
+
   // Epic-004 Task-05: one-time port of legacy `localStorage` secrets to the
   // server-side settings store. Runs once per page session AFTER the gate has
   // already confirmed `useSettings().ready === true` (AppInner only mounts in
@@ -544,8 +565,14 @@ function AppInner({ onFirstFetchDone }: AppInnerProps = {}) {
             AppInner. Subsequent loading states inside tabs render their
             own indicators. */}
 
-        {projects.length === 0 && (tab === "dashboard" || tab === "projects" || tab === "milestones") && !loading && !error && (
-          <div className="v4-loading">Нажмите «Обновить» для загрузки данных</div>
+        {projects.length === 0 && (tab === "dashboard" || tab === "projects" || tab === "milestones") && !error && (
+          // Inline brick-build loader for the empty-no-error state. Pairs
+          // with the auto-retry effect above so the visual matches reality
+          // (something is being fetched).
+          <div className="v4-inline-loader">
+            <MakeItLoader size={48} />
+            <div className="v4-inline-loader-caption">Подтягиваем данные с GitHub</div>
+          </div>
         )}
 
         {projects.length > 0 && tab === "dashboard" && (
