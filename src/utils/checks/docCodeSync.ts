@@ -85,7 +85,8 @@ function unknownFinding(
 // graceful `unknown`-finding signals. Returns:
 //  - { hits } on success (possibly empty array)
 //  - { unknownDetail } for rate-limit / not-indexed (caller short-circuits)
-//  - { hits: [] } for any other error (logged in DEV; treated as zero hits)
+//  - { hits: [], unknownDetail } for any other error (logged in DEV; caller
+//    short-circuits to unknown)
 async function safeSymbolSearch(
   token: string,
   owner: string,
@@ -107,7 +108,7 @@ async function safeSymbolSearch(
     if (import.meta.env.DEV) {
       console.warn(`[docCodeSync] code search "${symbol}" failed:`, err);
     }
-    return { hits: [] };
+    return { hits: [], unknownDetail: `Code search недоступен: ${msg}` };
   }
 }
 
