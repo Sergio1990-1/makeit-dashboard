@@ -13,7 +13,6 @@ import { MilestonesStatusBar } from "./MilestonesStatusBar";
 import { MilestoneIssuesPopup } from "./MilestoneIssuesPopup";
 import { classifyMilestone } from "./classifyMilestone";
 import { deadlineBucket } from "./utils";
-import { useFirstMountClass } from "../../../hooks/useFirstMountClass";
 import { applyMilestoneOverrides } from "../../../utils/milestoneEdit";
 
 interface Props {
@@ -209,10 +208,8 @@ export function MilestonesView({ milestones: rawMilestones, projects, lastUpdate
     return stamp ? `${base} · обновлено ${stamp}` : base;
   })();
 
-  const noEntranceClass = useFirstMountClass("milestones");
-
   return (
-    <div className={`v4-content${noEntranceClass ? ` ${noEntranceClass}` : ""}`}>
+    <div className="v4-content">
       {/* Page head */}
       <div className="v4-ph">
         <div>
