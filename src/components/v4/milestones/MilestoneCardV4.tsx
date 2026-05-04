@@ -108,6 +108,8 @@ export function MilestoneCardV4({ milestone, density, now, onSelect }: Props) {
         } список.`}
         onClick={() => setExpanded((v) => !v)}
         onKeyDown={(e) => {
+          // Skip bubbled events from nested interactive elements (title link, etc.)
+          if (e.target !== e.currentTarget) return;
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             setExpanded((v) => !v);
