@@ -261,14 +261,27 @@ export function TranscriptsTab({ projects }: Props) {
   }, []);
 
   const onRetryFromHistory = useCallback(
-    async (taskId: string, originalModel: TranscriptionModel | undefined) => {
+    async (
+      taskId: string,
+      originalModel: TranscriptionModel | undefined,
+      originalProject: string,
+    ) => {
       if (retryInProgressRef.current) return;
       retryInProgressRef.current = true;
       setBriefResult(null);
       setEditing(false);
       setResult(null);
       try {
-        const res = await retryTranscript(taskId, originalModel ?? "fast");
+        // Legacy history items pre-dating model tracking have no
+        // `transcription_model` — fall back to "fast" so retry still runs;
+        // there's no way to recover the original choice. `originalProject`
+        // is always present on TranscriptListItem (it's the same string the
+        // upload originally posted as project_context).
+        const res = await retryTranscript(
+          taskId,
+          originalModel ?? "fast",
+          originalProject,
+        );
         setActiveTaskId(res.task_id);
         setHistoryRefreshKey((k) => k + 1);
       } catch (err) {
