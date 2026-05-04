@@ -233,6 +233,12 @@ export async function checkClaudeMdFreshness(
     readMakefile(token, owner, repo),
     readScripts(token, owner, repo),
   ]);
+  // If BOTH reads fail transient, surface both surfaces in the diagnostic
+  // so the user can tell whether it's a single-file glitch or a broader
+  // GitHub/auth outage.
+  if (scriptsResult.unavailable && makefileResult.unavailable) {
+    return unknownFinding(rule, "package.json и Makefile недоступны (transient error)");
+  }
   if (scriptsResult.unavailable) {
     return unknownFinding(rule, "package.json недоступен (transient error)");
   }

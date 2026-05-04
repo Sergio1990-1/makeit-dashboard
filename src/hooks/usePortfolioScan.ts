@@ -98,6 +98,13 @@ export function usePortfolioScan<TItem, TResult>(
   // older build (or a hand-edit) could have a non-array payload — without the
   // guard, downstream `.reduce(...)` / `.map(...)` calls crash at render time
   // (regression noted in issue #225).
+  //
+  // Type-narrowing note: `Array.isArray(p)` only narrows `p` to `unknown[]`,
+  // so the `p is TResult[]` cast is a runtime-only guarantee. We trust that
+  // whatever array shape was previously serialized still matches `TResult`
+  // closely enough for downstream consumers. If `TResult` ever grows required
+  // structural fields whose absence would crash consumers, add a per-element
+  // type-check here.
   const cacheRef = useRef(
     createPortfolioCache<TResult[]>(cacheKey, {
       validate: (p): p is TResult[] => Array.isArray(p),

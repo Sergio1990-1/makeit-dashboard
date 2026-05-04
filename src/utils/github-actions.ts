@@ -715,10 +715,15 @@ export async function listMergedPRsInWindow(
 ): Promise<MergedPR[]> {
   const cutoff = Date.now() - windowDays * 86400000;
   const out: MergedPR[] = [];
-  for (let page = 1; page <= 5 && out.length < hardLimit; page++) {
+  // Pages are derived from hardLimit so callers can dial up the ceiling
+  // without having to also raise an inline page constant — previously the
+  // hardcoded 5 silently capped output at 150 PRs regardless of hardLimit.
+  const PER_PAGE = 30;
+  const maxPages = Math.max(1, Math.ceil(hardLimit / PER_PAGE));
+  for (let page = 1; page <= maxPages && out.length < hardLimit; page++) {
     const data = await rest(
       token,
-      `/repos/${owner}/${repo}/pulls?state=closed&per_page=30&page=${page}&sort=updated&direction=desc`,
+      `/repos/${owner}/${repo}/pulls?state=closed&per_page=${PER_PAGE}&page=${page}&sort=updated&direction=desc`,
       "GET",
       undefined,
       signal,
