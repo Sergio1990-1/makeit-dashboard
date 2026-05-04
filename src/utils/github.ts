@@ -449,7 +449,21 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 interface CacheEntry {
   data: ProjectData[];
+  // Wall-clock time the entry was written (used for TTL expiration only).
   timestamp: number;
+  // ISO timestamp of the upstream sync that produced `data` — preserved
+  // separately so the UI can show "когда реально синхронизировались с GitHub",
+  // not the moment we happened to read the cache. Optional for back-compat
+  // with entries written by older builds.
+  lastSyncIso?: string;
+}
+
+export interface DashboardFetchResult {
+  projects: ProjectData[];
+  /** When the upstream data was last synced with GitHub (cache backend's
+   * `lastSync`). Null when we hit GitHub directly — in that case the caller
+   * should treat "now" as the sync time. */
+  lastSync: Date | null;
 }
 
 // ── Backend-first fetch with fallback to direct GitHub API ──
@@ -465,7 +479,7 @@ function mergeFinancialData(projects: ProjectData[]): ProjectData[] {
   });
 }
 
-async function fetchFromCache(forceRefresh: boolean): Promise<ProjectData[] | null> {
+async function fetchFromCache(forceRefresh: boolean): Promise<{ projects: ProjectData[]; lastSync: Date | null } | null> {
   const cacheUrl = getCacheUrl();
   console.log(`[Dashboard] Cache URL: "${cacheUrl}", forceRefresh: ${forceRefresh}`);
   if (!cacheUrl) return null;
@@ -492,23 +506,31 @@ async function fetchFromCache(forceRefresh: boolean): Promise<ProjectData[] | nu
     if (!json.data || !Array.isArray(json.data)) return null;
 
     console.log(`[Dashboard] Using cache backend (synced: ${json.lastSync}, ${Math.round(json.syncDuration / 1000)}s)`);
-    return mergeFinancialData(json.data);
+    const lastSync = typeof json.lastSync === "string" ? new Date(json.lastSync) : null;
+    return {
+      projects: mergeFinancialData(json.data),
+      lastSync: lastSync && !Number.isNaN(lastSync.getTime()) ? lastSync : null,
+    };
   } catch {
     console.log("[Dashboard] Cache backend unavailable, falling back to direct API");
     return null;
   }
 }
 
-export async function fetchDashboardData(token: string, forceRefresh = false): Promise<ProjectData[]> {
+export async function fetchDashboardData(token: string, forceRefresh = false): Promise<DashboardFetchResult> {
   // 1. Try cache backend first
   const cached = await fetchFromCache(forceRefresh);
   if (cached) {
     // Save to session storage for offline/fast reload
     try {
-      const entry: CacheEntry = { data: cached, timestamp: Date.now() };
+      const entry: CacheEntry = {
+        data: cached.projects,
+        timestamp: Date.now(),
+        lastSyncIso: cached.lastSync ? cached.lastSync.toISOString() : undefined,
+      };
       sessionStorage.setItem(CACHE_KEY, JSON.stringify(entry));
     } catch { /* ignore quota errors */ }
-    return cached;
+    return { projects: cached.projects, lastSync: cached.lastSync };
   }
 
   // 2. Fallback: check session storage cache
@@ -519,7 +541,11 @@ export async function fetchDashboardData(token: string, forceRefresh = false): P
         const entry: CacheEntry = JSON.parse(sessionCached);
         if (Date.now() - entry.timestamp < CACHE_TTL) {
           console.log("[Dashboard] Using session cached data");
-          return entry.data;
+          const lastSync = entry.lastSyncIso ? new Date(entry.lastSyncIso) : null;
+          return {
+            projects: entry.data,
+            lastSync: lastSync && !Number.isNaN(lastSync.getTime()) ? lastSync : null,
+          };
         }
       }
     } catch { /* ignore cache errors */ }
@@ -643,11 +669,13 @@ export async function fetchDashboardData(token: string, forceRefresh = false): P
 
   const result = await Promise.all(projectDataPromises);
 
-  // Save to cache
+  // Save to cache. Direct GitHub fetch happens "now", so the entry's
+  // sync time and write time are the same.
+  const nowIso = new Date().toISOString();
   try {
-    const entry: CacheEntry = { data: result, timestamp: Date.now() };
+    const entry: CacheEntry = { data: result, timestamp: Date.now(), lastSyncIso: nowIso };
     sessionStorage.setItem(CACHE_KEY, JSON.stringify(entry));
   } catch { /* ignore quota errors */ }
 
-  return result;
+  return { projects: result, lastSync: new Date(nowIso) };
 }

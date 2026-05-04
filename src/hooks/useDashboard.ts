@@ -22,10 +22,13 @@ export function useDashboard() {
     setError(null);
 
     try {
-      const data = await fetchDashboardData(token, forceRefresh);
+      const { projects: data, lastSync } = await fetchDashboardData(token, forceRefresh);
       projectsRef.current = data;
       setProjects(data);
-      setLastUpdated(new Date());
+      // Prefer the upstream sync time so the UI reflects when GitHub data
+      // was actually pulled, not the moment we happened to read the cache.
+      // Falls back to "now" only if the source can't tell us (legacy path).
+      setLastUpdated(lastSync ?? new Date());
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Неизвестная ошибка";
       // On rate limit — try to use cached data if we have nothing
@@ -44,7 +47,12 @@ export function useDashboard() {
             ) {
               setProjects(entry.data);
               setError("Rate limit — показаны кэшированные данные");
-              setLastUpdated(new Date(entry.timestamp));
+              const lastSyncIso = typeof entry.lastSyncIso === "string" ? new Date(entry.lastSyncIso) : null;
+              setLastUpdated(
+                lastSyncIso && !Number.isNaN(lastSyncIso.getTime())
+                  ? lastSyncIso
+                  : new Date(entry.timestamp),
+              );
               return;
             }
           }
