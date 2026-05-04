@@ -16,6 +16,7 @@ interface Props {
     project: string,
   ) => Promise<void>;
   refreshKey: number;
+  onItemsChanged?: () => void;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -132,7 +133,7 @@ function matchesFilter(item: TranscriptListItem, f: StatusFilter): boolean {
   return true;
 }
 
-export function TranscriptHistoryV4({ onOpen, onResume, onRetry, refreshKey }: Props) {
+export function TranscriptHistoryV4({ onOpen, onResume, onRetry, refreshKey, onItemsChanged }: Props) {
   const [items, setItems] = useState<TranscriptListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -232,13 +233,14 @@ export function TranscriptHistoryV4({ onOpen, onResume, onRetry, refreshKey }: P
     try {
       await deleteTranscript(taskId);
       setItems((prev) => prev.filter((i) => i.task_id !== taskId));
+      onItemsChanged?.();
     } catch (err) {
       // Use a separate state from the load-error so the delete failure is
       // visible even when items.length > 0 (the load-error panel is
       // conditional on empty list).
       setDeleteError(`Не удалось удалить ${filename}: ${err}`);
     }
-  }, []);
+  }, [onItemsChanged]);
 
   const projects = useMemo(
     () => [...new Set(items.map((i) => i.project))].sort(),
