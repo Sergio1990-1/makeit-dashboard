@@ -156,9 +156,10 @@ export function PipelineView({
   const { sessionCost, sessionRuns } = useMemo(() => {
     if (!status) return { sessionCost: 0, sessionRuns: 0 };
     const cost = sumCost(status.results);
-    const runs = status.results.length > 0 ? 1 : 0;
-    const total = runs + (status.running && runStartedAt ? 1 : 0);
-    return { sessionCost: cost, sessionRuns: total };
+    // A running pipeline is the same run that produced any existing results,
+    // so count "1" when either condition holds — never both.
+    const hasRun = status.results.length > 0 || (status.running && runStartedAt !== null);
+    return { sessionCost: cost, sessionRuns: hasRun ? 1 : 0 };
   }, [status, runStartedAt]);
 
   // Classify dialog
