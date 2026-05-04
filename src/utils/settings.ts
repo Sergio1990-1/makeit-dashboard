@@ -122,6 +122,108 @@ interface SettingsValueResponse {
   value: string;
 }
 
+/* ────────────────────────────────────────
+   Wire-shape parsers
+   ──────────────────────────────────────────
+   Authoritative contract (makeit-pipeline Phase-1.5, 2026-05-03):
+     GET /settings/keys → list[str]                    (raw array)
+     GET /settings      → list[{key, masked_value?}]   (raw array)
+     GET /settings/{key}→ {key, value}
+
+   The earlier draft spec wrapped these in ``{key: value}`` / ``{"keys": [...]}``
+   — the backend was migrated to raw arrays after that wrapping caused
+   ``items.map is not a function`` here. We now (a) parse the realized
+   contract and (b) keep a defensive fallback for the wrapped shapes so a
+   stale-deploy regression surfaces with an explicit warning instead of an
+   unhandled TypeError that strands ``useSettings()`` in error/retry forever.
+   ──────────────────────────────────────── */
+
+function isObjectShape(x: unknown): x is Record<string, unknown> {
+  return typeof x === "object" && x !== null && !Array.isArray(x);
+}
+
+/**
+ * Parse the response of ``GET /settings``. Authoritative shape is
+ * ``Array<{key, masked_value?, ...}>``. Falls back to the legacy
+ * ``{key: value, ...}`` object shape (with a dev warning) so a stale
+ * backend doesn't crash the loader.
+ */
+export function parseSettingsList(raw: unknown): SettingsListItem[] {
+  if (Array.isArray(raw)) {
+    // Defensive: drop entries without a string ``key`` rather than crashing.
+    const isItem = (item: unknown): item is SettingsListItem =>
+      isObjectShape(item) && typeof (item as { key?: unknown }).key === "string";
+    const kept = raw.filter(isItem);
+    const dropped = raw.length - kept.length;
+    if (dropped > 0 && import.meta.env.DEV) {
+      console.warn(
+        `[settings] /settings dropped ${dropped} malformed entr${dropped === 1 ? "y" : "ies"} (missing string \`key\`).`,
+      );
+    }
+    return kept;
+  }
+  if (isObjectShape(raw)) {
+    if (import.meta.env.DEV) {
+      console.warn(
+        "[settings] /settings returned legacy object shape; expected array. " +
+          "Falling back to Object.entries — backend should be upgraded to Phase-1.5 wire-shape.",
+      );
+    }
+    return Object.keys(raw).map((key) => ({ key }));
+  }
+  throw new SettingsUnavailableError(
+    "Pipeline settings: /settings returned unexpected shape (expected array)",
+  );
+}
+
+/**
+ * Parse the response of ``GET /settings/keys``. Authoritative shape is a
+ * raw ``string[]``. Falls back to the legacy ``{"keys": [...]}`` wrapper
+ * (with a dev warning).
+ */
+export function parseSettingsKeys(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    const kept = raw.filter((k): k is string => typeof k === "string");
+    const dropped = raw.length - kept.length;
+    if (dropped > 0 && import.meta.env.DEV) {
+      console.warn(
+        `[settings] /settings/keys dropped ${dropped} non-string entr${dropped === 1 ? "y" : "ies"}.`,
+      );
+    }
+    return kept;
+  }
+  if (isObjectShape(raw) && Array.isArray((raw as { keys?: unknown }).keys)) {
+    if (import.meta.env.DEV) {
+      console.warn(
+        "[settings] /settings/keys returned legacy {keys: [...]} shape; expected raw array. " +
+          "Falling back to .keys — backend should be upgraded to Phase-1.5 wire-shape.",
+      );
+    }
+    return (raw as { keys: unknown[] }).keys.filter((k): k is string => typeof k === "string");
+  }
+  throw new SettingsUnavailableError(
+    "Pipeline settings: /settings/keys returned unexpected shape (expected array)",
+  );
+}
+
+/**
+ * Parse the response of ``GET /settings/{key}``. Authoritative shape is
+ * ``{key, value}``; we accept ``{value}`` (key-less) too — the caller already
+ * has the requested key in scope.
+ */
+export function parseSettingsValue(raw: unknown, requestedKey: string): SettingsValueResponse {
+  if (isObjectShape(raw) && typeof (raw as { value?: unknown }).value === "string") {
+    const obj = raw as { key?: unknown; value: string };
+    return {
+      key: typeof obj.key === "string" ? obj.key : requestedKey,
+      value: obj.value,
+    };
+  }
+  throw new SettingsUnavailableError(
+    `Pipeline settings: /settings/${requestedKey} returned unexpected shape (expected {value})`,
+  );
+}
+
 function authHeaders(): Record<string, string> {
   const token = getBootstrapToken();
   if (!token) throw new SettingsAuthError("Bootstrap token is not set");
@@ -189,13 +291,13 @@ async function request(path: string, init: RequestInit = {}): Promise<Response> 
  */
 export async function loadAllSettings(): Promise<void> {
   const listRes = await request("/settings");
-  const items = (await listRes.json()) as SettingsListItem[];
+  const items = parseSettingsList(await listRes.json());
   const next = new Map<string, string>();
   // Fetch values in parallel — bounded by the number of declared keys (small).
   const values = await Promise.all(
     items.map(async (item) => {
       const r = await request(`/settings/${encodeURIComponent(item.key)}`);
-      const data = (await r.json()) as SettingsValueResponse;
+      const data = parseSettingsValue(await r.json(), item.key);
       return [item.key, data.value] as const;
     }),
   );
@@ -228,7 +330,7 @@ export async function deleteSetting(key: string): Promise<void> {
 /** GET /settings/keys — list of declared/known keys. */
 export async function listSettingsKeys(): Promise<string[]> {
   const res = await request("/settings/keys");
-  return (await res.json()) as string[];
+  return parseSettingsKeys(await res.json());
 }
 
 /* ────────────────────────────────────────

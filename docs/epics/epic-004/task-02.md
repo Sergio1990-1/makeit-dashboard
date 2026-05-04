@@ -22,11 +22,17 @@
    - Возвращает текущее имя пользователя — сейчас всегда `"default"` (TODO-комментарий: «replace with JWT claims at multi-user epic»)
 
 2. **Endpoints в `api.py`:**
-   - `GET /settings` → `get_all(username)` → `{key: value, ...}`
-   - `GET /settings/keys` → `list_keys(username)` → `{"keys": [...]}` (без значений)
-   - `GET /settings/{key}` → `get(username, key)` → `{"value": "..."}`, 404 если ключа нет
+   - `GET /settings` → `get_all(username)` → `[{"key": "...", "masked_value": "..."}, ...]` (raw array, отсортирован по `key`; полные значения только через `GET /settings/{key}`)
+   - `GET /settings/keys` → `list_keys(username)` → `["...", ...]` (raw array, без значений)
+   - `GET /settings/{key}` → `get(username, key)` → `{"key": "...", "value": "..."}`, 404 если ключа нет
    - `PUT /settings/{key}` body `{"value": "..."}` → `put(username, key, value)` → 204
    - `DELETE /settings/{key}` → `delete(username, key)` → 204 если удалили, 404 если не было
+
+   > **Wire-shape note (Phase-1.5, 2026-05-03):** earlier draft использовал
+   > обёртки `{key: value, ...}` для `/settings` и `{"keys": [...]}` для
+   > `/settings/keys`. Эти формы крашили dashboard-loader (`items.map is not
+   > a function`) — backend переведён на raw-array, dashboard
+   > (`src/utils/settings.ts`) парсит именно этот контракт. См. issue #215.
 
 3. **Lifecycle:**
    - `SettingsStore` создаётся в `_lifespan` (см. `create_app` в `api.py`)
