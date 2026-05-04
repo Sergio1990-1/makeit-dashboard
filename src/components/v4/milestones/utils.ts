@@ -165,9 +165,13 @@ export function clsPriority(cls: MilestoneStatusKind): number {
  * Best-guess milestone start used as the left edge of the Gantt bar.
  *
  * Strategy keeps bars compact within the visible window:
- * - dueOn present: max(createdAt, due − issue-scaled offset). Using the LATER
- *   of the two avoids showing year-long bars when a milestone was created
- *   long before its deadline.
+ * - dueOn present: max(createdAt, due − issue-scaled offset), clamped to due.
+ *   Using the LATER of created vs projected avoids showing year-long bars when
+ *   a milestone was created long before its deadline. The clamp to `due`
+ *   prevents `start > due` for overdue milestones whose createdAt happens to
+ *   be after the deadline (e.g. a milestone updated/repurposed after it
+ *   expired) — without it the Gantt bar gets negative width and renders
+ *   inverted.
  * - dueOn missing: today. The bar projects forward by issue count, so the
  *   chart doesn't get a 28-px stub stuck at the left edge for milestones
  *   created months ago without a deadline.
@@ -178,11 +182,13 @@ export function milestoneStart(m: Milestone, fallbackNow: Date): Date {
     const due = startOfDay(new Date(m.dueOn));
     const total = m.openIssues + m.closedIssues;
     const projected = addDays(due, -Math.max(7, Math.round(total * 1.5)));
+    let candidate = projected;
     if (m.createdAt) {
       const created = startOfDay(new Date(m.createdAt));
-      return created > projected ? created : projected;
+      if (created > projected) candidate = created;
     }
-    return projected;
+    // Clamp to dueOn so the Gantt bar can never have negative width.
+    return candidate > due ? due : candidate;
   }
   return today;
 }
