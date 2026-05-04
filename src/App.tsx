@@ -30,6 +30,7 @@ import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH
 import { PasswordGate } from "./components/PasswordGate";
 import { SettingsBootstrap, SettingsUnavailable } from "./components/v4/SettingsBootstrap";
 import { SettingsPanel } from "./components/v4/SettingsPanel";
+import { BrandedLoader } from "./components/v4/BrandedLoader";
 import { useSettings } from "./hooks/useSettings";
 import { runOneTimeMigration } from "./utils/settings-migration";
 import {
@@ -522,7 +523,9 @@ function AppInner() {
             Tabs like Pipeline, Audit, Quality, Debate, Specs, Research, Transcripts,
             Monitoring have their own state and shouldn't be obscured by this banner. */}
         {projects.length === 0 && (tab === "dashboard" || tab === "projects" || tab === "milestones") && loading && (
-          <div className="v4-loading">Загрузка данных…</div>
+          // Same component as SettingsGate — keeps the cold-start sequence
+          // visually continuous (settings → data) instead of two screens.
+          <BrandedLoader stage="data" />
         )}
 
         {projects.length === 0 && (tab === "dashboard" || tab === "projects" || tab === "milestones") && !loading && !error && (
@@ -687,15 +690,10 @@ function SettingsGate() {
     if (settings.error === "unavailable") {
       return <SettingsUnavailable onRetry={settings.retry} />;
     }
-    // Initial loading state — short, but render something rather than a blank
-    // page so the user knows the app is alive while loadAllSettings() resolves.
-    return (
-      <div className="v4-app" style={{ gridTemplateColumns: "1fr", minHeight: "100vh" }}>
-        <main className="v4-main">
-          <div className="v4-loading">Загрузка настроек…</div>
-        </main>
-      </div>
-    );
+    // Initial loading — single branded loader covering the cold-start path.
+    // Same component is reused in AppInner for the data-fetching phase, so
+    // the user perceives one continuous loader, not two screens.
+    return <BrandedLoader stage="settings" />;
   }
   return <AppInner />;
 }

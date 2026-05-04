@@ -1891,6 +1891,45 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 }
 
 /* ────────────────────────────────────────
+   BRANDED LOADER (cold-start sequence)
+   Wraps MakeItLoader (brick-build wordmark)
+   in a full-screen overlay with a stage
+   label. The wordmark itself owns its
+   animation — see MakeItLoader.module.css.
+   ──────────────────────────────────────── */
+.bl-root {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--v4-bg);
+  color: var(--v4-ink-900);
+  z-index: 50;
+}
+
+.bl-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  padding: 32px 40px;
+  text-align: center;
+}
+
+.bl-stage {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--v4-ink-600);
+  letter-spacing: 0.01em;
+}
+
+.bl-subtitle {
+  font-size: 12px;
+  color: var(--v4-ink-500);
+  margin-top: -10px;
+}
+
+/* ────────────────────────────────────────
    PROJECTS VIEW (full page, rich cards)
    ──────────────────────────────────────── */
 
