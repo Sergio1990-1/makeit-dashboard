@@ -177,6 +177,10 @@ function splitPath(path: string): { dir: string; name: string } {
   return { dir: path.slice(0, idx), name: path.slice(idx + 1) };
 }
 
+// Returns the canonical path (dir + matched basename) when the entry exists,
+// or null otherwise. Callers in truthy/falsy patterns keep working; callers
+// that need to read the file (e.g. file_contains with case_insensitive) must
+// use the returned canonical path so the basename matches actual repo casing.
 // `caseInsensitive` only normalizes the basename — the directory portion is
 // passed verbatim to GitHub's `/contents/{dir}` endpoint, which is
 // case-sensitive. For YAML rules currently using the flag (root-level docs
@@ -191,16 +195,16 @@ async function pathExists(
   expect?: "file" | "dir",
   caseInsensitive: boolean = false,
   signal?: AbortSignal,
-): Promise<boolean> {
+): Promise<string | null> {
   const { dir, name } = splitPath(path);
   const items = await listDirCached(token, owner, repo, dir, cache, signal);
   const found = caseInsensitive
     ? items.find((i) => i.name.toLowerCase() === name.toLowerCase())
     : items.find((i) => i.name === name);
-  if (!found) return false;
-  if (expect === "file" && found.type !== "file") return false;
-  if (expect === "dir" && found.type !== "dir") return false;
-  return true;
+  if (!found) return null;
+  if (expect === "file" && found.type !== "file") return null;
+  if (expect === "dir" && found.type !== "dir") return null;
+  return dir ? `${dir}/${found.name}` : found.name;
 }
 
 function resolveClassification(
@@ -289,11 +293,12 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         const contains = param<string | undefined>(c, "contains", undefined);
         const containsAny = param<string[] | undefined>(c, "contains_any", undefined);
         const caseInsensitive = param<boolean>(c, "case_insensitive", false);
-        if (!(await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file", caseInsensitive, ctx.signal))) {
+        const canonicalPath = await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file", caseInsensitive, ctx.signal);
+        if (!canonicalPath) {
           return { ...base, status: "fail", detail: `Нет файла ${path}` };
         }
         try {
-          const text = await readRepoFile(ctx.token, ctx.owner, ctx.repo, path, ctx.signal);
+          const text = await readRepoFile(ctx.token, ctx.owner, ctx.repo, canonicalPath, ctx.signal);
           const ok = contains
             ? text.includes(contains)
             : Array.isArray(containsAny) && containsAny.some((s) => text.includes(s));
