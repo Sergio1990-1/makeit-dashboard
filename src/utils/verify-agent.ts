@@ -372,9 +372,13 @@ async function executeGrepFileTool(
 function guessSymbolPaths(symbol: string, hintFile?: string): string[] {
   const lower = symbol.toLowerCase();
   // Python convention: `QueueManager` lives in `queue_manager.py`, not `queuemanager.py`.
-  // Generate a snake_case variant alongside the lowercase one. When the symbol is
-  // already lowercase (e.g. `queue`), `snake === lower` and the Set dedupes.
-  const snake = symbol.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase();
+  // Generate a snake_case variant alongside the lowercase one. Two-pass split handles
+  // acronyms followed by another word: `IOError` → `io_error`, `HTTPClient` → `http_client`.
+  // When the symbol is already lowercase (e.g. `queue`), `snake === lower` and the Set dedupes.
+  const snake = symbol
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1_$2")
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase();
   const out = new Set<string>();
   if (hintFile) {
     const lastSlash = hintFile.lastIndexOf("/");
