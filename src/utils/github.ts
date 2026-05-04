@@ -571,7 +571,9 @@ export async function fetchDashboardData(
         void (async () => {
           try {
             const fresh = await fetchFromCache(false);
-            if (fresh) {
+            // Skip empty payloads — they'd clobber good local data with [].
+            // Wait for the next refresh cycle when the backend has results.
+            if (fresh && fresh.projects.length > 0) {
               writeLocalCache(fresh.projects, fresh.lastSync);
               onFreshData({ projects: fresh.projects, lastSync: fresh.lastSync });
             }
@@ -584,18 +586,27 @@ export async function fetchDashboardData(
 
   // 2. No fresh local cache — fetch from cache backend
   const cached = await fetchFromCache(forceRefresh);
-  if (cached) {
+  if (cached && cached.projects.length > 0) {
     writeLocalCache(cached.projects, cached.lastSync);
     return { projects: cached.projects, lastSync: cached.lastSync };
   }
 
-  // 3. Fallback: stale local cache (TTL expired but better than nothing)
-  if (!forceRefresh) {
-    const local = readLocalCache();
-    if (local) {
-      console.log("[Dashboard] Cache backend unreachable, using stale local cache");
-      return localCacheToResult(local);
-    }
+  // 3. Fallback: stale local cache. Triggered when the backend either
+  //    failed (cached === null) OR returned an empty payload (e.g. cache
+  //    container was just recreated and hasn't synced yet). Showing the
+  //    last known dashboard beats showing nothing — the next refresh
+  //    will reconcile once the backend has data.
+  const stale = readLocalCache();
+  if (stale && stale.data.length > 0) {
+    console.log("[Dashboard] Backend empty/unreachable, using stale local cache");
+    return localCacheToResult(stale);
+  }
+
+  // 3b. Backend returned a valid-but-empty payload AND we have nothing
+  //     local to fall back on. Surface the empty result honestly so the
+  //     UI can render its empty state.
+  if (cached) {
+    return { projects: cached.projects, lastSync: cached.lastSync };
   }
 
   // 4. Fallback: direct GitHub API (original logic)
