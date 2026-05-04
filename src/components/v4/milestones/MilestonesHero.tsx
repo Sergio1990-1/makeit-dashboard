@@ -6,7 +6,12 @@ import { classifyMilestone } from "./classifyMilestone";
 import { stripEpicPrefix } from "./utils";
 
 interface Props {
-  /** Open milestones — drives portfolio stats, deadlines, status counts. */
+  /**
+   * Full milestone set (open + closed). Hero classifies internally and counts
+   * `done`, `inProgress`, `overdue`, plus the issue rollup ring. Passing only
+   * open milestones makes the «завершено» counter and progress ring miss every
+   * closed milestone — see fix for #230.
+   */
   milestones: Milestone[];
   /**
    * Project data (issues from project boards). Velocity reuses the dashboard's
