@@ -1549,6 +1549,29 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 @media (prefers-reduced-motion: reduce) {
   .v4-orphan-skel-bar { animation: none; }
 }
+/* Failure state — overrides .v4-empty's muted look so the user can tell a
+   scan failure apart from "all issues distributed". Mirrors the inline-warn
+   pattern used by other panels (no full v4-error banner — we're inside a
+   panel body). */
+.v4-orphan-error {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--v4-danger-50);
+  color: var(--v4-danger-700);
+  border-radius: var(--v4-r-md);
+  border: 1px solid var(--v4-danger-100);
+  padding: 18px 16px;
+  margin: 8px;
+}
+.v4-orphan-error-t {
+  font-weight: 600;
+  font-size: 13px;
+}
+.v4-orphan-error-m {
+  font-size: 12px;
+  opacity: 0.85;
+}
 
 /* ────────────────────────────────────────
    MILESTONES STRIP

@@ -7,6 +7,13 @@ interface Props {
   loading: boolean;
   /** Timestamp of the most recent successful scan; null while we have no data yet. */
   lastUpdated: Date | null;
+  /**
+   * Scan failure message (missing token / all repos failed). Shown as a
+   * dedicated state when there's nothing to render, and as a non-blocking
+   * warning chip in the header when stale items are still on screen — so
+   * the user never sees the success-empty copy after a true failure.
+   */
+  error?: string | null;
 }
 
 // SVG viewBox dimensions — match ClosedChart30d so both panels feel like
@@ -103,7 +110,7 @@ function formatRelativeTime(d: Date | null, now: number): string | null {
   return `обновлено ${days} д назад`;
 }
 
-export function OrphanIssuesPanel({ items, loading, lastUpdated }: Props) {
+export function OrphanIssuesPanel({ items, loading, lastUpdated, error = null }: Props) {
   const buckets = useMemo(() => build30DayBuckets(items), [items]);
   const today = buckets[buckets.length - 1] ?? null;
   const totalToday = today?.count ?? 0;
@@ -172,7 +179,14 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated }: Props) {
 
   const showSkeleton = loading && items.length === 0;
   const showRefreshing = loading && items.length > 0;
-  const isEmpty = !loading && items.length === 0;
+  // Dedicated error state takes over when we have nothing to show — keeps the
+  // success-empty copy ("Все issues распределены…") from masking a failed scan.
+  const showError = !loading && items.length === 0 && !!error;
+  const isEmpty = !loading && items.length === 0 && !error;
+  // Recoverable failure: stale items still on screen but the latest scan failed.
+  // The chart stays so the user keeps the data, and a warn chip in the header
+  // signals that what they see may be out of date.
+  const showStaleErrorChip = !loading && items.length > 0 && !!error;
 
   return (
     <div className="v4-panel">
@@ -191,6 +205,11 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated }: Props) {
           Issues без milestone
           <span className="v4-tag">30 дней</span>
           {showRefreshing && <span className="v4-tag">обновляется…</span>}
+          {showStaleErrorChip && (
+            <span className="v4-tag v4-tag--warn" title={error ?? undefined}>
+              данные могут быть устаревшими
+            </span>
+          )}
         </div>
         <div className="v4-panel-meta">
           {totalToday > 0 ? `сейчас ${totalToday}` : meta ?? ""}
@@ -201,6 +220,11 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated }: Props) {
       <div className="v4-closed-chart">
         {showSkeleton ? (
           <OrphanSkeleton />
+        ) : showError ? (
+          <div className="v4-empty v4-ai-empty v4-orphan-error" role="alert">
+            <div className="v4-orphan-error-t">Не удалось загрузить orphan-issues</div>
+            <div className="v4-orphan-error-m">{error}</div>
+          </div>
         ) : isEmpty ? (
           <div className="v4-empty v4-ai-empty">
             Все issues распределены по milestones.
@@ -299,7 +323,7 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated }: Props) {
 
         {/* Tooltip card on hover — flips to the left of cursor near the
             right edge so it can't clip out of the panel. */}
-        {!showSkeleton && !isEmpty && hover !== null && buckets[hover] && (() => {
+        {!showSkeleton && !isEmpty && !showError && hover !== null && buckets[hover] && (() => {
           const row = buckets[hover];
           const date = new Date(row.iso);
           const xFrac = xOf(hover) / W;
@@ -346,7 +370,7 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated }: Props) {
         })()}
       </div>
 
-      {!showSkeleton && !isEmpty && (
+      {!showSkeleton && !isEmpty && !showError && (
         <div className="v4-cc-legend">
           <span className="v4-cc-lg">
             <span
