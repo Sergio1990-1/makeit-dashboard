@@ -110,7 +110,7 @@ export function StartDebateModal({ onClose, onStarted }: Props) {
         topic: topic.trim(),
         project: project || undefined,
         brief: brief.trim() || undefined,
-        context_files: contextFilesList.length > 0 ? contextFilesList : undefined,
+        context_files: project && contextFilesList.length > 0 ? contextFilesList : undefined,
         participants,
       });
       setStarting(false);
