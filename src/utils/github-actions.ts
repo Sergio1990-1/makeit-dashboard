@@ -744,6 +744,20 @@ export async function listMergedPRsInWindow(
   return out;
 }
 
+// Returns the full list of changed file paths for a PR.
+//
+// Pagination: GitHub silently caps `per_page` at 100 for the
+// `/pulls/{n}/files` endpoint, and the REST API itself returns at most 3000
+// files per PR. We loop up to MAX_PAGES (30 × 100 = 3000) so PRs touching
+// many files don't get truncated — previously the helper grabbed only the
+// first page, which made `pr_touches_code_not_docs` mis-classify large PRs
+// as "code without docs" when the doc changes happened to land on later
+// pages, skewing the project health score.
+//
+// Error handling: callers treat an empty list as "unknown set of files" and
+// skip the related health check, so on any non-Abort failure mid-stream we
+// return `[]` (NOT a partial list) to preserve that conservative semantic.
+// AbortError is re-thrown so cancellation propagates to the orchestrator.
 export async function getPRFiles(
   token: string,
   owner: string,
@@ -751,17 +765,25 @@ export async function getPRFiles(
   number: number,
   signal?: AbortSignal,
 ): Promise<string[]> {
+  const PER_PAGE = 100;
+  const MAX_PAGES = 30; // 3000 files — GitHub's hard cap for this endpoint
+  const out: string[] = [];
   try {
-    const data = await rest(
-      token,
-      `/repos/${owner}/${repo}/pulls/${number}/files?per_page=300`,
-      "GET",
-      undefined,
-      signal,
-    );
-    return Array.isArray(data)
-      ? data.map((f: { filename: string }) => f.filename)
-      : [];
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const data = await rest(
+        token,
+        `/repos/${owner}/${repo}/pulls/${number}/files?per_page=${PER_PAGE}&page=${page}`,
+        "GET",
+        undefined,
+        signal,
+      );
+      if (!Array.isArray(data)) return []; // unexpected shape — treat as unknown
+      for (const f of data as Array<{ filename: string }>) {
+        out.push(f.filename);
+      }
+      if (data.length < PER_PAGE) break; // last page reached
+    }
+    return out;
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") throw err;
     return [];
