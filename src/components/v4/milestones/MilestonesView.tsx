@@ -368,7 +368,8 @@ export function MilestonesView({ milestones: rawMilestones, projects, lastUpdate
                       key={e.m.url}
                       milestone={e.m}
                       density={state.density}
-                      now={now}
+                      days={e.days}
+                      cls={e.cls}
                       onSelect={setPopupMs}
                     />
                   ))}
