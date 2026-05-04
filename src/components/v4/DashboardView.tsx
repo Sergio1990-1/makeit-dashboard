@@ -191,6 +191,7 @@ export function DashboardView({
           loading={portfolio.loading}
           lastUpdated={portfolioLastUpdated}
           onOpenHealth={onOpenHealth}
+          error={portfolio.error}
         />
       </div>
 

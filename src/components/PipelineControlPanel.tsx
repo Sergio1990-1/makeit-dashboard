@@ -98,7 +98,65 @@ const STATUS_LABEL: Record<string, string> = {
   done: "Готово",
   needs_human: "Нужен человек",
   rolled_back: "Откат",
+  failed: "Ошибка",
+  cancelled: "Отменено",
+  error: "Ошибка",
 };
+
+/**
+ * Terminal-failure statuses — the pipeline ran and conclusively failed.
+ * Kept in sync with v4/pipeline/PipelineResults.tsx (issue #217). Note that
+ * `needs_human` is intentionally NOT here: it's a triage state (warn), not a
+ * failure. Unknown future statuses default to "not failed".
+ *
+ * TODO: extract to utils/pipeline-status.ts (duplicated across 5 files).
+ */
+const TERMINAL_FAILURE_STATUSES: ReadonlySet<string> = new Set([
+  "failed",
+  "cancelled",
+  "error",
+  "rolled_back",
+]);
+
+function isTerminalFailure(status: string): boolean {
+  return TERMINAL_FAILURE_STATUSES.has(status);
+}
+
+/**
+ * Visual tokens for the four ladder states (done / terminal-failure /
+ * needs_human / other) used by the row border and the status badge. Kept as
+ * a single helper so the four three-property tuples stay in lockstep — a
+ * mismatch between border and badge colour would be visually jarring.
+ */
+type StatusVisual = { border: string; badgeBg: string; badgeColor: string };
+
+const STATUS_VISUAL_DONE: StatusVisual = {
+  border: "rgba(16,185,129,0.2)",
+  badgeBg: "rgba(16, 185, 129, 0.12)",
+  badgeColor: "var(--green-500)",
+};
+const STATUS_VISUAL_FAILED: StatusVisual = {
+  border: "rgba(239,68,68,0.2)",
+  badgeBg: "rgba(239, 68, 68, 0.12)",
+  badgeColor: "var(--red-500)",
+};
+const STATUS_VISUAL_NEEDS_HUMAN: StatusVisual = {
+  border: "rgba(245,158,11,0.25)",
+  badgeBg: "rgba(245, 158, 11, 0.12)",
+  badgeColor: "var(--orange-500)",
+};
+const STATUS_VISUAL_DEFAULT: StatusVisual = {
+  border: "var(--color-border)",
+  badgeBg: "rgba(76, 141, 255, 0.12)",
+  badgeColor: "var(--blue-500)",
+};
+
+function statusVisual(status: string): StatusVisual {
+  if (status === "done") return STATUS_VISUAL_DONE;
+  if (isTerminalFailure(status)) return STATUS_VISUAL_FAILED;
+  if (status === "needs_human") return STATUS_VISUAL_NEEDS_HUMAN;
+  return STATUS_VISUAL_DEFAULT;
+}
 
 const VERDICT_STYLE: Record<string, { color: string; bg: string }> = {
   APPROVED: { color: "var(--green-500)", bg: "rgba(16, 185, 129, 0.12)" },
@@ -671,8 +729,9 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {status.results.map((r) => {
-              const isDone = r.status === "done";
-              const isFailed = r.status === "needs_human";
+              // Issue #254: distinguish terminal failures (red) from
+              // needs_human (warn/amber) — they're semantically different.
+              const visual = statusVisual(r.status);
               return (
                 <div
                   key={r.issue_number}
@@ -683,7 +742,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                     padding: "8px 10px",
                     borderRadius: "var(--radius-sm)",
                     background: "var(--color-bg)",
-                    border: `1px solid ${isDone ? "rgba(16,185,129,0.2)" : isFailed ? "rgba(239,68,68,0.2)" : "var(--color-border)"}`,
+                    border: `1px solid ${visual.border}`,
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -722,16 +781,8 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                     fontWeight: 600,
                     padding: "1px 8px",
                     borderRadius: 10,
-                    background: isDone
-                      ? "rgba(16, 185, 129, 0.12)"
-                      : isFailed
-                        ? "rgba(239, 68, 68, 0.12)"
-                        : "rgba(76, 141, 255, 0.12)",
-                    color: isDone
-                      ? "var(--green-500)"
-                      : isFailed
-                        ? "var(--red-500)"
-                        : "var(--blue-500)",
+                    background: visual.badgeBg,
+                    color: visual.badgeColor,
                   }}>
                     {STATUS_LABEL[r.status] ?? r.status}
                   </span>
