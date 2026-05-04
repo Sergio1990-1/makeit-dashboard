@@ -165,6 +165,21 @@ export function DebateView() {
 
       {loading && debates.length === 0 ? (
         <div className="v4-empty" style={{ marginTop: 14 }}>Загрузка…</div>
+      ) : error && debates.length === 0 ? (
+        <div className="v4-panel">
+          <div className="v4-db-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v4" />
+              <path d="M12 16h.01" />
+            </svg>
+            <h3>Не удалось загрузить дебаты</h3>
+            <p>{error || "Проверьте соединение и попробуйте снова."}</p>
+            <button type="button" className="v4-btn v4-btn--pri" onClick={refresh}>
+              Повторить
+            </button>
+          </div>
+        </div>
       ) : visible.length === 0 && debates.length === 0 ? (
         <div className="v4-panel">
           <div className="v4-db-empty">
