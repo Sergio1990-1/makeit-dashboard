@@ -233,11 +233,6 @@ export function TranscriptsView({ projects }: Props) {
       setEditing(false);
       setUploadError(null);
       try {
-        // Legacy history items pre-dating model tracking have no
-        // `transcription_model` — fall back to "fast" so retry still runs;
-        // there's no way to recover the original choice. `originalProject`
-        // is always present on TranscriptListItem (it's the same string the
-        // upload originally posted as project_context).
         const res = await retryTranscript(
           taskId,
           originalModel ?? "fast",
