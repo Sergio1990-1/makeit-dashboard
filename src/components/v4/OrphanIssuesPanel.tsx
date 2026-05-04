@@ -206,7 +206,12 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated, error = null }:
           <span className="v4-tag">30 дней</span>
           {showRefreshing && <span className="v4-tag">обновляется…</span>}
           {showStaleErrorChip && (
-            <span className="v4-tag v4-tag--warn" title={error ?? undefined}>
+            <span
+              className="v4-tag v4-tag--warn"
+              role="status"
+              title={error ?? undefined}
+              aria-label={`данные могут быть устаревшими: ${error}`}
+            >
               данные могут быть устаревшими
             </span>
           )}

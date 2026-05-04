@@ -1571,6 +1571,7 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 .v4-orphan-error-m {
   font-size: 12px;
   opacity: 0.85;
+  white-space: pre-line;
 }
 
 /* ────────────────────────────────────────
