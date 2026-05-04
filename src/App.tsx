@@ -160,13 +160,17 @@ function AppInner() {
   const [healthRepo, setHealthRepo] = useState<string | null>(null);
   // Switching tabs should always land on the tab's main view — clear the
   // drill-down before changing tabs so the user never returns to a stale
-  // sub-page on tab re-entry. Also strip `?repo=` from the URL: ProjectsView
-  // owns that query param while it is mounted, but once we navigate away it
-  // becomes orphaned and would mislead the next refresh.
+  // sub-page on tab re-entry. Also strip `?repo=` from the URL when LEAVING
+  // the Projects tab: ProjectsView owns that query param while it is mounted,
+  // but once we navigate away it becomes orphaned and would mislead the next
+  // refresh. We must NOT strip on the way IN to Projects (issue #212), since
+  // a shared/bookmarked deep-link like `/?repo=Beer_bot` opened while the
+  // persisted active tab is e.g. Dashboard would otherwise lose `?repo=`
+  // before ProjectsView mounts and runs its URL-hydration effect.
   const navigateTab = useCallback(
     (next: TabId) => {
       setHealthRepo(null);
-      if (typeof window !== "undefined") {
+      if (typeof window !== "undefined" && next !== "projects") {
         const url = new URL(window.location.href);
         if (url.searchParams.has("repo")) {
           url.searchParams.delete("repo");
