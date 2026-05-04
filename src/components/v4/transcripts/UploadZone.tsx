@@ -13,7 +13,7 @@ interface Props {
   setSelectedProject: (v: string) => void;
   selectedModel: TranscriptionModel;
   setSelectedModel: (v: TranscriptionModel) => void;
-  onSubmit: (files: File[]) => void;
+  onSubmit: (files: File[]) => void | Promise<void>;
   errorMessage?: string | null;
 }
 
@@ -45,6 +45,7 @@ export function UploadZone({
   const [files, setFiles] = useState<File[]>([]);
   const [dragging, setDragging] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const addFiles = useCallback((newFiles: File[]) => {
@@ -101,12 +102,21 @@ export function UploadZone({
     [addFiles]
   );
 
-  const handleSubmit = useCallback(() => {
-    if (files.length === 0 || !selectedProject) return;
-    onSubmit(files);
-    setFiles([]);
-    if (inputRef.current) inputRef.current.value = "";
-  }, [files, selectedProject, onSubmit]);
+  const handleSubmit = useCallback(async () => {
+    if (files.length === 0 || !selectedProject || submitting) return;
+    setSubmitting(true);
+    setLocalError(null);
+    try {
+      await onSubmit(files);
+      setFiles([]);
+      if (inputRef.current) inputRef.current.value = "";
+    } catch (err) {
+      // Keep selected files so the user can retry without re-picking them.
+      setLocalError(`Не удалось отправить файлы: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setSubmitting(false);
+    }
+  }, [files, selectedProject, submitting, onSubmit]);
 
   const hasAudio = files.some((f) => isAudioFile(f.name));
   const hasFiles = files.length > 0;
@@ -247,10 +257,14 @@ export function UploadZone({
         <button
           type="button"
           className="v4-btn v4-btn--pri v4-tpc-submit"
-          disabled={!hasFiles || !selectedProject}
+          disabled={!hasFiles || !selectedProject || submitting}
           onClick={handleSubmit}
         >
-          {files.length > 1 ? `Обработать (${files.length})` : "Обработать"}
+          {submitting
+            ? "Отправка…"
+            : files.length > 1
+              ? `Обработать (${files.length})`
+              : "Обработать"}
         </button>
       </div>
 

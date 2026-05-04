@@ -92,6 +92,9 @@ export function TranscriptsView({ projects }: Props) {
       setHistoryRefreshKey((k) => k + 1);
     } catch (err) {
       setUploadError(String(err));
+      // Re-throw so UploadZone keeps the selected file and the user can retry
+      // without having to pick it again.
+      throw err;
     }
   }, [selectedProject, selectedModel]);
 
