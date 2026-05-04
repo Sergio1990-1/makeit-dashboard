@@ -703,7 +703,6 @@ Verify it now.`;
               });
               continue;
             }
-            seenToolCalls.add(callKey);
 
             let result: VerifyToolResult;
             switch (block.name) {
@@ -743,6 +742,12 @@ Verify it now.`;
               content: result.text,
               is_error: result.error,
             });
+            // Only mark as "seen" for dedupe when the tool actually succeeded.
+            // Transient failures (e.g. GitHub rate-limiting in
+            // executeFindSymbolTool) must be retryable with the same arguments,
+            // otherwise the verifier drifts to UNCERTAIN even though a retry
+            // could have worked.
+            if (!result.error) seenToolCalls.add(callKey);
           }
           currentMessages = [
             ...currentMessages,
