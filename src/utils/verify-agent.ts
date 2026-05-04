@@ -454,6 +454,23 @@ async function executeFindSymbolTool(
     rendered.push(renderCodeWindow(file.resolvedPath, file.content, line, 20));
   }
 
+  // Fallback A: no def-fragment hits but raw hits exist — bare-query fallback may
+  // have surfaced files where the first text match is a reference, not the def.
+  // Scan top-3 candidate paths from the raw hits via findDefinitionLine before
+  // falling through to blind path guessing.
+  if (rendered.length === 0 && hits.length > 0) {
+    for (const hit of hits) {
+      if (rendered.length >= 3) break;
+      if (seenPaths.has(hit.path)) continue;
+      seenPaths.add(hit.path);
+      const file = await fetchFileWithCache(githubToken, owner, repo, hit.path, cache);
+      if (!file) continue;
+      const line = findDefinitionLine(file.content, symbol);
+      if (line < 0) continue;
+      rendered.push(renderCodeWindow(file.resolvedPath, file.content, line, 20));
+    }
+  }
+
   // 3. If search returned nothing useful (either unavailable or no definitions),
   //    fall back to sequential path guessing.
   if (rendered.length === 0) {
