@@ -213,6 +213,7 @@ export function DashboardView({
           items={orphans.items}
           loading={orphans.loading}
           lastUpdated={orphansLastUpdated}
+          error={orphans.error}
         />
       </div>
 
