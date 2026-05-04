@@ -43,7 +43,7 @@ export function UXAuditView() {
       const s = statuses[p.name]?.state;
       if (filter === "completed" && s !== "completed") return false;
       if (filter === "running" && s !== "running") return false;
-      if (filter === "notRun" && (s === "completed" || s === "running" || s === "failed")) return false;
+      if (filter === "notRun" && (s === "completed" || s === "running" || s === "failed" || s === "cancelled")) return false;
       return true;
     });
   }, [projects, statuses, filter, search]);
