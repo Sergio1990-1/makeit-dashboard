@@ -445,7 +445,7 @@ async function fetchRepoInfo(token: string, owner: string, repo: string): Promis
 }
 
 const CACHE_KEY = "makeit_dashboard_cache";
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
 interface CacheEntry {
   data: ProjectData[];
@@ -464,6 +464,45 @@ export interface DashboardFetchResult {
    * `lastSync`). Null when we hit GitHub directly — in that case the caller
    * should treat "now" as the sync time. */
   lastSync: Date | null;
+}
+
+function readLocalCache(): CacheEntry | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const entry = JSON.parse(raw) as CacheEntry;
+    if (
+      !entry ||
+      !Array.isArray(entry.data) ||
+      typeof entry.timestamp !== "number"
+    ) return null;
+    if (entry.data.length > 0) {
+      const first = entry.data[0] as Partial<ProjectData> | null;
+      if (!first || typeof first !== "object" || !("repo" in first)) return null;
+    }
+    return entry;
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalCache(data: ProjectData[], lastSync: Date | null = null): void {
+  try {
+    const entry: CacheEntry = {
+      data,
+      timestamp: Date.now(),
+      lastSyncIso: lastSync ? lastSync.toISOString() : undefined,
+    };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
+  } catch { /* ignore quota errors */ }
+}
+
+function localCacheToResult(entry: CacheEntry): DashboardFetchResult {
+  const lastSync = entry.lastSyncIso ? new Date(entry.lastSyncIso) : null;
+  return {
+    projects: entry.data,
+    lastSync: lastSync && !Number.isNaN(lastSync.getTime()) ? lastSync : null,
+  };
 }
 
 // ── Backend-first fetch with fallback to direct GitHub API ──
@@ -517,41 +556,49 @@ async function fetchFromCache(forceRefresh: boolean): Promise<{ projects: Projec
   }
 }
 
-export async function fetchDashboardData(token: string, forceRefresh = false): Promise<DashboardFetchResult> {
-  // 1. Try cache backend first
+export async function fetchDashboardData(
+  token: string,
+  forceRefresh = false,
+  onFreshData?: (result: DashboardFetchResult) => void
+): Promise<DashboardFetchResult> {
+  // 1. Stale-while-revalidate: if not a manual refresh and local cache is fresh,
+  //    return it instantly and refresh in the background via onFreshData.
+  if (!forceRefresh) {
+    const local = readLocalCache();
+    if (local && Date.now() - local.timestamp < CACHE_TTL) {
+      console.log("[Dashboard] SWR: serving local cache, refreshing in background");
+      if (onFreshData) {
+        void (async () => {
+          try {
+            const fresh = await fetchFromCache(false);
+            if (fresh) {
+              writeLocalCache(fresh.projects, fresh.lastSync);
+              onFreshData({ projects: fresh.projects, lastSync: fresh.lastSync });
+            }
+          } catch { /* background refresh failed — keep stale data */ }
+        })();
+      }
+      return localCacheToResult(local);
+    }
+  }
+
+  // 2. No fresh local cache — fetch from cache backend
   const cached = await fetchFromCache(forceRefresh);
   if (cached) {
-    // Save to session storage for offline/fast reload
-    try {
-      const entry: CacheEntry = {
-        data: cached.projects,
-        timestamp: Date.now(),
-        lastSyncIso: cached.lastSync ? cached.lastSync.toISOString() : undefined,
-      };
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify(entry));
-    } catch { /* ignore quota errors */ }
+    writeLocalCache(cached.projects, cached.lastSync);
     return { projects: cached.projects, lastSync: cached.lastSync };
   }
 
-  // 2. Fallback: check session storage cache
+  // 3. Fallback: stale local cache (TTL expired but better than nothing)
   if (!forceRefresh) {
-    try {
-      const sessionCached = sessionStorage.getItem(CACHE_KEY);
-      if (sessionCached) {
-        const entry: CacheEntry = JSON.parse(sessionCached);
-        if (Date.now() - entry.timestamp < CACHE_TTL) {
-          console.log("[Dashboard] Using session cached data");
-          const lastSync = entry.lastSyncIso ? new Date(entry.lastSyncIso) : null;
-          return {
-            projects: entry.data,
-            lastSync: lastSync && !Number.isNaN(lastSync.getTime()) ? lastSync : null,
-          };
-        }
-      }
-    } catch { /* ignore cache errors */ }
+    const local = readLocalCache();
+    if (local) {
+      console.log("[Dashboard] Cache backend unreachable, using stale local cache");
+      return localCacheToResult(local);
+    }
   }
 
-  // 3. Fallback: direct GitHub API (original logic)
+  // 4. Fallback: direct GitHub API (original logic)
   console.log("[Dashboard] Fetching directly from GitHub API");
   const allIssues = await fetchAllProjectItems(token);
 
@@ -669,13 +716,8 @@ export async function fetchDashboardData(token: string, forceRefresh = false): P
 
   const result = await Promise.all(projectDataPromises);
 
-  // Save to cache. Direct GitHub fetch happens "now", so the entry's
-  // sync time and write time are the same.
-  const nowIso = new Date().toISOString();
-  try {
-    const entry: CacheEntry = { data: result, timestamp: Date.now(), lastSyncIso: nowIso };
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify(entry));
-  } catch { /* ignore quota errors */ }
-
-  return { projects: result, lastSync: new Date(nowIso) };
+  // Direct GitHub fetch happens "now", so sync time and write time match.
+  const now = new Date();
+  writeLocalCache(result, now);
+  return { projects: result, lastSync: now };
 }
