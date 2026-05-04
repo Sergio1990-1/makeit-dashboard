@@ -8284,6 +8284,75 @@ ul.v4-rsh-list {
 .v4-mspopup-edit button:disabled,
 .v4-mspopup-edit input:disabled { opacity: 0.55; cursor: not-allowed; }
 
+.v4-mspopup-title-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.v4-mspopup-title-edit input[type="text"] {
+  flex: 1 1 220px;
+  min-width: 180px;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border: 1px solid var(--v4-line-strong);
+  border-radius: 6px;
+  background: var(--v4-paper);
+  color: var(--v4-ink-900);
+}
+.v4-mspopup-title-edit input[type="text"]:focus {
+  outline: none;
+  border-color: var(--v4-accent-500);
+}
+
+.v4-mspopup-danger-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px dashed var(--v4-line-soft);
+  font-family: var(--v4-mono);
+  font-size: 11px;
+}
+.v4-mspopup-danger-prompt {
+  flex: 1 1 240px;
+  color: var(--v4-ink-700);
+}
+.v4-mspopup-danger-btn {
+  appearance: none;
+  border: 1px solid #FCC8C5;
+  background: transparent;
+  color: #B42318;
+  font-family: var(--v4-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.v4-mspopup-danger-btn:hover {
+  background: #FEE4E2;
+  border-color: #B42318;
+}
+.v4-mspopup-danger-confirm {
+  appearance: none;
+  border: 0;
+  background: #B42318;
+  color: #fff;
+  font-family: var(--v4-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s, opacity .15s;
+}
+.v4-mspopup-danger-confirm:hover:not(:disabled) { background: #912018; }
+.v4-mspopup-danger-confirm:disabled { opacity: 0.55; cursor: not-allowed; }
+
 .v4-mspopup-tabs {
   display: flex;
   gap: 4px;

@@ -4,9 +4,13 @@ import type { Milestone } from "../../../types";
 import { formatShortDate } from "../../../utils/date";
 import { getToken } from "../../../utils/config";
 import {
+  deleteMilestone,
   parseMilestoneUrl,
   patchMilestoneDueOn,
+  patchMilestoneTitle,
+  setDeletedOverride,
   setDueOverride,
+  setTitleOverride,
   triggerCacheSync,
 } from "../../../utils/milestoneEdit";
 import { useToast } from "../toastContext";
@@ -39,19 +43,106 @@ export function MilestoneIssuesPopup({ milestone, onClose, onEdited }: Props) {
   const [editing, setEditing] = useState(false);
   const [draftDate, setDraftDate] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [savingTitle, setSavingTitle] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const toast = useToast();
 
   const ref = useMemo(() => parseMilestoneUrl(milestone.url), [milestone.url]);
   const canEdit = ref !== null;
 
-  // ESC to close
+  const renameTitle = async () => {
+    if (!ref) return;
+    const trimmed = draftTitle.trim();
+    if (!trimmed || trimmed === milestone.title) {
+      setEditingTitle(false);
+      return;
+    }
+    const token = getToken();
+    if (!token) {
+      toast.push({
+        title: "Нет GitHub-токена",
+        description: "Добавь PAT в настройках, чтобы переименовать milestone.",
+        kind: "error",
+      });
+      return;
+    }
+    setSavingTitle(true);
+    const result = await patchMilestoneTitle(token, ref, trimmed);
+    setSavingTitle(false);
+    if (!result) {
+      toast.push({
+        title: "Не удалось переименовать",
+        description: "GitHub отклонил запрос. Проверь права токена.",
+        kind: "error",
+      });
+      return;
+    }
+    setTitleOverride(milestone.url, trimmed);
+    triggerCacheSync();
+    toast.push({ title: "Milestone переименован", kind: "success" });
+    setEditingTitle(false);
+    onEdited?.();
+  };
+
+  const performDelete = async () => {
+    if (!ref) return;
+    const token = getToken();
+    if (!token) {
+      toast.push({
+        title: "Нет GitHub-токена",
+        description: "Добавь PAT в настройках, чтобы удалить milestone.",
+        kind: "error",
+      });
+      return;
+    }
+    setDeleting(true);
+    const ok = await deleteMilestone(token, ref);
+    setDeleting(false);
+    if (!ok) {
+      toast.push({
+        title: "Не удалось удалить",
+        description: "GitHub отклонил запрос. Проверь права токена.",
+        kind: "error",
+      });
+      return;
+    }
+    setDeletedOverride(milestone.url);
+    triggerCacheSync();
+    toast.push({
+      title: "Milestone удалён",
+      description: "Issues остались в репо — у них просто снят milestone.",
+      kind: "success",
+    });
+    onEdited?.();
+    onClose();
+  };
+
+  // ESC to close — but if a sub-form is open (date edit, title edit, delete
+  // confirm), close that form instead so a stray Escape doesn't bin the
+  // whole dialog mid-edit.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      if (editingTitle) {
+        setEditingTitle(false);
+        return;
+      }
+      if (editing) {
+        setEditing(false);
+        return;
+      }
+      if (confirmDelete) {
+        setConfirmDelete(false);
+        return;
+      }
+      onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, editingTitle, editing, confirmDelete]);
 
   // Lock background scroll while popup is open
   useEffect(() => {
@@ -108,9 +199,58 @@ export function MilestoneIssuesPopup({ milestone, onClose, onEdited }: Props) {
           />
           <div className="v4-mspopup-h-text">
             <div className="v4-mspopup-repo">{milestone.repo}</div>
-            <h2 id="v4-mspopup-title" className="v4-mspopup-title">
-              {stripEpicPrefix(milestone.title) || milestone.title}
-            </h2>
+            {editingTitle ? (
+              <form
+                className="v4-mspopup-title-edit"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void renameTitle();
+                }}
+              >
+                <input
+                  type="text"
+                  value={draftTitle}
+                  onChange={(e) => setDraftTitle(e.target.value)}
+                  disabled={savingTitle}
+                  autoFocus
+                  aria-label="Название milestone"
+                />
+                <button
+                  type="submit"
+                  className="v4-mspopup-edit-save"
+                  disabled={savingTitle || !draftTitle.trim()}
+                >
+                  {savingTitle ? "..." : "OK"}
+                </button>
+                <button
+                  type="button"
+                  className="v4-mspopup-edit-cancel"
+                  disabled={savingTitle}
+                  onClick={() => setEditingTitle(false)}
+                >
+                  Отмена
+                </button>
+              </form>
+            ) : (
+              <h2 id="v4-mspopup-title" className="v4-mspopup-title">
+                {stripEpicPrefix(milestone.title) || milestone.title}
+                {canEdit && (
+                  <button
+                    type="button"
+                    className="v4-mspopup-edit-btn"
+                    title="Переименовать milestone"
+                    aria-label="Переименовать milestone"
+                    onClick={() => {
+                      setDraftTitle(milestone.title);
+                      setEditingTitle(true);
+                      setConfirmDelete(false);
+                    }}
+                  >
+                    ✎
+                  </button>
+                )}
+              </h2>
+            )}
           </div>
           <button
             type="button"
@@ -236,6 +376,7 @@ export function MilestoneIssuesPopup({ milestone, onClose, onEdited }: Props) {
                       onClick={() => {
                         setDraftDate(dueOnInputValue(milestone.dueOn));
                         setEditing(true);
+                        setConfirmDelete(false);
                       }}
                     >
                       ✎
@@ -258,6 +399,43 @@ export function MilestoneIssuesPopup({ milestone, onClose, onEdited }: Props) {
               </>
             )}
           </div>
+          {canEdit && !editing && !editingTitle && (
+            <div className="v4-mspopup-danger-row">
+              {confirmDelete ? (
+                <>
+                  <span className="v4-mspopup-danger-prompt">
+                    Удалить milestone «{stripEpicPrefix(milestone.title) || milestone.title}»?
+                    Issues останутся в репо, но потеряют привязку к milestone.
+                  </span>
+                  <button
+                    type="button"
+                    className="v4-mspopup-danger-confirm"
+                    onClick={performDelete}
+                    disabled={deleting}
+                  >
+                    {deleting ? "Удаляю..." : "Да, удалить"}
+                  </button>
+                  <button
+                    type="button"
+                    className="v4-mspopup-edit-cancel"
+                    onClick={() => setConfirmDelete(false)}
+                    disabled={deleting}
+                  >
+                    Отмена
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="v4-mspopup-danger-btn"
+                  onClick={() => setConfirmDelete(true)}
+                  title="Удалить milestone на GitHub"
+                >
+                  Удалить milestone
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="v4-mspopup-tabs" role="tablist">
