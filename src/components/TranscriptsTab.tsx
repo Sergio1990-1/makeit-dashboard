@@ -261,14 +261,22 @@ export function TranscriptsTab({ projects }: Props) {
   }, []);
 
   const onRetryFromHistory = useCallback(
-    async (taskId: string, originalModel: TranscriptionModel | undefined) => {
+    async (
+      taskId: string,
+      originalModel: TranscriptionModel | undefined,
+      originalProject: string,
+    ) => {
       if (retryInProgressRef.current) return;
       retryInProgressRef.current = true;
       setBriefResult(null);
       setEditing(false);
       setResult(null);
       try {
-        const res = await retryTranscript(taskId, originalModel ?? "fast");
+        const res = await retryTranscript(
+          taskId,
+          originalModel ?? "fast",
+          originalProject,
+        );
         setActiveTaskId(res.task_id);
         setHistoryRefreshKey((k) => k + 1);
       } catch (err) {

@@ -10,7 +10,11 @@ import {
 interface Props {
   onOpen: (taskId: string) => void;
   onResume: (taskId: string) => void;
-  onRetry: (taskId: string, transcriptionModel: TranscriptionModel | undefined) => Promise<void>;
+  onRetry: (
+    taskId: string,
+    transcriptionModel: TranscriptionModel | undefined,
+    project: string,
+  ) => Promise<void>;
   refreshKey: number;
 }
 
@@ -204,12 +208,16 @@ export function TranscriptHistoryV4({ onOpen, onResume, onRetry, refreshKey }: P
 
   const inflightRetriesRef = useRef<Set<string>>(new Set());
   const handleRetry = useCallback(
-    async (taskId: string, model: TranscriptionModel | undefined) => {
+    async (
+      taskId: string,
+      model: TranscriptionModel | undefined,
+      project: string,
+    ) => {
       if (inflightRetriesRef.current.has(taskId)) return;
       inflightRetriesRef.current.add(taskId);
       setRetryingIds(new Set(inflightRetriesRef.current));
       try {
-        await onRetry(taskId, model);
+        await onRetry(taskId, model, project);
       } finally {
         inflightRetriesRef.current.delete(taskId);
         setRetryingIds(new Set(inflightRetriesRef.current));
@@ -504,7 +512,7 @@ export function TranscriptHistoryV4({ onOpen, onResume, onRetry, refreshKey }: P
                     <button
                       type="button"
                       className="v4-btn"
-                      onClick={() => handleRetry(item.task_id, item.transcription_model)}
+                      onClick={() => handleRetry(item.task_id, item.transcription_model, item.project)}
                       disabled={retryingIds.has(item.task_id)}
                       title="Повторить с момента сбоя"
                     >

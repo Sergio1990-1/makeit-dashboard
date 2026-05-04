@@ -224,12 +224,20 @@ export function TranscriptsView({ projects }: Props) {
   // (inflightRetriesRef guards each row's button). No view-level guard
   // needed — and adding one would create dead code that misleads readers.
   const onRetryFromHistory = useCallback(
-    async (taskId: string, originalModel: TranscriptionModel | undefined) => {
+    async (
+      taskId: string,
+      originalModel: TranscriptionModel | undefined,
+      originalProject: string,
+    ) => {
       setBriefResult(null);
       setEditing(false);
       setUploadError(null);
       try {
-        const res = await retryTranscript(taskId, originalModel ?? "fast");
+        const res = await retryTranscript(
+          taskId,
+          originalModel ?? "fast",
+          originalProject,
+        );
         setActiveTaskId(res.task_id);
         setHistoryRefreshKey((k) => k + 1);
       } catch (err) {

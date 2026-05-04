@@ -244,16 +244,21 @@ export async function uploadTranscript(
 
 /** Retry a failed transcript job. Backend resumes from saved state by job id;
  *  the empty file blob is a multipart placeholder — backend uses the original
- *  file already on disk. The original model is passed through so backend can
- *  honour it if its resume path doesn't override from saved state. */
+ *  file already on disk. The original model and project_context MUST be
+ *  passed through so the retry is parameter-equivalent to the failed job —
+ *  hardcoding `fast` / empty context downgraded settings and could trip
+ *  backend validation that requires a non-empty context (issue #218).
+ *  Caller is responsible for plumbing these from the stored job state
+ *  (`TranscriptListItem.transcription_model` and `TranscriptListItem.project`). */
 export async function retryTranscript(
   jobId: string,
-  transcriptionModel: TranscriptionModel = "fast",
+  transcriptionModel: TranscriptionModel,
+  projectContext: string,
 ): Promise<TranscriptUploadResponse> {
   const form = new FormData();
   form.append("resume", jobId);
   form.append("file", new Blob([], { type: "application/octet-stream" }), "retry");
-  form.append("project_context", "");
+  form.append("project_context", projectContext);
   form.append("transcription_model", transcriptionModel);
 
   const res = await fetch(`${PIPELINE_BASE_URL}/transcript/upload`, {
