@@ -203,6 +203,10 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
   const openDelta = useMemo(() => calcOpenDelta(projects), [projects]);
   const progressDelta = useMemo(() => calcProgressDelta(projects), [projects]);
   const priorityTotals = useMemo(() => sumOpenPriorities(projects), [projects]);
+  const openCount = useMemo(
+    () => projects.reduce((s, p) => s + (p.openCount ?? 0), 0),
+    [projects],
+  );
 
   const pctDone =
     summary.totalIssues > 0
@@ -274,7 +278,7 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
             },
             {
               key: "open",
-              n: <TweenedNumber value={summary.openCount} />,
+              n: <TweenedNumber value={openCount} />,
               l: "Открыто",
             },
           ]}
@@ -294,7 +298,7 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
         </div>
         <div className="v4-kpi-num-row">
           <span className="v4-kpi-num num">
-            <TweenedNumber value={summary.openCount} />
+            <TweenedNumber value={openCount} />
           </span>
           {openDelta.netDelta7d !== 0 && (
             <span
