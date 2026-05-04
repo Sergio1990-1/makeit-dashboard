@@ -62,10 +62,25 @@ export interface PortfolioCache<T> {
   clear(): void;
 }
 
+// Optional payload validator: callers pass a type-guard (e.g. `Array.isArray`
+// for collections) so that stale or hand-edited entries with a structurally
+// invalid `payload` are rejected as a cache miss instead of crashing
+// downstream consumers (e.g. `portfolio.reports.reduce(...)` blowing up at
+// render time when `payload` happens to be an object). A regression of an
+// older guard — see issue #225.
+export interface CreatePortfolioCacheOptions<T> {
+  validate?: (payload: unknown) => payload is T;
+}
+
 // Factory for a typed localStorage-backed cache. The key namespaces the
 // payload; bump the suffix in the cache key when the payload shape changes
-// incompatibly.
-export function createPortfolioCache<T>(key: string): PortfolioCache<T> {
+// incompatibly. Pass `validate` to enforce a runtime type-guard on the cached
+// payload; without it, the read trusts whatever shape was previously written.
+export function createPortfolioCache<T>(
+  key: string,
+  options: CreatePortfolioCacheOptions<T> = {},
+): PortfolioCache<T> {
+  const { validate } = options;
   return {
     read() {
       try {
@@ -77,6 +92,11 @@ export function createPortfolioCache<T>(key: string): PortfolioCache<T> {
         if (!parsed || typeof parsed !== "object") return null;
         if (typeof parsed.generated_at !== "string" || !parsed.generated_at) return null;
         if (!("payload" in parsed)) return null;
+        // Validator-driven shape check on the payload itself. A previous
+        // build may have written a different structure under the same key,
+        // or a hand-edited entry may have malformed payload. Treat as a
+        // miss so the next scan rebuilds it cleanly.
+        if (validate && !validate(parsed.payload)) return null;
         return parsed;
       } catch {
         return null;

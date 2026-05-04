@@ -93,49 +93,79 @@ function unknownFinding(
   return { ...baseFinding(rule), status: "unknown", detail };
 }
 
+// True if the error message looks like a genuine 404 (file truly absent) as
+// opposed to a transient network / 5xx / auth failure. `rest()` in
+// github-actions.ts throws `Error("GitHub API ${status}")` so a word-boundary
+// match on `404` is the cheapest reliable signal.
+function isNotFoundError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : "";
+  return /\b404\b/.test(msg);
+}
+
 // Read package.json and return a compact JSON of just its `scripts` block,
-// plus a flag signalling whether the payload was truncated. Empty json means
-// "no package.json" or "no scripts" — both are treated equivalently by the
-// prompt. Errors fall through to absent — a failed read shouldn't kill the
-// rule, the LLM still has CLAUDE.md + repo tree. The `truncated` flag lets
-// the prompt warn the model so it doesn't flag clipped scripts as missing
-// with high confidence (mirrors the repo_tree truncation note).
+// plus a flag signalling whether the payload was truncated. Empty json with
+// `unavailable: false` means "no package.json" or "no scripts" — both are
+// treated equivalently by the prompt. The `unavailable` flag distinguishes a
+// transient read failure (network/5xx/auth) so the caller can degrade the
+// whole rule to `unknown` instead of running the prompt against an empty
+// scripts block (which would falsely fail `npm run X` mentions). The
+// `truncated` flag lets the prompt warn the model so it doesn't flag clipped
+// scripts as missing with high confidence (mirrors the repo_tree truncation
+// note).
 async function readScripts(
   token: string,
   owner: string,
   repo: string,
-): Promise<{ json: string; truncated: boolean }> {
+): Promise<{ json: string; truncated: boolean; unavailable: boolean }> {
+  let raw: string;
   try {
-    const raw = await readRepoFile(token, owner, repo, "package.json");
+    raw = await readRepoFile(token, owner, repo, "package.json");
+  } catch (err) {
+    if (isNotFoundError(err)) {
+      return { json: "", truncated: false, unavailable: false };
+    }
+    return { json: "", truncated: false, unavailable: true };
+  }
+  try {
     // Bound parse work for adversarial / accidentally-huge files. The file
     // exists but we can't see its scripts — flag truncated so the prompt
     // tells the model not to fail `npm run X` mentions with high confidence.
-    if (raw.length > MAX_PACKAGE_JSON_CHARS) return { json: "", truncated: true };
+    if (raw.length > MAX_PACKAGE_JSON_CHARS) {
+      return { json: "", truncated: true, unavailable: false };
+    }
     const parsed = JSON.parse(raw) as { scripts?: Record<string, string> };
     if (!parsed.scripts || typeof parsed.scripts !== "object") {
-      return { json: "", truncated: false };
+      return { json: "", truncated: false, unavailable: false };
     }
     const full = JSON.stringify(parsed.scripts);
     if (full.length > MAX_SCRIPTS_CHARS) {
-      return { json: full.slice(0, MAX_SCRIPTS_CHARS), truncated: true };
+      return { json: full.slice(0, MAX_SCRIPTS_CHARS), truncated: true, unavailable: false };
     }
-    return { json: full, truncated: false };
+    return { json: full, truncated: false, unavailable: false };
   } catch {
-    return { json: "", truncated: false };
+    // JSON.parse failure on a successfully-fetched payload — file exists but
+    // is malformed. Treat as "no scripts" rather than transient: re-running
+    // won't help.
+    return { json: "", truncated: false, unavailable: false };
   }
 }
 
-// Best-effort Makefile read. Same swallow-on-error policy as readScripts.
+// Best-effort Makefile read. Same 404-vs-transient distinction as readScripts
+// so a 5xx on Makefile fetch can degrade the rule to `unknown` instead of
+// silently treating Makefile as absent.
 async function readMakefile(
   token: string,
   owner: string,
   repo: string,
-): Promise<string> {
+): Promise<{ content: string; unavailable: boolean }> {
   try {
     const raw = await readRepoFile(token, owner, repo, "Makefile");
-    return raw.slice(0, MAX_MAKEFILE_CHARS);
-  } catch {
-    return "";
+    return { content: raw.slice(0, MAX_MAKEFILE_CHARS), unavailable: false };
+  } catch (err) {
+    if (isNotFoundError(err)) {
+      return { content: "", unavailable: false };
+    }
+    return { content: "", unavailable: true };
   }
 }
 
@@ -195,12 +225,27 @@ export async function checkClaudeMdFreshness(
   const treePaths = sortedPaths.slice(0, MAX_PATHS);
 
   // Step 3 — opportunistically read Makefile and package.json scripts in
-  // parallel. Either failing is fine — the LLM gets "(не найден)" for
-  // missing surfaces.
-  const [makefile, scriptsResult] = await Promise.all([
+  // parallel. A genuine 404 is fine — the LLM gets "(не найден)" for missing
+  // surfaces. But a transient failure (network/5xx/auth) on either read would
+  // otherwise let the prompt validate `npm run X` / `make Y` against an empty
+  // block and produce a false `fail` — degrade to `unknown` instead.
+  const [makefileResult, scriptsResult] = await Promise.all([
     readMakefile(token, owner, repo),
     readScripts(token, owner, repo),
   ]);
+  // If BOTH reads fail transient, surface both surfaces in the diagnostic
+  // so the user can tell whether it's a single-file glitch or a broader
+  // GitHub/auth outage.
+  if (scriptsResult.unavailable && makefileResult.unavailable) {
+    return unknownFinding(rule, "package.json и Makefile недоступны (transient error)");
+  }
+  if (scriptsResult.unavailable) {
+    return unknownFinding(rule, "package.json недоступен (transient error)");
+  }
+  if (makefileResult.unavailable) {
+    return unknownFinding(rule, "Makefile недоступен (transient error)");
+  }
+  const makefile = makefileResult.content;
   const { json: scripts, truncated: scriptsTruncated } = scriptsResult;
   const scriptsBlock = scripts
     ? scripts +

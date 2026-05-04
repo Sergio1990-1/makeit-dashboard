@@ -37,6 +37,11 @@ function param<T>(obj: Record<string, unknown>, key: string, fallback: T): T {
 // response is returned as-is so the caller can decide what to do with non-OK
 // statuses; only thrown errors propagate after retries are exhausted.
 //
+// Retry policy: only transient statuses (5xx + 429) and thrown network errors
+// are retried. Permanent client errors (401/403/404/422 etc.) are returned
+// immediately — retrying them just doubles latency and third-party traffic
+// (e.g. shields.io rate-limit pressure) without ever changing the outcome.
+//
 // AbortError short-circuits the retry loop — once a scan is cancelled there is
 // no point burning the backoff timer.
 async function fetchWithRetry(
@@ -49,7 +54,13 @@ async function fetchWithRetry(
     try {
       const r = await fetch(url, { signal });
       if (r.ok) return r;
-      if (attempt < retries) {
+      // Only retry transient failures. 4xx (except 408 / 429) is the server
+      // telling us the request itself is wrong — a second identical request
+      // can't fix that, so return immediately and let the caller decide.
+      // 408 (Request Timeout) and 429 (Too Many Requests) are both transient
+      // by spec.
+      const transient = r.status >= 500 || r.status === 408 || r.status === 429;
+      if (transient && attempt < retries) {
         await new Promise((res) => setTimeout(res, baseDelay * Math.pow(4, attempt)));
         continue;
       }
@@ -654,19 +665,40 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         const maxCount = resolveRef<number>(c.max_count, ctx.doc.settings, 3);
         const codeGlobs = param<string[]>(c, "code_globs", ["app/**", "src/**"]);
         const docGlobs = param<string[]>(c, "doc_globs", ["docs/**", "README.md", "CLAUDE.md"]);
-        const prs = await listMergedPRsInWindow(ctx.token, ctx.owner, ctx.repo, windowDays, 30, ctx.signal);
+        // The drift rule is defined over *all* merged PRs in the window.
+        // Raise the cap to 200 (was 30) so older in-window PRs in busy repos
+        // aren't silently dropped — the paginator now scales pages from
+        // hardLimit, so 200 actually delivers up to 200 PRs (previously the
+        // inline 5-page cap clamped output at 150 regardless of hardLimit).
+        // The window short-circuits pagination once sorted-desc updated_at
+        // crosses it, so quiet repos still cost just a single REST page.
+        const prs = await listMergedPRsInWindow(ctx.token, ctx.owner, ctx.repo, windowDays, 200, ctx.signal);
         if (prs.length === 0) {
           return { ...base, status: "pass", detail: `Нет смерженных PR за ${windowDays} дн.` };
         }
+        // Fan out getPRFiles with a small concurrency cap so a 200-PR window
+        // doesn't serialize 200 sequential REST calls. 5 concurrent keeps
+        // GitHub well under its secondary-rate-limit thresholds while cutting
+        // worst-case wall time ~5×.
+        const PR_FILES_CONCURRENCY = 5;
         let driftCount = 0;
         const driftPrs: number[] = [];
-        for (const pr of prs) {
-          const files = await getPRFiles(ctx.token, ctx.owner, ctx.repo, pr.number, ctx.signal);
-          const touchesCode = files.some((f) => pathMatchesAny(f, codeGlobs));
-          const touchesDocs = files.some((f) => pathMatchesAny(f, docGlobs));
-          if (touchesCode && !touchesDocs) {
-            driftCount++;
-            driftPrs.push(pr.number);
+        for (let i = 0; i < prs.length; i += PR_FILES_CONCURRENCY) {
+          const chunk = prs.slice(i, i + PR_FILES_CONCURRENCY);
+          const chunkResults = await Promise.all(
+            chunk.map((pr) =>
+              getPRFiles(ctx.token, ctx.owner, ctx.repo, pr.number, ctx.signal).then(
+                (files) => ({ pr, files }),
+              ),
+            ),
+          );
+          for (const { pr, files } of chunkResults) {
+            const touchesCode = files.some((f) => pathMatchesAny(f, codeGlobs));
+            const touchesDocs = files.some((f) => pathMatchesAny(f, docGlobs));
+            if (touchesCode && !touchesDocs) {
+              driftCount++;
+              driftPrs.push(pr.number);
+            }
           }
         }
         const ok = driftCount <= maxCount;
