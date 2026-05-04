@@ -22,7 +22,16 @@ export function useDashboard() {
     setError(null);
 
     try {
-      const { projects: data, lastSync } = await fetchDashboardData(token, forceRefresh);
+      const { projects: data, lastSync } = await fetchDashboardData(
+        token,
+        forceRefresh,
+        (fresh) => {
+          // SWR background refresh — replace stale data quietly.
+          projectsRef.current = fresh.projects;
+          setProjects(fresh.projects);
+          setLastUpdated(fresh.lastSync ?? new Date());
+        },
+      );
       projectsRef.current = data;
       setProjects(data);
       // Prefer the upstream sync time so the UI reflects when GitHub data
@@ -34,7 +43,7 @@ export function useDashboard() {
       // On rate limit — try to use cached data if we have nothing
       if (msg.includes("rate limit") && projectsRef.current.length === 0) {
         try {
-          const cached = sessionStorage.getItem("makeit_dashboard_cache");
+          const cached = localStorage.getItem("makeit_dashboard_cache");
           if (cached) {
             const entry = JSON.parse(cached);
             // Defensive: cache schema may have changed across versions.
