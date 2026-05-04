@@ -159,7 +159,13 @@ export function DebateTab() {
                   key={d.id}
                   className="debate-row debate-row--clickable"
                   onClick={() => { setManualBack(false); setSelectedId(d.id); }}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedId(d.id); } }}
+                  onKeyDown={(e) => {
+                    if (e.target !== e.currentTarget) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedId(d.id);
+                    }
+                  }}
                   tabIndex={0}
                   role="button"
                   aria-label={`Open debate: ${d.topic}`}

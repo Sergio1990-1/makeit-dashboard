@@ -693,7 +693,13 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                     tabIndex={0}
                     aria-label={`Таймлайн issue #${r.issue_number}`}
                     onClick={() => setTimelineIssue(r.issue_number)}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setTimelineIssue(r.issue_number); }}
+                    onKeyDown={(e) => {
+                      if (e.target !== e.currentTarget) return;
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setTimelineIssue(r.issue_number);
+                      }
+                    }}
                     style={{
                       fontFamily: "var(--font-mono)",
                       fontSize: "var(--text-xs)",
