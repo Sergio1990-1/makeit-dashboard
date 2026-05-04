@@ -2792,6 +2792,9 @@ a.v4-pl-ctx-art-val:hover { text-decoration: underline; }
 .v4-pl-result--ok { border-left-color: var(--v4-success-500); }
 .v4-pl-result--warn { border-left-color: var(--v4-warn-500); background: rgba(247, 144, 9, 0.04); }
 .v4-pl-result--err { border-left-color: var(--v4-danger-500); background: rgba(239, 68, 68, 0.04); }
+/* Issue #217: in-progress non-terminal statuses (pr_open, in_review, retry, …)
+   share the accent palette used by the in-progress status badge. */
+.v4-pl-result--inprog { border-left-color: var(--v4-accent-500); }
 .v4-pl-result-main {
   display: flex;
   align-items: center;

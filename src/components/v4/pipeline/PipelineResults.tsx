@@ -26,6 +26,9 @@ const STATUS_LABEL: Record<string, string> = {
   done: "Готово",
   needs_human: "Нужен человек",
   rolled_back: "Откат",
+  failed: "Ошибка",
+  cancelled: "Отменено",
+  error: "Ошибка",
 };
 
 type StatusFilter = "all" | "done" | "needs_human" | "failed";
@@ -37,11 +40,29 @@ const FILTER_LABELS: Record<StatusFilter, string> = {
   failed: "Failed",
 };
 
+/**
+ * Terminal failure statuses for a PipelineResult. Whitelist (not blacklist):
+ * intermediate states like `pr_open`, `in_review`, `retry`, `queued`,
+ * `in_progress` are still active work and must NOT be treated as failures
+ * (issue #217). Unknown future statuses also default to "not failed" — they
+ * fall through to the in-progress styling instead of being misclassified.
+ */
+const TERMINAL_FAILURE_STATUSES: ReadonlySet<string> = new Set([
+  "failed",
+  "cancelled",
+  "error",
+  "rolled_back",
+]);
+
+function isTerminalFailure(status: string): boolean {
+  return TERMINAL_FAILURE_STATUSES.has(status);
+}
+
 function matchesFilter(r: PipelineResult, f: StatusFilter): boolean {
   if (f === "all") return true;
   if (f === "done") return r.status === "done";
   if (f === "needs_human") return r.status === "needs_human";
-  if (f === "failed") return r.status !== "done" && r.status !== "needs_human" && r.status !== "queued" && r.status !== "in_progress";
+  if (f === "failed") return isTerminalFailure(r.status);
   return true;
 }
 
@@ -55,14 +76,19 @@ function ResultRow({
   const [whyOpen, setWhyOpen] = useState(false);
   const isDone = r.status === "done";
   const isNeedsHuman = r.status === "needs_human";
+  // Issue #217: only terminal-failure statuses get failure styling, the
+  // `Why?` affordance and contribute to the `Failed` filter. Intermediate
+  // states (`pr_open`, `in_review`, `retry`, …) are still in progress.
+  const isFail = isTerminalFailure(r.status);
   const rowCls = isDone
     ? "v4-pl-result--ok"
     : isNeedsHuman
     ? "v4-pl-result--warn"
-    : "v4-pl-result--err";
+    : isFail
+    ? "v4-pl-result--err"
+    : "v4-pl-result--inprog";
 
   const hasWhy = !!(r.human_summary || r.error || r.escalation_reason);
-  const isFail = r.status !== "done" && r.status !== "queued" && r.status !== "in_progress";
   const showWhyToggle = isFail && hasWhy;
 
   // Attempts warning
@@ -182,7 +208,7 @@ export function PipelineResults({
     for (const r of results) {
       if (r.status === "done") c.done++;
       else if (r.status === "needs_human") c.needs_human++;
-      else if (r.status !== "queued" && r.status !== "in_progress") c.failed++;
+      else if (isTerminalFailure(r.status)) c.failed++;
     }
     return c;
   }, [results]);
