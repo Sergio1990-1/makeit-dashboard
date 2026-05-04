@@ -180,12 +180,11 @@ function splitPath(path: string): { dir: string; name: string } {
 // Returns the canonical path (dir + matched basename) when the entry exists,
 // or null otherwise. Callers in truthy/falsy patterns keep working; callers
 // that need to read the file (e.g. file_contains with case_insensitive) must
-// use the returned canonical path so the basename matches actual repo casing.
-// `caseInsensitive` only normalizes the basename — the directory portion is
-// passed verbatim to GitHub's `/contents/{dir}` endpoint, which is
-// case-sensitive. For YAML rules currently using the flag (root-level docs
-// like README.md / CHANGELOG.md) this is sufficient; nested paths with
-// uncertain dir casing would need a per-segment walk.
+// use the returned canonical path so every segment matches actual repo casing.
+// When `caseInsensitive` is true, every path segment is resolved via a
+// case-insensitive walk through `listDirCached`, so nested paths like
+// `Docs/Readme.md` vs `docs/README.md` resolve correctly. The non-CI fast
+// path (single directory listing + exact basename compare) is preserved.
 async function pathExists(
   token: string,
   owner: string,
@@ -196,15 +195,37 @@ async function pathExists(
   caseInsensitive: boolean = false,
   signal?: AbortSignal,
 ): Promise<string | null> {
-  const { dir, name } = splitPath(path);
-  const items = await listDirCached(token, owner, repo, dir, cache, signal);
-  const found = caseInsensitive
-    ? items.find((i) => i.name.toLowerCase() === name.toLowerCase())
-    : items.find((i) => i.name === name);
-  if (!found) return null;
-  if (expect === "file" && found.type !== "file") return null;
-  if (expect === "dir" && found.type !== "dir") return null;
-  return dir ? `${dir}/${found.name}` : found.name;
+  if (!caseInsensitive) {
+    const { dir, name } = splitPath(path);
+    const items = await listDirCached(token, owner, repo, dir, cache, signal);
+    const found = items.find((i) => i.name === name);
+    if (!found) return null;
+    if (expect === "file" && found.type !== "file") return null;
+    if (expect === "dir" && found.type !== "dir") return null;
+    return dir ? `${dir}/${found.name}` : found.name;
+  }
+
+  // Case-insensitive walk: resolve each segment against the actual repo
+  // listing so the dir portion picks up real casing. Reuses listDirCached so
+  // cache invalidation behaves identically to the fast path.
+  const segments = path.split("/").filter((s) => s.length > 0);
+  if (segments.length === 0) return null;
+  let canonicalDir = "";
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i];
+    const items = await listDirCached(token, owner, repo, canonicalDir, cache, signal);
+    const lower = segment.toLowerCase();
+    const match = items.find((it) => it.name.toLowerCase() === lower);
+    if (!match) return null;
+    const isLast = i === segments.length - 1;
+    if (!isLast && match.type !== "dir") return null;
+    if (isLast) {
+      if (expect === "file" && match.type !== "file") return null;
+      if (expect === "dir" && match.type !== "dir") return null;
+    }
+    canonicalDir = canonicalDir ? `${canonicalDir}/${match.name}` : match.name;
+  }
+  return canonicalDir;
 }
 
 function resolveClassification(
