@@ -200,14 +200,17 @@ export function BulkCreateModal({ report, repo, onClose, onActionStateChange }: 
 
     // Build a stable, severity-ordered work list. Sorting by severity means
     // the most painful items get filed first — useful when the user aborts
-    // mid-batch.
+    // mid-batch. Sort BEFORE slicing so the MAX_BATCH_SIZE cap actually
+    // keeps the top-N by severity rather than the first-N by original order
+    // (otherwise high/critical findings later in `fails` could be skipped
+    // while low-severity ones earlier get created).
     const workList = fails
       .filter((f) => selected.has(f.rule_id))
-      .slice(0, MAX_BATCH_SIZE)
       .sort(
         (a, b) =>
           SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity),
-      );
+      )
+      .slice(0, MAX_BATCH_SIZE);
 
     abortRef.current = false;
     setSubmitting(true);
@@ -350,7 +353,7 @@ export function BulkCreateModal({ report, repo, onClose, onActionStateChange }: 
   const selectedCount = selected.size;
   const showWarning = selectedCount > WARNING_THRESHOLD;
   // 1 req/sec ⇒ N findings ≈ N seconds. Cap by MAX_BATCH_SIZE because the
-  // submit loop itself caps the slice at MAX_BATCH_SIZE (line 206).
+  // submit loop itself caps the slice at MAX_BATCH_SIZE (after severity sort).
   const projectedSeconds = Math.min(selectedCount, MAX_BATCH_SIZE);
   const submitDisabled = submitting || selectedCount === 0 || !hasToken;
   const progressPct =
