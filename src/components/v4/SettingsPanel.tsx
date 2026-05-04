@@ -392,7 +392,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
                           updateRow(key, { editing: e.target.value, error: null })
                         }
                         placeholder={`Новый ${label}`}
-                        disabled={busy}
+                        disabled={busy || bulkDeleting}
                         autoComplete="off"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") void handleSave(key);
@@ -404,7 +404,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
                           type="button"
                           className="v4-btn"
                           onClick={() => handleCancelEdit(key)}
-                          disabled={busy}
+                          disabled={busy || bulkDeleting}
                         >
                           Отмена
                         </button>
@@ -412,7 +412,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
                           type="button"
                           className="v4-btn v4-btn--pri"
                           onClick={() => void handleSave(key)}
-                          disabled={busy || !row.editing?.trim()}
+                          disabled={busy || bulkDeleting || !row.editing?.trim()}
                         >
                           {row.inflight === "saving" ? "Сохранение…" : "Сохранить"}
                         </button>
@@ -435,7 +435,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
                         type="button"
                         className="v4-btn"
                         onClick={() => setConfirmDeleteKey(null)}
-                        disabled={busy}
+                        disabled={busy || bulkDeleting}
                       >
                         Отмена
                       </button>
@@ -444,7 +444,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
                         className="v4-btn"
                         style={{ color: "var(--v4-danger-700, #b91c1c)" }}
                         onClick={() => void handleDelete(key)}
-                        disabled={busy}
+                        disabled={busy || bulkDeleting}
                       >
                         {row.inflight === "deleting" ? "Очистка…" : "Очистить"}
                       </button>
@@ -455,7 +455,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
                         type="button"
                         className="v4-btn"
                         onClick={() => setConfirmDeleteKey(key)}
-                        disabled={busy || row.value === null}
+                        disabled={busy || bulkDeleting || row.value === null}
                         title={row.value === null ? "Значение не задано" : "Удалить значение"}
                       >
                         Очистить
@@ -464,7 +464,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
                         type="button"
                         className="v4-btn v4-btn--pri"
                         onClick={() => handleStartEdit(key)}
-                        disabled={busy}
+                        disabled={busy || bulkDeleting}
                       >
                         {row.value === null ? "Задать" : "Изменить"}
                       </button>
