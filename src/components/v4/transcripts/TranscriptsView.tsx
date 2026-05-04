@@ -367,6 +367,7 @@ export function TranscriptsView({ projects }: Props) {
           onResume={onResumeFromHistory}
           onRetry={onRetryFromHistory}
           refreshKey={historyRefreshKey}
+          onItemsChanged={() => setHistoryRefreshKey((k) => k + 1)}
         />
       )}
     </div>
