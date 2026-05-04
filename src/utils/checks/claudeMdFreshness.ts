@@ -107,8 +107,10 @@ async function readScripts(
 ): Promise<{ json: string; truncated: boolean }> {
   try {
     const raw = await readRepoFile(token, owner, repo, "package.json");
-    // Bound parse work for adversarial / accidentally-huge files.
-    if (raw.length > MAX_PACKAGE_JSON_CHARS) return { json: "", truncated: false };
+    // Bound parse work for adversarial / accidentally-huge files. The file
+    // exists but we can't see its scripts — flag truncated so the prompt
+    // tells the model not to fail `npm run X` mentions with high confidence.
+    if (raw.length > MAX_PACKAGE_JSON_CHARS) return { json: "", truncated: true };
     const parsed = JSON.parse(raw) as { scripts?: Record<string, string> };
     if (!parsed.scripts || typeof parsed.scripts !== "object") {
       return { json: "", truncated: false };
@@ -200,6 +202,14 @@ export async function checkClaudeMdFreshness(
     readScripts(token, owner, repo),
   ]);
   const { json: scripts, truncated: scriptsTruncated } = scriptsResult;
+  const scriptsBlock = scripts
+    ? scripts +
+      (scriptsTruncated
+        ? "\n[note: scripts обрезаны, часть ключей могут быть скрыты]"
+        : "")
+    : scriptsTruncated
+      ? "(package.json слишком большой, scripts недоступны для проверки)"
+      : "(не найден)";
 
   // Truncate at the last newline before the cap so a path mention straddling
   // the boundary doesn't reach the LLM as a partial token (which would cause
@@ -230,7 +240,7 @@ ${treeText}${truncationNote}
 ${makefile || "(не найден)"}
 </makefile>
 <package_json_scripts>
-${scripts || "(не найден)"}${scriptsTruncated ? "\n[note: scripts обрезаны, часть ключей могут быть скрыты]" : ""}
+${scriptsBlock}
 </package_json_scripts>
 
 Задача:
@@ -245,7 +255,7 @@ ${scripts || "(не найден)"}${scriptsTruncated ? "\n[note: scripts обр
 5. Не придирайся к опечаткам или общим описаниям — только к конкретным упоминаниям пути/команды, которые легко проверить.
 6. Если в repo_tree есть note о неполноте, и упомянутый путь не виден в сэмпле — НЕ помечай как fail; снизь confidence (0.4–0.6).
 7. Если в claude_md есть note об обрезке — игнорируй упоминания которые могут быть частично обрезаны на границе.
-8. Если в package_json_scripts есть note об обрезке, и \`npm run X\` не виден среди ключей — НЕ помечай как fail; снизь confidence (0.4–0.6).`;
+8. Если в package_json_scripts есть note об обрезке ИЛИ сообщение что scripts недоступны (package.json слишком большой), и \`npm run X\` не виден среди ключей — НЕ помечай как fail; снизь confidence (0.4–0.6).`;
 
   let result: LLMResult;
   try {
