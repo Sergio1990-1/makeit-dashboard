@@ -92,7 +92,17 @@ export function usePortfolioScan<TItem, TResult>(
   // Cache instance is keyed off `cacheKey`. Callers pass a static literal so
   // we only build it once; if a future caller ever varies the key at runtime,
   // they'll need to remount the hook to swap stores.
-  const cacheRef = useRef(createPortfolioCache<TResult[]>(cacheKey));
+  //
+  // The validator rejects cache entries whose `payload` isn't an array. This
+  // hook always writes `TResult[]`, but a stale localStorage entry from an
+  // older build (or a hand-edit) could have a non-array payload — without the
+  // guard, downstream `.reduce(...)` / `.map(...)` calls crash at render time
+  // (regression noted in issue #225).
+  const cacheRef = useRef(
+    createPortfolioCache<TResult[]>(cacheKey, {
+      validate: (p): p is TResult[] => Array.isArray(p),
+    }),
+  );
 
   const [state, setState] = useState<InternalState<TResult>>({
     items: [],
