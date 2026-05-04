@@ -115,7 +115,7 @@ export function DebateView() {
         onOpenActive={(id) => { setManualBack(false); setSelectedId(id); }}
       />
 
-      {error && <div className="v4-error" style={{ marginTop: 14 }}>{error}</div>}
+      {error && debates.length > 0 && <div className="v4-error" style={{ marginTop: 14 }}>{error}</div>}
 
       <DebateKpiStrip debates={debates} />
 
