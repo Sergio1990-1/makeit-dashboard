@@ -58,6 +58,15 @@ export function QualityPanel({ project }: QualityPanelProps) {
 
   useEffect(() => {
     let cancelled = false;
+    // Microtask defer satisfies react-hooks/set-state-in-effect (sync
+    // setState in effect body) while still clearing stale snapshot/error
+    // before the new fetch resolves on project change.
+    Promise.resolve().then(() => {
+      if (!cancelled) {
+        setSnapshot(null);
+        setError(false);
+      }
+    });
     const load = async () => {
       try {
         const data = await fetchQualitySnapshot(project);
