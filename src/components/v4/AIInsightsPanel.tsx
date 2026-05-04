@@ -8,6 +8,13 @@ interface Props {
   lastUpdated: Date | null;
   /** Switches to the Projects tab and opens the Project Health drilldown for `repo`. */
   onOpenHealth: (repo: string) => void;
+  /**
+   * Scan failure message (missing token / all repos failed). Shown as a
+   * dedicated state when there's nothing to render, and as a non-blocking
+   * warning chip in the header when stale reports are still on screen — so
+   * the user never sees the success-empty copy after a true failure.
+   */
+  error?: string | null;
 }
 
 // Sorting / filtering knobs — single source of truth so a designer tweak is
@@ -120,7 +127,7 @@ function rankFails(reports: HealthReport[], nowMs: number): RankedFail[] {
     .slice(0, MAX_CARDS);
 }
 
-export function AIInsightsPanel({ reports, loading, lastUpdated, onOpenHealth }: Props) {
+export function AIInsightsPanel({ reports, loading, lastUpdated, onOpenHealth, error = null }: Props) {
   // We freeze the "now" used for *scoring* at lastUpdated so cards don't
   // reorder on every parent re-render. Without lastUpdated we fall back to
   // 0 — ageDays then clamps to 0 and ageFactor collapses to 1× uniformly,
@@ -151,6 +158,14 @@ export function AIInsightsPanel({ reports, loading, lastUpdated, onOpenHealth }:
   // with a small "обновляется" indicator so the user knows it isn't stale.
   const showSkeleton = loading && reports.length === 0;
   const showRefreshing = loading && reports.length > 0;
+  // Dedicated error state takes over when we have nothing to show — keeps
+  // the success-empty copy ("Нет данных health-сканирования.") from masking
+  // a failed scan.
+  const showError = !loading && reports.length === 0 && !!error;
+  // Recoverable failure: stale reports still on screen but the latest scan
+  // failed. The list stays so the user keeps the data, and a warn chip in
+  // the header signals that what they see may be out of date.
+  const showStaleErrorChip = !loading && reports.length > 0 && !!error;
 
   return (
     <div className="v4-panel">
@@ -168,6 +183,16 @@ export function AIInsightsPanel({ reports, loading, lastUpdated, onOpenHealth }:
           AI-инсайты по портфелю
           <span className="v4-tag">{top.length}</span>
           {showRefreshing && <span className="v4-tag">обновляется…</span>}
+          {showStaleErrorChip && (
+            <span
+              className="v4-tag v4-tag--warn"
+              role="status"
+              title={error ?? undefined}
+              aria-label={`данные могут быть устаревшими: ${error}`}
+            >
+              данные могут быть устаревшими
+            </span>
+          )}
         </div>
         {meta && <div className="v4-panel-meta">{meta}</div>}
       </div>
@@ -175,6 +200,11 @@ export function AIInsightsPanel({ reports, loading, lastUpdated, onOpenHealth }:
       <div className="v4-ai-list">
         {showSkeleton ? (
           <SkeletonList count={SKELETON_COUNT} />
+        ) : showError ? (
+          <div className="v4-empty v4-ai-empty v4-orphan-error" role="alert">
+            <div className="v4-orphan-error-t">Не удалось загрузить health-сканирование</div>
+            <div className="v4-orphan-error-m">{error}</div>
+          </div>
         ) : top.length === 0 ? (
           <EmptyState hasReports={reports.length > 0} />
         ) : (
