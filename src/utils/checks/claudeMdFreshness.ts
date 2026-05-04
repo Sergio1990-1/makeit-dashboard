@@ -93,25 +93,33 @@ function unknownFinding(
   return { ...baseFinding(rule), status: "unknown", detail };
 }
 
-// Read package.json and return a compact JSON of just its `scripts` block.
-// Empty string means "no package.json" or "no scripts" — both are treated
-// equivalently by the prompt. Errors fall through to absent — a failed read
-// shouldn't kill the rule, the LLM still has CLAUDE.md + repo tree.
+// Read package.json and return a compact JSON of just its `scripts` block,
+// plus a flag signalling whether the payload was truncated. Empty json means
+// "no package.json" or "no scripts" — both are treated equivalently by the
+// prompt. Errors fall through to absent — a failed read shouldn't kill the
+// rule, the LLM still has CLAUDE.md + repo tree. The `truncated` flag lets
+// the prompt warn the model so it doesn't flag clipped scripts as missing
+// with high confidence (mirrors the repo_tree truncation note).
 async function readScripts(
   token: string,
   owner: string,
   repo: string,
-): Promise<string> {
+): Promise<{ json: string; truncated: boolean }> {
   try {
     const raw = await readRepoFile(token, owner, repo, "package.json");
     // Bound parse work for adversarial / accidentally-huge files.
-    if (raw.length > MAX_PACKAGE_JSON_CHARS) return "";
+    if (raw.length > MAX_PACKAGE_JSON_CHARS) return { json: "", truncated: false };
     const parsed = JSON.parse(raw) as { scripts?: Record<string, string> };
-    if (!parsed.scripts || typeof parsed.scripts !== "object") return "";
-    const json = JSON.stringify(parsed.scripts);
-    return json.slice(0, MAX_SCRIPTS_CHARS);
+    if (!parsed.scripts || typeof parsed.scripts !== "object") {
+      return { json: "", truncated: false };
+    }
+    const full = JSON.stringify(parsed.scripts);
+    if (full.length > MAX_SCRIPTS_CHARS) {
+      return { json: full.slice(0, MAX_SCRIPTS_CHARS), truncated: true };
+    }
+    return { json: full, truncated: false };
   } catch {
-    return "";
+    return { json: "", truncated: false };
   }
 }
 
@@ -187,10 +195,11 @@ export async function checkClaudeMdFreshness(
   // Step 3 — opportunistically read Makefile and package.json scripts in
   // parallel. Either failing is fine — the LLM gets "(не найден)" for
   // missing surfaces.
-  const [makefile, scripts] = await Promise.all([
+  const [makefile, scriptsResult] = await Promise.all([
     readMakefile(token, owner, repo),
     readScripts(token, owner, repo),
   ]);
+  const { json: scripts, truncated: scriptsTruncated } = scriptsResult;
 
   // Truncate at the last newline before the cap so a path mention straddling
   // the boundary doesn't reach the LLM as a partial token (which would cause
@@ -221,7 +230,7 @@ ${treeText}${truncationNote}
 ${makefile || "(не найден)"}
 </makefile>
 <package_json_scripts>
-${scripts || "(не найден)"}
+${scripts || "(не найден)"}${scriptsTruncated ? "\n[note: scripts обрезаны, часть ключей могут быть скрыты]" : ""}
 </package_json_scripts>
 
 Задача:
@@ -235,7 +244,8 @@ ${scripts || "(не найден)"}
 4. Если есть устаревшие → status fail, detail с конкретными примерами (≤ 200 chars), например «\`./scripts/old-deploy.sh\` не найден; \`npm run prepare\` не в scripts».
 5. Не придирайся к опечаткам или общим описаниям — только к конкретным упоминаниям пути/команды, которые легко проверить.
 6. Если в repo_tree есть note о неполноте, и упомянутый путь не виден в сэмпле — НЕ помечай как fail; снизь confidence (0.4–0.6).
-7. Если в claude_md есть note об обрезке — игнорируй упоминания которые могут быть частично обрезаны на границе.`;
+7. Если в claude_md есть note об обрезке — игнорируй упоминания которые могут быть частично обрезаны на границе.
+8. Если в package_json_scripts есть note об обрезке, и \`npm run X\` не виден среди ключей — НЕ помечай как fail; снизь confidence (0.4–0.6).`;
 
   let result: LLMResult;
   try {
