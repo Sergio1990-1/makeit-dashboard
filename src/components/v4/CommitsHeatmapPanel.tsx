@@ -129,6 +129,29 @@ export function CommitsHeatmapPanel({ projects, lastUpdated }: Props) {
                 key={row.repo}
                 className={`v4-commit-row${isRowHover ? " is-on" : ""}`}
                 style={rowStyle}
+                onMouseMove={(e) => {
+                  // Handler lives on the row (not on .v4-commit-cells) so it
+                  // fires even when the cursor is over the row's padding,
+                  // project name, or total — keeping the tooltip in sync
+                  // when moving vertically between rows. mouseenter-per-cell
+                  // was unreliable: React's synthetic mouseenter polyfill
+                  // dropped events on fast moves and competed with cell
+                  // transforms, leaving the tooltip stuck on a stale cell.
+                  const cellsEl = e.currentTarget.querySelector(
+                    ".v4-commit-cells",
+                  ) as HTMLElement | null;
+                  if (!cellsEl) return;
+                  const rect = cellsEl.getBoundingClientRect();
+                  if (rect.width <= 0) return;
+                  const ratio = (e.clientX - rect.left) / rect.width;
+                  const next = Math.max(
+                    0,
+                    Math.min(DAYS - 1, Math.floor(ratio * DAYS)),
+                  );
+                  if (hover?.repo !== row.repo || hover?.col !== next) {
+                    setHover({ repo: row.repo, col: next });
+                  }
+                }}
               >
                 <span className="v4-nm">{row.repo}</span>
                 <div className="v4-commit-cells">
@@ -161,9 +184,6 @@ export function CommitsHeatmapPanel({ projects, lastUpdated }: Props) {
                             ? " v4-cc-wrap--col"
                             : ""
                         }`}
-                        onMouseEnter={() =>
-                          setHover({ repo: row.repo, col: colIdx })
-                        }
                       >
                         <div
                           className={`v4-cc${isHover ? " is-hover" : ""}`}

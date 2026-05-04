@@ -13,6 +13,7 @@ import { StaleBanner } from "./StaleBanner";
 import { OrphanIssuesPanel } from "./OrphanIssuesPanel";
 import type { usePortfolioHealth } from "../../hooks/usePortfolioHealth";
 import type { usePortfolioOrphans } from "../../hooks/usePortfolioOrphans";
+import { useFirstMountClass } from "../../hooks/useFirstMountClass";
 
 interface Props {
   projects: ProjectData[];
@@ -120,8 +121,10 @@ export function DashboardView({
     return parts.join(" · ");
   }, [filtered.length, lastUpdated]);
 
+  const noEntranceClass = useFirstMountClass("dashboard");
+
   return (
-    <div className="v4-content">
+    <div className={`v4-content${noEntranceClass ? ` ${noEntranceClass}` : ""}`}>
       <div className="v4-ph">
         <div>
           <h1>MakeIT · сводка по проектам</h1>

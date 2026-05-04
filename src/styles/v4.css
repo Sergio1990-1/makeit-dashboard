@@ -529,14 +529,6 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 @keyframes v4-kpi-enter {
   to { opacity: 1; transform: translateY(0); }
 }
-/* Tab switches re-mount KpiRow; the entrance animation is suppressed on
-   subsequent mounts via this class so the staggered fade doesn't replay
-   each time the user returns to the dashboard. */
-.v4-kpi.v4-kpi--no-anim {
-  opacity: 1;
-  transform: none;
-  animation: none;
-}
 .v4-kpi:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 28px rgba(11, 16, 32, 0.07);
@@ -8586,4 +8578,35 @@ ul.v4-rsh-list {
   align-items: center;
   gap: 4px;
   backdrop-filter: blur(4px);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   ENTRANCE-ANIMATION SUPPRESSION (tab returns)
+   Re-mounting DashboardView / MilestonesView when the user switches tabs
+   replays every entrance keyframe (v4-kpi-enter, wow-kpi-in, wow-card-in,
+   wow-stack-grow, wow-chart-wipe, wow-cell-pop, v4-mshero-enter,
+   v4-spark-fade) — visibly stutters when colliding with React reconciliation
+   and rAF tween loops. The `v4-tab--no-entrance` class is applied by
+   useFirstMountClass on subsequent mounts; these rules nullify the
+   entrances so the view renders instantly.
+
+   Pulse / spin / hover transitions are intentionally untouched — only
+   one-shot mount-time entrances are suppressed.
+   ════════════════════════════════════════════════════════════════════════════ */
+.v4-tab--no-entrance .v4-kpi,
+.v4-tab--no-entrance .v4-kpi-row > .v4-kpi,
+.v4-tab--no-entrance .v4-proj-grid > .v4-pcard,
+.v4-tab--no-entrance .v4-stack-list > .v4-stack-row,
+.v4-tab--no-entrance .v4-heat-strip > .v4-commit-row,
+.v4-tab--no-entrance .v4-stack-bar .v4-seg,
+.v4-tab--no-entrance .v4-commit-cells .v4-cc,
+.v4-tab--no-entrance .v4-mshero,
+.v4-tab--no-entrance .v4-mshero-spark-area {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+.v4-tab--no-entrance .v4-closed-chart svg {
+  animation: none !important;
+  clip-path: none !important;
 }
