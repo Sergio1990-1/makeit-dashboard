@@ -7100,18 +7100,6 @@ body::after {
 
 /* ── Phase F2: AutoTuner config, lessons viewer, preview modal, filters ── */
 
-/* Project filter dropdown in QualityTab header */
-.qk-project-filter {
-  padding: var(--sp-1) var(--sp-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 13px;
-  cursor: pointer;
-  min-width: 140px;
-}
-
 /* AutoTuner config panel */
 .qtc-badge {
   display: inline-block;
