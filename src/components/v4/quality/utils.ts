@@ -144,18 +144,22 @@ export function snapshotSeries(
 
 /** Compare current to mean of previous N snapshots → delta as fraction
  *  (e.g. -0.05 = 5% worse for higher-is-better, 5% better for lower-is-better).
- *  Returns null if not enough data. */
+ *  Returns null if not enough data, or if the latest snapshot lacks the metric
+ *  (otherwise we'd show a misleading delta next to a "—" current value). */
 export function deltaVsPrev(
   series: (number | null)[],
   prevWindow = 3,
 ): { abs: number; cur: number } | null {
-  const present = series.filter((v): v is number => v !== null && isFinite(v));
-  if (present.length < 2) return null;
-  const cur = present[present.length - 1];
-  const prevSlice = present.slice(-1 - prevWindow, -1);
-  if (prevSlice.length === 0) return null;
+  if (series.length === 0) return null;
+  const latest = series[series.length - 1];
+  if (latest === null || !isFinite(latest)) return null;
+  const prior = series
+    .slice(0, -1)
+    .filter((v): v is number => v !== null && isFinite(v));
+  if (prior.length === 0) return null;
+  const prevSlice = prior.slice(-prevWindow);
   const prev = prevSlice.reduce((s, x) => s + x, 0) / prevSlice.length;
-  return { abs: cur - prev, cur };
+  return { abs: latest - prev, cur: latest };
 }
 
 export function relativeAgo(ts: string | null): string {
