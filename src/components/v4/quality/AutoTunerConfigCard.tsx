@@ -67,6 +67,7 @@ export function AutoTunerConfigCard({ config, onSave }: Props) {
         tabIndex={0}
         onClick={() => setOpen((v) => !v)}
         onKeyDown={(e) => {
+          if (e.target !== e.currentTarget) return;
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             setOpen((v) => !v);
