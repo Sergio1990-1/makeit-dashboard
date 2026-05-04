@@ -663,7 +663,15 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         const maxCount = resolveRef<number>(c.max_count, ctx.doc.settings, 3);
         const codeGlobs = param<string[]>(c, "code_globs", ["app/**", "src/**"]);
         const docGlobs = param<string[]>(c, "doc_globs", ["docs/**", "README.md", "CLAUDE.md"]);
-        const prs = await listMergedPRsInWindow(ctx.token, ctx.owner, ctx.repo, windowDays, 30, ctx.signal);
+        // The drift rule is defined over *all* merged PRs in the window. The
+        // previous 30-PR cap silently dropped older in-window PRs in busy
+        // repos and turned real drift into false passes. Raise the cap to
+        // 200 — the underlying paginator already self-limits to 5 × 30 = 150
+        // pages and short-circuits as soon as sorted-desc updated_at crosses
+        // the window, so this only matters for repos that genuinely have
+        // >30 merged PRs within the configured window. The per-PR loop below
+        // is O(N) (one getPRFiles call each), so the worst case stays linear.
+        const prs = await listMergedPRsInWindow(ctx.token, ctx.owner, ctx.repo, windowDays, 200, ctx.signal);
         if (prs.length === 0) {
           return { ...base, status: "pass", detail: `Нет смерженных PR за ${windowDays} дн.` };
         }
