@@ -432,7 +432,18 @@ function AppInner() {
 
   const allMilestones = projects.flatMap((p) => p.milestones);
 
-  // Token-form gate: classic experience until token is set
+  // Token-form gate: classic experience until token is set.
+  //
+  // `onTokenSet` must trigger every dashboard data source — not just
+  // `useDashboard.refresh`. The portfolio hooks (`usePortfolioHealth`,
+  // `usePortfolioOrphans`) are mounted above the gate so their initial
+  // mount-effect runs once with no token, lands in the
+  // `TOKEN_MISSING_ERROR` branch of `usePortfolioScan`, and never auto-
+  // reruns when the token appears (they don't subscribe to token changes
+  // and their mount effect already fired). Reusing `handleRefresh` here
+  // mirrors what the Topbar "Обновить" button does, so the panels
+  // populate immediately after a fresh setup instead of staying empty
+  // until the user clicks Refresh — fixes #214 (regression from PR #173).
   if (!hasToken) {
     return (
       <div className="v4-app" style={{ gridTemplateColumns: "1fr" }}>
@@ -442,7 +453,7 @@ function AppInner() {
             <p style={{ color: "var(--v4-ink-500)", marginBottom: 24 }}>
               Укажите GitHub Token для начала работы.
             </p>
-            <TokenForm onTokenSet={() => refresh(true)} />
+            <TokenForm onTokenSet={handleRefresh} />
           </div>
         </main>
       </div>
