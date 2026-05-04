@@ -216,8 +216,11 @@ export function MilestonesView({ milestones: rawMilestones, projects, lastUpdate
         </div>
       </div>
 
-      {/* Hero — three tiles */}
-      <MilestonesHero milestones={openMs} projects={projects} now={now} />
+      {/* Hero — three tiles. Passes full milestone set (open + closed) so
+          «завершено» counter and the progress ring reflect the whole
+          portfolio. Hero classifies internally and filters out `done` for
+          deadline/status calculations. */}
+      <MilestonesHero milestones={milestones} projects={projects} now={now} />
 
       {/* Gantt */}
       <MilestonesGantt
