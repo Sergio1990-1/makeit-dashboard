@@ -735,6 +735,9 @@ Verify it now.`;
                 break;
               default:
                 result = { text: `ERROR: unknown tool '${block.name}'`, error: true };
+                // Unknown tool name is a deterministic failure — dedupe so the
+                // model can't waste iterations re-calling the same wrong name.
+                seenToolCalls.add(callKey);
             }
             toolResults.push({
               type: "tool_result",
