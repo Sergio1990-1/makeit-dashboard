@@ -144,19 +144,15 @@ function AppInner({ onFirstFetchDone }: AppInnerProps = {}) {
     }
     return "dashboard";
   });
-  // Wrap state setter with View Transitions API for a smooth cross-fade
-  // between tabs. Falls back to plain setState in browsers without support
-  // (e.g. Firefox today) — tabs still switch, just without the animation.
-  const setTab = useCallback((next: TabId) => {
-    type DocVT = Document & { startViewTransition?: (cb: () => void) => unknown };
-    const doc = document as DocVT;
-    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (typeof doc.startViewTransition === "function" && !reduced) {
-      doc.startViewTransition(() => setTabRaw(next));
-    } else {
-      setTabRaw(next);
-    }
-  }, []);
+  // Plain state setter. The View Transitions API wrapper that used to live
+  // here cross-faded a snapshot of the OLD tab against the NEW tab over
+  // 280ms — but the new tab's snapshot was captured on the very first
+  // frame, when entrance keyframes (.v4-mshero-tile, .v4-kpi, .v4-pcard
+  // etc.) still had `opacity: 0`. The cross-fade then animated the same
+  // properties (opacity, transform) the entrance was animating, doubling
+  // the easing and producing the visible flicker users complained about.
+  // Without the wrapper, content's own entrance animations play cleanly.
+  const setTab = setTabRaw;
   useEffect(() => {
     try {
       localStorage.setItem(ACTIVE_TAB_KEY, tab);
