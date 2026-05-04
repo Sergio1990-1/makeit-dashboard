@@ -132,9 +132,10 @@ export async function patchMilestoneTitle(
 }
 
 /**
- * DELETE the milestone on GitHub. Returns true on success (204), false on any
- * failure. The issues attached to the milestone are NOT deleted — GitHub just
- * unsets their milestone field.
+ * DELETE the milestone on GitHub. Returns true on success (204) or if the
+ * milestone is already gone (404 — UI-equivalent to success since it ends up
+ * with the same state). Issues attached to the milestone are NOT deleted —
+ * GitHub just unsets their milestone field.
  */
 export async function deleteMilestone(
   token: string,
@@ -151,7 +152,7 @@ export async function deleteMilestone(
         },
       },
     );
-    return res.ok || res.status === 204;
+    return res.ok || res.status === 404;
   } catch {
     return false;
   }

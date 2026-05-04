@@ -120,14 +120,29 @@ export function MilestoneIssuesPopup({ milestone, onClose, onEdited }: Props) {
     onClose();
   };
 
-  // ESC to close
+  // ESC to close — but if a sub-form is open (date edit, title edit, delete
+  // confirm), close that form instead so a stray Escape doesn't bin the
+  // whole dialog mid-edit.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      if (editingTitle) {
+        setEditingTitle(false);
+        return;
+      }
+      if (editing) {
+        setEditing(false);
+        return;
+      }
+      if (confirmDelete) {
+        setConfirmDelete(false);
+        return;
+      }
+      onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, editingTitle, editing, confirmDelete]);
 
   // Lock background scroll while popup is open
   useEffect(() => {
@@ -198,13 +213,6 @@ export function MilestoneIssuesPopup({ milestone, onClose, onEdited }: Props) {
                   onChange={(e) => setDraftTitle(e.target.value)}
                   disabled={savingTitle}
                   autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setEditingTitle(false);
-                    }
-                  }}
                   aria-label="Название milestone"
                 />
                 <button
@@ -231,9 +239,11 @@ export function MilestoneIssuesPopup({ milestone, onClose, onEdited }: Props) {
                     type="button"
                     className="v4-mspopup-edit-btn"
                     title="Переименовать milestone"
+                    aria-label="Переименовать milestone"
                     onClick={() => {
                       setDraftTitle(milestone.title);
                       setEditingTitle(true);
+                      setConfirmDelete(false);
                     }}
                   >
                     ✎
@@ -366,6 +376,7 @@ export function MilestoneIssuesPopup({ milestone, onClose, onEdited }: Props) {
                       onClick={() => {
                         setDraftDate(dueOnInputValue(milestone.dueOn));
                         setEditing(true);
+                        setConfirmDelete(false);
                       }}
                     >
                       ✎
@@ -388,7 +399,7 @@ export function MilestoneIssuesPopup({ milestone, onClose, onEdited }: Props) {
               </>
             )}
           </div>
-          {canEdit && !editing && (
+          {canEdit && !editing && !editingTitle && (
             <div className="v4-mspopup-danger-row">
               {confirmDelete ? (
                 <>
