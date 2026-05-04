@@ -37,6 +37,11 @@ function param<T>(obj: Record<string, unknown>, key: string, fallback: T): T {
 // response is returned as-is so the caller can decide what to do with non-OK
 // statuses; only thrown errors propagate after retries are exhausted.
 //
+// Retry policy: only transient statuses (5xx + 429) and thrown network errors
+// are retried. Permanent client errors (401/403/404/422 etc.) are returned
+// immediately — retrying them just doubles latency and third-party traffic
+// (e.g. shields.io rate-limit pressure) without ever changing the outcome.
+//
 // AbortError short-circuits the retry loop — once a scan is cancelled there is
 // no point burning the backoff timer.
 async function fetchWithRetry(
@@ -49,7 +54,11 @@ async function fetchWithRetry(
     try {
       const r = await fetch(url, { signal });
       if (r.ok) return r;
-      if (attempt < retries) {
+      // Only retry transient failures. 4xx (except 429) is the server telling
+      // us the request itself is wrong — a second identical request can't fix
+      // that, so return immediately and let the caller decide.
+      const transient = r.status >= 500 || r.status === 429;
+      if (transient && attempt < retries) {
         await new Promise((res) => setTimeout(res, baseDelay * Math.pow(4, attempt)));
         continue;
       }
