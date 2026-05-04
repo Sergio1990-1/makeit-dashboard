@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Milestone } from "../../../types";
-import { daysUntil, formatShortDate } from "../../../utils/date";
-import { classifyMilestone } from "./classifyMilestone";
+import { formatShortDate } from "../../../utils/date";
+import type { MilestoneStatusKind } from "./classifyMilestone";
 import { MilestoneIssueRow } from "./MilestoneIssueRow";
 import {
   countBlocked,
@@ -13,9 +13,14 @@ import {
 interface Props {
   milestone: Milestone;
   density: "comfortable" | "compact";
-  /** Anchor for daysUntil — passed from the view to keep classification
-   *  consistent with the data refresh timestamp. */
-  now: Date;
+  /** Days until due, precomputed by the parent view against the data-refresh
+   *  anchor. `null` when the milestone has no `dueOn`. Passed in so card
+   *  badges/risk strip never drift from group bucket and aggregate counters
+   *  between refreshes (e.g. across midnight). */
+  days: number | null;
+  /** Classification bucket precomputed alongside `days`. Same anchor as
+   *  the parent's grouping/sorting/aggregates. */
+  cls: MilestoneStatusKind;
   onSelect?: (m: Milestone) => void;
 }
 
@@ -34,14 +39,12 @@ const FILL_BY_CLS: Record<string, string> = {
   noeta: "v4-mscv-fill--noeta",
 };
 
-export function MilestoneCardV4({ milestone, density, now, onSelect }: Props) {
+export function MilestoneCardV4({ milestone, density, days, cls, onSelect }: Props) {
   const [expanded, setExpanded] = useState(false);
 
   const total = milestone.openIssues + milestone.closedIssues;
   const pct = total > 0 ? Math.round((milestone.closedIssues / total) * 100) : 0;
   const left = total - milestone.closedIssues;
-  const days = milestone.dueOn ? daysUntil(milestone.dueOn, now) : null;
-  const cls = classifyMilestone(milestone, days);
   const isDone = cls === "done";
 
   const pctClass =
