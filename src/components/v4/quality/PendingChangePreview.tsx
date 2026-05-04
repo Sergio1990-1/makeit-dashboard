@@ -132,10 +132,12 @@ export function PendingChangePreviewV4({ change, loadPreview, onConfirm, onCance
                     </span>
                   )
                 )}
-                {preview.scoped_projects && preview.scoped_projects.length > 0 ? (
-                  <span className="v4-tag">проекты: {preview.scoped_projects.join(", ")}</span>
-                ) : (
+                {preview.scoped_projects == null ? (
                   <span className="v4-tag">все проекты</span>
+                ) : preview.scoped_projects.length === 0 ? (
+                  <span className="v4-tag v4-tag--danger">⚠ Скоуп не разрешён — нет проектов</span>
+                ) : (
+                  <span className="v4-tag">проекты: {preview.scoped_projects.join(", ")}</span>
                 )}
               </div>
 
