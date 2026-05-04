@@ -30,7 +30,7 @@ import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH
 import { PasswordGate } from "./components/PasswordGate";
 import { SettingsBootstrap, SettingsUnavailable } from "./components/v4/SettingsBootstrap";
 import { SettingsPanel } from "./components/v4/SettingsPanel";
-import { BrandedLoader } from "./components/v4/BrandedLoader";
+import { BrandedLoader, type LoaderStage } from "./components/v4/BrandedLoader";
 import { useSettings } from "./hooks/useSettings";
 import { runOneTimeMigration } from "./utils/settings-migration";
 import {
@@ -57,7 +57,13 @@ const TAB_CRUMBS: Record<TabId, string> = {
   debate: "Debate",
 };
 
-function AppInner() {
+interface AppInnerProps {
+  /** Fires once after the first refresh attempt resolves (success OR failure)
+   * so the cold-start overlay above can hide. Subsequent refreshes don't fire. */
+  onFirstFetchDone?: () => void;
+}
+
+function AppInner({ onFirstFetchDone }: AppInnerProps = {}) {
   const toast = useToast();
   const {
     projects,
@@ -68,6 +74,17 @@ function AppInner() {
     lastUpdated,
     refresh,
   } = useDashboard();
+
+  // Notify parent when the first fetch attempt resolves (whichever way) so
+  // the cold-start splash can lift. We use a ref to keep this exactly-once.
+  const firstFetchSignaledRef = useRef(false);
+  useEffect(() => {
+    if (firstFetchSignaledRef.current) return;
+    if (lastUpdated !== null || error !== null) {
+      firstFetchSignaledRef.current = true;
+      onFirstFetchDone?.();
+    }
+  }, [lastUpdated, error, onFirstFetchDone]);
 
   const { monitors, loading: monitorsLoading, error: monitorsError, refresh: refreshMonitors } = useMonitors();
 
@@ -522,11 +539,10 @@ function AppInner() {
         {/* Loading / empty state — only for tabs that depend on GitHub project data.
             Tabs like Pipeline, Audit, Quality, Debate, Specs, Research, Transcripts,
             Monitoring have their own state and shouldn't be obscured by this banner. */}
-        {projects.length === 0 && (tab === "dashboard" || tab === "projects" || tab === "milestones") && loading && (
-          // Same component as SettingsGate — keeps the cold-start sequence
-          // visually continuous (settings → data) instead of two screens.
-          <BrandedLoader stage="data" />
-        )}
+        {/* Cold-start splash is rendered once at App level (ColdStartShell)
+            so the loader doesn't re-mount when SettingsGate hands off to
+            AppInner. Subsequent loading states inside tabs render their
+            own indicators. */}
 
         {projects.length === 0 && (tab === "dashboard" || tab === "projects" || tab === "milestones") && !loading && !error && (
           <div className="v4-loading">Нажмите «Обновить» для загрузки данных</div>
@@ -681,21 +697,35 @@ function AppInner() {
   );
 }
 
-function SettingsGate() {
+function ColdStartShell() {
   const settings = useSettings();
-  if (!settings.ready) {
-    if (settings.error === "auth") {
-      return <SettingsBootstrap onSuccess={settings.retry} />;
-    }
-    if (settings.error === "unavailable") {
-      return <SettingsUnavailable onRetry={settings.retry} />;
-    }
-    // Initial loading — single branded loader covering the cold-start path.
-    // Same component is reused in AppInner for the data-fetching phase, so
-    // the user perceives one continuous loader, not two screens.
-    return <BrandedLoader stage="settings" />;
+  // Hides the splash once the first dashboard fetch resolves. Until then,
+  // the BrandedLoader overlay covers AppInner while it warms up underneath.
+  const [firstFetchDone, setFirstFetchDone] = useState(false);
+
+  if (settings.error === "auth") {
+    return <SettingsBootstrap onSuccess={settings.retry} />;
   }
-  return <AppInner />;
+  if (settings.error === "unavailable") {
+    return <SettingsUnavailable onRetry={settings.retry} />;
+  }
+
+  const stage: LoaderStage = settings.ready ? "data" : "settings";
+  const showSplash = !settings.ready || !firstFetchDone;
+
+  return (
+    <>
+      {/* Mount AppInner as soon as settings are ready so the dashboard
+          warms up under the splash. Explicit keys ensure React keeps the
+          BrandedLoader instance stable across the settings → data
+          transition — only the stage label changes, the brick-build
+          animation does not restart. */}
+      {settings.ready ? (
+        <AppInner key="app" onFirstFetchDone={() => setFirstFetchDone(true)} />
+      ) : null}
+      {showSplash ? <BrandedLoader key="splash" stage={stage} /> : null}
+    </>
+  );
 }
 
 function App() {
@@ -707,7 +737,7 @@ function App() {
 
   return (
     <ToastHost>
-      <SettingsGate />
+      <ColdStartShell />
     </ToastHost>
   );
 }
