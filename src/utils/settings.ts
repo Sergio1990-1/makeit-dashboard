@@ -151,10 +151,16 @@ function isObjectShape(x: unknown): x is Record<string, unknown> {
 export function parseSettingsList(raw: unknown): SettingsListItem[] {
   if (Array.isArray(raw)) {
     // Defensive: drop entries without a string ``key`` rather than crashing.
-    return raw.filter(
-      (item): item is SettingsListItem =>
-        isObjectShape(item) && typeof (item as { key?: unknown }).key === "string",
-    );
+    const isItem = (item: unknown): item is SettingsListItem =>
+      isObjectShape(item) && typeof (item as { key?: unknown }).key === "string";
+    const kept = raw.filter(isItem);
+    const dropped = raw.length - kept.length;
+    if (dropped > 0 && import.meta.env.DEV) {
+      console.warn(
+        `[settings] /settings dropped ${dropped} malformed entr${dropped === 1 ? "y" : "ies"} (missing string \`key\`).`,
+      );
+    }
+    return kept;
   }
   if (isObjectShape(raw)) {
     if (import.meta.env.DEV) {
@@ -177,7 +183,14 @@ export function parseSettingsList(raw: unknown): SettingsListItem[] {
  */
 export function parseSettingsKeys(raw: unknown): string[] {
   if (Array.isArray(raw)) {
-    return raw.filter((k): k is string => typeof k === "string");
+    const kept = raw.filter((k): k is string => typeof k === "string");
+    const dropped = raw.length - kept.length;
+    if (dropped > 0 && import.meta.env.DEV) {
+      console.warn(
+        `[settings] /settings/keys dropped ${dropped} non-string entr${dropped === 1 ? "y" : "ies"}.`,
+      );
+    }
+    return kept;
   }
   if (isObjectShape(raw) && Array.isArray((raw as { keys?: unknown }).keys)) {
     if (import.meta.env.DEV) {
