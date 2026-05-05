@@ -29,9 +29,10 @@ class Service:
     health_path: str = "/health"
     ready_path: Optional[str] = "/health/ready"
     expected_status: int = 200
+    base_url: Optional[str] = None  # overrides http://{BASE_HOST}:{port} when set (for services behind nginx)
 
 SERVICES = [
-    Service("Sewing-ERP",   8001, ready_path="/health/ready"),
+    Service("Sewing-ERP",   0, ready_path="/health/ready", base_url="https://api.pins.kg"),
     Service("Uchet_bot",    8002, ready_path="/health/ready"),
     Service("Beer_bot",     8003, ready_path="/health/ready"),
     Service("mankassa-app", 8004, ready_path=None),
@@ -67,9 +68,10 @@ def http_get(url: str) -> tuple[int, str, int]:
 
 def check_service(svc: Service) -> list[CheckResult]:
     results = []
+    base = svc.base_url or f"http://{BASE_HOST}:{svc.port}"
 
     # Basic health check
-    url = f"http://{BASE_HOST}:{svc.port}{svc.health_path}"
+    url = f"{base}{svc.health_path}"
     try:
         code, body, ms = http_get(url)
         ok = code == svc.expected_status
@@ -91,7 +93,7 @@ def check_service(svc: Service) -> list[CheckResult]:
 
     # Ready check (DB connectivity)
     if svc.ready_path:
-        url = f"http://{BASE_HOST}:{svc.port}{svc.ready_path}"
+        url = f"{base}{svc.ready_path}"
         try:
             code, body, ms = http_get(url)
             ok = code == 200
