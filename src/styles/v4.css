@@ -1526,6 +1526,12 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
   color: var(--v4-ink-500);
   padding-top: 2px;
 }
+.v4-orphan-tip-snap {
+  font-size: 10px;
+  color: var(--v4-ink-400);
+  padding-top: 2px;
+  font-style: italic;
+}
 .v4-orphan-skel {
   display: flex;
   align-items: flex-end;

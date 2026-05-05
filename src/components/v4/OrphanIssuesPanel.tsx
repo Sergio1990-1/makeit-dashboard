@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { OrphanIssueMeta } from "../../utils/github-actions";
+import { getSnapshots, recordSnapshot } from "../../utils/orphanSnapshots";
 import { ruDow, ruMonthShort } from "./milestones/utils";
 
 interface Props {
@@ -49,18 +50,42 @@ interface DayBucket {
   count: number;
   /** Per-repo breakdown sorted desc — capped to top entries by the renderer. */
   byRepo: Array<{ repo: string; count: number }>;
+  /** True when the count comes from a stored localStorage snapshot (historically accurate). */
+  isSnapshot: boolean;
 }
 
 // Returns N consecutive UTC midnights ending at *today's* UTC midnight.
 // Anchoring to UTC keeps the chart stable across DST transitions and
 // matches GitHub's `created_at` (which is also UTC).
-function build30DayBuckets(items: OrphanIssueMeta[]): DayBucket[] {
+//
+// For past days that have a stored localStorage snapshot we use the accurate
+// historical count directly. Without a snapshot we fall back to the
+// created_at-based heuristic (same as before), which is wrong after issues
+// are bulk-assigned to milestones but at least shows something. Over time,
+// as snapshots accumulate, all 30 days will be historically accurate.
+function build30DayBuckets(
+  items: OrphanIssueMeta[],
+  snapshots: Map<string, number>,
+): DayBucket[] {
   const now = new Date();
   const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const buckets: DayBucket[] = [];
   for (let i = DAYS - 1; i >= 0; i--) {
     const dayMs = todayUtc - i * DAY_MS;
-    // End-of-day cutoff: an issue created at 23:59 UTC counts on its own day.
+    const isoDate = new Date(dayMs).toISOString().slice(0, 10); // "YYYY-MM-DD"
+
+    // Past day with an accurate snapshot — use it directly.
+    if (i > 0 && snapshots.has(isoDate)) {
+      buckets.push({
+        iso: new Date(dayMs).toISOString(),
+        count: snapshots.get(isoDate)!,
+        byRepo: [],
+        isSnapshot: true,
+      });
+      continue;
+    }
+
+    // Today (i === 0) or past day without a snapshot — compute from live items.
     const cutoff = dayMs + DAY_MS - 1;
     const perRepo = new Map<string, number>();
     let count = 0;
@@ -74,7 +99,7 @@ function build30DayBuckets(items: OrphanIssueMeta[]): DayBucket[] {
     const byRepo = [...perRepo.entries()]
       .map(([repo, c]) => ({ repo, count: c }))
       .sort((a, b) => b.count - a.count || a.repo.localeCompare(b.repo));
-    buckets.push({ iso: new Date(dayMs).toISOString(), count, byRepo });
+    buckets.push({ iso: new Date(dayMs).toISOString(), count, byRepo, isSnapshot: false });
   }
   return buckets;
 }
@@ -111,7 +136,18 @@ function formatRelativeTime(d: Date | null, now: number): string | null {
 }
 
 export function OrphanIssuesPanel({ items, loading, lastUpdated, error = null }: Props) {
-  const buckets = useMemo(() => build30DayBuckets(items), [items]);
+  // Persist today's count to localStorage on every successful refresh so that
+  // future renders can reconstruct historically accurate data for past days.
+  const [snapshots, setSnapshots] = useState(() => getSnapshots());
+  useEffect(() => {
+    if (!loading && lastUpdated && !error) {
+      recordSnapshot(items.length);
+      setSnapshots(getSnapshots());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastUpdated]);
+
+  const buckets = useMemo(() => build30DayBuckets(items, snapshots), [items, snapshots]);
   const today = buckets[buckets.length - 1] ?? null;
   const totalToday = today?.count ?? 0;
 
@@ -355,7 +391,9 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated, error = null }:
                   {row.count === 1 ? "orphan-issue" : "orphan-issues"}
                 </span>
               </div>
-              {repos.length > 0 && (
+              {row.isSnapshot ? (
+                <div className="v4-orphan-tip-snap">слепок на конец дня</div>
+              ) : repos.length > 0 ? (
                 <div className="v4-orphan-tip-list">
                   {repos.map((r) => (
                     <div key={r.repo} className="v4-orphan-tip-row">
@@ -369,7 +407,7 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated, error = null }:
                     </div>
                   )}
                 </div>
-              )}
+              ) : null}
             </div>
           );
         })()}
