@@ -25,9 +25,11 @@ interface Props {
   subtitle?: string;
 }
 
-const MATRIX_CHARS =
-  "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン" +
-  "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const CODE_CHARS = "{}[]()=+*#.$→/|<>01;";
+const TRAIL_LEN = 16;
+const COL_WIDTH = 20;
+const FONT_SIZE = 13;
+const FPS = 24;
 
 export function BrandedLoader({ stage, subtitle }: Props) {
   const label = STAGE_LABEL[stage];
@@ -40,55 +42,80 @@ export function BrandedLoader({ stage, subtitle }: Props) {
     const ctx = canvasEl.getContext("2d");
     if (!ctx) return;
 
-    // Non-null aliases for use inside nested functions where TS can't narrow
     const canvas: HTMLCanvasElement = canvasEl;
     const g: CanvasRenderingContext2D = ctx;
 
-    const fontSize = 14;
+    // Detect accent color from CSS custom property
+    const accent = getComputedStyle(document.documentElement)
+      .getPropertyValue("--v4-accent-600")
+      .trim() || "#2563EB";
+
+    // Parse hex to r,g,b for rgba() usage
+    const hex = accent.replace("#", "");
+    const r = parseInt(hex.slice(0, 2), 16);
+    const gb = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+
     let cols: number;
-    let drops: number[];
+    let drops: number[];   // head row index per column
+    let chars: string[];   // current head char per column
     let raf = 0;
+    let lastTick = 0;
 
     function resize() {
       cancelAnimationFrame(raf);
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      cols = Math.floor(canvas.width / fontSize);
-      drops = Array.from({ length: cols }, () =>
-        Math.floor(Math.random() * Math.ceil(canvas.height / fontSize))
-      );
-      g.fillStyle = "#000";
-      g.fillRect(0, 0, canvas.width, canvas.height);
+      cols = Math.floor(canvas.width / COL_WIDTH);
+      const totalRows = Math.ceil(canvas.height / FONT_SIZE);
+      drops = Array.from({ length: cols }, () => Math.floor(Math.random() * totalRows));
+      chars = Array.from({ length: cols }, () => randomChar());
       raf = requestAnimationFrame(draw);
     }
 
-    function draw() {
-      g.fillStyle = "rgba(0,0,0,0.08)";
-      g.fillRect(0, 0, canvas.width, canvas.height);
-      g.font = `${fontSize}px "JetBrains Mono", monospace`;
+    function randomChar() {
+      return CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+    }
 
-      for (let i = 0; i < drops.length; i++) {
-        const y = drops[i] * fontSize;
-        if (y <= 0) {
-          drops[i]++;
-          continue;
-        }
-
-        const headChar = MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)];
-        g.fillStyle = "#e0ffe8";
-        g.fillText(headChar, i * fontSize, y);
-
-        const bodyChar = MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)];
-        g.fillStyle = "#00cc44";
-        g.fillText(bodyChar, i * fontSize, y - fontSize);
-
-        if (y > canvas.height && Math.random() > 0.975) {
-          drops[i] = 0;
-        }
-        drops[i]++;
-      }
-
+    function draw(now: number) {
       raf = requestAnimationFrame(draw);
+
+      const elapsed = now - lastTick;
+      if (elapsed < 1000 / FPS) return;
+      lastTick = now;
+
+      g.clearRect(0, 0, canvas.width, canvas.height);
+      g.font = `400 ${FONT_SIZE}px "JetBrains Mono", ui-monospace, monospace`;
+      g.textAlign = "center";
+
+      for (let i = 0; i < cols; i++) {
+        const headRow = drops[i];
+        const x = i * COL_WIDTH + COL_WIDTH / 2;
+
+        // Draw trail from head up, fading out
+        for (let t = 0; t < TRAIL_LEN; t++) {
+          const row = headRow - t;
+          if (row < 0) continue;
+          const y = row * FONT_SIZE;
+          if (y > canvas.height) continue;
+
+          // t=0 is head (brightest), t=TRAIL_LEN-1 is tail (near invisible)
+          const alpha = t === 0
+            ? 0.55
+            : (0.40 * Math.pow(1 - t / TRAIL_LEN, 1.8));
+
+          g.fillStyle = `rgba(${r},${gb},${b},${alpha.toFixed(3)})`;
+          const ch = t === 0 ? chars[i] : randomChar();
+          g.fillText(ch, x, y);
+        }
+
+        // Advance head
+        drops[i]++;
+        chars[i] = randomChar();
+        if (drops[i] * FONT_SIZE > canvas.height + TRAIL_LEN * FONT_SIZE) {
+          drops[i] = -Math.floor(Math.random() * 8);
+        }
+      }
     }
 
     resize();
