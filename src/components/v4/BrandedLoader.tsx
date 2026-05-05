@@ -34,11 +34,15 @@ export function BrandedLoader({ stage, subtitle }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const canvasEl = canvasRef.current;
+    if (!canvasEl) return;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvasEl.getContext("2d");
     if (!ctx) return;
+
+    // Non-null aliases for use inside nested functions where TS can't narrow
+    const canvas: HTMLCanvasElement = canvasEl;
+    const g: CanvasRenderingContext2D = ctx;
 
     const fontSize = 14;
     let cols: number;
@@ -53,15 +57,15 @@ export function BrandedLoader({ stage, subtitle }: Props) {
       drops = Array.from({ length: cols }, () =>
         Math.floor(Math.random() * Math.ceil(canvas.height / fontSize))
       );
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      g.fillStyle = "#000";
+      g.fillRect(0, 0, canvas.width, canvas.height);
       raf = requestAnimationFrame(draw);
     }
 
     function draw() {
-      ctx.fillStyle = "rgba(0,0,0,0.08)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.font = `${fontSize}px "JetBrains Mono", monospace`;
+      g.fillStyle = "rgba(0,0,0,0.08)";
+      g.fillRect(0, 0, canvas.width, canvas.height);
+      g.font = `${fontSize}px "JetBrains Mono", monospace`;
 
       for (let i = 0; i < drops.length; i++) {
         const y = drops[i] * fontSize;
@@ -71,12 +75,12 @@ export function BrandedLoader({ stage, subtitle }: Props) {
         }
 
         const headChar = MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)];
-        ctx.fillStyle = "#e0ffe8";
-        ctx.fillText(headChar, i * fontSize, y);
+        g.fillStyle = "#e0ffe8";
+        g.fillText(headChar, i * fontSize, y);
 
         const bodyChar = MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)];
-        ctx.fillStyle = "#00cc44";
-        ctx.fillText(bodyChar, i * fontSize, y - fontSize);
+        g.fillStyle = "#00cc44";
+        g.fillText(bodyChar, i * fontSize, y - fontSize);
 
         if (y > canvas.height && Math.random() > 0.975) {
           drops[i] = 0;
