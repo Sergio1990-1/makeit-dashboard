@@ -13,7 +13,7 @@ import { MilestonesStatusBar } from "./MilestonesStatusBar";
 import { MilestoneIssuesPopup } from "./MilestoneIssuesPopup";
 import { classifyMilestone } from "./classifyMilestone";
 import { deadlineBucket } from "./utils";
-import { applyMilestoneOverrides } from "../../../utils/milestoneEdit";
+import { applyMilestoneOverrides, getMilestoneOverrides } from "../../../utils/milestoneEdit";
 
 interface Props {
   milestones: Milestone[];
@@ -112,11 +112,18 @@ export function MilestonesView({ milestones: rawMilestones, projects, lastUpdate
 
   // Re-resolve the popup milestone against the latest data so issue counts
   // refresh while the popup is open. Match by URL — stable across refreshes.
-  // If the milestone vanished (deletion), return null so the popup closes
-  // automatically instead of holding onto a stale snapshot.
+  // Distinguish "deleted" (close popup) from "transient absence" (fall back to
+  // the snapshot): the GraphQL window is bounded (first: 20 open / 10 closed
+  // by DUE_DATE), so a refresh can momentarily drop a milestone off the edge
+  // and lose in-progress edits if we treat that as deletion. The deletion
+  // signal is the explicit `overrides[url].deleted` flag set by the delete
+  // flow.
   const popupMsLive = useMemo(() => {
     if (!popupMs) return null;
-    return milestones.find((m) => m.url === popupMs.url) ?? null;
+    const fresh = milestones.find((m) => m.url === popupMs.url);
+    if (fresh) return fresh;
+    const wasDeleted = getMilestoneOverrides()[popupMs.url]?.deleted === true;
+    return wasDeleted ? null : popupMs;
   }, [milestones, popupMs]);
 
   // Anchor "now" to lastUpdated so daysUntil/Gantt today line stay consistent
