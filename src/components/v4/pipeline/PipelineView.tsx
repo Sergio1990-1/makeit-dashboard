@@ -119,6 +119,10 @@ export function PipelineView({
   // as state (not ref) so the cost memo sees the right value in the same
   // render commit cycle when a new run starts.
   const [baselineResultCount, setBaselineResultCount] = useState(0);
+  // Count of distinct run-starts detected in this component mount (session).
+  // Incremented on every running: false → true transition, covering both
+  // click-initiated runs and mid-run mounts (page refresh while running).
+  const [sessionRunCount, setSessionRunCount] = useState(0);
   // Last completed run summary (shown when idle).
   const [lastRunSummary, setLastRunSummary] = useState<{
     done: number;
@@ -141,9 +145,11 @@ export function PipelineView({
   useEffect(() => {
     if (!status) return;
     if (status.running && !wasRunningRef.current) {
-      // New run started. If handleStart already captured the baseline
-      // synchronously, keep it — otherwise this is a mid-run mount and we
-      // take the current results length as the best-effort baseline.
+      // New run started — count it regardless of how the transition was triggered.
+      setSessionRunCount((c) => c + 1);
+      // If handleStart already captured the baseline synchronously, keep it —
+      // otherwise this is a mid-run mount and we take the current results
+      // length as the best-effort baseline.
       if (baselineSetByClickRef.current) {
         baselineSetByClickRef.current = false;
       } else {
@@ -173,11 +179,8 @@ export function PipelineView({
   const { sessionCost, sessionRuns } = useMemo(() => {
     if (!status) return { sessionCost: 0, sessionRuns: 0 };
     const cost = sumCost(status.results);
-    // A running pipeline is the same run that produced any existing results,
-    // so count "1" when either condition holds — never both.
-    const hasRun = status.results.length > 0 || (status.running && runStartedAt !== null);
-    return { sessionCost: cost, sessionRuns: hasRun ? 1 : 0 };
-  }, [status, runStartedAt]);
+    return { sessionCost: cost, sessionRuns: sessionRunCount };
+  }, [status, sessionRunCount]);
 
   // Classify dialog
   const [classifyDialogOpen, setClassifyDialogOpen] = useState(false);
@@ -225,19 +228,27 @@ export function PipelineView({
     ? `${GITHUB_OWNER}/${status.current_project}`
     : null;
 
-  function handleStart() {
+  async function handleStart() {
     // Capture the baseline at click time so results produced between this
     // moment and the first poll observing `running=true` are still attributed
     // to the new run. Issue #239.
+    const prevBaseline = statusRef.current?.results.length ?? 0;
     baselineSetByClickRef.current = true;
-    setBaselineResultCount(statusRef.current?.results.length ?? 0);
+    setBaselineResultCount(prevBaseline);
     setRunStartedAt(Date.now());
-    void start({
+    const ok = await start({
       project: selectedProject || undefined,
       labels: selectedLabels.length > 0 ? selectedLabels : undefined,
       limit,
       complexity_filter: complexityFilter !== "all" ? complexityFilter : undefined,
     });
+    if (!ok) {
+      // Roll back all baseline state so a subsequent successful run gets a
+      // fresh snapshot rather than computing cost/elapsed from this failed click.
+      baselineSetByClickRef.current = false;
+      setRunStartedAt(null);
+      setBaselineResultCount(prevBaseline);
+    }
   }
 
   // Project label for hero (shorthand without owner)
