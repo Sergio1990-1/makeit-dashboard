@@ -232,8 +232,9 @@ export function PipelineView({
     // Capture the baseline at click time so results produced between this
     // moment and the first poll observing `running=true` are still attributed
     // to the new run. Issue #239.
+    const prevBaseline = statusRef.current?.results.length ?? 0;
     baselineSetByClickRef.current = true;
-    setBaselineResultCount(statusRef.current?.results.length ?? 0);
+    setBaselineResultCount(prevBaseline);
     setRunStartedAt(Date.now());
     const ok = await start({
       project: selectedProject || undefined,
@@ -242,10 +243,11 @@ export function PipelineView({
       complexity_filter: complexityFilter !== "all" ? complexityFilter : undefined,
     });
     if (!ok) {
-      // Roll back the baseline so a subsequent successful run gets a fresh
-      // snapshot rather than computing cost/elapsed from this failed click.
+      // Roll back all baseline state so a subsequent successful run gets a
+      // fresh snapshot rather than computing cost/elapsed from this failed click.
       baselineSetByClickRef.current = false;
       setRunStartedAt(null);
+      setBaselineResultCount(prevBaseline);
     }
   }
 
