@@ -104,11 +104,15 @@ export function UploadZone({
 
   const handleSubmit = useCallback(async () => {
     if (files.length === 0 || !selectedProject || submitting) return;
+    // Snapshot the batch we're submitting. The user can still queue more
+    // files during the in-flight upload (drag/drop, "+ Добавить"); clearing
+    // by snapshot identity preserves those instead of dropping them.
+    const submitted = files;
     setSubmitting(true);
     setLocalError(null);
     try {
-      await onSubmit(files);
-      setFiles([]);
+      await onSubmit(submitted);
+      setFiles((prev) => prev.filter((f) => !submitted.includes(f)));
       if (inputRef.current) inputRef.current.value = "";
     } catch (err) {
       // Keep selected files so the user can retry without re-picking them.
