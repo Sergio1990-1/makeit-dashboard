@@ -203,15 +203,25 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
   const openDelta = useMemo(() => calcOpenDelta(projects), [projects]);
   const progressDelta = useMemo(() => calcProgressDelta(projects), [projects]);
   const priorityTotals = useMemo(() => sumOpenPriorities(projects), [projects]);
-  const openCount = useMemo(
-    () => projects.reduce((s, p) => s + (p.openCount ?? 0), 0),
-    [projects],
-  );
+  // Derive total/done/open from the (possibly phase-filtered) `projects` so
+  // all three splits-row numbers and the headline percentage live in the same
+  // scope. Using `summary.*` here mixed global totals with a filtered open
+  // count, producing inconsistent rows like done + open !== total under an
+  // active phaseFilter.
+  const { totalCount, doneCount, openCount } = useMemo(() => {
+    let total = 0;
+    let done = 0;
+    let open = 0;
+    for (const p of projects) {
+      total += p.totalCount ?? 0;
+      done += p.doneCount ?? 0;
+      open += p.openCount ?? 0;
+    }
+    return { totalCount: total, doneCount: done, openCount: open };
+  }, [projects]);
 
   const pctDone =
-    summary.totalIssues > 0
-      ? Math.round((summary.doneCount / summary.totalIssues) * 100)
-      : 0;
+    totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
 
   const hasFinances = summary.totalBudget > 0;
   const paidPct = hasFinances
@@ -268,12 +278,12 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
           items={[
             {
               key: "total",
-              n: <TweenedNumber value={summary.totalIssues} />,
+              n: <TweenedNumber value={totalCount} />,
               l: "Всего",
             },
             {
               key: "done",
-              n: <TweenedNumber value={summary.doneCount} />,
+              n: <TweenedNumber value={doneCount} />,
               l: "Сделано",
             },
             {
