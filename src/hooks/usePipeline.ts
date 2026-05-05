@@ -125,7 +125,7 @@ export function usePipeline() {
   }, []);
 
   const start = useCallback(
-    async (req: PipelineStartRequest) => {
+    async (req: PipelineStartRequest): Promise<boolean> => {
       setError(null);
       setStarting(true);
       try {
@@ -135,8 +135,10 @@ export function usePipeline() {
         // Reset backoff streak so we drop back to fast (2s) cadence immediately.
         notRunningStreakRef.current = 0;
         startPolling();
+        return true;
       } catch (err) {
         setError(err instanceof Error ? err.message : "Ошибка запуска");
+        return false;
       } finally {
         setStarting(false);
       }
