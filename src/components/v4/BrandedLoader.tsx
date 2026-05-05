@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { MakeItLoader } from "./MakeItLoader";
 
 /**
@@ -24,10 +25,79 @@ interface Props {
   subtitle?: string;
 }
 
+const MATRIX_CHARS =
+  "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン" +
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
 export function BrandedLoader({ stage, subtitle }: Props) {
   const label = STAGE_LABEL[stage];
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const fontSize = 14;
+    let cols: number;
+    let drops: number[];
+    let raf = 0;
+
+    function resize() {
+      cancelAnimationFrame(raf);
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      cols = Math.floor(canvas.width / fontSize);
+      drops = Array.from({ length: cols }, () =>
+        Math.floor(Math.random() * Math.ceil(canvas.height / fontSize))
+      );
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      raf = requestAnimationFrame(draw);
+    }
+
+    function draw() {
+      ctx.fillStyle = "rgba(0,0,0,0.08)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.font = `${fontSize}px "JetBrains Mono", monospace`;
+
+      for (let i = 0; i < drops.length; i++) {
+        const y = drops[i] * fontSize;
+        if (y <= 0) {
+          drops[i]++;
+          continue;
+        }
+
+        const headChar = MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)];
+        ctx.fillStyle = "#e0ffe8";
+        ctx.fillText(headChar, i * fontSize, y);
+
+        const bodyChar = MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)];
+        ctx.fillStyle = "#00cc44";
+        ctx.fillText(bodyChar, i * fontSize, y - fontSize);
+
+        if (y > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+        drops[i]++;
+      }
+
+      raf = requestAnimationFrame(draw);
+    }
+
+    resize();
+    window.addEventListener("resize", resize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
+
   return (
     <div className="bl-root" role="status" aria-live="polite">
+      <canvas ref={canvasRef} className="bl-matrix" aria-hidden="true" />
       <div className="bl-card">
         <MakeItLoader size={64} />
         <div className="bl-stage">{label}</div>

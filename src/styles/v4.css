@@ -1930,6 +1930,20 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
   background: var(--v4-bg);
   color: var(--v4-ink-900);
   z-index: 50;
+  overflow: hidden;
+}
+
+.bl-matrix {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bl-matrix { display: none; }
 }
 
 .bl-card {
