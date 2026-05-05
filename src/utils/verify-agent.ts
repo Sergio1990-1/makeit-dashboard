@@ -470,12 +470,17 @@ async function executeFindSymbolTool(
   // Fallback A: no def-fragment hits but raw hits exist — bare-query fallback may
   // have surfaced files where the first text match is a reference, not the def.
   // Scan top-3 candidate paths from the raw hits via findDefinitionLine before
-  // falling through to blind path guessing.
+  // falling through to blind path guessing. Cap by *inspected* files, not by
+  // `rendered.length` — every miss leaves rendered at 0 and otherwise the loop
+  // would walk all 10 hits, burning ~10× the GitHub API budget per call when
+  // the symbol isn't indexed.
   if (rendered.length === 0 && hits.length > 0) {
+    let inspected = 0;
     for (const hit of hits) {
-      if (rendered.length >= 3) break;
+      if (inspected >= 3 || rendered.length >= 3) break;
       if (seenPaths.has(hit.path)) continue;
       seenPaths.add(hit.path);
+      inspected++;
       const file = await fetchFileWithCache(githubToken, owner, repo, hit.path, cache);
       if (!file) continue;
       const line = findDefinitionLine(file.content, symbol);
