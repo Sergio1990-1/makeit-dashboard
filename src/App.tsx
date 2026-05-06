@@ -28,7 +28,7 @@ import { fetchPipelineStatus, fetchPipelineLimits } from "./utils/pipeline";
 import type { PipelineAbortReason, PipelineLimits } from "./utils/pipeline";
 import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH, PROJECTS } from "./utils/config";
 import { PasswordGate } from "./components/PasswordGate";
-import { SettingsBootstrap, SettingsUnavailable } from "./components/v4/SettingsBootstrap";
+import { SettingsBootstrap } from "./components/v4/SettingsBootstrap";
 import { SettingsPanel } from "./components/v4/SettingsPanel";
 import { BrandedLoader, type LoaderStage } from "./components/v4/BrandedLoader";
 import { MakeItLoader } from "./components/v4/MakeItLoader";
@@ -729,21 +729,23 @@ function ColdStartShell() {
   if (settings.error === "auth") {
     return <SettingsBootstrap onSuccess={settings.retry} />;
   }
-  if (settings.error === "unavailable") {
-    return <SettingsUnavailable onRetry={settings.retry} />;
-  }
+  // "unavailable" → degraded mode: Pipeline settings failed to load (API offline
+  // or transient network error), but all other tabs (Dashboard, Monitoring, etc.)
+  // still work via localStorage fallbacks. The Pipeline tab handles its own
+  // offline state via usePipeline(). We don't block the whole app here.
 
-  const stage: LoaderStage = settings.ready ? "data" : "settings";
-  const showSplash = !settings.ready || !firstFetchDone;
+  const isReady = settings.ready || settings.error === "unavailable";
+  const stage: LoaderStage = isReady ? "data" : "settings";
+  const showSplash = !isReady || !firstFetchDone;
 
   return (
     <>
-      {/* Mount AppInner as soon as settings are ready so the dashboard
-          warms up under the splash. Explicit keys ensure React keeps the
-          BrandedLoader instance stable across the settings → data
-          transition — only the stage label changes, the brick-build
-          animation does not restart. */}
-      {settings.ready ? (
+      {/* Mount AppInner as soon as settings are ready (or in degraded mode) so
+          the dashboard warms up under the splash. Explicit keys ensure React
+          keeps the BrandedLoader instance stable across the settings → data
+          transition — only the stage label changes, the brick-build animation
+          does not restart. */}
+      {isReady ? (
         <AppInner key="app" onFirstFetchDone={() => setFirstFetchDone(true)} />
       ) : null}
       {showSplash ? <BrandedLoader key="splash" stage={stage} /> : null}
