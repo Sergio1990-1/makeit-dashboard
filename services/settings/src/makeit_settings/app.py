@@ -109,6 +109,17 @@ def create_app() -> FastAPI:
         logger.info("settings_access user=%s action=list_keys", username)
         return keys
 
+    @app.get("/settings")
+    async def settings_get_all(
+        username: Annotated[str, Depends(_verify_settings_token)],
+        store: Annotated[SettingsStore, Depends(_get_settings_store)],
+    ) -> list[dict[str, str]]:
+        values = await asyncio.to_thread(store.get_all, username)
+        logger.info("settings_access user=%s action=get_all keys=%d", username, len(values))
+        return [
+            {"key": k, "masked_value": _mask_setting_value(v)} for k, v in sorted(values.items())
+        ]
+
     return app
 
 

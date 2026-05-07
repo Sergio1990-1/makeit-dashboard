@@ -58,3 +58,27 @@ def test_keys_returns_array_not_object(client, auth_headers):
     """Phase-1.5 wire-shape: raw array, not {keys: [...]}."""
     r = client.get("/settings/keys", headers=auth_headers)
     assert isinstance(r.json(), list)
+
+
+# ---------------------------------------------------------------------------
+# GET /settings (masked listing)
+# ---------------------------------------------------------------------------
+
+
+def test_get_all_empty(client, auth_headers):
+    r = client.get("/settings", headers=auth_headers)
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+def test_get_all_returns_masked_listing(client, auth_headers):
+    """Phase-1.5 wire-shape: list[{key, masked_value}], no plaintext."""
+    client.put("/settings/k1", headers=auth_headers, json={"value": "abcdefghij1234567890"})
+    r = client.get("/settings", headers=auth_headers)
+    assert r.status_code == 200
+    body = r.json()
+    assert isinstance(body, list)
+    assert len(body) == 1
+    assert body[0]["key"] == "k1"
+    assert "masked_value" in body[0]
+    assert "abcdefghij1234567890" not in body[0]["masked_value"]
