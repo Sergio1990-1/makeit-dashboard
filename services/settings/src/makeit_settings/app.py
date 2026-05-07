@@ -144,6 +144,19 @@ def create_app() -> FastAPI:
         logger.info("settings_access user=%s action=put key=%s", username, key)
         return Response(status_code=204)
 
+    @app.delete("/settings/{key}", status_code=204)
+    async def settings_delete(
+        key: str,
+        username: Annotated[str, Depends(_verify_settings_token)],
+        store: Annotated[SettingsStore, Depends(_get_settings_store)],
+    ) -> Response:
+        deleted = await asyncio.to_thread(store.delete, username, key)
+        if not deleted:
+            logger.info("settings_access user=%s action=delete key=%s status=404", username, key)
+            raise HTTPException(status_code=404, detail="Not found")
+        logger.info("settings_access user=%s action=delete key=%s", username, key)
+        return Response(status_code=204)
+
     return app
 
 

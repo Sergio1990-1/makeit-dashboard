@@ -134,3 +134,21 @@ def test_db_path_env_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         r = c.put("/settings/k", headers={"Authorization": f"Bearer {TEST_TOKEN}"}, json={"value": "v"})
         assert r.status_code == 204
     assert custom_db.exists(), "store didn't write to MAKEIT_SETTINGS_DB_PATH"
+
+
+# ---------------------------------------------------------------------------
+# DELETE /settings/{key}
+# ---------------------------------------------------------------------------
+
+
+def test_delete_existing_returns_204(client, auth_headers):
+    client.put("/settings/k", headers=auth_headers, json={"value": "v"})
+    r = client.delete("/settings/k", headers=auth_headers)
+    assert r.status_code == 204
+    g = client.get("/settings/k", headers=auth_headers)
+    assert g.status_code == 404
+
+
+def test_delete_missing_returns_404(client, auth_headers):
+    r = client.delete("/settings/nonexistent", headers=auth_headers)
+    assert r.status_code == 404
