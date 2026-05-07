@@ -155,6 +155,30 @@ def test_delete_missing_returns_404(client, auth_headers):
 
 
 # ---------------------------------------------------------------------------
+# CORS — local dev needs preflight to succeed (dashboard :4173 → settings :8768)
+# ---------------------------------------------------------------------------
+
+
+def test_cors_preflight_succeeds(client):
+    """OPTIONS /settings from a cross-origin must return 200 with allow headers.
+
+    Without CORSMiddleware, FastAPI returns 405 to OPTIONS, browsers block the
+    actual GET, and the dashboard's loadAllSettings() fails silently in dev.
+    """
+    r = client.options(
+        "/settings",
+        headers={
+            "Origin": "http://localhost:4173",
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "authorization",
+        },
+    )
+    assert r.status_code == 200
+    assert r.headers.get("access-control-allow-origin") == "*"
+    assert "GET" in r.headers.get("access-control-allow-methods", "")
+
+
+# ---------------------------------------------------------------------------
 # Degraded mode — encryption key missing → store init fails → 503
 # ---------------------------------------------------------------------------
 

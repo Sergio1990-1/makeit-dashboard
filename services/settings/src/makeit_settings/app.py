@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Annotated, AsyncIterator
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from .settings_store import SettingsStore, SettingsStoreError
@@ -94,6 +95,18 @@ def create_app() -> FastAPI:
         version="0.1.0",
         description="Encrypted bearer-auth secret store.",
         lifespan=_lifespan,
+    )
+
+    # CORS: bearer-token auth is the actual security gate (browsers won't auto-attach
+    # the token to cross-origin requests — JS has to fetch it from same-origin storage).
+    # `*` mirrors makeit-pipeline's existing CORS config so local dev (dashboard at
+    # :4173 → settings at :8768) works without preflight 405s. In production both
+    # services are reached via the same nginx origin (/api/settings/) so CORS is moot.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     @app.get("/health")
