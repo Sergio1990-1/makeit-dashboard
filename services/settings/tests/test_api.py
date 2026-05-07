@@ -82,3 +82,8 @@ def test_get_all_returns_masked_listing(client, auth_headers):
     assert body[0]["key"] == "k1"
     assert "masked_value" in body[0]
     assert "abcdefghij1234567890" not in body[0]["masked_value"]
+
+
+def test_get_missing_returns_404(client, auth_headers):
+    r = client.get("/settings/nonexistent", headers=auth_headers)
+    assert r.status_code == 404

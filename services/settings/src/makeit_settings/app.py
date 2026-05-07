@@ -120,6 +120,19 @@ def create_app() -> FastAPI:
             {"key": k, "masked_value": _mask_setting_value(v)} for k, v in sorted(values.items())
         ]
 
+    @app.get("/settings/{key}")
+    async def settings_get(
+        key: str,
+        username: Annotated[str, Depends(_verify_settings_token)],
+        store: Annotated[SettingsStore, Depends(_get_settings_store)],
+    ) -> dict[str, str]:
+        value = await asyncio.to_thread(store.get, username, key)
+        if value is None:
+            logger.info("settings_access user=%s action=get key=%s status=404", username, key)
+            raise HTTPException(status_code=404, detail="Not found")
+        logger.info("settings_access user=%s action=get key=%s", username, key)
+        return {"key": key, "value": value}
+
     return app
 
 
