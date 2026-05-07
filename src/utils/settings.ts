@@ -19,7 +19,7 @@
  *    work without re-asking for the secret.
  */
 
-import { PIPELINE_BASE_URL } from "./config";
+import { SETTINGS_BASE_URL } from "./config";
 
 const BOOTSTRAP_TOKEN_KEY = "pipeline_settings_token";
 
@@ -233,7 +233,7 @@ function authHeaders(): Record<string, string> {
 async function request(path: string, init: RequestInit = {}): Promise<Response> {
   let res: Response;
   try {
-    res = await fetch(`${PIPELINE_BASE_URL}${path}`, {
+    res = await fetch(`${SETTINGS_BASE_URL}${path}`, {
       ...init,
       headers: {
         ...authHeaders(),
