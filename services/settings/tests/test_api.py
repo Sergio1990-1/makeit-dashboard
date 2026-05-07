@@ -87,3 +87,50 @@ def test_get_all_returns_masked_listing(client, auth_headers):
 def test_get_missing_returns_404(client, auth_headers):
     r = client.get("/settings/nonexistent", headers=auth_headers)
     assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# PUT /settings/{key}
+# ---------------------------------------------------------------------------
+
+
+def test_put_then_get_round_trip(client, auth_headers):
+    r = client.put("/settings/github_token", headers=auth_headers, json={"value": "ghp_test_xyz"})
+    assert r.status_code == 204
+    g = client.get("/settings/github_token", headers=auth_headers)
+    assert g.status_code == 200
+    assert g.json() == {"key": "github_token", "value": "ghp_test_xyz"}
+
+
+def test_put_overwrites_existing_value(client, auth_headers):
+    client.put("/settings/k", headers=auth_headers, json={"value": "v1"})
+    client.put("/settings/k", headers=auth_headers, json={"value": "v2"})
+    r = client.get("/settings/k", headers=auth_headers)
+    assert r.json()["value"] == "v2"
+
+
+def test_put_invalid_body_returns_422(client, auth_headers):
+    r = client.put("/settings/k", headers=auth_headers, json={"wrong_field": "x"})
+    assert r.status_code == 422
+
+
+def test_put_value_too_large_returns_422(client, auth_headers):
+    r = client.put("/settings/k", headers=auth_headers, json={"value": "x" * 65537})
+    assert r.status_code == 422
+
+
+def test_db_path_env_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """MAKEIT_SETTINGS_DB_PATH redirects the SQLite file (covers container deploy
+    where /data is the bind-mounted volume; default Path.home() lands in /home/settings)."""
+    from makeit_settings.app import DB_PATH_ENV
+
+    custom_db = tmp_path / "custom" / "x.db"
+    custom_db.parent.mkdir()
+    monkeypatch.setenv(ENCRYPTION_KEY_ENV, base64.b64encode(secrets.token_bytes(32)).decode())
+    monkeypatch.setenv(SETTINGS_TOKEN_ENV, TEST_TOKEN)
+    monkeypatch.setenv(DB_PATH_ENV, str(custom_db))
+    app = create_app()
+    with TestClient(app) as c:
+        r = c.put("/settings/k", headers={"Authorization": f"Bearer {TEST_TOKEN}"}, json={"value": "v"})
+        assert r.status_code == 204
+    assert custom_db.exists(), "store didn't write to MAKEIT_SETTINGS_DB_PATH"

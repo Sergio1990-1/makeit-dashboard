@@ -133,6 +133,17 @@ def create_app() -> FastAPI:
         logger.info("settings_access user=%s action=get key=%s", username, key)
         return {"key": key, "value": value}
 
+    @app.put("/settings/{key}", status_code=204)
+    async def settings_put(
+        key: str,
+        body: _SettingsValueBody,
+        username: Annotated[str, Depends(_verify_settings_token)],
+        store: Annotated[SettingsStore, Depends(_get_settings_store)],
+    ) -> Response:
+        await asyncio.to_thread(store.put, username, key, body.value)
+        logger.info("settings_access user=%s action=put key=%s", username, key)
+        return Response(status_code=204)
+
     return app
 
 
