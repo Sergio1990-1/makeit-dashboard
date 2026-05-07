@@ -152,3 +152,21 @@ def test_delete_existing_returns_204(client, auth_headers):
 def test_delete_missing_returns_404(client, auth_headers):
     r = client.delete("/settings/nonexistent", headers=auth_headers)
     assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Degraded mode — encryption key missing → store init fails → 503
+# ---------------------------------------------------------------------------
+
+
+def test_503_when_encryption_key_missing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """No PIPELINE_SETTINGS_ENCRYPTION_KEY → store=None → all /settings/* → 503."""
+    monkeypatch.delenv(ENCRYPTION_KEY_ENV, raising=False)
+    monkeypatch.setenv(SETTINGS_TOKEN_ENV, TEST_TOKEN)
+    app = create_app()
+    with TestClient(app) as c:
+        r = c.get("/settings/keys", headers={"Authorization": f"Bearer {TEST_TOKEN}"})
+        assert r.status_code == 503
+        # /health still works
+        h = c.get("/health")
+        assert h.status_code == 200
