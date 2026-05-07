@@ -176,6 +176,14 @@ export const PIPELINE_BASE_URL =
   (window as unknown as { __MAKEIT_CONFIG__?: { PIPELINE_URL?: string } }).__MAKEIT_CONFIG__?.PIPELINE_URL
   ?? "http://127.0.0.1:8766";
 
+// Settings store base URL — separate from PIPELINE_URL because the store now
+// lives on the VPS as its own service (makeit-settings), independent of the
+// Pipeline Mac. Falls back to PIPELINE_URL so local dev (and any deploy that
+// hasn't been re-configured yet) keeps working against Pipeline's /settings.
+export const SETTINGS_BASE_URL =
+  (window as unknown as { __MAKEIT_CONFIG__?: { SETTINGS_URL?: string } }).__MAKEIT_CONFIG__?.SETTINGS_URL
+  ?? PIPELINE_BASE_URL;
+
 // Map repo name → keywords to match against monitor name/url
 export const MONITOR_MATCH: Record<string, string[]> = {
   "Sewing-ERP": ["8001", "sewing"],
