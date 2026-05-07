@@ -78,10 +78,18 @@ function AppInner({ onFirstFetchDone }: AppInnerProps = {}) {
 
   // Notify parent when the first fetch attempt resolves (whichever way) so
   // the cold-start splash can lift. We use a ref to keep this exactly-once.
+  //
+  // The "no token" branch matters because `refresh(false)` below is gated on
+  // `getToken()` — without a token there is no fetch to wait for, so neither
+  // `lastUpdated` nor `error` will ever flip. That happens for brand-new users
+  // and (since 98f0c4f) in degraded mode when Pipeline is offline AND the
+  // `github_token` was already migrated off localStorage by Task-05: the
+  // settings cache stays empty, `getToken()` returns null, and the BrandedLoader
+  // overlay above us would otherwise stay fixed at z-index 50 forever.
   const firstFetchSignaledRef = useRef(false);
   useEffect(() => {
     if (firstFetchSignaledRef.current) return;
-    if (lastUpdated !== null || error !== null) {
+    if (lastUpdated !== null || error !== null || !getToken()) {
       firstFetchSignaledRef.current = true;
       onFirstFetchDone?.();
     }
