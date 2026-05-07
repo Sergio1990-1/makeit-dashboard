@@ -100,6 +100,15 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/settings/keys")
+    async def settings_list_keys(
+        username: Annotated[str, Depends(_verify_settings_token)],
+        store: Annotated[SettingsStore, Depends(_get_settings_store)],
+    ) -> list[str]:
+        keys = await asyncio.to_thread(store.list_keys, username)
+        logger.info("settings_access user=%s action=list_keys", username)
+        return keys
+
     return app
 
 
