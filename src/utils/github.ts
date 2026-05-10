@@ -102,6 +102,34 @@ function buildActivity(byDate: Record<string, number>): CommitActivity {
   };
 }
 
+export interface OpenMilestone {
+  number: number;
+  title: string;
+  due_on: string | null;
+}
+
+interface RestMilestone {
+  number: number;
+  title: string;
+  due_on: string | null;
+}
+
+/** Fetch open milestones for a single repo via REST. Returns [] on auth/network
+ * failure — the dropdown should degrade to "no filter" rather than block the
+ * Pipeline run UI. */
+export async function fetchOpenMilestones(
+  token: string,
+  owner: string,
+  repo: string,
+): Promise<OpenMilestone[]> {
+  const items = await restGet<RestMilestone[]>(
+    token,
+    `/repos/${owner}/${repo}/milestones?state=open&sort=due_on&direction=asc&per_page=100`,
+  );
+  if (!Array.isArray(items)) return [];
+  return items.map((m) => ({ number: m.number, title: m.title, due_on: m.due_on }));
+}
+
 const GITHUB_GRAPHQL = "https://api.github.com/graphql";
 
 async function graphql<T>(token: string, query: string, variables: Record<string, unknown> = {}): Promise<T> {
