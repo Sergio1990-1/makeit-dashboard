@@ -102,6 +102,39 @@ function buildActivity(byDate: Record<string, number>): CommitActivity {
   };
 }
 
+export interface OpenMilestone {
+  number: number;
+  title: string;
+  due_on: string | null;
+}
+
+interface RestMilestone {
+  number: number;
+  title: string;
+  due_on: string | null;
+}
+
+/** Fetch open milestones for a single repo via REST.
+ *
+ * Returns:
+ *   - `OpenMilestone[]` (possibly empty) on success — empty means "repo has no
+ *     open milestones", which is a legitimate steady state worth caching.
+ *   - `null` on auth/network failure — the caller should NOT cache this,
+ *     otherwise a transient 401 permanently breaks the dropdown until reload. */
+export async function fetchOpenMilestones(
+  token: string,
+  owner: string,
+  repo: string,
+): Promise<OpenMilestone[] | null> {
+  const items = await restGet<RestMilestone[]>(
+    token,
+    `/repos/${owner}/${repo}/milestones?state=open&sort=due_on&direction=asc&per_page=100`,
+  );
+  if (items === null) return null;
+  if (!Array.isArray(items)) return [];
+  return items.map((m) => ({ number: m.number, title: m.title, due_on: m.due_on }));
+}
+
 const GITHUB_GRAPHQL = "https://api.github.com/graphql";
 
 async function graphql<T>(token: string, query: string, variables: Record<string, unknown> = {}): Promise<T> {

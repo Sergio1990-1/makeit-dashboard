@@ -9,6 +9,10 @@ export interface PipelineStartRequest {
   labels?: string[];
   limit?: number;
   complexity_filter?: ComplexityFilter;
+  /** Open-milestone title to filter issues by (AND with labels). Backend
+   * accepts the title string, normalises whitespace-only to "no filter", and
+   * passes through the special tokens `*` and `none` unchanged. */
+  milestone?: string;
 }
 
 export type PhaseStatus =

@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { usePipeline } from "../hooks/usePipeline";
-import { GITHUB_OWNER, PROJECTS } from "../utils/config";
+import { GITHUB_OWNER, PROJECTS, getToken } from "../utils/config";
 import type { ComplexityFilter, ComplexityLevel, ClassifyProgress, ClassifyResponse, EscalationCategory, Outcome } from "../utils/pipeline";
 import { classifyIssues } from "../utils/pipeline";
+import { fetchOpenMilestones, type OpenMilestone } from "../utils/github";
 import type { ProjectData } from "../types";
 import { PipelineClosedChart } from "./PipelineClosedChart";
 import { IssueTimeline } from "./IssueTimeline";
@@ -233,6 +234,11 @@ function OutcomeBadge({ outcome }: { outcome: Outcome }) {
   );
 }
 
+/* Module-scoped cache: open milestones per "owner/repo". Persists across
+ * remounts of PipelineControlPanel and avoids hammering the REST API every
+ * time the user toggles labels / limit. Invalidated only by reload. */
+const milestoneCache = new Map<string, OpenMilestone[]>();
+
 /* ── Main component ── */
 
 interface PipelineControlPanelProps {
@@ -272,6 +278,14 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
     const valid: ComplexityFilter[] = ["auto", "assisted", "all"];
     return stored && valid.includes(stored as ComplexityFilter) ? (stored as ComplexityFilter) : "all";
   });
+  const [selectedMilestone, setSelectedMilestone] = useState<string>(() => {
+    // Per-project key so a milestone chosen for repo A doesn't bleed into repo
+    // B (titles can collide and would otherwise pass the stale-clear guard).
+    const initialProject = localStorage.getItem("pipeline_project")
+      ?? `${GITHUB_OWNER}/moliyakg`;
+    return localStorage.getItem(`pipeline_milestone:${initialProject}`) ?? "";
+  });
+  const [milestoneOptions, setMilestoneOptions] = useState<OpenMilestone[]>([]);
 
   useEffect(() => {
     localStorage.setItem("pipeline_project", selectedProject);
@@ -288,6 +302,70 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
   useEffect(() => {
     localStorage.setItem("pipeline_complexity", complexityFilter);
   }, [complexityFilter]);
+
+  // Persist milestone choice per-project. Skip writes for the empty value when
+  // there's nothing in storage to clear — keeps localStorage from being seeded
+  // with `pipeline_milestone:owner/repo=""` entries on first mount.
+  useEffect(() => {
+    if (!selectedProject) return;
+    const key = `pipeline_milestone:${selectedProject}`;
+    if (selectedMilestone) {
+      localStorage.setItem(key, selectedMilestone);
+    } else {
+      localStorage.removeItem(key);
+    }
+  }, [selectedMilestone, selectedProject]);
+
+  // When the project changes, restore that project's saved milestone. The
+  // alternative (keeping the previous project's title) lets a same-named
+  // milestone in repo B silently inherit repo A's selection.
+  useEffect(() => {
+    setSelectedMilestone(localStorage.getItem(`pipeline_milestone:${selectedProject}`) ?? "");
+  }, [selectedProject]);
+
+  useEffect(() => {
+    if (!selectedProject) {
+      setMilestoneOptions([]);
+      return;
+    }
+    const cached = milestoneCache.get(selectedProject);
+    if (cached) {
+      setMilestoneOptions(cached);
+      return;
+    }
+    const token = getToken();
+    if (!token) {
+      setMilestoneOptions([]);
+      return;
+    }
+    const [owner, repo] = selectedProject.split("/");
+    if (!owner || !repo) {
+      setMilestoneOptions([]);
+      return;
+    }
+    let cancelled = false;
+    void fetchOpenMilestones(token, owner, repo).then((items) => {
+      if (cancelled) return;
+      // null = transient auth/network failure — don't cache, so the next
+      // project switch (or dashboard refresh) retries instead of showing
+      // a permanently empty dropdown until the user reloads.
+      if (items === null) return;
+      milestoneCache.set(selectedProject, items);
+      setMilestoneOptions(items);
+    });
+    return () => { cancelled = true; };
+  }, [selectedProject]);
+
+  // If the current selection is no longer one of the open milestones for this
+  // project (e.g. project switched, or milestone was closed since cache built),
+  // clear it so we don't send a stale title that resolves to an empty fan-out.
+  useEffect(() => {
+    if (!selectedMilestone) return;
+    if (milestoneOptions.length === 0) return;
+    if (!milestoneOptions.some((m) => m.title === selectedMilestone)) {
+      setSelectedMilestone("");
+    }
+  }, [milestoneOptions, selectedMilestone]);
 
   useEffect(() => {
     if (available && selectedProject) void loadStats(selectedProject);
@@ -355,6 +433,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
       labels: selectedLabels.length > 0 ? selectedLabels : undefined,
       limit,
       complexity_filter: complexityFilter !== "all" ? complexityFilter : undefined,
+      milestone: selectedMilestone || undefined,
     });
   }
 
@@ -440,6 +519,32 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
             {PROJECTS.map((p) => (
               <option key={p.repo} value={`${p.owner}/${p.repo}`}>
                 {p.repo}
+              </option>
+            ))}
+          </select>
+
+          {/* Milestone selector (optional, AND with labels). Disabled when
+             pipeline is running, when no project is selected (the API needs
+             owner/repo to resolve title→id), or when the project has no open
+             milestones — keeps the dropdown from looking interactive but empty. */}
+          <select
+            className="input"
+            style={{ fontSize: "var(--text-sm)", padding: "4px 8px", minWidth: 160 }}
+            value={selectedMilestone}
+            onChange={(e) => setSelectedMilestone(e.target.value)}
+            disabled={isRunning || !selectedProject || milestoneOptions.length === 0}
+            title={
+              !selectedProject
+                ? "Выберите проект, чтобы увидеть milestones"
+                : milestoneOptions.length === 0
+                  ? "У проекта нет открытых milestones"
+                  : "Фильтр по milestone (опционально)"
+            }
+          >
+            <option value="">Все milestones</option>
+            {milestoneOptions.map((m) => (
+              <option key={m.number} value={m.title}>
+                {m.title}
               </option>
             ))}
           </select>
