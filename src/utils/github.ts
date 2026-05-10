@@ -114,18 +114,23 @@ interface RestMilestone {
   due_on: string | null;
 }
 
-/** Fetch open milestones for a single repo via REST. Returns [] on auth/network
- * failure — the dropdown should degrade to "no filter" rather than block the
- * Pipeline run UI. */
+/** Fetch open milestones for a single repo via REST.
+ *
+ * Returns:
+ *   - `OpenMilestone[]` (possibly empty) on success — empty means "repo has no
+ *     open milestones", which is a legitimate steady state worth caching.
+ *   - `null` on auth/network failure — the caller should NOT cache this,
+ *     otherwise a transient 401 permanently breaks the dropdown until reload. */
 export async function fetchOpenMilestones(
   token: string,
   owner: string,
   repo: string,
-): Promise<OpenMilestone[]> {
+): Promise<OpenMilestone[] | null> {
   const items = await restGet<RestMilestone[]>(
     token,
     `/repos/${owner}/${repo}/milestones?state=open&sort=due_on&direction=asc&per_page=100`,
   );
+  if (items === null) return null;
   if (!Array.isArray(items)) return [];
   return items.map((m) => ({ number: m.number, title: m.title, due_on: m.due_on }));
 }

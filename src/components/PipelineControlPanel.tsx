@@ -279,7 +279,11 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
     return stored && valid.includes(stored as ComplexityFilter) ? (stored as ComplexityFilter) : "all";
   });
   const [selectedMilestone, setSelectedMilestone] = useState<string>(() => {
-    return localStorage.getItem("pipeline_milestone") ?? "";
+    // Per-project key so a milestone chosen for repo A doesn't bleed into repo
+    // B (titles can collide and would otherwise pass the stale-clear guard).
+    const initialProject = localStorage.getItem("pipeline_project")
+      ?? `${GITHUB_OWNER}/moliyakg`;
+    return localStorage.getItem(`pipeline_milestone:${initialProject}`) ?? "";
   });
   const [milestoneOptions, setMilestoneOptions] = useState<OpenMilestone[]>([]);
 
@@ -299,9 +303,25 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
     localStorage.setItem("pipeline_complexity", complexityFilter);
   }, [complexityFilter]);
 
+  // Persist milestone choice per-project. Skip writes for the empty value when
+  // there's nothing in storage to clear — keeps localStorage from being seeded
+  // with `pipeline_milestone:owner/repo=""` entries on first mount.
   useEffect(() => {
-    localStorage.setItem("pipeline_milestone", selectedMilestone);
-  }, [selectedMilestone]);
+    if (!selectedProject) return;
+    const key = `pipeline_milestone:${selectedProject}`;
+    if (selectedMilestone) {
+      localStorage.setItem(key, selectedMilestone);
+    } else {
+      localStorage.removeItem(key);
+    }
+  }, [selectedMilestone, selectedProject]);
+
+  // When the project changes, restore that project's saved milestone. The
+  // alternative (keeping the previous project's title) lets a same-named
+  // milestone in repo B silently inherit repo A's selection.
+  useEffect(() => {
+    setSelectedMilestone(localStorage.getItem(`pipeline_milestone:${selectedProject}`) ?? "");
+  }, [selectedProject]);
 
   useEffect(() => {
     if (!selectedProject) {
@@ -326,6 +346,10 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
     let cancelled = false;
     void fetchOpenMilestones(token, owner, repo).then((items) => {
       if (cancelled) return;
+      // null = transient auth/network failure — don't cache, so the next
+      // project switch (or dashboard refresh) retries instead of showing
+      // a permanently empty dropdown until the user reloads.
+      if (items === null) return;
       milestoneCache.set(selectedProject, items);
       setMilestoneOptions(items);
     });
