@@ -12,6 +12,7 @@ COPY --from=build /usr/local/lib/python3.12/site-packages /usr/local/lib/python3
 COPY --from=build /usr/local/bin /usr/local/bin
 COPY src/ ./src/
 USER settings
-ENV PYTHONPATH=/app/src
+ENV PYTHONPATH=/app/src \
+    MAKEIT_SETTINGS_DB_PATH=/data/settings.db
 EXPOSE 8768
 CMD ["uvicorn", "makeit_settings.app:app", "--host", "0.0.0.0", "--port", "8768"]
