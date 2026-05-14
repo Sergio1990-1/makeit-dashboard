@@ -34,6 +34,40 @@ const BOOTSTRAP_TOKEN_KEY = "pipeline_settings_token";
  */
 export const SETTINGS_AUTH_LOST_EVENT = "settings:auth-lost";
 
+/**
+ * Fired when a setting value is changed via `setSetting()` / `deleteSetting()`
+ * or — for legacy localStorage-backed secrets — `setToken()` / `clearToken()`
+ * (and friends) in `utils/config.ts`. The `detail.key` identifies the setting
+ * that changed so listeners can filter cheaply.
+ *
+ * Motivation (issue #330): components that read a secret via `getToken()` on
+ * mount and key effects off `[selectedProject]` had no signal when the user
+ * saved a token elsewhere (SettingsPanel, legacy TokenForm). They'd stay in a
+ * "no-token" state until a full page reload. Subscribing to this event lets
+ * them invalidate caches and re-run fetches without polling or prop-drilling.
+ *
+ * Dispatched only on successful write (and after the local mutation) so
+ * listeners can trust that a subsequent `getSetting()` / `getToken()` will
+ * return the new value.
+ */
+export const SETTINGS_CHANGED_EVENT = "settings:changed";
+
+/** Internal helper: fire the change event for `key`. No-op outside browsers. */
+function emitSettingsChanged(key: string): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(SETTINGS_CHANGED_EVENT, { detail: { key } }));
+}
+
+/**
+ * Exported for `utils/config.ts` so the legacy `setToken()` / `clearToken()`
+ * paths can emit the same event without duplicating the dispatch boilerplate.
+ * Not part of the public settings API surface — kept here so the event name
+ * and detail shape stay in one place.
+ */
+export function notifySettingChanged(key: string): void {
+  emitSettingsChanged(key);
+}
+
 /** 401 from the pipeline — bootstrap token is missing or invalid. */
 export class SettingsAuthError extends Error {
   constructor(message = "Pipeline settings: unauthorized") {
@@ -316,6 +350,10 @@ export async function setSetting(key: string, value: string): Promise<void> {
   await res.text().catch(() => "");
   if (!cache) cache = new Map();
   cache.set(key, value);
+  // Emit AFTER the local mutation lands so subscribers reading via
+  // `getSetting(key)` synchronously in their listener observe the new value.
+  // Skipped on failures because `request()` throws above this point.
+  emitSettingsChanged(key);
 }
 
 /** DELETE /settings/{key} — also removes from the in-memory cache on success. */
@@ -325,6 +363,7 @@ export async function deleteSetting(key: string): Promise<void> {
   });
   await res.text().catch(() => "");
   cache?.delete(key);
+  emitSettingsChanged(key);
 }
 
 /** GET /settings/keys — list of declared/known keys. */
