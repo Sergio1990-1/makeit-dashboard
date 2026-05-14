@@ -1,5 +1,5 @@
 import type { ProjectConfig } from "../types";
-import { deleteSetting, getSetting } from "./settings";
+import { deleteSetting, getSetting, notifySettingChanged } from "./settings";
 
 export const GITHUB_OWNER = "Sergio1990-1";
 export const GITHUB_PROJECT_NUMBER = 1;
@@ -85,6 +85,10 @@ export function getToken(): string | null {
 
 export function setToken(token: string): void {
   localStorage.setItem("github_token", token);
+  // Mirror the dispatch that `setSetting()` does for the canonical path so
+  // subscribers (issue #330) react the same way regardless of which form
+  // wrote the token.
+  notifySettingChanged("github_token");
 }
 
 // Logout / "Очистить" must wipe BOTH the legacy localStorage entry AND the
@@ -95,6 +99,7 @@ export function setToken(token: string): void {
 export function clearToken(): void {
   localStorage.removeItem("github_token");
   void deleteSetting("github_token").catch(() => {});
+  notifySettingChanged("github_token");
 }
 
 export function getClaudeKey(): string | null {

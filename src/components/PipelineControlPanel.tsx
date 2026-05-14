@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { usePipeline } from "../hooks/usePipeline";
 import { GITHUB_OWNER, PROJECTS, getToken } from "../utils/config";
+import { SETTINGS_CHANGED_EVENT } from "../utils/settings";
 import type { ComplexityFilter, ComplexityLevel, ClassifyProgress, ClassifyResponse, EscalationCategory, Outcome } from "../utils/pipeline";
 import { classifyIssues } from "../utils/pipeline";
 import { fetchOpenMilestones, type OpenMilestone } from "../utils/github";
@@ -294,6 +295,10 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
   // we either kept a stale localStorage milestone forever (when fetch never
   // ran because of missing token) or cleared in-flight selections mid-fetch.
   const [milestoneLoadState, setMilestoneLoadState] = useState<MilestoneLoadState>("idle");
+  // Issue #330: bumped from the SETTINGS_CHANGED_EVENT listener when the GitHub
+  // token is saved/cleared elsewhere in the app. Included in the fetch effect's
+  // deps so the load re-runs against the new auth state without a full reload.
+  const [milestoneRefreshTick, setMilestoneRefreshTick] = useState(0);
 
   useEffect(() => {
     localStorage.setItem("pipeline_project", selectedProject);
@@ -375,6 +380,21 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
       setMilestoneLoadState("loaded");
     });
     return () => { cancelled = true; };
+  }, [selectedProject, milestoneRefreshTick]);
+
+  // Token-availability subscriber (issue #330): when github_token is saved or
+  // cleared elsewhere in the app (Settings panel, legacy TokenForm, logout),
+  // drop the cache entry for the current project so the fetch effect re-runs
+  // against the new auth state instead of serving the stale "no-token" cache.
+  useEffect(() => {
+    function onSettingsChange(e: Event) {
+      const detail = (e as CustomEvent<{ key?: string }>).detail;
+      if (detail?.key !== "github_token") return;
+      if (selectedProject) milestoneCache.delete(selectedProject);
+      setMilestoneRefreshTick((n) => n + 1);
+    }
+    window.addEventListener(SETTINGS_CHANGED_EVENT, onSettingsChange);
+    return () => window.removeEventListener(SETTINGS_CHANGED_EVENT, onSettingsChange);
   }, [selectedProject]);
 
   // If the current selection is no longer one of the open milestones for this
