@@ -141,9 +141,32 @@ export function PipelineView({
   // results that arrive between the click and the first `running=true` poll
   // are still counted toward currentRunCost and the final run summary.
   const baselineSetByClickRef = useRef(false);
+  // One-shot guard for the session-run bootstrap on the first received status.
+  // Issue #332.
+  const bootstrappedRef = useRef(false);
 
   useEffect(() => {
     if (!status) return;
+
+    // Bootstrap on the first status if there are already finalized results
+    // from an earlier run in this API session (page mounted/refreshed mid-idle
+    // after a completed run). Counts as one "session run" — the backend keeps
+    // results only for the current API session, so all completed items belong
+    // to the same logical run as far as session metrics are concerned.
+    // Without this, sessionRunCount stays 0 while sessionCost > 0, producing
+    // an inconsistent "$X spent, 0 runs" KPI. Issue #332.
+    if (!bootstrappedRef.current) {
+      bootstrappedRef.current = true;
+      if (!status.running && status.results.length > 0) {
+        const finalCount = status.results.filter(
+          (r) => r.status !== "queued" && r.status !== "in_progress",
+        ).length;
+        if (finalCount > 0) {
+          setSessionRunCount(1);
+        }
+      }
+    }
+
     if (status.running && !wasRunningRef.current) {
       // New run started — count it regardless of how the transition was triggered.
       setSessionRunCount((c) => c + 1);
