@@ -239,6 +239,8 @@ function OutcomeBadge({ outcome }: { outcome: Outcome }) {
  * time the user toggles labels / limit. Invalidated only by reload. */
 const milestoneCache = new Map<string, OpenMilestone[]>();
 
+type MilestoneLoadState = "idle" | "loading" | "loaded" | "no-token";
+
 /* ── Main component ── */
 
 interface PipelineControlPanelProps {
@@ -286,6 +288,12 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
     return localStorage.getItem(`pipeline_milestone:${initialProject}`) ?? "";
   });
   const [milestoneOptions, setMilestoneOptions] = useState<OpenMilestone[]>([]);
+  // Lifecycle of milestoneOptions for the current project. Lets the stale-clear
+  // effect distinguish "fetch still in flight" (don't clear) from "we know the
+  // list is final" (safe to clear stale selection). Issue #329: without this
+  // we either kept a stale localStorage milestone forever (when fetch never
+  // ran because of missing token) or cleared in-flight selections mid-fetch.
+  const [milestoneLoadState, setMilestoneLoadState] = useState<MilestoneLoadState>("idle");
 
   useEffect(() => {
     localStorage.setItem("pipeline_project", selectedProject);
@@ -326,32 +334,45 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
   useEffect(() => {
     if (!selectedProject) {
       setMilestoneOptions([]);
+      setMilestoneLoadState("idle");
       return;
     }
     const cached = milestoneCache.get(selectedProject);
     if (cached) {
       setMilestoneOptions(cached);
+      setMilestoneLoadState("loaded");
       return;
     }
     const token = getToken();
     if (!token) {
       setMilestoneOptions([]);
+      setMilestoneLoadState("no-token");
       return;
     }
     const [owner, repo] = selectedProject.split("/");
     if (!owner || !repo) {
       setMilestoneOptions([]);
+      setMilestoneLoadState("loaded");
       return;
     }
+    setMilestoneOptions([]);
+    setMilestoneLoadState("loading");
     let cancelled = false;
     void fetchOpenMilestones(token, owner, repo).then((items) => {
       if (cancelled) return;
       // null = transient auth/network failure — don't cache, so the next
       // project switch (or dashboard refresh) retries instead of showing
-      // a permanently empty dropdown until the user reloads.
-      if (items === null) return;
+      // a permanently empty dropdown until the user reloads. Mark as
+      // "loaded" anyway so the stale-clear effect can drop a saved
+      // milestone the user can't pick (the defensive guard in handleStart
+      // is the final backstop if this fires unexpectedly).
+      if (items === null) {
+        setMilestoneLoadState("loaded");
+        return;
+      }
       milestoneCache.set(selectedProject, items);
       setMilestoneOptions(items);
+      setMilestoneLoadState("loaded");
     });
     return () => { cancelled = true; };
   }, [selectedProject]);
@@ -359,13 +380,16 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
   // If the current selection is no longer one of the open milestones for this
   // project (e.g. project switched, or milestone was closed since cache built),
   // clear it so we don't send a stale title that resolves to an empty fan-out.
+  // Issue #329: only clear when the list is final ("loaded" or "no-token") —
+  // skipping during "loading" avoids racing with an in-flight fetch that would
+  // momentarily blank a still-valid selection.
   useEffect(() => {
     if (!selectedMilestone) return;
-    if (milestoneOptions.length === 0) return;
+    if (milestoneLoadState === "idle" || milestoneLoadState === "loading") return;
     if (!milestoneOptions.some((m) => m.title === selectedMilestone)) {
       setSelectedMilestone("");
     }
-  }, [milestoneOptions, selectedMilestone]);
+  }, [milestoneOptions, milestoneLoadState, selectedMilestone]);
 
   useEffect(() => {
     if (available && selectedProject) void loadStats(selectedProject);
@@ -428,12 +452,19 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
   }
 
   function handleStart() {
+    // Defensive guard (issue #329): only send a milestone filter if it's still
+    // one of the project's open milestones. Backstops the stale-clear effect
+    // in case state hasn't caught up yet (e.g. start clicked during in-flight
+    // fetch, or unmount/remount race) — a stale title would resolve to an
+    // empty fan-out on the backend.
+    const milestoneIsValid = selectedMilestone
+      && milestoneOptions.some((m) => m.title === selectedMilestone);
     void start({
       project: selectedProject || undefined,
       labels: selectedLabels.length > 0 ? selectedLabels : undefined,
       limit,
       complexity_filter: complexityFilter !== "all" ? complexityFilter : undefined,
-      milestone: selectedMilestone || undefined,
+      milestone: milestoneIsValid ? selectedMilestone : undefined,
     });
   }
 
@@ -536,9 +567,13 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
             title={
               !selectedProject
                 ? "Выберите проект, чтобы увидеть milestones"
-                : milestoneOptions.length === 0
-                  ? "У проекта нет открытых milestones"
-                  : "Фильтр по milestone (опционально)"
+                : milestoneLoadState === "loading"
+                  ? "Загружаются milestones..."
+                  : milestoneLoadState === "no-token"
+                    ? "Нужен GitHub токен, чтобы загрузить milestones"
+                    : milestoneOptions.length === 0
+                      ? "У проекта нет открытых milestones"
+                      : "Фильтр по milestone (опционально)"
             }
           >
             <option value="">Все milestones</option>
