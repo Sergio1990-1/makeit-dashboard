@@ -1,5 +1,6 @@
 import type { KeyboardEvent } from "react";
 import type { HubTab } from "../../../types/hub";
+import { InboxBadge } from "./InboxBadge";
 
 interface Props {
   active: HubTab;
@@ -66,7 +67,6 @@ export function ProjectHubTabs({ active, onChange, inboxCount }: Props) {
     <div className="v4-hub-tabs" role="tablist" aria-label="Project Hub sections">
       {TABS.map((tab, index) => {
         const isActive = tab.id === active;
-        const showBadge = tab.id === "activity" && inboxCount > 0;
         return (
           <button
             key={tab.id}
@@ -81,14 +81,7 @@ export function ProjectHubTabs({ active, onChange, inboxCount }: Props) {
             onKeyDown={(e) => handleKeyDown(e, index)}
           >
             <span className="v4-hub-tab-label">{tab.label}</span>
-            {showBadge && (
-              <span
-                className="v4-hub-tab-badge"
-                aria-label={`${inboxCount} новых событий`}
-              >
-                {inboxCount}
-              </span>
-            )}
+            {tab.id === "activity" && <InboxBadge count={inboxCount} />}
           </button>
         );
       })}

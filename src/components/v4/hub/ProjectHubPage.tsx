@@ -1,7 +1,8 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ProjectData } from "../../../types";
 import type { HubTab } from "../../../types/hub";
 import { useProjectHub } from "../../../hooks/useProjectHub";
+import { unreadCount } from "../../../utils/lastVisitedStore";
 import { ProjectHubHeader } from "./ProjectHubHeader";
 import { ProjectHubTabs } from "./ProjectHubTabs";
 
@@ -46,6 +47,23 @@ function isHubTab(value: string | null): value is HubTab {
  */
 export function ProjectHubPage({ repo, project, onBackToList }: Props) {
   const data = useProjectHub(repo, project);
+
+  // Inbox badge = Activity events newer than this device's last visit to
+  // the Activity tab for `repo` (Epic-011 Task-05). `unreadCount` reads
+  // sessionStorage (non-reactive), so a `visitVersion` counter — bumped by
+  // ActivityTab once `markVisited` has fired — forces a recompute that
+  // drops the badge to 0 after the tab is opened.
+  const [visitVersion, setVisitVersion] = useState(0);
+  const inboxCount = useMemo(
+    () => unreadCount(data.pulse, repo),
+    // `visitVersion` is an intentional recompute trigger after markVisited;
+    // `data.pulse` and `repo` are the real inputs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data.pulse, repo, visitVersion],
+  );
+  const handleActivityVisited = useCallback(() => {
+    setVisitVersion((v) => v + 1);
+  }, []);
 
   // ─── URL persistence for `subtab` ────────────────────────────────────
   // Mirrors the lastSyncedRef + didMountPushRef pattern from ProjectsView.tsx
@@ -142,7 +160,7 @@ export function ProjectHubPage({ repo, project, onBackToList }: Props) {
       <ProjectHubTabs
         active={activeTab}
         onChange={setActiveTab}
-        inboxCount={data.inboxCount}
+        inboxCount={inboxCount}
       />
       <div
         className="v4-hub-tabpanel"
@@ -162,7 +180,9 @@ export function ProjectHubPage({ repo, project, onBackToList }: Props) {
         >
           {activeTab === "overview" && <OverviewTab data={data} onOpenTab={setActiveTab} />}
           {activeTab === "health" && <HealthTab repo={repo} project={project} />}
-          {activeTab === "activity" && <ActivityTab />}
+          {activeTab === "activity" && (
+            <ActivityTab repo={repo} onVisited={handleActivityVisited} />
+          )}
           {activeTab === "decisions" && <DecisionsRisksTab decisions={data.decisions} />}
           {activeTab === "delivery" && <DeliveryTab />}
         </Suspense>
