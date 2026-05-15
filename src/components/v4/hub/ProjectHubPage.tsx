@@ -164,7 +164,7 @@ export function ProjectHubPage({ repo, project, onBackToList }: Props) {
           {activeTab === "health" && <HealthTab repo={repo} project={project} />}
           {activeTab === "activity" && <ActivityTab />}
           {activeTab === "decisions" && <DecisionsRisksTab decisions={data.decisions} />}
-          {activeTab === "delivery" && <DeliveryTab />}
+          {activeTab === "delivery" && <DeliveryTab data={data} />}
         </Suspense>
       </div>
     </div>

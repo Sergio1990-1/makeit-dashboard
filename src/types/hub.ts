@@ -5,6 +5,7 @@
 
 import type { ProjectData } from "./index";
 import type { HealthReport, HealthSeverity } from "./health";
+import type { DoraMetricsResult } from "../utils/doraCalculator";
 
 export type HubTab = "overview" | "health" | "activity" | "decisions" | "delivery";
 
@@ -83,18 +84,7 @@ export interface DigestEntry {
  * DORA metrics snapshot + 90d trend per metric.
  * Filled in Epic-012 (Task-01: DORA).
  */
-export interface DoraMetrics {
-  deploymentFrequency: number; // deploys/week
-  leadTimeHours: number;
-  mttrHours: number;
-  changeFailureRate: number; // 0..1
-  trend90d: {
-    deploymentFrequency: number[];
-    leadTimeHours: number[];
-    mttrHours: number[];
-    changeFailureRate: number[];
-  };
-}
+export type DoraMetrics = DoraMetricsResult;
 
 /**
  * Customer Health Score (formula TBD — see PROJECT_HUB_DESIGN_BRIEF.md §11).
