@@ -74,16 +74,31 @@ export interface Commitment {
   status: "open" | "done" | "overdue";
 }
 
+/** What kind of thing is being renewed (drives the type filter). */
+export type RenewalType = "ssl" | "domain" | "contract" | "license" | "dep";
+
 /**
- * Renewal — SSL/domain/contract/dep deprecation with a due date.
- * Filled in Epic-011 (Task-04: Renewals).
+ * How a renewal entered the list. `manual` rows live in
+ * `docs/renewals.yaml` and are CRUD-editable; `auto-scan` rows are
+ * virtual (derived from `package.json` deprecated deps) and never
+ * persisted back to the yaml — they are read-only in the UI.
+ */
+export type RenewalSource = "manual" | "auto-scan";
+
+/**
+ * Renewal — SSL/domain/contract/license expiry or a deprecated
+ * dependency, surfaced with a due date. Manual entries are one row of
+ * `docs/renewals.yaml`; auto-scan entries are virtual (Epic-011
+ * Task-04, FR-32). CRUD writes back via the GitHub Contents API
+ * (see src/utils/github-contents.ts) for `source === "manual"` only.
  */
 export interface Renewal {
-  id: string;
-  kind: "ssl" | "domain" | "contract" | "dependency" | "other";
-  title: string;
-  dueDate: string; // ISO
-  status: "upcoming" | "due" | "expired";
+  type: RenewalType;
+  name: string;
+  /** ISO-8601 expiry date, or `null` when no date is known/set. */
+  expires_at: string | null;
+  notes: string;
+  source: RenewalSource;
 }
 
 /**
