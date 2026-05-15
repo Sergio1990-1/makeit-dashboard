@@ -286,7 +286,11 @@ export function computeDora(
       if (Number.isNaN(start) || Number.isNaN(end)) continue;
       if (end < since) continue; // resolved before window
       if (start > now) continue; // started in the future (bad data)
-      const durH = (end - start) / 3_600_000;
+      // Clamp pre-window time so a long-running incident that started
+      // weeks before `since` doesn't bias the median upward with its
+      // pre-window duration — only the in-window portion counts.
+      const effectiveStart = Math.max(start, since);
+      const durH = (end - effectiveStart) / 3_600_000;
       if (durH < 0) continue;
       durations.push(durH);
     }
