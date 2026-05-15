@@ -1379,6 +1379,51 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 .v4-promise-due--due-week { color: var(--v4-warn-700); }
 
 /* ────────────────────────────────────────
+   PORTFOLIO RENEWALS (Epic-010 Task-04)
+   Reuses .v4-promise-* row scaffold; adds a type-icon chip whose colour
+   encodes urgency. Colour is NEVER the only signal — every row also
+   carries an explicit «через Nд» text label (WCAG 1.4.1).
+   Theme-aware via --v4-* tokens (auto dark/light).
+   ──────────────────────────────────────── */
+/* The shared .v4-promise-row grid is 8px 1fr 14px (sized for an 8px
+   dot); a renewal row leads with a 22px type-icon chip, so widen the
+   first track. .v4-renewals-row is applied alongside .v4-promise-row. */
+.v4-renewals-row {
+  grid-template-columns: 22px 1fr 14px;
+}
+.v4-renewal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+.v4-renewal-icon--red {
+  color: var(--v4-danger-700);
+  background: var(--v4-danger-50);
+}
+.v4-renewal-icon--yellow {
+  color: var(--v4-warn-700);
+  background: var(--v4-warn-50);
+}
+.v4-renewal-icon--gray {
+  color: var(--v4-ink-500);
+  background: var(--v4-line-soft);
+}
+.v4-renewal-type {
+  font-weight: 600;
+  color: var(--v4-ink-500);
+}
+.v4-renewal-client {
+  font-size: 11px;
+  color: var(--v4-ink-400);
+}
+.v4-renewal-due--red { color: var(--v4-danger-700); }
+.v4-renewal-due--yellow { color: var(--v4-warn-700); }
+.v4-renewal-due--gray { color: var(--v4-ink-500); }
+
+/* ────────────────────────────────────────
    LISTS: blocked + deadlines
    ──────────────────────────────────────── */
 .v4-list { padding: 6px 0; }
