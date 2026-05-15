@@ -152,10 +152,11 @@ function readCache(repo: string): ProjectNorm | null {
     const raw = localStorage.getItem(CACHE_PREFIX + repo);
     if (!raw) return null;
     const entry = JSON.parse(raw) as Partial<CacheEntry>;
-    if (
-      typeof entry.cached_at !== "number" ||
-      Date.now() - entry.cached_at >= CACHE_TTL_MS
-    ) {
+    const age = typeof entry.cached_at === "number" ? Date.now() - entry.cached_at : NaN;
+    // `age < 0` guards a clock moved backwards (or a future `cached_at`):
+    // without it a negative age never satisfies `>= TTL` and the entry
+    // would be served as "fresh" forever. NaN (missing cached_at) also fails.
+    if (!(age >= 0 && age < CACHE_TTL_MS)) {
       return null;
     }
     // Re-validate the cached payload: a hand-edited or schema-drifted
