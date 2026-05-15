@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Commitment } from "../../../types/hub";
 import {
   extractCommitments,
@@ -288,15 +288,15 @@ export function CommitmentsTable({ repo }: Props) {
     };
   }, [repo, reloadToken]);
 
+  // Derive the overdue badge at render time. No useMemo: the input is
+  // `Date.now()`, fresh every render, so a memo would never hit — and
+  // the map is cheap. Mirrors the deliberate no-hook choice in
+  // OverviewTab's filterUrgentCommitments.
   const now = Date.now();
-  const decorated = useMemo(
-    () =>
-      rows.map((r) =>
-        r.status !== "done" && isOverdue(r, now)
-          ? { ...r, status: "overdue" as const }
-          : r,
-      ),
-    [rows, now],
+  const decorated = rows.map((r) =>
+    r.status !== "done" && isOverdue(r, now)
+      ? { ...r, status: "overdue" as const }
+      : r,
   );
 
   function mutate(next: Row[]) {
