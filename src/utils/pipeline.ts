@@ -405,6 +405,58 @@ export async function fetchPipelineLimits(): Promise<PipelineLimits | null> {
   }
 }
 
+/**
+ * Per-project monthly budget snapshot (epic-035 Task-05).
+ *
+ * `monthly_cap_usd === null` → cap not configured for this project;
+ * `percentage` is also `null` and the widget renders a "cap not set" badge.
+ *
+ * `status` thresholds: `<60%` ok, `60-80%` warning, `>=80%` exceeded —
+ * mirror the pipeline's Telegram alert thresholds so the dashboard's
+ * visual state matches the operator's notification stream.
+ */
+export interface BudgetSummary {
+  project: string;
+  year_month: string;
+  monthly_spent_usd: number;
+  monthly_cap_usd: number | null;
+  percentage: number | null;
+  batches_this_month: number;
+  last_alert_at: string | null;
+  status: "ok" | "warning" | "exceeded";
+}
+
+/**
+ * Fetch the per-project budget snapshot. Returns `null` on any failure
+ * (404 — pipeline doesn't know the project, 503 — store/config outage,
+ * network/timeout) so the widget can render a neutral fallback rather
+ * than crash the project card.
+ */
+export async function fetchBudget(project: string): Promise<BudgetSummary | null> {
+  if (!project.includes("/")) {
+    if (import.meta.env.DEV) {
+      console.warn("[pipeline] fetchBudget: expected owner/repo, got", project);
+    }
+    return null;
+  }
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    // `project` is a GitHub slug `owner/repo` — split + encode each
+    // segment so dots/dashes round-trip but a malicious caller can't
+    // smuggle a `?` or `#` into the path.
+    const [owner, repo] = project.split("/", 2);
+    const url = `${PIPELINE_BASE_URL}/pipeline/budget/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+    const res = await fetch(url, { cache: "no-store", signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (!res.ok) return null;
+    return (await res.json()) as BudgetSummary;
+  } catch (e) {
+    if (import.meta.env.DEV) console.error("[pipeline] budget fetch failed:", e);
+    return null;
+  }
+}
+
 export async function fetchPipelineStats(project: string): Promise<PipelineStats> {
   const res = await fetch(
     `${PIPELINE_BASE_URL}/pipeline/stats?project=${encodeURIComponent(project)}`,

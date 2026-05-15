@@ -2159,6 +2159,52 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 .v4-pcard--full .v4-pcard-finance-sep { color: var(--v4-ink-400); }
 .v4-pcard-finance-bar { height: 5px; }
 
+/* ---------------------------------------------------------------------
+   Budget widget (epic-035 Task-06)
+--------------------------------------------------------------------- */
+.v4-budget-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--v4-mono);
+  font-size: 11px;
+  color: var(--v4-ink-700);
+}
+.v4-budget-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--v4-ink-900);
+}
+.v4-budget-pct {
+  color: var(--v4-ink-500);
+  font-size: 10.5px;
+}
+.v4-budget-track { height: 5px; }
+.v4-budget-widget--no-cap .v4-budget-line {
+  color: var(--v4-ink-500);
+  font-style: italic;
+  font-size: 10.5px;
+}
+.v4-budget-alert {
+  font-size: 10px;
+  color: var(--v4-ink-500);
+  letter-spacing: 0.02em;
+}
+/* Pulse at >=80% so the operator's eye catches the bar even when the
+   card is dense with finance/stats sections. 1.5s cycle, 70% min-opacity
+   so it never disappears entirely. */
+@keyframes v4-budget-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.7; }
+}
+.v4-budget-widget--pulse .v4-budget-track .v4-pfill {
+  animation: v4-budget-pulse 1.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .v4-budget-widget--pulse .v4-budget-track .v4-pfill { animation: none; }
+}
+
 /* Risk chip (full label) */
 .v4-pcard-risk-chip {
   display: inline-flex;
