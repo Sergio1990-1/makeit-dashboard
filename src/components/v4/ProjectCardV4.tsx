@@ -3,6 +3,7 @@ import type { ProjectData, Priority, Monitor, MonitorStatus } from "../../types"
 import { calcRiskScore } from "../../utils/riskScore";
 import { GITHUB_OWNER } from "../../utils/config";
 import { getLastNDays } from "../../utils/dashboardMetrics";
+import { BudgetWidget } from "./BudgetWidget";
 
 interface Props {
   project: ProjectData;
@@ -318,6 +319,16 @@ export function ProjectCardV4({ project, monitor, onJumpToTab, onEditFinance }: 
               }}
             />
           </div>
+        </div>
+      )}
+
+      {/* Section: monthly LLM budget (epic-035 Task-06).
+          Self-renders nothing when the pipeline doesn't know the project
+          or the cap is not configured (after first response).  Keeps the
+          card layout calm during outages. */}
+      {project.repo.includes("/") && (
+        <div className="v4-pcard-section">
+          <BudgetWidget project={project.repo} />
         </div>
       )}
 
