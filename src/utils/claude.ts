@@ -4,6 +4,12 @@ import { GITHUB_OWNER, GITHUB_PROJECT_NUMBER, getToken } from "./config";
 import { maybeDispatchAuthLostFromError } from "./external-auth-events";
 import { selectFindingsForVerification } from "./verification";
 import {
+  assertNotHardStopped,
+  effectiveModel,
+  logCall,
+  type ClaudeCallType,
+} from "./claudeBudget";
+import {
   listRepoFiles,
   readRepoFile,
   createIssue,
@@ -596,8 +602,13 @@ export async function generateIssuesFromFindings(
         : "";
 
     try {
+      // Refuse the call when monthly Claude spend is past the hard-stop
+      // threshold (Epic-012 Task-01 / FR-41). The outer try/catch logs
+      // and continues so a single budget refusal doesn't poison the loop.
+      assertNotHardStopped();
+      const auditModel = effectiveModel("claude-sonnet-4-6");
       const response = await client.messages.create({
-        model: "claude-sonnet-4-6",
+        model: auditModel,
         max_tokens: 4096,
         system: _AUDIT_BATCH_PROMPT,
         messages: [
@@ -610,6 +621,15 @@ export async function generateIssuesFromFindings(
         // FR-8: surface invalid Claude key as auth-lost. Re-throw so the
         // outer try/catch's existing log-and-continue logic still runs.
         throw maybeDispatchAuthLostFromError("claude", e);
+      });
+      // Account for the spend BEFORE we touch the response payload so a
+      // parse failure later still records the cost — Claude billed us
+      // either way.
+      logCall({
+        type: "audit",
+        model: auditModel,
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
       });
 
       const text = response.content
@@ -658,12 +678,19 @@ export async function callClaudeWithTool<T>(
   toolDef: { name: string; description: string; input_schema: object },
   model: "claude-haiku-4-5-20251001" | "claude-opus-4-7",
   maxTokens = 1024,
+  callType: ClaudeCallType = "drift",
 ): Promise<T> {
   const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
 
+  // FR-41: refuse when the monthly budget is past hard-stop; downgrade
+  // Opus → Haiku when past the fallback threshold. We do not downgrade
+  // explicitly-requested Haiku since that's already the cheapest tier.
+  assertNotHardStopped();
+  const actualModel = effectiveModel(model);
+
   const response = await client.messages
     .create({
-      model,
+      model: actualModel,
       max_tokens: maxTokens,
       system: systemPrompt,
       messages: [{ role: "user", content: userMessage }],
@@ -674,13 +701,20 @@ export async function callClaudeWithTool<T>(
       throw maybeDispatchAuthLostFromError("claude", e);
     });
 
+  logCall({
+    type: callType,
+    model: actualModel,
+    inputTokens: response.usage.input_tokens,
+    outputTokens: response.usage.output_tokens,
+  });
+
   for (const block of response.content) {
     if (block.type === "tool_use" && block.name === toolDef.name) {
       return block.input as T;
     }
   }
   throw new Error(
-    `model did not call tool "${toolDef.name}" (model=${model})`,
+    `model did not call tool "${toolDef.name}" (model=${actualModel})`,
   );
 }
 
@@ -713,9 +747,15 @@ export async function sendChatMessage(
 
   // Tool use loop — max 20 iterations
   for (let i = 0; i < 20; i++) {
+    // FR-41 budget guards. The hard-stop check sits inside the loop on
+    // purpose: a single chat session can rack up dozens of tool-use
+    // iterations, and we want every one of them to honour a fresh
+    // hard-stop (e.g. another tab pushed us over the cap).
+    assertNotHardStopped();
+    const chatModel = effectiveModel("claude-sonnet-4-6");
     const response = await client.messages
       .create({
-        model: "claude-sonnet-4-6",
+        model: chatModel,
         max_tokens: 4096,
         system: [
           { type: "text", text: SYSTEM_RULES, cache_control: { type: "ephemeral" } },
@@ -730,6 +770,13 @@ export async function sendChatMessage(
         // chat panel's existing error UX.
         throw maybeDispatchAuthLostFromError("claude", e);
       });
+
+    logCall({
+      type: "chat",
+      model: chatModel,
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+    });
 
     // Check if we need to handle tool calls
     if (response.stop_reason === "tool_use") {

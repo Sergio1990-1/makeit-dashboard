@@ -33,6 +33,7 @@ import {
   setSetting,
 } from "../../utils/settings";
 import { useToast } from "./toastContext";
+import { SettingsBudgetPanel } from "./SettingsBudgetPanel";
 
 /** Friendly RU labels for the well-known managed keys. */
 const KEY_LABELS: Record<string, string> = {
@@ -514,6 +515,8 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
               Сменить bootstrap-токен
             </button>
           </div>
+
+          <SettingsBudgetPanel />
 
           <div
             style={{
