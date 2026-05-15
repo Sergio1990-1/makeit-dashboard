@@ -150,7 +150,16 @@ export function ProjectHubPage({ repo, project, onBackToList }: Props) {
         id={`v4-hub-tabpanel-${activeTab}`}
         aria-labelledby={`v4-hub-tab-${activeTab}`}
       >
-        <Suspense fallback={<div className="v4-tab-skeleton" aria-busy="true" />}>
+        <Suspense
+          fallback={
+            <div
+              className="v4-tab-skeleton"
+              role="status"
+              aria-busy="true"
+              aria-label="Загружается раздел"
+            />
+          }
+        >
           {activeTab === "overview" && <OverviewTab data={data} onOpenTab={setActiveTab} />}
           {activeTab === "health" && <HealthTab repo={repo} project={project} />}
           {activeTab === "activity" && <ActivityTab />}
