@@ -141,6 +141,13 @@ export function CustomerHealthGauge({
   // unnecessary Claude call (it should take the throttled path instead).
   const consumedForce = useRef(0);
   const lastSignal = useRef(recomputeSignal);
+  // Identity of the project currently reflected in `load`. When `repo`
+  // changes we must drop straight to the loading state — keeping the
+  // previous project's `ready` score on screen would mis-attribute it
+  // to the new project for the duration of the (possibly multi-second)
+  // recompute. A same-repo recompute still keeps the old gauge visible
+  // so a minor refresh doesn't flash a spinner.
+  const lastRepo = useRef(repo);
 
   useEffect(() => {
     let cancelled = false;
@@ -153,8 +160,11 @@ export function CustomerHealthGauge({
     consumedForce.current = forceToken;
     lastSignal.current = recomputeSignal;
 
+    const repoChanged = repo !== lastRepo.current;
+    lastRepo.current = repo;
+
     setLoad((prev) =>
-      prev.phase === "ready" ? prev : { phase: "loading" },
+      prev.phase === "ready" && !repoChanged ? prev : { phase: "loading" },
     );
 
     (async () => {
