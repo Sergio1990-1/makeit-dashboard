@@ -1,8 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { ProjectData } from "../../../types";
 import type { HubTab } from "../../../types/hub";
 import { useProjectHub } from "../../../hooks/useProjectHub";
 import { ProjectHubHeader } from "./ProjectHubHeader";
+import { ProjectHubTabs } from "./ProjectHubTabs";
+
+// Lazy tabs — each becomes its own chunk, so switching to Health doesn't
+// pull Decision/Risk/DORA modules and vice versa. Health is the heavy one
+// (drift engine, GitHub Actions client); the rest are placeholders until
+// Epic-011/012 fill them in.
+const OverviewTab = lazy(() => import("./tabs/OverviewTab"));
+const HealthTab = lazy(() => import("./tabs/HealthTab"));
+const ActivityTab = lazy(() => import("./tabs/ActivityTab"));
+const DecisionsRisksTab = lazy(() => import("./tabs/DecisionsRisksTab"));
+const DeliveryTab = lazy(() => import("./tabs/DeliveryTab"));
 
 interface Props {
   repo: string;
@@ -28,8 +39,10 @@ function isHubTab(value: string | null): value is HubTab {
  * string). Mount/popstate/pushState pattern mirrors ProjectsView, but for
  * `subtab` only; `repo` is the parent's concern.
  *
- * Tab content slot is a placeholder until Epic-009 Task-03 lands
- * `<ProjectHubTabs>` and the lazy tab components.
+ * Five tab components render lazily; the active tab is gated by a
+ * `<Suspense>` so the visible UI shows a skeleton while the chunk
+ * downloads. Inactive tabs are not mounted — switching is a
+ * conditional render, not a hidden mount.
  */
 export function ProjectHubPage({ repo, project, onBackToList }: Props) {
   const data = useProjectHub(repo, project);
@@ -126,11 +139,33 @@ export function ProjectHubPage({ repo, project, onBackToList }: Props) {
         ← Все проекты
       </button>
       <ProjectHubHeader data={data} />
-      <div className="v4-hub-tabs-placeholder" aria-hidden="true">
-        Tabs placeholder (Task-03): active = <code>{activeTab}</code>
-      </div>
-      <div className="v4-hub-content-placeholder">
-        Content placeholder for <code>subtab={activeTab}</code> (Task-03/04 fill this in)
+      <ProjectHubTabs
+        active={activeTab}
+        onChange={setActiveTab}
+        inboxCount={data.inboxCount}
+      />
+      <div
+        className="v4-hub-tabpanel"
+        role="tabpanel"
+        id={`v4-hub-tabpanel-${activeTab}`}
+        aria-labelledby={`v4-hub-tab-${activeTab}`}
+      >
+        <Suspense
+          fallback={
+            <div
+              className="v4-tab-skeleton"
+              role="status"
+              aria-busy="true"
+              aria-label="Загружается раздел"
+            />
+          }
+        >
+          {activeTab === "overview" && <OverviewTab data={data} onOpenTab={setActiveTab} />}
+          {activeTab === "health" && <HealthTab repo={repo} project={project} />}
+          {activeTab === "activity" && <ActivityTab />}
+          {activeTab === "decisions" && <DecisionsRisksTab />}
+          {activeTab === "delivery" && <DeliveryTab />}
+        </Suspense>
       </div>
     </div>
   );
