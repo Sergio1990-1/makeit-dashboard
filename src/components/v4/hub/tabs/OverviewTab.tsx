@@ -287,11 +287,14 @@ function CommitmentsSummary({
 
       {top.length > 0 ? (
         <ul className="v4-hub-commit-list">
-          {top.map((c) => {
+          {top.map((c, i) => {
             const isOverdue = c.status === "overdue";
             return (
               <li
-                key={c.id}
+                // Commitment has no id (text+client is its dedup key);
+                // the list is a stable top-3 derived synchronously, so
+                // a composite key is collision-safe and churn-free.
+                key={`${c.text} ${c.client} ${i}`}
                 className={`v4-hub-commit-item${
                   isOverdue ? " v4-hub-commit-item--overdue" : ""
                 }`}
@@ -301,11 +304,11 @@ function CommitmentsSummary({
                     isOverdue ? "overdue" : "soon"
                   }`}
                 >
-                  {isOverdue ? "Просрочено" : formatRelative(c.dueDate)}
+                  {isOverdue ? "Просрочено" : formatRelative(c.due)}
                 </span>
-                <span className="v4-hub-commit-title">{c.title}</span>
-                {c.owner ? (
-                  <span className="v4-hub-commit-owner">@{c.owner}</span>
+                <span className="v4-hub-commit-title">{c.text}</span>
+                {c.client ? (
+                  <span className="v4-hub-commit-owner">{c.client}</span>
                 ) : null}
               </li>
             );
@@ -365,9 +368,14 @@ function FooterLink({ onClick }: FooterLinkProps) {
 
 /**
  * Filter + sort commitments for the Overview surface. Overdue first,
- * then due-within-7-days by dueDate asc, top 3. Done commitments are
+ * then due-within-7-days by `due` asc, top 3. Done commitments are
  * always dropped. Malformed ISO dates are skipped (Date.parse → NaN)
  * instead of throwing.
+ *
+ * Note: `commitments` here may carry the persisted `open`/`done` only
+ * (the producer doesn't always pre-derive `overdue`), so this also
+ * treats a past-due `open` as urgent rather than relying solely on a
+ * pre-set `overdue` status.
  *
  * Lives outside React (no hook) so react-hooks/purity doesn't flag
  * Date.now(); callers run it synchronously every render.
@@ -380,7 +388,7 @@ function filterUrgentCommitments(commitments: Commitment[]): Commitment[] {
     .filter((c) => {
       if (c.status === "done") return false;
       if (c.status === "overdue") return true;
-      const due = Date.parse(c.dueDate);
+      const due = Date.parse(c.due);
       if (Number.isNaN(due)) return false;
       return due <= weekFromNow;
     })
@@ -388,7 +396,7 @@ function filterUrgentCommitments(commitments: Commitment[]): Commitment[] {
       const aOver = a.status === "overdue" ? 0 : 1;
       const bOver = b.status === "overdue" ? 0 : 1;
       if (aOver !== bOver) return aOver - bOver;
-      return a.dueDate.localeCompare(b.dueDate);
+      return a.due.localeCompare(b.due);
     })
     .slice(0, 3);
 }

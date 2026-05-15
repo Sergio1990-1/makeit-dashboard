@@ -36,13 +36,21 @@ export interface Risk {
 /**
  * Promise/commitment tracked per project (overdue + due-this-week surfacing).
  * Filled in Epic-011 (Task-02: Commitments).
+ *
+ * Source of truth: `## Commitments` / `commitments:` in the project's
+ * BRIEF.md, merged with `docs/commitments.yaml` (yaml wins on dupes by
+ * `text + client`). `overdue` is derived client-side (`due < now`) — a
+ * persisted status is only ever `open` or `done`.
  */
 export interface Commitment {
-  id: string;
-  title: string;
-  dueDate: string; // ISO
+  /** What was promised (free text). */
+  text: string;
+  /** ISO-8601 due date (YYYY-MM-DD or full timestamp). */
+  due: string;
+  /** Client / counterparty the promise is owed to. */
+  client: string;
+  /** `open` / `done` persisted; `overdue` is computed at render time. */
   status: "open" | "done" | "overdue";
-  owner?: string;
 }
 
 /**
