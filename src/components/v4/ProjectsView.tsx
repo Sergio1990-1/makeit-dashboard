@@ -3,6 +3,7 @@ import type { ProjectData, Monitor, Phase } from "../../types";
 import { ProjectCardV4 } from "./ProjectCardV4";
 import { ProjectHubPage } from "./hub/ProjectHubPage";
 import { calcRiskScore } from "../../utils/riskScore";
+import { useToast } from "./toastContext";
 
 interface Props {
   projects: ProjectData[];
@@ -140,6 +141,7 @@ export function ProjectsView({
   const [state, setState] = useState<ToolbarState>(() => loadState());
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
+  const toast = useToast();
 
   const selectedProject = useMemo(
     () => (selectedRepo ? projects.find((p) => p.repo === selectedRepo) : undefined),
@@ -195,6 +197,44 @@ export function ProjectsView({
     }
     // Run only once on mount; we don't want to reset selection if the
     // projects list later reloads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ─── Epic-009 Task-05 / PRD-008 FR-12 — legacy bookmark toast ─────
+  // Old bookmarks pointed at `?tab=projects&repo=X` and used to render
+  // ProjectHealthPage directly. Hub now defaults to Overview when `subtab`
+  // is absent (FR-12). One-time toast tells the user where Health went.
+  //
+  // Only fires on initial mount with a valid legacy URL, so internal
+  // navigation (clicking a project card) never triggers it. The
+  // localStorage flag persists across sessions, per spec — show once per
+  // user, not once per tab. Wrapped in try/catch because private-mode
+  // Safari throws on localStorage access; the toast is purely advisory,
+  // so we silently no-op rather than break the mount path.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get("repo");
+    const hasSubtab = params.has("subtab");
+    if (!fromUrl || hasSubtab) return;
+    if (!projects.some((p) => p.repo === fromUrl)) return;
+
+    const FLAG = "makeit_hub_legacy_toast_shown";
+    try {
+      if (localStorage.getItem(FLAG) === "1") return;
+      localStorage.setItem(FLAG, "1");
+    } catch {
+      // localStorage unavailable (private mode, quota, etc) — still show
+      // the toast this once but don't bail out.
+    }
+    toast.push({
+      kind: "info",
+      title: "Health теперь во вкладке",
+      description:
+        "Переключитесь сверху, чтобы вернуться к привычному виду",
+      duration: 6000,
+    });
+    // Run only on mount: legacy bookmarks land here exactly once. Internal
+    // navigation produces fresh URLs through pushState, not a remount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
