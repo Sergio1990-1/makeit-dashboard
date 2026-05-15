@@ -1,7 +1,13 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProjectHealth } from "./useProjectHealth";
 import type { ProjectData } from "../types";
 import type { HubTab, OnboardingReport, ProjectHubData } from "../types/hub";
+import {
+  listRecentCommits,
+  readMarkdown,
+  type CommitInfo,
+} from "../utils/github-contents";
+import { extractDecisions } from "../utils/decisionLogExtractor";
 
 // Stable empty stubs so consumers can rely on reference equality. The Hub
 // surfaces (Overview, Activity, etc.) render empty states from these in
@@ -37,6 +43,36 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
     [healthError],
   );
 
+  // ── Decision Log (Epic-011 Task-01) ────────────────────────────────
+  // Two sources: the project's BRIEF.md (optional, often absent) and
+  // the most-recent commits filtered for `decide:`/`accept:` prefixes.
+  // Both fetches are best-effort: any failure collapses to empty so the
+  // tab still renders rather than blocking the whole Hub.
+  const [briefMd, setBriefMd] = useState<string | null>(null);
+  const [commits, setCommits] = useState<CommitInfo[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      // Run in parallel — they're independent and the Hub has nothing
+      // to do with either response while we wait.
+      const [briefRes, commitsRes] = await Promise.all([
+        readMarkdown(repo, "docs/BRIEF.md").catch(() => null),
+        listRecentCommits(repo, 50).catch(() => [] as CommitInfo[]),
+      ]);
+      if (cancelled) return;
+      setBriefMd(briefRes?.content ?? null);
+      setCommits(commitsRes);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [repo]);
+
+  const decisions = useMemo(
+    () => extractDecisions(briefMd, commits),
+    [briefMd, commits],
+  );
+
   // `loadingTab` mirrors the per-tab loading state. In Epic-009 only Health
   // has a real loading signal; the rest stay false until their producers
   // (Epic-011/012) wire in their own async work.
@@ -60,10 +96,14 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
     // TODO: Epic-012 — NBA engine recompute.
   }, []);
 
+  // Fall back to the stable empty array when the extractor produced no
+  // decisions — keeps reference equality for downstream memo deps.
+  const finalDecisions = decisions.length > 0 ? decisions : EMPTY_DECISIONS;
+
   return {
     project: project ?? null,
     health: report,
-    decisions: EMPTY_DECISIONS,
+    decisions: finalDecisions,
     risks: EMPTY_RISKS,
     commitments: EMPTY_COMMITMENTS,
     renewals: EMPTY_RENEWALS,
