@@ -132,8 +132,12 @@ interface PulseSummaryProps {
 
 function PulseSummary({ events, onOpenTab }: PulseSummaryProps) {
   const top5 = useMemo(() => {
+    // Use Date.parse so mixed ISO precision (e.g. `…T10:00Z` vs
+    // `…T10:00:00.000Z`) sorts chronologically; localeCompare on raw
+    // strings would order `Z` after digits and put the less-precise
+    // timestamp later than its sub-second sibling for the same instant.
     return [...events]
-      .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+      .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp))
       .slice(0, 5);
   }, [events]);
 

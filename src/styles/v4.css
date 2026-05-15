@@ -9034,6 +9034,9 @@ ul.v4-rsh-list {
   border-radius: 4px;
   background: var(--v4-surface-2);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 14ch;
 }
 .v4-hub-pulse-label {
   color: var(--v4-ink-900);
