@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ProjectData, Monitor, Phase } from "../../types";
 import { ProjectCardV4 } from "./ProjectCardV4";
-import { ProjectHealthPage } from "./health/ProjectHealthPage";
+import { ProjectHubPage } from "./hub/ProjectHubPage";
 import { calcRiskScore } from "../../utils/riskScore";
 
 interface Props {
@@ -9,7 +9,7 @@ interface Props {
   getMonitor: (repo: string) => Monitor | undefined;
   onFinanceClick: () => void;
   onJumpToTab?: (tab: "pipeline" | "audit") => void;
-  /** Selected repo for the embedded ProjectHealthPage. Lifted to the parent
+  /** Selected repo for the embedded ProjectHubPage. Lifted to the parent
    *  so the topbar breadcrumb can include the project name. */
   selectedRepo: string | null;
   onSelectRepo: (repo: string | null) => void;
@@ -326,9 +326,10 @@ export function ProjectsView({
 
   if (selectedRepo) {
     return (
-      <ProjectHealthPage
+      <ProjectHubPage
         repo={selectedRepo}
         project={selectedProject}
+        onBackToList={() => onSelectRepo(null)}
       />
     );
   }

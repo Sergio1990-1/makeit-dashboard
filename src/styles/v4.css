@@ -8740,20 +8740,105 @@ ul.v4-rsh-list {
   border: 1px dashed var(--v4-line);
 }
 
-.v4-hub-tabs-placeholder,
-.v4-hub-content-placeholder {
-  padding: 14px 20px;
+/* Tab strip — horizontal list of 5 buttons. Underline-style active state
+   keeps the chrome quiet so attention goes to the panel below. */
+.v4-hub-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  border-bottom: 1px solid var(--v4-line);
+  padding: 0;
+}
+.v4-hub-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  margin-bottom: -1px;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--v4-ink-700);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+}
+.v4-hub-tab:hover { background: var(--v4-bg-soft); color: var(--v4-ink-900); }
+.v4-hub-tab:focus-visible {
+  outline: 2px solid var(--v4-accent-500);
+  outline-offset: -2px;
+}
+.v4-hub-tab.is-active {
+  color: var(--v4-accent-600);
+  border-bottom-color: var(--v4-accent-500);
+  font-weight: 600;
+}
+.v4-hub-tab-label { white-space: nowrap; }
+.v4-hub-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--v4-accent-500);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Tab panel — single wrapper around whichever lazy tab is active. The
+   Suspense fallback (`v4-tab-skeleton`) is shown for ~one paint while
+   the chunk arrives. */
+.v4-hub-tabpanel { min-height: 200px; }
+.v4-tab-skeleton {
+  height: 180px;
+  border-radius: 10px;
+  background: linear-gradient(
+    90deg,
+    var(--v4-bg-soft) 0%,
+    var(--v4-line-soft) 50%,
+    var(--v4-bg-soft) 100%
+  );
+  background-size: 200% 100%;
+  animation: v4-tab-skeleton-shimmer 1.2s ease-in-out infinite;
+}
+@keyframes v4-tab-skeleton-shimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* In-development placeholders for Activity / Decisions / Delivery
+   tabs. Icon + heading + body, neutral chrome so it reads as "not
+   ready yet" rather than "broken". */
+.v4-hub-tab-stub {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 24px 20px;
   border: 1px dashed var(--v4-line);
   border-radius: 10px;
   background: var(--v4-bg);
-  color: var(--v4-ink-500);
+  color: var(--v4-ink-700);
   font-size: 13px;
+  line-height: 1.5;
 }
-.v4-hub-tabs-placeholder code,
-.v4-hub-content-placeholder code {
-  font-family: var(--v4-mono);
+.v4-hub-tab-stub strong {
+  display: block;
   color: var(--v4-ink-900);
+  font-weight: 600;
+  margin-bottom: 4px;
 }
+.v4-hub-tab-stub p { margin: 0; }
+.v4-hub-tab-stub a {
+  color: var(--v4-accent-600);
+  font-weight: 600;
+  text-decoration: none;
+}
+.v4-hub-tab-stub a:hover { text-decoration: underline; }
 
 @media (max-width: 640px) {
   .v4-hub-header {
@@ -8763,4 +8848,5 @@ ul.v4-rsh-list {
   .v4-hub-header-health { align-items: flex-start; flex-direction: row; gap: 12px; }
   .v4-hub-nba-row { flex-wrap: wrap; }
   .v4-hub-nba-text { white-space: normal; }
+  .v4-hub-tab { padding: 8px 10px; font-size: 12px; }
 }
