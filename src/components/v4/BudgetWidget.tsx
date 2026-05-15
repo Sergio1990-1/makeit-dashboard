@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { fetchBudget, type BudgetSummary } from "../../utils/pipeline";
 
 interface Props {
@@ -44,15 +44,17 @@ export function BudgetWidget({ project, pollIntervalMs = DEFAULT_POLL_MS }: Prop
   // the widget does not flash a placeholder on every project card during
   // initial mount.
   const [loaded, setLoaded] = useState(false);
-  const mountedRef = useRef(true);
 
   useEffect(() => {
-    mountedRef.current = true;
+    // The closure-scoped ``cancelled`` flag is the single load-bearing
+    // guard against late ``setState`` after unmount or a deps-change
+    // re-run.  ``clearInterval`` stops the timer, ``cancelled`` catches
+    // the in-flight ``await fetchBudget`` whose result must be discarded.
     let cancelled = false;
 
     const tick = async () => {
       const snap = await fetchBudget(project);
-      if (cancelled || !mountedRef.current) return;
+      if (cancelled) return;
       setData(snap);
       setLoaded(true);
     };
@@ -61,7 +63,6 @@ export function BudgetWidget({ project, pollIntervalMs = DEFAULT_POLL_MS }: Prop
     const id = window.setInterval(tick, pollIntervalMs);
     return () => {
       cancelled = true;
-      mountedRef.current = false;
       window.clearInterval(id);
     };
   }, [project, pollIntervalMs]);
