@@ -35,6 +35,7 @@ export function ProjectHubHeader({ data }: Props) {
   const client = data.project?.client ?? null;
   const lastActivity = data.project?.lastActivityDate ?? null;
   const grade = data.health?.score.grade ?? "—";
+  const hasGrade = data.health !== null;
   const scorePct = data.health?.score.raw ?? null;
   const nbaText = data.nba[0]?.text ?? "—";
 
@@ -58,7 +59,10 @@ export function ProjectHubHeader({ data }: Props) {
         </div>
       </div>
       <div className="v4-hub-header-health" aria-label="Health summary">
-        <div className={`v4-hub-grade v4-hub-grade--${grade.toLowerCase()}`} aria-label={`Grade ${grade}`}>
+        <div
+          className={hasGrade ? `v4-hub-grade v4-hub-grade--${grade.toLowerCase()}` : "v4-hub-grade"}
+          aria-label={hasGrade ? `Grade ${grade}` : "Grade not yet available"}
+        >
           {grade}
         </div>
         <div className="v4-hub-score">{scorePct !== null ? `${scorePct}%` : "—"}</div>
@@ -72,6 +76,7 @@ export function ProjectHubHeader({ data }: Props) {
           className="v4-btn"
           disabled
           title="Будет в Epic-012 (NBA engine)"
+          aria-label="Регенерировать NBA — будет доступно в Epic-012"
         >
           Регенерировать
         </button>
