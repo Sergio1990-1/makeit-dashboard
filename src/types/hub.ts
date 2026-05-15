@@ -116,11 +116,50 @@ export interface PulseEvent {
 /**
  * Weekly Project Digest entry (single latest digest, not a list).
  * Filled in Epic-012 (Task-02: Weekly Project Digest).
+ *
+ * `budgetFallback` is true when the digest was produced on Haiku
+ * because the monthly Claude budget crossed the fallback threshold
+ * (`shouldFallbackToHaiku()`), so the viewer can show a badge.
  */
 export interface DigestEntry {
   week: string; // ISO week, e.g. "2026-W18"
   generatedAt: string; // ISO
   markdown: string;
+  budgetFallback: boolean;
+}
+
+/**
+ * Raw input to `generateDigest` — the week's activity for one project.
+ * Every field is optional / may be empty; the generator must still
+ * produce all six markdown sections with a `—` placeholder when a
+ * source is absent (FR-36, Epic-012 Task-02 acceptance criteria).
+ */
+export interface DigestInput {
+  /** Activity timeline points within the ISO week (commits/PRs/runs). */
+  pulse: PulseEvent[];
+  /** Issues closed during the week (`title` + optional html `url`). */
+  closedIssues: { title: string; url?: string }[];
+  /** PRs merged during the week (`title` + optional html `url`). */
+  mergedPRs: { title: string; url?: string }[];
+  /** Commitments delivered (status moved to `done`) during the week. */
+  commitmentsDelivered: Commitment[];
+  /** Audit findings recorded for the period (title + severity). */
+  auditFindings: { title: string; severity: string }[];
+  /** Claude API spend (USD) attributed to the project this week, if known. */
+  spendUsd?: number;
+}
+
+/**
+ * Per-project digest metadata, persisted alongside the markdown and
+ * aggregated by `generatePortfolioDigest`. Kept tiny on purpose — the
+ * portfolio roll-up only needs to know which projects produced a
+ * digest and whether any ran on the budget-fallback model.
+ */
+export interface DigestMeta {
+  repo: string;
+  week: string;
+  generatedAt: string;
+  budgetFallback: boolean;
 }
 
 /**
