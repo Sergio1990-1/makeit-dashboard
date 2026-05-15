@@ -8,10 +8,11 @@
  *
  * Design notes:
  *  - Reuses the existing transcript client (`transcript.ts`) and the
- *    Claude helper (`callClaudeWithTool` in `claude.ts`). No API key,
- *    endpoint or model id is hardcoded here — the key comes from
- *    `getClaudeKey()` (localStorage) and the budget guard / model
- *    downgrade live inside `callClaudeWithTool`.
+ *    Claude helper (`callClaudeWithTool` in `claude.ts`). No API key or
+ *    endpoint is hardcoded — the key comes from `getClaudeKey()`
+ *    (localStorage) and the budget guard / model downgrade live inside
+ *    `callClaudeWithTool`. The model is pinned to Haiku via `RISK_MODEL`
+ *    (extraction is a cheap, structured-output task).
  *  - The repo↔transcript match mirrors `customerHealthScore.ts` so the
  *    same "owner/Repo" ↔ free-text project-context heuristic is used
  *    everywhere (one source of truth for that fuzzy join).
