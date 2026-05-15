@@ -7,6 +7,7 @@ import {
   readRepoFile,
   searchCodeSymbol,
 } from "./github-actions";
+import { assertNotHardStopped, effectiveModel, logCall } from "./claudeBudget";
 
 export const VERIFY_MODEL = "claude-sonnet-4-6";
 
@@ -668,10 +669,15 @@ Verify it now.`;
 
     try {
       for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
+        // FR-41: refuse this verification iteration when the budget hard-
+        // stop is active. Caught by the outer per-finding try/catch and
+        // surfaced as a verification error — better than silently spending.
+        assertNotHardStopped();
+        const verifyModel = effectiveModel(VERIFY_MODEL);
         const response = await client.messages
           .create(
             {
-              model: VERIFY_MODEL,
+              model: verifyModel,
               max_tokens: 1024,
               system: VERIFY_SYSTEM_PROMPT,
               tools: [VERIFY_TOOL, VERIFY_GREP_TOOL, VERIFY_FIND_SYMBOL_TOOL],
@@ -684,6 +690,16 @@ Verify it now.`;
             // rejected. Re-throw to preserve the existing retry / error path.
             throw maybeDispatchAuthLostFromError("claude", e);
           });
+
+        // Account spend before processing the response so a downstream
+        // parsing/loop failure still records the cost — Anthropic billed
+        // us either way.
+        logCall({
+          type: "verify",
+          model: verifyModel,
+          inputTokens: response.usage.input_tokens,
+          outputTokens: response.usage.output_tokens,
+        });
 
         if (response.stop_reason === "tool_use") {
           currentMessages = [
