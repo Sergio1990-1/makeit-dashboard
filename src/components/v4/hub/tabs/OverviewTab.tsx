@@ -407,7 +407,7 @@ function severityLabel(severity: Risk["severity"]): string {
       return "Critical";
     case "high":
       return "High";
-    case "medium":
+    case "med":
       return "Medium";
     case "low":
       return "Low";
