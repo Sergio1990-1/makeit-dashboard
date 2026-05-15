@@ -148,6 +148,11 @@ function storageKey(month: string): string {
 
 function readBucket(month: string): MonthBucket {
   const empty: MonthBucket = { month, total: 0, byType: {}, calls: 0 };
+  // In-memory fallback wins over disk when both exist — it captures
+  // writes that localStorage rejected (quota / disabled). When there
+  // is no fallback, fall through to the disk read.
+  const fallback = inMemoryFallback.get(month);
+  if (fallback !== undefined) return fallback;
   if (typeof localStorage === "undefined") return empty;
   const raw = localStorage.getItem(storageKey(month));
   if (raw === null) return empty;
@@ -168,13 +173,41 @@ function readBucket(month: string): MonthBucket {
   }
 }
 
+/**
+ * In-memory snapshot of a bucket whose `writeBucket` rejected (quota
+ * exceeded / storage disabled / Safari private mode). When present
+ * for a given month, `readBucket` prefers it over `localStorage` —
+ * so subsequent reads see the new total even though disk is stuck.
+ *
+ * Cleared per-month when a future write succeeds (disk caught up) or
+ * when `resetCurrentMonth` runs.
+ *
+ * Without this overlay a failed write would silently undercount the
+ * spend: the listener would still fire (UI re-renders), then read
+ * the stale on-disk total and show wrong cap %.
+ */
+const inMemoryFallback: Map<string, MonthBucket> = new Map();
+
+/**
+ * Persist the bucket. On success, drops any fallback overlay (disk
+ * is now authoritative). On failure, records the bucket in memory
+ * so reads observe the correct total within the session. Either way
+ * the in-process state stays consistent with what `readBucket` will
+ * return on the next call — the sole reason `notify()` callers can
+ * trust their listeners to read fresh.
+ */
 function writeBucket(bucket: MonthBucket): void {
-  if (typeof localStorage === "undefined") return;
+  if (typeof localStorage === "undefined") {
+    inMemoryFallback.set(bucket.month, bucket);
+    return;
+  }
   try {
     localStorage.setItem(storageKey(bucket.month), JSON.stringify(bucket));
+    inMemoryFallback.delete(bucket.month);
   } catch (e) {
-    // Quota exceeded or storage disabled — log but don't break the call.
+    // Quota exceeded / storage disabled / Safari private mode etc.
     console.warn("claudeBudget: failed to persist bucket:", e);
+    inMemoryFallback.set(bucket.month, bucket);
   }
 }
 
@@ -210,10 +243,11 @@ export function estimateCost(
 /**
  * Record a Claude API call against the current month's bucket.
  *
- * Safe to call from any context (browser, test, SSR — no-op without
- * `localStorage`). Never throws; on any persistence error the in-memory
- * notification still fires so listeners stay consistent with whatever
- * localStorage now holds.
+ * Safe to call from any context (browser, test, SSR). Never throws.
+ * Persistence errors (quota / disabled storage / private mode) fall
+ * back to an in-memory overlay so subsequent `getSpend` calls (and
+ * the UI listening via `subscribe`) observe the correct total within
+ * the session — the overlay is checked first by `readBucket`.
  */
 export function logCall(input: LogCallInput): void {
   const cost = estimateCost(input.model, input.inputTokens, input.outputTokens);
@@ -281,9 +315,18 @@ export function isHardStopped(): boolean {
  * is preserved.
  */
 export function resetCurrentMonth(): void {
-  if (typeof localStorage === "undefined") return;
+  const month = monthKey();
+  // Drop the in-memory fallback first so a no-localStorage environment
+  // (SSR, private mode) still resets correctly. Without this the
+  // subsequent localStorage-only branch would leave the overlay in
+  // place and `readBucket` would still return its stale total.
+  inMemoryFallback.delete(month);
+  if (typeof localStorage === "undefined") {
+    notify();
+    return;
+  }
   try {
-    localStorage.removeItem(storageKey(monthKey()));
+    localStorage.removeItem(storageKey(month));
   } catch (e) {
     console.warn("claudeBudget: failed to reset bucket:", e);
   }

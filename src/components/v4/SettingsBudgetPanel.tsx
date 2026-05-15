@@ -69,6 +69,10 @@ export function SettingsBudgetPanel() {
   // without polling. `getSpendSnapshot` returns a reference-stable
   // value between mutations so React doesn't see a fake change every
   // render — `subscribe` invalidates the snapshot on `notify()`.
+  //
+  // Third arg is the SSR snapshot. The dashboard is SPA-only so it
+  // never fires in practice, but passing the same identity-stable
+  // getter keeps the contract consistent if SSR is ever added.
   const spend = useSyncExternalStore(subscribe, getSpendSnapshot, getSpendSnapshot);
   const [confirmReset, setConfirmReset] = useState(false);
 
