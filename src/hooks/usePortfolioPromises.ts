@@ -52,7 +52,7 @@ export interface PortfolioCommitment {
   text: string;
   /** ISO-8601 due date as captured (may be "" / malformed → undated). */
   due: string;
-  /** Always `open` here — done commitments are filtered out upstream. */
+  /** `open` or derived `overdue` — only `done` is filtered out upstream. */
   status: Commitment["status"];
 }
 
@@ -182,7 +182,9 @@ async function collectAll(now: number): Promise<PortfolioCommitment[]> {
 }
 
 export function usePortfolioPromises(): UsePortfolioPromisesState {
-  const cached = readCache();
+  // Read sessionStorage once (lazy initializer) — not on every render.
+  // The result only seeds the initial state + mount effect.
+  const [cached] = useState(readCache);
 
   const [items, setItems] = useState<PortfolioCommitment[]>(
     () => cached ?? [],

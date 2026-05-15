@@ -63,8 +63,13 @@ function startOfTodayUtc(now: number): number {
 function bucketOf(due: string, todayUtc: number): Bucket | null {
   const t = Date.parse(due);
   if (Number.isNaN(t)) return null;
-  if (t < todayUtc) return "overdue";
-  if (t <= todayUtc + WEEK_MS) return "due-week";
+  // Normalize to UTC midnight (same as relativeDue) so a due with a
+  // time-of-day component classifies on the date, not the timestamp —
+  // otherwise the bucket and the relative-due label can disagree on
+  // the day boundary.
+  const dueUtc = startOfTodayUtc(t);
+  if (dueUtc < todayUtc) return "overdue";
+  if (dueUtc <= todayUtc + WEEK_MS) return "due-week";
   return null;
 }
 
