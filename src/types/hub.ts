@@ -4,7 +4,7 @@
 // in real producers (extractors, registers, aggregators, NBA engine).
 
 import type { ProjectData } from "./index";
-import type { HealthReport, HealthSeverity } from "./health";
+import type { HealthReport } from "./health";
 
 export type HubTab = "overview" | "health" | "activity" | "decisions" | "delivery";
 
@@ -21,16 +21,37 @@ export interface Decision {
 }
 
 /**
- * Risk Register entry — known risk with severity.
- * Filled in Epic-011 (Task-03: Risk Register).
+ * Risk severity — ordered worst→best as `critical > high > med > low`.
+ * Intentionally NOT `HealthSeverity` ("medium"): the Risk Register yaml
+ * schema (Epic-011 FR-29, docs/risks.yaml) uses the short `med` token.
+ */
+export type RiskSeverity = "low" | "med" | "high" | "critical";
+
+/** Likelihood the risk materialises. */
+export type RiskProbability = "low" | "med" | "high";
+
+/** Lifecycle of a risk entry in the register. */
+export type RiskStatus = "open" | "mitigated" | "accepted" | "closed";
+
+/** How a risk entered the register (drives the source badge). */
+export type RiskSource = "manual" | "transcript-extracted" | "audit-promoted";
+
+/**
+ * Risk Register entry — one row of `docs/risks.yaml` in the project repo.
+ * Filled in Epic-011 (Task-03: Risk Register). CRUD writes back via the
+ * GitHub Contents API (see src/utils/github-contents.ts).
  */
 export interface Risk {
   id: string;
   title: string;
-  severity: HealthSeverity;
-  status: "open" | "mitigated" | "accepted";
-  owner?: string;
-  description?: string;
+  severity: RiskSeverity;
+  probability: RiskProbability;
+  mitigation: string;
+  owner: string;
+  /** ISO-8601 date, or `null` when no due date is set. */
+  due: string | null;
+  status: RiskStatus;
+  source: RiskSource;
 }
 
 /**
