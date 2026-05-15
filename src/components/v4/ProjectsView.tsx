@@ -205,19 +205,30 @@ export function ProjectsView({
   // ProjectHealthPage directly. Hub now defaults to Overview when `subtab`
   // is absent (FR-12). One-time toast tells the user where Health went.
   //
-  // Only fires on initial mount with a valid legacy URL, so internal
-  // navigation (clicking a project card) never triggers it. The
-  // localStorage flag persists across sessions, per spec — show once per
-  // user, not once per tab. Wrapped in try/catch because private-mode
-  // Safari throws on localStorage access; the toast is purely advisory,
-  // so we silently no-op rather than break the mount path.
+  // Snapshot the URL once during initial render — the hydration effect
+  // above strips `?repo=X` from URL when `projects` is still loading
+  // (treating it as stale), so reading window.location inside the toast
+  // effect would miss the legacy URL on slow first loads. Waits for
+  // `projects` to populate before deciding the bookmark is valid;
+  // `didShowToastRef` keeps "fire once" semantics across re-renders.
+  const initialLegacyUrlRef = useRef<{ repo: string | null; hasSubtab: boolean }>(
+    (() => {
+      if (typeof window === "undefined") return { repo: null, hasSubtab: false };
+      const p = new URLSearchParams(window.location.search);
+      return { repo: p.get("repo"), hasSubtab: p.has("subtab") };
+    })(),
+  );
+  const didShowToastRef = useRef(false);
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const fromUrl = params.get("repo");
-    const hasSubtab = params.has("subtab");
-    if (!fromUrl || hasSubtab) return;
-    if (!projects.some((p) => p.repo === fromUrl)) return;
+    if (didShowToastRef.current) return;
+    const { repo: bookmarkedRepo, hasSubtab } = initialLegacyUrlRef.current;
+    if (!bookmarkedRepo || hasSubtab) return;
+    // Wait until the projects list has loaded so we can validate the repo
+    // exists; otherwise an empty `projects` would silently drop the toast.
+    if (projects.length === 0) return;
+    if (!projects.some((p) => p.repo === bookmarkedRepo)) return;
 
+    didShowToastRef.current = true;
     const FLAG = "makeit_hub_legacy_toast_shown";
     try {
       if (localStorage.getItem(FLAG) === "1") return;
@@ -233,10 +244,7 @@ export function ProjectsView({
         "Переключитесь сверху, чтобы вернуться к привычному виду",
       duration: 6000,
     });
-    // Run only on mount: legacy bookmarks land here exactly once. Internal
-    // navigation produces fresh URLs through pushState, not a remount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [projects, toast]);
 
   // Push URL whenever the selection changes (skipping re-syncs from the
   // mount/popstate paths). The first run is always a no-op — see the
