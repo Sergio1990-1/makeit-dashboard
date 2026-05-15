@@ -143,6 +143,79 @@ export async function readMarkdown(
 }
 
 /**
+ * Read a plain-text / markdown file. Alias of `readMarkdown` kept for
+ * call-site clarity where the payload is not markdown (e.g. a digest
+ * `.md` is markdown, but generic text helpers read better as `readFile`).
+ * `null` on 404.
+ */
+export async function readFile(
+  repo: string,
+  path: string,
+): Promise<{ content: string; sha: string } | null> {
+  return readContent(repo, path);
+}
+
+/**
+ * Create or overwrite a plain-text / markdown file (Epic-012 Task-02,
+ * FR-36 — weekly digest persistence).
+ *
+ * Overwrite-safe by default: when `sha` is omitted we first GET the
+ * current file to discover its sha, then PUT with it. This makes
+ * regenerating an existing digest idempotent without the caller having
+ * to thread a sha through — and crucially avoids a silent 409 that
+ * would otherwise drop the regenerated content on the floor (data
+ * loss). A genuine concurrent write between our GET and PUT still
+ * surfaces as `ConflictError` so the caller can decide.
+ *
+ * Pass an explicit `sha` (including `""` for "must not exist yet") to
+ * opt out of the auto-resolve and get strict optimistic concurrency.
+ */
+export async function writeFile(
+  repo: string,
+  path: string,
+  content: string,
+  message: string,
+  sha?: string,
+): Promise<{ sha: string }> {
+  const slug = resolveRepoSlug(repo);
+  const url = `${GITHUB_REST}/repos/${slug}/contents/${encodeURI(path)}`;
+
+  // Auto-resolve the current sha for an overwrite-safe write. Only when
+  // the caller did not pass one — an explicit `sha` (or explicit empty
+  // string for create-only) keeps strict optimistic-concurrency
+  // semantics. A read failure here is non-fatal: fall through to a
+  // create-style PUT and let the server's 409 (if any) surface.
+  let effectiveSha = sha;
+  if (effectiveSha === undefined) {
+    try {
+      const existing = await readContent(repo, path);
+      effectiveSha = existing?.sha;
+    } catch {
+      effectiveSha = undefined;
+    }
+  }
+
+  const body: Record<string, string> = {
+    message,
+    content: base64EncodeUtf8(content),
+  };
+  if (effectiveSha) body.sha = effectiveSha;
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 401) dispatchExternalAuthLost("github");
+  if (res.status === 409) throw new ConflictError();
+  if (!res.ok) {
+    throw new Error(`GitHub Contents PUT ${slug}/${path} failed: ${res.status}`);
+  }
+  const responseBody = (await res.json()) as { content?: { sha?: string } };
+  const newSha = responseBody.content?.sha ?? effectiveSha ?? "";
+  return { sha: newSha };
+}
+
+/**
  * Read a YAML file and parse it into `T`. Returns `null` on 404 so
  * callers can treat "file doesn't exist yet" as a normal empty state.
  *
