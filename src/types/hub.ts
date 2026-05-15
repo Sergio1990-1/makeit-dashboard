@@ -102,16 +102,28 @@ export interface Renewal {
   source: RenewalSource;
 }
 
+/** Origin system a `PulseEvent` was aggregated from. */
+export type PulseSource = "github" | "pipeline" | "transcript" | "audit";
+
 /**
  * PulseEvent — unified activity timeline point (commits, PRs, runs, etc).
  * Filled in Epic-011 (Task-06: Activity Pulse aggregator).
+ *
+ * `label` is retained for back-compat with consumers that pre-date the
+ * Task-06 aggregator (weeklyDigestGenerator, lastVisitedStore). New code
+ * should prefer `title`; the aggregator always sets both to the same
+ * string so existing callers keep working unchanged.
  */
 export interface PulseEvent {
   id: string;
+  source: PulseSource;
   timestamp: string; // ISO
   type: string; // e.g. "commit", "pr_merged", "issue_closed"
+  title: string;
+  /** @deprecated mirror of `title` kept for pre-Task-06 consumers. */
   label: string;
   url?: string;
+  meta?: Record<string, unknown>;
 }
 
 /**
