@@ -44,12 +44,22 @@ const DECISION_COMMIT_PREFIXES = ["decide:", "accept:"];
 // const _IGNORED_PREFIXES = ["feat:", "fix:", "chore:", "docs:", "style:", "refactor:", "test:", "build:", "ci:", "perf:"];
 
 /**
- * Match a section heading in a BRIEF.md. We accept both `##` and `###`,
- * with optional emoji or trailing colon, e.g. `## 📋 Decisions:`.
+ * Match a section heading in a BRIEF.md. Accepts both `##` and `###`,
+ * with optional leading emoji/punctuation and optional trailing colon —
+ * `## 📋 Decisions:` and `### Decisions` both match.
  *
- * Anchored to the start of the line via the `m` flag at call site.
+ * The `Decisions?` token must be a STANDALONE heading, not a substring
+ * inside a larger phrase. So `## Past decisions we regret` and
+ * `## Pricing decisions matter` correctly DO NOT match — the heading
+ * must end (modulo trailing punctuation/whitespace) right after the
+ * keyword. Without this guard we'd scrape bullets out of unrelated
+ * sections.
+ *
+ * The leading-decoration class `[^\w\n]*` allows emoji or punctuation
+ * (e.g. `## 📋 Decisions`) but not letters/digits/underscore — those
+ * would change the heading's meaning. Anchored via `/m`.
  */
-const DECISION_HEADING_RE = /^#{2,3}\s+[^\n]*decisions?[^\n]*$/im;
+const DECISION_HEADING_RE = /^#{2,3}[^\S\n]+[^\w\n]*\s*decisions?\s*[:.]?\s*$/im;
 
 /** Match the next heading (any level) — we use it to know when to stop. */
 const NEXT_HEADING_RE = /^#{1,6}\s+/m;
@@ -94,15 +104,33 @@ function extractBriefBullets(briefMd: string): string[] {
 }
 
 /**
- * Try to pull an ISO date out of the very top of a BRIEF.md. The
- * Pipeline writes `date: 2026-05-01` or `# 2026-05-01 — Title` near
- * the top; we look for the first 10-char date in the first 1 KiB and
- * give up if there isn't one (decision falls back to undated).
+ * Try to pull an ISO date out of the BRIEF.md top matter.
+ *
+ * Two recognised producers:
+ *   1. YAML front-matter (`---\ndate: 2026-05-01\n…`) at the very top.
+ *   2. An H1 starting with the date — `# 2026-05-01 — Title`.
+ *
+ * Both are anchored: the date must appear in `date:` field or right
+ * after `#`, NOT anywhere in the body. Without anchoring we'd pick up
+ * dates from quoted dialogue ("Met with client 2024-03-01") and
+ * mis-stamp every decision with that date.
+ *
+ * Returns `null` when neither pattern matches — decisions fall back
+ * to undated and sort to the end of the list.
  */
 function extractBriefDate(briefMd: string): string | null {
-  const head = briefMd.slice(0, 1024);
-  const m = head.match(/(\d{4}-\d{2}-\d{2})/);
-  return m ? m[1] : null;
+  // Front-matter form: `date: YYYY-MM-DD` on its own line within the
+  // first 2 KiB. `^\s*date:` is anchored to start-of-line via `/m`.
+  const head = briefMd.slice(0, 2048);
+  const fm = head.match(/^\s*date:\s*(\d{4}-\d{2}-\d{2})\s*$/im);
+  if (fm) return fm[1];
+
+  // H1 form: `# YYYY-MM-DD …` — must start at column 0 (no leading
+  // whitespace), and the date must be the very first token after `#`.
+  const h1 = head.match(/^#\s+(\d{4}-\d{2}-\d{2})\b/m);
+  if (h1) return h1[1];
+
+  return null;
 }
 
 /** True when a commit subject is a decision/accept commit. */
@@ -144,8 +172,11 @@ export function extractDecisions(
       const description = lead ? rest : undefined;
       out.push({
         // Stable id so React keys don't churn between renders for the
-        // same brief text. `idx` keeps duplicates distinct.
-        id: `brief:${idx}:${title.slice(0, 40)}`,
+        // same brief text. Index alone is unique within a single brief
+        // — earlier we suffixed `title.slice(0,40)` for human-readability
+        // but two bullets sharing a 40-char title prefix would collide
+        // and React would reuse the wrong DOM node.
+        id: `brief:${idx}`,
         date: briefDate,
         title: title.slice(0, 200),
         description: description && description.length > 0 ? description : undefined,

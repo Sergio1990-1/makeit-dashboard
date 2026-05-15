@@ -114,14 +114,17 @@ async function readContent(
   if (!res.ok) {
     throw new Error(`GitHub Contents GET ${slug}/${path} failed: ${res.status}`);
   }
-  const body = (await res.json()) as ContentsResponse;
-  // The Contents API can return a directory listing (array) when the
-  // path is a folder — guard so callers don't get JSON garbage.
-  if (typeof body.content !== "string") {
-    throw new Error(
-      `GitHub Contents GET ${slug}/${path} returned no content (is it a directory?)`,
-    );
-  }
+  const parsed = (await res.json()) as ContentsResponse | unknown[];
+  // The Contents API returns a JSON ARRAY when `path` is a directory
+  // instead of an object with `content`. Treat that as not-found
+  // rather than throwing — callers (`readMarkdown`/`readYaml`) treat
+  // `null` as the documented empty state, and a path typo that
+  // resolves to a folder shouldn't crash callers like `useProjectHub`
+  // (which fans this out via Promise.all and would propagate the
+  // throw all the way to the Hub render boundary).
+  if (Array.isArray(parsed)) return null;
+  const body = parsed as ContentsResponse;
+  if (typeof body.content !== "string") return null;
   // Files >1 MiB come back with `content === ""` and `encoding === "none"`.
   // Surface as null so caller can fall back; the proper API for big files
   // is the blobs endpoint, which we intentionally don't pull in here.
@@ -212,6 +215,14 @@ interface RawCommit {
  * On any failure (auth, network, parse) returns `[]` rather than
  * throwing — Hub views render an empty state better than they handle
  * an exception cascade.
+ *
+ * Failure visibility note: a 401 dispatches the standard
+ * `external-auth-lost` event (so SettingsPanel prompts for a new
+ * token), but the function itself still returns `[]` — there is no
+ * separate "auth failed" return state for the Decision Log to render.
+ * Acceptable today: the auth banner is the canonical surface; the log
+ * being empty is a downstream symptom the user resolves by rotating
+ * the token.
  */
 export async function listRecentCommits(
   repo: string,
