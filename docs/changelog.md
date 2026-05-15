@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 ### Added
+- **Onboarding Readiness Checklist** (Epic-012 Task-04): 6 новых правил health-engine Layer 2 — README freshness (90д), наличие docs/BRIEF.md, deploy-инструкция (docs/DEPLOY.md или раздел в README), .env.example, зелёный CI на main, свежий audit (30д). Компонент `OnboardingChecklist` рендерит чеклист с ✓/✗ и tooltip-remediation. Health-scores у части проектов могут сдвинуться вниз из-за дополнительных правил — это ожидаемо.
 - Tab-навигация: Дашборд, Проекты, Milestones, Завершённые, Мониторинг, Аудит, Pipeline
 - **Audit подсистема**: AuditTab, AuditProjectCard, AuditConfirmDialog, AuditIssuesDialog, AuditVerifyDialog
 - Верификация audit findings через Claude (verification.ts, verify-agent.ts)

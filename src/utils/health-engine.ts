@@ -26,6 +26,8 @@ import {
   getPRFiles,
 } from "./github-actions";
 import { Semaphore } from "./semaphore";
+import { fetchAuditProjects } from "./auditor";
+import type { AuditProjectStatus } from "../types";
 
 // Helper: read a typed param from a check object with a fallback.
 function param<T>(obj: Record<string, unknown>, key: string, fallback: T): T {
@@ -275,9 +277,22 @@ interface RunCtx {
   doc: ChecklistDocument;
   dirCache: DirCache;
   inGrace: boolean;
+  // Shared lazy promise so multiple rules in the same scan don't each refetch
+  // the auditor project list. `null` means the service was unreachable.
+  auditProjectsPromise?: Promise<AuditProjectStatus[] | null>;
   // Forwarded to every fetch helper. When this aborts, all in-flight rule
   // checks reject with AbortError and the top-level Promise.all reflects it.
   signal?: AbortSignal;
+}
+
+function getAuditProjects(ctx: RunCtx): Promise<AuditProjectStatus[] | null> {
+  if (!ctx.auditProjectsPromise) {
+    ctx.auditProjectsPromise = fetchAuditProjects().catch((err) => {
+      if (err instanceof Error && err.name === "AbortError") throw err;
+      return null;
+    });
+  }
+  return ctx.auditProjectsPromise;
 }
 
 async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFinding> {
@@ -708,6 +723,116 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
           detail: ok
             ? `${driftCount} PR без обновления доков за ${windowDays} дн. (порог ${maxCount})`
             : `${driftCount} PR за ${windowDays} дн. без правок в docs/: ${driftPrs.slice(0, 5).map((n) => `#${n}`).join(", ")}`,
+        };
+      }
+
+      // ── Onboarding Readiness (Epic-012 Task-04) ──────────────────────────
+      case "deploy_doc_present": {
+        // Passes if either docs/DEPLOY.md exists OR README.md contains a
+        // recognisable "## Deploy" section heading. Either form of deploy
+        // instruction is acceptable — small projects keep it inline, larger
+        // ones split it into a dedicated doc.
+        const deployPath = param<string>(c, "deploy_doc_path", "docs/DEPLOY.md");
+        const readmePath = param<string>(c, "readme_path", "README.md");
+        const readmeSection = param<string>(c, "readme_section", "## Deploy");
+
+        const deployExists = await pathExists(
+          ctx.token,
+          ctx.owner,
+          ctx.repo,
+          deployPath,
+          ctx.dirCache,
+          "file",
+          false,
+          ctx.signal,
+        );
+        if (deployExists) {
+          return { ...base, status: "pass", detail: `${deployPath} ✓` };
+        }
+
+        const readmeCanonical = await pathExists(
+          ctx.token,
+          ctx.owner,
+          ctx.repo,
+          readmePath,
+          ctx.dirCache,
+          "file",
+          false,
+          ctx.signal,
+        );
+        if (!readmeCanonical) {
+          return {
+            ...base,
+            status: "fail",
+            detail: `Нет ${deployPath} и нет ${readmePath}`,
+          };
+        }
+        try {
+          const text = await readRepoFile(
+            ctx.token,
+            ctx.owner,
+            ctx.repo,
+            readmeCanonical,
+            ctx.signal,
+          );
+          // Match on a heading at start-of-line so "## Deployment notes"
+          // counts but a stray mention of "deploy" in prose doesn't.
+          const re = new RegExp(
+            `^${readmeSection.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+            "im",
+          );
+          const ok = re.test(text);
+          return {
+            ...base,
+            status: ok ? "pass" : "fail",
+            detail: ok
+              ? `${readmePath}: раздел «${readmeSection}» ✓`
+              : `Нет ${deployPath} и нет раздела «${readmeSection}» в ${readmePath}`,
+          };
+        } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") throw err;
+          return { ...base, status: "unknown", detail: `Не удалось прочитать ${readmePath}` };
+        }
+      }
+
+      case "audit_fresh": {
+        // Reads the Auditor service to find the latest run for this repo.
+        // The service is optional in many environments (local dev without
+        // an auditor running) — return `unknown` rather than `fail` so a
+        // missing service doesn't ding the score.
+        // Uses a scan-scoped memo so portfolio scans don't refetch the
+        // full project list once per repo.
+        const maxAgeDays = param<number>(c, "max_age_days", 30);
+        const projects = await getAuditProjects(ctx);
+        if (projects === null) {
+          return { ...base, status: "unknown", detail: "Auditor service недоступен" };
+        }
+        // Match by `repo` first (canonical), fall back to `name` for legacy
+        // projects whose auditor entry pre-dates the `repo` field.
+        const entry = projects.find((p) => p.repo === ctx.repo || p.name === ctx.repo);
+        if (!entry) {
+          return {
+            ...base,
+            status: "fail",
+            detail: `Проект не зарегистрирован в auditor`,
+          };
+        }
+        if (!entry.last_run) {
+          return {
+            ...base,
+            status: "fail",
+            detail: `Audit ещё не запускался (порог ${maxAgeDays} дн.)`,
+          };
+        }
+        const ageMs = Date.now() - new Date(entry.last_run.timestamp).getTime();
+        const ageDays = Math.floor(ageMs / 86400000);
+        const ok = ageDays <= maxAgeDays;
+        return {
+          ...base,
+          status: ok ? "pass" : "fail",
+          detail: ok
+            ? `Свежий audit (${ageDays} дн. назад)`
+            : `Audit ${ageDays} дн. назад (порог ${maxAgeDays})`,
         };
       }
 
