@@ -8850,3 +8850,328 @@ ul.v4-rsh-list {
   .v4-hub-nba-text { white-space: normal; }
   .v4-hub-tab { padding: 8px 10px; font-size: 12px; }
 }
+
+/* ── Hub Overview (Epic-009 Task-04) ───────────────────────────────────
+   4 mini-blocks rendered in a 2×2 grid at ≥1024px and stacked single
+   column at <768px. Each block (NBA / Pulse / Risks / Commitments) is a
+   <section.v4-hub-mini> with the same head/body/footer shell so the row
+   reads as a coherent dashboard rather than four unrelated cards.
+
+   Colour-wise we only reach for the existing semantic tokens (warn /
+   danger / success / accent) — no new palette lives here. Severity
+   mapping: critical=danger, high=danger, medium=warn, low=ink-500.
+*/
+.v4-hub-overview {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+@media (min-width: 1024px) {
+  .v4-hub-overview {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.v4-hub-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--v4-line);
+  border-radius: 12px;
+  background: var(--v4-paper);
+  min-height: 200px;
+}
+
+.v4-hub-mini-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.v4-hub-mini-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--v4-ink-900);
+  letter-spacing: -0.005em;
+}
+.v4-hub-mini-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 16px;
+}
+.v4-hub-mini-ic--nba {
+  background: var(--v4-accent-50);
+  color: var(--v4-accent-700);
+}
+.v4-hub-mini-ic--pulse {
+  background: var(--v4-sky-50);
+  color: var(--v4-sky-700);
+}
+.v4-hub-mini-ic--risks {
+  background: var(--v4-danger-50);
+  color: var(--v4-danger-700);
+}
+.v4-hub-mini-ic--commitments {
+  background: var(--v4-warn-50);
+  color: var(--v4-warn-700);
+}
+
+.v4-hub-mini-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Footer link — visually subtle "open full view" affordance shared by
+   every block. Button (not <a>) because the click is a tab switch within
+   the SPA, not a navigation. */
+.v4-hub-mini-foot {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--v4-line-soft);
+}
+.v4-hub-mini-link {
+  background: transparent;
+  border: 0;
+  padding: 2px 0;
+  color: var(--v4-accent-600);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.v4-hub-mini-link:hover { color: var(--v4-accent-700); text-decoration: underline; }
+.v4-hub-mini-link:focus-visible {
+  outline: 2px solid var(--v4-accent-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Empty states — same horizontal rhythm as the head, slightly muted. */
+.v4-hub-mini-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 0;
+  color: var(--v4-ink-500);
+  font-size: 13px;
+}
+.v4-hub-mini-empty-ic {
+  display: inline-flex;
+  font-size: 18px;
+  color: var(--v4-ink-400);
+  margin-bottom: 2px;
+}
+.v4-hub-mini-empty-text {
+  margin: 0;
+  color: var(--v4-ink-700);
+  font-weight: 500;
+}
+.v4-hub-mini-empty-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--v4-ink-500);
+}
+
+/* NBA block */
+.v4-hub-nba-action {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--v4-ink-900);
+  line-height: 1.4;
+}
+.v4-hub-nba-reason {
+  margin: 0;
+  font-size: 12px;
+  color: var(--v4-ink-600);
+  line-height: 1.5;
+}
+.v4-hub-nba-reason-label {
+  font-weight: 600;
+  color: var(--v4-ink-700);
+}
+.v4-hub-nba-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+/* Pulse list — compact 5-row stack. Type pill is monospace so eye-track
+   columns align even when labels wrap. */
+.v4-hub-pulse-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.v4-hub-pulse-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--v4-ink-700);
+}
+.v4-hub-pulse-type {
+  font-family: var(--v4-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--v4-ink-500);
+  text-transform: lowercase;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--v4-surface-2);
+  white-space: nowrap;
+}
+.v4-hub-pulse-label {
+  color: var(--v4-ink-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v4-hub-pulse-time {
+  color: var(--v4-ink-500);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* Risks list — colour stripe + severity chip + title. Stripe colour
+   reuses semantic tokens (no new palette). */
+.v4-hub-risk-list,
+.v4-hub-commit-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.v4-hub-risk-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--v4-surface-2);
+  border-left: 3px solid var(--v4-ink-300);
+  font-size: 13px;
+}
+.v4-hub-risk-item--critical { border-left-color: var(--v4-danger-500); }
+.v4-hub-risk-item--high     { border-left-color: var(--v4-danger-500); }
+.v4-hub-risk-sev {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--v4-ink-300);
+  color: var(--v4-ink-900);
+}
+.v4-hub-risk-sev--critical,
+.v4-hub-risk-sev--high {
+  background: var(--v4-danger-50);
+  color: var(--v4-danger-700);
+}
+.v4-hub-risk-sev--medium {
+  background: var(--v4-warn-50);
+  color: var(--v4-warn-700);
+}
+.v4-hub-risk-sev--low {
+  background: var(--v4-surface-3);
+  color: var(--v4-ink-700);
+}
+.v4-hub-risk-title {
+  color: var(--v4-ink-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v4-hub-risk-owner,
+.v4-hub-commit-owner {
+  font-family: var(--v4-mono);
+  font-size: 11px;
+  color: var(--v4-ink-500);
+  white-space: nowrap;
+}
+
+/* Commitments list — overdue treated like a risk visually (red stripe),
+   due-this-week gets warn-amber. Identical grid to risks so the two
+   blocks visually rhyme. */
+.v4-hub-commit-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--v4-surface-2);
+  border-left: 3px solid var(--v4-warn-500);
+  font-size: 13px;
+}
+.v4-hub-commit-item--overdue {
+  border-left-color: var(--v4-danger-500);
+  background: var(--v4-danger-50);
+}
+.v4-hub-commit-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.v4-hub-commit-badge--overdue {
+  background: var(--v4-danger-100);
+  color: var(--v4-danger-700);
+}
+.v4-hub-commit-badge--soon {
+  background: var(--v4-warn-50);
+  color: var(--v4-warn-700);
+}
+.v4-hub-commit-title {
+  color: var(--v4-ink-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .v4-hub-mini { min-height: 0; }
+  .v4-hub-pulse-item,
+  .v4-hub-risk-item,
+  .v4-hub-commit-item {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "lead  title"
+      "lead  meta";
+    row-gap: 2px;
+  }
+  .v4-hub-pulse-type,
+  .v4-hub-risk-sev,
+  .v4-hub-commit-badge { grid-area: lead; align-self: center; }
+  .v4-hub-pulse-label,
+  .v4-hub-risk-title,
+  .v4-hub-commit-title { grid-area: title; white-space: normal; }
+  .v4-hub-pulse-time,
+  .v4-hub-risk-owner,
+  .v4-hub-commit-owner { grid-area: meta; justify-self: start; }
+}
