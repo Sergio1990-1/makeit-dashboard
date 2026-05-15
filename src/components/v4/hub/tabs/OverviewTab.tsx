@@ -19,9 +19,10 @@ interface Props {
  * Overview tab — first thing the user sees after clicking a Scorecard row.
  * 4 mini-blocks in a 2×2 grid (stack <768px): NBA / Pulse / Risks / Commitments.
  *
- * All data flows from useProjectHub. In Epic-009 every source is stubbed
- * (empty arrays / null), so every block here must render a sensible empty
- * state without crashing. Real producers land in Epic-011/012.
+ * All data flows from useProjectHub. Sources may still be empty (a
+ * project with nothing to act on, or a producer that hasn't resolved
+ * yet), so every block here must render a sensible empty state without
+ * crashing.
  *
  * Per FR-20: each block has an "Открыть полностью →" footer link that
  * switches the parent's active tab via onOpenTab.
@@ -52,9 +53,11 @@ export function OverviewTab({ data, onOpenTab }: Props) {
 export default OverviewTab;
 
 // ─── NBA block ──────────────────────────────────────────────────────────
-// Shows the top-1 Next Best Action expanded (text + reason + stub action
-// buttons). Per design brief §6, NBA sits at attention rank 1 — this is
-// the "what should I do right now" entry into the Hub.
+// Shows the top-1 Next Best Action expanded (text + reason), with the
+// next two (top-3 total) as a compact follow-up list. Per design brief
+// §6, NBA sits at attention rank 1 — this is the "what should I do right
+// now" entry into the Hub. Data is the real engine output from
+// useProjectHub (Epic-012 Task-05/Task-09).
 
 interface NbaBlockProps {
   nba: NextBestAction[];
@@ -62,7 +65,10 @@ interface NbaBlockProps {
 }
 
 function NbaBlock({ nba, onOpenTab }: NbaBlockProps) {
-  const top = nba[0];
+  // Engine already ranks most-important-first; the Hub surfaces the
+  // top-3 (slice is safe for <3 / empty — yields [] / a short list).
+  const top3 = useMemo(() => nba.slice(0, 3), [nba]);
+  const [top, ...rest] = top3;
 
   return (
     <section
@@ -84,24 +90,15 @@ function NbaBlock({ nba, onOpenTab }: NbaBlockProps) {
           <p className="v4-hub-nba-reason">
             <span className="v4-hub-nba-reason-label">Почему:</span> {top.reason}
           </p>
-          <div className="v4-hub-nba-actions">
-            <button
-              type="button"
-              className="v4-btn v4-btn--pri"
-              disabled
-              title="Будет включено в Epic-012 Task-05"
-            >
-              Создать issue
-            </button>
-            <button
-              type="button"
-              className="v4-btn"
-              disabled
-              title="Будет включено в Epic-012 Task-05"
-            >
-              Отметить сделанным
-            </button>
-          </div>
+          {rest.length > 0 ? (
+            <ul className="v4-hub-nba-list">
+              {rest.map((action) => (
+                <li key={action.id} className="v4-hub-nba-list-item">
+                  <span className="v4-hub-nba-list-text">{action.text}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ) : (
         <EmptyState

@@ -25,8 +25,10 @@ interface Props {
  * uses the matching `useProjectHub` field only to decide the per-section
  * empty state (the stub returns null/empty today; Task-09 (#367) swaps in
  * real producers without touching this presentation layer):
- *   - DORA              gated on `data.dora`; DoraCards owns its own
- *                       four-dash placeholder when no metrics yet.
+ *   - DORA              `data.dora` is the calculator's own
+ *                       `DoraMetricsResult` (unified with DoraCards in
+ *                       Task-09); passed straight through. DoraCards owns
+ *                       its own four-dash placeholder when `null`.
  *   - Customer Health   self-contained — owns its computeHealth(repo) call.
  *   - Onboarding        reads the six onboarding rules from health findings.
  *   - Weekly Digest     self-contained — read-only history by repo (no
@@ -56,10 +58,10 @@ export function DeliveryTab({ repo, data }: Props) {
         </h2>
         {dora === null ? (
           <p className="delivery-empty">
-            Недостаточно merges на main за окно.
+            DORA-метрики ещё считаются (или недостаточно активности на main).
           </p>
         ) : (
-          <DoraCards metrics={null} />
+          <DoraCards metrics={dora} />
         )}
       </section>
 
