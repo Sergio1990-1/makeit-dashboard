@@ -9288,3 +9288,59 @@ ul.v4-rsh-list {
   .v4-hub-risk-owner,
   .v4-hub-commit-owner { grid-area: meta; justify-self: start; }
 }
+
+/* ── Delivery Tab (Epic-012 Task-08) ───────────────────────────────────
+   Three stacked rows: DORA KPIs (full-width, own internal 4-col grid),
+   Customer Health + Onboarding (split), Weekly Digest (full-width).
+
+   Mobile-first: single column by default (covers <768px per the brief).
+   At ≥1280px row-2 becomes a 2-column split. Every selector is scoped
+   under .delivery-tab so no other tab's layout regresses. Colours reuse
+   existing semantic tokens only — no new palette here. */
+.delivery-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.delivery-tab .delivery-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.delivery-tab .delivery-row--split {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 1280px) {
+  .delivery-tab .delivery-row--split {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
+.delivery-tab .delivery-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.delivery-tab .delivery-section-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--v4-ink-900);
+}
+
+.delivery-tab .delivery-empty {
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed var(--v4-line);
+  border-radius: 10px;
+  color: var(--v4-ink-500);
+  font-size: 13px;
+}
