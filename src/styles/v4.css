@@ -8644,3 +8644,123 @@ ul.v4-rsh-list {
   gap: 4px;
   backdrop-filter: blur(4px);
 }
+
+/* ── Project Hub (Epic-009) ───────────────────────────────────────────
+   Foundation styles for ProjectHubPage + ProjectHubHeader. The detailed
+   visual polish for tabs, NBA row, and content lands with Tasks-03/04;
+   what's here is layout structure + minimal chrome so the header is
+   readable on both light and dark themes. */
+.v4-hub-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 20px 32px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.v4-hub-back-link {
+  align-self: flex-start;
+  background: transparent;
+  border: 0;
+  padding: 4px 8px;
+  margin-left: -8px;
+  font-size: 13px;
+  color: var(--v4-accent-600);
+  cursor: pointer;
+  border-radius: 6px;
+}
+.v4-hub-back-link:hover { background: var(--v4-bg-soft); }
+.v4-hub-back-link:focus-visible {
+  outline: 2px solid var(--v4-accent-500);
+  outline-offset: 2px;
+}
+
+.v4-hub-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "id    health"
+    "nba   nba";
+  gap: 12px 24px;
+  padding: 16px 20px;
+  border: 1px solid var(--v4-line);
+  border-radius: 12px;
+  background: var(--v4-bg);
+}
+.v4-hub-header-id { grid-area: id; min-width: 0; }
+.v4-hub-header-health { grid-area: health; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.v4-hub-nba-row {
+  grid-area: nba;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--v4-line-soft);
+  font-size: 13px;
+}
+.v4-hub-nba-label { color: var(--v4-ink-500); font-weight: 600; }
+.v4-hub-nba-text { color: var(--v4-ink-900); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.v4-hub-title { margin: 0 0 6px; font-size: 18px; font-weight: 700; }
+.v4-hub-header-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.v4-hub-phase {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--v4-bg-soft);
+  color: var(--v4-ink-700);
+  font-size: 11px;
+}
+.v4-hub-client { color: var(--v4-ink-700); }
+.v4-hub-meta { color: var(--v4-ink-500); font-family: var(--v4-mono); font-size: 11px; }
+
+.v4-hub-grade {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--v4-ink-900);
+}
+.v4-hub-grade--a { color: var(--v4-success-700); }
+.v4-hub-grade--b { color: var(--v4-success-700); }
+.v4-hub-grade--c { color: var(--v4-warning-700, var(--v4-accent-600)); }
+.v4-hub-grade--d { color: var(--v4-danger-600); }
+.v4-hub-grade--f { color: var(--v4-danger-600); }
+.v4-hub-score { font-size: 13px; font-weight: 600; color: var(--v4-ink-700); }
+
+.v4-sparkline-placeholder {
+  width: 80px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--v4-bg-soft);
+  border: 1px dashed var(--v4-line);
+}
+
+.v4-hub-tabs-placeholder,
+.v4-hub-content-placeholder {
+  padding: 14px 20px;
+  border: 1px dashed var(--v4-line);
+  border-radius: 10px;
+  background: var(--v4-bg);
+  color: var(--v4-ink-500);
+  font-size: 13px;
+}
+.v4-hub-tabs-placeholder code,
+.v4-hub-content-placeholder code {
+  font-family: var(--v4-mono);
+  color: var(--v4-ink-900);
+}
+
+@media (max-width: 640px) {
+  .v4-hub-header {
+    grid-template-columns: 1fr;
+    grid-template-areas: "id" "health" "nba";
+  }
+  .v4-hub-header-health { align-items: flex-start; flex-direction: row; gap: 12px; }
+  .v4-hub-nba-row { flex-wrap: wrap; }
+  .v4-hub-nba-text { white-space: normal; }
+}
