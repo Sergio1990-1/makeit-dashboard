@@ -26,7 +26,7 @@ import {
   getPRFiles,
 } from "./github-actions";
 import { Semaphore } from "./semaphore";
-import { fetchAuditProjects, isAuditorRunning } from "./auditor";
+import { fetchAuditProjects } from "./auditor";
 import type { AuditProjectStatus } from "../types";
 
 // Helper: read a typed param from a check object with a fallback.
@@ -277,9 +277,22 @@ interface RunCtx {
   doc: ChecklistDocument;
   dirCache: DirCache;
   inGrace: boolean;
+  // Shared lazy promise so multiple rules in the same scan don't each refetch
+  // the auditor project list. `null` means the service was unreachable.
+  auditProjectsPromise?: Promise<AuditProjectStatus[] | null>;
   // Forwarded to every fetch helper. When this aborts, all in-flight rule
   // checks reject with AbortError and the top-level Promise.all reflects it.
   signal?: AbortSignal;
+}
+
+function getAuditProjects(ctx: RunCtx): Promise<AuditProjectStatus[] | null> {
+  if (!ctx.auditProjectsPromise) {
+    ctx.auditProjectsPromise = fetchAuditProjects().catch((err) => {
+      if (err instanceof Error && err.name === "AbortError") throw err;
+      return null;
+    });
+  }
+  return ctx.auditProjectsPromise;
 }
 
 async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFinding> {
@@ -765,7 +778,7 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
           // Match on a heading at start-of-line so "## Deployment notes"
           // counts but a stray mention of "deploy" in prose doesn't.
           const re = new RegExp(
-            `^\\s*${readmeSection.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+            `^${readmeSection.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
             "im",
           );
           const ok = re.test(text);
@@ -787,17 +800,12 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         // The service is optional in many environments (local dev without
         // an auditor running) — return `unknown` rather than `fail` so a
         // missing service doesn't ding the score.
+        // Uses a scan-scoped memo so portfolio scans don't refetch the
+        // full project list once per repo.
         const maxAgeDays = param<number>(c, "max_age_days", 30);
-        const available = await isAuditorRunning();
-        if (!available) {
+        const projects = await getAuditProjects(ctx);
+        if (projects === null) {
           return { ...base, status: "unknown", detail: "Auditor service недоступен" };
-        }
-        let projects: AuditProjectStatus[];
-        try {
-          projects = await fetchAuditProjects();
-        } catch (err) {
-          if (err instanceof Error && err.name === "AbortError") throw err;
-          return { ...base, status: "unknown", detail: "Не удалось получить статус audit" };
         }
         // Match by `repo` first (canonical), fall back to `name` for legacy
         // projects whose auditor entry pre-dates the `repo` field.
