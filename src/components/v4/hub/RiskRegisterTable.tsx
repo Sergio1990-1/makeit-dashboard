@@ -233,6 +233,10 @@ export function RiskRegisterTable({ repo }: Props) {
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
+  // Neutral (non-error) feedback, e.g. the post-reload merge notice.
+  // Kept separate from writeError so success isn't styled/announced as
+  // an error (red role="alert").
+  const [infoNotice, setInfoNotice] = useState<string | null>(null);
 
   /**
    * Pending conflict: we hold the local list we tried to persist so the
@@ -277,6 +281,7 @@ export function RiskRegisterTable({ repo }: Props) {
     async (next: Risk[], commitMsg: string): Promise<boolean> => {
       setBusy(true);
       setWriteError(null);
+      setInfoNotice(null);
       try {
         const { sha: newSha } = await writeYaml<RisksFile>(
           repo,
@@ -310,6 +315,7 @@ export function RiskRegisterTable({ repo }: Props) {
     if (!conflict) return;
     setBusy(true);
     setWriteError(null);
+    setInfoNotice(null);
     try {
       const fresh = await readYaml<RisksFile>(repo, RISKS_PATH);
       sha.current = fresh?.sha;
@@ -342,6 +348,7 @@ export function RiskRegisterTable({ repo }: Props) {
     if (!conflict) return;
     setBusy(true);
     setWriteError(null);
+    setInfoNotice(null);
     try {
       const fresh = await readYaml<RisksFile>(repo, RISKS_PATH);
       sha.current = fresh?.sha;
@@ -361,8 +368,17 @@ export function RiskRegisterTable({ repo }: Props) {
       setConflict(null);
       // Surface the merged result for review rather than auto-writing —
       // the user explicitly asked to see remote before clobbering it.
-      setWriteError(
-        "Загружена свежая версия и применены ваши правки поверх. Проверьте и сохраните снова.",
+      // NOTE: merge is keyed by id. A risk deleted locally but still
+      // present in fresh remote is re-added (resurrection), since a
+      // local deletion is an absence, not a tombstone — we favour
+      // resurrection over silent data loss. Flagged to the user below.
+      const reloadHadDeletions =
+        conflict.attempted.length < remote.length &&
+        remote.some((r) => !localById.has(r.id));
+      setInfoNotice(
+        reloadHadDeletions
+          ? "Загружена свежая версия, ваши правки применены поверх. Внимание: удалённые вами риски могли вернуться (есть в свежей версии). Проверьте и сохраните снова."
+          : "Загружена свежая версия и применены ваши правки поверх. Проверьте и сохраните снова.",
       );
     } catch (e) {
       setWriteError(errorMessage(e));
@@ -522,6 +538,21 @@ export function RiskRegisterTable({ repo }: Props) {
           }}
         >
           {writeError}
+        </div>
+      )}
+
+      {infoNotice && (
+        <div
+          role="status"
+          style={{
+            fontSize: 12,
+            padding: "8px 10px",
+            borderRadius: 8,
+            background: "var(--v4-surface-3, rgba(0,0,0,0.04))",
+            color: "var(--v4-ink-700, #374151)",
+          }}
+        >
+          {infoNotice}
         </div>
       )}
 

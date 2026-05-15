@@ -9091,7 +9091,7 @@ ul.v4-rsh-list {
   background: var(--v4-danger-50);
   color: var(--v4-danger-700);
 }
-.v4-hub-risk-sev--medium {
+.v4-hub-risk-sev--med {
   background: var(--v4-warn-50);
   color: var(--v4-warn-700);
 }
