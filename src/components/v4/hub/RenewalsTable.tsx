@@ -392,6 +392,23 @@ export function RenewalsTable({ repo }: Props) {
       notes: draft.notes.trim(),
       source: "manual",
     };
+    // Guard against a duplicate type+name: the whole identity model
+    // (indexOf dispatch, conflict-merge keyOf, auto-scan shadowing)
+    // assumes manual rows are unique by type+name. A dup would let the
+    // reload-merge Map silently collapse two rows into one (data loss).
+    const newKey = `${clean.type}::${clean.name.toLowerCase()}`;
+    const isEditing = !adding && editingIndex !== null;
+    const dup = manual.some(
+      (r, i) =>
+        !(isEditing && i === editingIndex) &&
+        `${r.type}::${r.name.trim().toLowerCase()}` === newKey,
+    );
+    if (dup) {
+      setWriteError(
+        `«${clean.name}» с типом «${clean.type}» уже есть в списке`,
+      );
+      return;
+    }
     const next =
       adding || editingIndex === null
         ? [...manual, clean]

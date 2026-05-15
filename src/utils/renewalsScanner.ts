@@ -45,18 +45,13 @@ const DEPRECATED_PACKAGES: ReadonlySet<string> = new Set([
   "tslint",
   "node-sass",
   "babel-eslint",
-  "core-js@2",
-  "moment",
-  "querystring",
   "@hapi/joi",
   "circular-json",
   "gulp-util",
   "istanbul",
   "phantomjs",
   "phantomjs-prebuilt",
-  "fsevents@1",
   "har-validator",
-  "uuid@3",
 ]);
 
 /** Coerce an arbitrary yaml value to a valid `RenewalType`. */
