@@ -65,12 +65,6 @@ export function ProjectHubPage({ repo, project, onBackToList }: Props) {
     setVisitVersion((v) => v + 1);
   }, []);
 
-  // A new repo is a different inbox — reset so a stale count from the
-  // previous project never bleeds across navigation.
-  useEffect(() => {
-    setVisitVersion(0);
-  }, [repo]);
-
   // ─── URL persistence for `subtab` ────────────────────────────────────
   // Mirrors the lastSyncedRef + didMountPushRef pattern from ProjectsView.tsx
   // (Epic-008 Task-01) so an initial render coming from a `?subtab=health`
