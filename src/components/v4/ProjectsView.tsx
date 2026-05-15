@@ -3,6 +3,7 @@ import type { ProjectData, Monitor, Phase } from "../../types";
 import { ProjectCardV4 } from "./ProjectCardV4";
 import { ProjectHubPage } from "./hub/ProjectHubPage";
 import { calcRiskScore } from "../../utils/riskScore";
+import { useToast } from "./toastContext";
 
 interface Props {
   projects: ProjectData[];
@@ -140,6 +141,7 @@ export function ProjectsView({
   const [state, setState] = useState<ToolbarState>(() => loadState());
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
+  const toast = useToast();
 
   const selectedProject = useMemo(
     () => (selectedRepo ? projects.find((p) => p.repo === selectedRepo) : undefined),
@@ -197,6 +199,52 @@ export function ProjectsView({
     // projects list later reloads.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ─── Epic-009 Task-05 / PRD-008 FR-12 — legacy bookmark toast ─────
+  // Old bookmarks pointed at `?tab=projects&repo=X` and used to render
+  // ProjectHealthPage directly. Hub now defaults to Overview when `subtab`
+  // is absent (FR-12). One-time toast tells the user where Health went.
+  //
+  // Snapshot the URL once during initial render — the hydration effect
+  // above strips `?repo=X` from URL when `projects` is still loading
+  // (treating it as stale), so reading window.location inside the toast
+  // effect would miss the legacy URL on slow first loads. Waits for
+  // `projects` to populate before deciding the bookmark is valid;
+  // `didShowToastRef` keeps "fire once" semantics across re-renders.
+  const initialLegacyUrlRef = useRef<{ repo: string | null; hasSubtab: boolean }>(
+    (() => {
+      if (typeof window === "undefined") return { repo: null, hasSubtab: false };
+      const p = new URLSearchParams(window.location.search);
+      return { repo: p.get("repo"), hasSubtab: p.has("subtab") };
+    })(),
+  );
+  const didShowToastRef = useRef(false);
+  useEffect(() => {
+    if (didShowToastRef.current) return;
+    const { repo: bookmarkedRepo, hasSubtab } = initialLegacyUrlRef.current;
+    if (!bookmarkedRepo || hasSubtab) return;
+    // Wait until the projects list has loaded so we can validate the repo
+    // exists; otherwise an empty `projects` would silently drop the toast.
+    if (projects.length === 0) return;
+    if (!projects.some((p) => p.repo === bookmarkedRepo)) return;
+
+    didShowToastRef.current = true;
+    const FLAG = "makeit_hub_legacy_toast_shown";
+    try {
+      if (localStorage.getItem(FLAG) === "1") return;
+      localStorage.setItem(FLAG, "1");
+    } catch {
+      // localStorage unavailable (private mode, quota, etc) — still show
+      // the toast this once but don't bail out.
+    }
+    toast.push({
+      kind: "info",
+      title: "Health теперь во вкладке",
+      description:
+        "Переключитесь сверху, чтобы вернуться к привычному виду",
+      duration: 6000,
+    });
+  }, [projects, toast]);
 
   // Push URL whenever the selection changes (skipping re-syncs from the
   // mount/popstate paths). The first run is always a no-op — see the
