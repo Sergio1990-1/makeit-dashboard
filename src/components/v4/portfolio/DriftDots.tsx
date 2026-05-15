@@ -9,10 +9,9 @@ import type { ProjectNorm } from "../../../utils/driftNorm";
  * commit / deploy / audit / client-touch dots.
  *
  * Color rule (from epic-010.md "Архитектурные решения"):
- *   green   days ≤ norm
- *   yellow  days ≥ 1.5 × norm
- *   red     days ≥ 3   × norm
- * The band between norm and 1.5×norm reads as green (still acceptable);
+ *   green   days < 1.5 × norm   (incl. the still-acceptable band norm..1.5×norm)
+ *   yellow  1.5 × norm ≤ days < 3 × norm
+ *   red     days ≥ 3 × norm
  * "red wins" — the steepest threshold is checked first.
  *
  * A11y: color is never the *only* signal. Each dot has a `title` tooltip
