@@ -4,6 +4,10 @@ import {
   readYaml,
   writeYaml,
 } from "../../../utils/github-contents";
+import {
+  extractRisks,
+  type ProposedRisk,
+} from "../../../utils/extractRisksFromTranscripts";
 import type {
   Risk,
   RiskProbability,
@@ -434,6 +438,92 @@ export function RiskRegisterTable({ repo }: Props) {
     await persist([], "chore(hub): create docs/risks.yaml");
   };
 
+  // ── risk extraction from transcripts (Epic-011 Task-09) ────────────
+
+  /**
+   * Extraction lifecycle. `idle` ⇒ no modal. While `extracting` we show
+   * a loading state on the button. `done` opens the review modal with
+   * `proposals` (possibly empty → "nothing found" state inside modal).
+   */
+  const [extractPhase, setExtractPhase] = useState<
+    "idle" | "extracting" | "done"
+  >("idle");
+  const [proposals, setProposals] = useState<ProposedRisk[]>([]);
+  const [extractError, setExtractError] = useState<string | null>(null);
+
+  const runExtraction = useCallback(async () => {
+    setExtractPhase("extracting");
+    setExtractError(null);
+    setProposals([]);
+    try {
+      const found = await extractRisks(repo);
+      setProposals(found);
+      setExtractPhase("done");
+    } catch (e) {
+      // extractRisks is contracted never to throw, but stay defensive
+      // so a future regression can't wedge the button in "extracting".
+      setExtractError(errorMessage(e));
+      setExtractPhase("idle");
+    }
+  }, [repo]);
+
+  const closeExtraction = () => {
+    setExtractPhase("idle");
+    setProposals([]);
+  };
+
+  /**
+   * Approve one proposed risk: convert it to a real `Risk` (forcing
+   * `source: 'transcript-extracted'`) and append it through the
+   * component's EXISTING `persist()` path — same sha/ConflictError flow
+   * as manual add, so there is exactly one writer to risks.yaml. On a
+   * successful write the row is dropped from the modal list; on conflict
+   * the standard ConflictDialog takes over (the proposal stays in the
+   * list so it can be retried after the user resolves the conflict).
+   */
+  const approveProposal = useCallback(
+    async (p: ProposedRisk): Promise<void> => {
+      const rand =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID().slice(0, 8)
+          : Math.random().toString(36).slice(2, 10);
+      const risk: Risk = {
+        id: `risk-${Date.now().toString(36)}-${rand}`,
+        title: p.title.trim(),
+        severity: p.severity,
+        probability: p.probability,
+        mitigation: p.mitigation.trim(),
+        owner: "",
+        due: null,
+        status: "open",
+        source: "transcript-extracted",
+      };
+      const ok = await persist(
+        [...risks, risk],
+        `chore(hub): add risk "${risk.title}" from transcript to risks.yaml`,
+      );
+      if (ok) {
+        setProposals((prev) => prev.filter((x) => x !== p));
+      }
+    },
+    [persist, risks],
+  );
+
+  const rejectProposal = useCallback((p: ProposedRisk) => {
+    // Reject = forget it. Nothing is written to risks.yaml.
+    setProposals((prev) => prev.filter((x) => x !== p));
+  }, []);
+
+  /** Replace a proposal in-place after an inline edit (no write yet). */
+  const editProposal = useCallback(
+    (index: number, next: ProposedRisk) => {
+      setProposals((prev) =>
+        prev.map((x, i) => (i === index ? next : x)),
+      );
+    },
+    [],
+  );
+
   // ── render ────────────────────────────────────────────────────────
 
   if (phase === "loading") {
@@ -516,15 +606,47 @@ export function RiskRegisterTable({ repo }: Props) {
           {risks.length}{" "}
           {risks.length === 1 ? "риск" : "рисков"} · сортировка по severity
         </span>
-        <button
-          type="button"
-          style={btnPrimary}
-          disabled={busy || adding || editingId !== null}
-          onClick={startAdd}
-        >
-          + Добавить риск
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            type="button"
+            style={btn}
+            disabled={
+              busy ||
+              adding ||
+              editingId !== null ||
+              extractPhase === "extracting"
+            }
+            onClick={() => void runExtraction()}
+          >
+            {extractPhase === "extracting"
+              ? "Извлечение…"
+              : "Extract from transcripts"}
+          </button>
+          <button
+            type="button"
+            style={btnPrimary}
+            disabled={busy || adding || editingId !== null}
+            onClick={startAdd}
+          >
+            + Добавить риск
+          </button>
+        </div>
       </div>
+
+      {extractError && (
+        <div
+          role="alert"
+          style={{
+            fontSize: 12,
+            padding: "8px 10px",
+            borderRadius: 8,
+            background: "var(--v4-danger-bg, rgba(220,38,38,0.1))",
+            color: "var(--v4-danger, #dc2626)",
+          }}
+        >
+          Не удалось извлечь риски: {extractError}
+        </div>
+      )}
 
       {writeError && (
         <div
@@ -676,6 +798,17 @@ export function RiskRegisterTable({ repo }: Props) {
         />
       )}
 
+      {extractPhase === "done" && (
+        <ExtractReviewModal
+          proposals={proposals}
+          busy={busy}
+          onApprove={(p) => void approveProposal(p)}
+          onReject={rejectProposal}
+          onEdit={editProposal}
+          onClose={closeExtraction}
+        />
+      )}
+
       {conflict && (
         <ConflictDialog
           busy={busy}
@@ -684,6 +817,309 @@ export function RiskRegisterTable({ repo }: Props) {
           onDismiss={() => setConflict(null)}
         />
       )}
+    </div>
+  );
+}
+
+// ─── transcript-extraction review modal ─────────────────────────────────
+
+interface ExtractReviewProps {
+  proposals: ProposedRisk[];
+  busy: boolean;
+  onApprove: (p: ProposedRisk) => void;
+  onReject: (p: ProposedRisk) => void;
+  onEdit: (index: number, next: ProposedRisk) => void;
+  onClose: () => void;
+}
+
+function ExtractReviewModal({
+  proposals,
+  busy,
+  onApprove,
+  onReject,
+  onEdit,
+  onClose,
+}: ExtractReviewProps) {
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+
+  // The proposals array is index-keyed for the edit toggle. When a row
+  // is approved/rejected the array shifts, so a stale `editingIdx`
+  // would attach the edit form to the wrong card. Reset it during
+  // render (the React-recommended "adjust state on prop change"
+  // pattern) whenever the list length changes — no effect needed.
+  const count = proposals.length;
+  const [seenCount, setSeenCount] = useState(count);
+  if (seenCount !== count) {
+    setSeenCount(count);
+    setEditingIdx(null);
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Риски из транскриптов"
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.45)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          background: "var(--v4-surface, #fff)",
+          color: "var(--v4-ink-900, inherit)",
+          borderRadius: 12,
+          padding: 20,
+          width: "min(640px, 100%)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+          maxHeight: "90vh",
+          overflowY: "auto",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <h3 style={{ margin: 0, fontSize: 16 }}>Риски из транскриптов</h3>
+          <button type="button" style={btn} onClick={onClose}>
+            Закрыть
+          </button>
+        </div>
+
+        {proposals.length === 0 ? (
+          <div
+            style={{
+              padding: 16,
+              border: "1px dashed var(--v4-border, rgba(0,0,0,0.1))",
+              borderRadius: 10,
+              color: "var(--v4-ink-500)",
+              fontSize: 13,
+            }}
+          >
+            В последних транскриптах проекта риски не найдены (или нет
+            обработанных транскриптов). Закройте это окно.
+          </div>
+        ) : (
+          <>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 12,
+                color: "var(--v4-ink-500)",
+              }}
+            >
+              {proposals.length}{" "}
+              {proposals.length === 1
+                ? "предложенный риск"
+                : "предложенных рисков"}
+              . «Одобрить» добавит риск в risks.yaml (источник: Transcript).
+              «Отклонить» ничего не записывает.
+            </p>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: 10 }}
+            >
+              {proposals.map((p, idx) => {
+                const isEditing = editingIdx === idx;
+                return (
+                  <div
+                    key={`${p.source}-${idx}`}
+                    style={{
+                      border:
+                        "1px solid var(--v4-border, rgba(0,0,0,0.12))",
+                      borderRadius: 10,
+                      padding: 12,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                  >
+                    {isEditing ? (
+                      <ProposalEditForm
+                        value={p}
+                        onChange={(next) => onEdit(idx, next)}
+                      />
+                    ) : (
+                      <>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>
+                          {p.title || "—"}
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 6,
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <span
+                            style={{
+                              ...pillStyle,
+                              background: severityBg(p.severity),
+                              color: "#fff",
+                            }}
+                          >
+                            {SEVERITY_LABEL[p.severity]}
+                          </span>
+                          <span style={pillStyle}>
+                            Вероятность:{" "}
+                            {PROBABILITY_LABEL[p.probability]}
+                          </span>
+                        </div>
+                        {p.mitigation && (
+                          <div
+                            style={{
+                              fontSize: 13,
+                              color: "var(--v4-ink-700)",
+                            }}
+                          >
+                            Митигация: {p.mitigation}
+                          </div>
+                        )}
+                      </>
+                    )}
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 6,
+                        justifyContent: "flex-end",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {isEditing ? (
+                        <button
+                          type="button"
+                          style={btn}
+                          disabled={busy}
+                          onClick={() => setEditingIdx(null)}
+                        >
+                          Готово
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          style={btn}
+                          disabled={busy}
+                          onClick={() => setEditingIdx(idx)}
+                        >
+                          Изм.
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        style={btn}
+                        disabled={busy}
+                        onClick={() => onReject(p)}
+                      >
+                        Отклонить
+                      </button>
+                      <button
+                        type="button"
+                        style={btnPrimary}
+                        disabled={busy || p.title.trim() === ""}
+                        onClick={() => onApprove(p)}
+                      >
+                        {busy ? "…" : "Одобрить"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface ProposalEditFormProps {
+  value: ProposedRisk;
+  onChange: (next: ProposedRisk) => void;
+}
+
+function ProposalEditForm({ value, onChange }: ProposalEditFormProps) {
+  const field: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    fontSize: 12,
+    color: "var(--v4-ink-500)",
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <label style={field}>
+        Название
+        <input
+          aria-label="Название риска"
+          style={inputStyle}
+          value={value.title}
+          onChange={(e) => onChange({ ...value, title: e.target.value })}
+        />
+      </label>
+      <div style={{ display: "flex", gap: 12 }}>
+        <label style={{ ...field, flex: 1 }}>
+          Severity
+          <select
+            aria-label="Severity"
+            style={inputStyle}
+            value={value.severity}
+            onChange={(e) =>
+              onChange({
+                ...value,
+                severity: e.target.value as RiskSeverity,
+              })
+            }
+          >
+            {SEVERITIES.map((s) => (
+              <option key={s} value={s}>
+                {SEVERITY_LABEL[s]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label style={{ ...field, flex: 1 }}>
+          Вероятность
+          <select
+            aria-label="Вероятность"
+            style={inputStyle}
+            value={value.probability}
+            onChange={(e) =>
+              onChange({
+                ...value,
+                probability: e.target.value as RiskProbability,
+              })
+            }
+          >
+            {PROBABILITIES.map((pr) => (
+              <option key={pr} value={pr}>
+                {PROBABILITY_LABEL[pr]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label style={field}>
+        Митигация
+        <input
+          aria-label="Митигация"
+          style={inputStyle}
+          value={value.mitigation}
+          onChange={(e) =>
+            onChange({ ...value, mitigation: e.target.value })
+          }
+        />
+      </label>
     </div>
   );
 }
