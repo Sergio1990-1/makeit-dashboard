@@ -5,6 +5,7 @@
 
 import type { ProjectData } from "./index";
 import type { HealthReport } from "./health";
+import type { DoraMetricsResult } from "../utils/doraCalculator";
 
 export type HubTab = "overview" | "health" | "activity" | "decisions" | "delivery";
 
@@ -163,21 +164,13 @@ export interface DigestMeta {
 }
 
 /**
- * DORA metrics snapshot + 90d trend per metric.
- * Filled in Epic-012 (Task-01: DORA).
+ * DORA metrics: the Hub re-uses the calculator's own result shape
+ * (`DoraMetricsResult` from `src/utils/doraCalculator.ts`) rather than a
+ * parallel type. `DoraCards` already consumes that exact shape, so the
+ * Hub aggregate, the producer (`computeDora`) and the presentation layer
+ * all share one source of truth — no adapter, no field-name skew.
+ * Filled in Epic-012 (Task-03: DORA calculator, Task-09: Hub wiring).
  */
-export interface DoraMetrics {
-  deploymentFrequency: number; // deploys/week
-  leadTimeHours: number;
-  mttrHours: number;
-  changeFailureRate: number; // 0..1
-  trend90d: {
-    deploymentFrequency: number[];
-    leadTimeHours: number[];
-    mttrHours: number[];
-    changeFailureRate: number[];
-  };
-}
 
 /**
  * The four weighted Customer Health sub-components, each `0..100` or
@@ -251,7 +244,7 @@ export interface ProjectHubData {
   pulse: PulseEvent[];
   inboxCount: number;
   digest: DigestEntry | null;
-  dora: DoraMetrics | null;
+  dora: DoraMetricsResult | null;
   customerHealth: CustomerHealthScore | null;
   onboarding: OnboardingReport;
   nba: NextBestAction[];

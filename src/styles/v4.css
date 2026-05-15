@@ -9109,11 +9109,32 @@ ul.v4-rsh-list {
   font-weight: 600;
   color: var(--v4-ink-700);
 }
-.v4-hub-nba-actions {
+/* Follow-up actions (ranks 2–3): compact, de-emphasised vs the top-1
+   block above so the primary recommendation still dominates. */
+.v4-hub-nba-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--v4-border, rgba(0, 0, 0, 0.08));
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 2px;
+  flex-direction: column;
+  gap: 6px;
+}
+.v4-hub-nba-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--v4-ink-600);
+  line-height: 1.4;
+}
+.v4-hub-nba-list-item::before {
+  content: "→";
+  color: var(--v4-ink-500);
+  flex-shrink: 0;
+}
+.v4-hub-nba-list-text {
+  flex: 1;
 }
 
 /* Pulse list — compact 5-row stack. Type pill is monospace so eye-track
