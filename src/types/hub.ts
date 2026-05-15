@@ -180,12 +180,36 @@ export interface DoraMetrics {
 }
 
 /**
- * Customer Health Score (formula TBD — see PROJECT_HUB_DESIGN_BRIEF.md §11).
- * Filled in Epic-012 (Task-03: Customer Health).
+ * The four weighted Customer Health sub-components, each `0..100` or
+ * `null` ("not measurable" — treated as neutral inside the blend).
+ * Mirrors `HealthComponents` in `src/utils/customerHealthScore.ts`;
+ * kept here so Hub views can type the breakdown without reaching into
+ * the util. Filled in Epic-012 (Task-07).
+ */
+export interface CustomerHealthComponents {
+  sentiment: number | null;
+  cadence: number | null;
+  delivery: number | null;
+  paid: number | null;
+}
+
+/**
+ * Customer Health Score (Epic-012 Task-07, PRD-008 FR-37).
+ *
+ * `score` is `0..100` or the string `'n/a'` when no transcript exists
+ * in the last 120 days (don't surface a number we can't trust). `tier`
+ * is the derived colour zone for the gauge; `sparkline` is the 90-day
+ * daily series. The real producer is
+ * `src/utils/customerHealthScore.ts` (`computeHealth`).
  */
 export interface CustomerHealthScore {
-  score: number; // 0..100
+  /** `0..100` or `'n/a'` (no transcript in the last 120 days). */
+  score: number | "n/a";
+  /** Colour zone: 0–40 critical, 40–70 warning, 70–100 good. */
   tier: "good" | "warning" | "critical";
+  components: CustomerHealthComponents;
+  /** 90 daily score values, oldest → newest. Empty when `score` is `'n/a'`. */
+  sparkline: number[];
   updatedAt: string; // ISO
 }
 
