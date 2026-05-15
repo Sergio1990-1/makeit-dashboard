@@ -1,6 +1,7 @@
 import yaml from "js-yaml";
 import { readRepoFile } from "./github-actions";
 import type { ChecklistDocument } from "../types/health";
+import { ONBOARDING_READINESS_RULES } from "./onboardingReadinessRules";
 
 const KNOWLEDGE_OWNER = "Sergio1990-1";
 const KNOWLEDGE_REPO = "makeit-knowledge";
@@ -43,6 +44,16 @@ export async function loadChecklist(
   const text = await readRepoFile(token, KNOWLEDGE_OWNER, KNOWLEDGE_REPO, CHECKLIST_PATH, signal);
   const parsed = yaml.load(text);
   validate(parsed);
+  // Merge in-code Layer-2 rules that are owned by the dashboard repo rather
+  // than the YAML source of truth (Epic-012 Task-04: Onboarding Readiness).
+  // Dedup by `id` so a future mirror-PR into makeit-knowledge can't
+  // double-count the same rule — the YAML version wins if present.
+  const existingIds = new Set(parsed.rules.map((r) => r.id));
+  for (const rule of ONBOARDING_READINESS_RULES) {
+    if (!existingIds.has(rule.id)) {
+      parsed.rules.push(rule);
+    }
+  }
   cached = { doc: parsed, loaded_at: Date.now() };
   return parsed;
 }
