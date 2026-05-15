@@ -298,7 +298,7 @@ function buildUserPrompt(repo: string, inputs: NbaInputs): string {
           .map(
             (c) =>
               `- ${clip(c.title)} (due ${c.dueDate}${
-                c.daysOverdue ? `, ${c.daysOverdue}d overdue` : ""
+                c.daysOverdue != null ? `, ${c.daysOverdue}d overdue` : ""
               })`,
           )
           .join("\n"),
@@ -426,8 +426,10 @@ export async function computeProjectNBA(
     const stale = readCache(scope, false);
     const warning =
       "Claude budget hard-stopped — showing last cached actions.";
+    // Normalize budgetFallback: a hard-stop / missing-key degrade is not
+    // a Haiku fallback, so don't let a stale `true` light the budget badge.
     return stale !== null
-      ? { ...stale, warning }
+      ? { ...stale, budgetFallback: false, warning }
       : { actions: [], budgetFallback: false, warning };
   }
 
@@ -435,8 +437,10 @@ export async function computeProjectNBA(
     // No key injected — degrade to stale cache rather than a hard error.
     const stale = readCache(scope, false);
     const warning = "Claude API key not configured — showing cached actions.";
+    // Normalize budgetFallback: a hard-stop / missing-key degrade is not
+    // a Haiku fallback, so don't let a stale `true` light the budget badge.
     return stale !== null
-      ? { ...stale, warning }
+      ? { ...stale, budgetFallback: false, warning }
       : { actions: [], budgetFallback: false, warning };
   }
 
@@ -449,8 +453,10 @@ export async function computeProjectNBA(
     const stale = readCache(scope, false);
     const warning =
       "Claude budget hard-stopped — showing last cached actions.";
+    // Normalize budgetFallback: a hard-stop / missing-key degrade is not
+    // a Haiku fallback, so don't let a stale `true` light the budget badge.
     return stale !== null
-      ? { ...stale, warning }
+      ? { ...stale, budgetFallback: false, warning }
       : { actions: [], budgetFallback: false, warning };
   }
 
@@ -497,8 +503,10 @@ export async function computeProjectNBA(
     console.warn(`computeProjectNBA failed for ${repo}:`, e);
     const stale = readCache(scope, false);
     const warning = "Could not refresh actions — showing cached data.";
+    // budgetFallback reflects THIS run's model choice (computed above),
+    // which is more accurate than the stale envelope's stored value.
     return stale !== null
-      ? { ...stale, warning }
+      ? { ...stale, budgetFallback, warning }
       : { actions: [], budgetFallback, warning };
   }
 }
@@ -531,11 +539,16 @@ export async function computePortfolioNBA(
     if (p.actions.length > 0) top1.push(p.actions[0]);
   }
 
-  // Stable sort by severity desc — `Array.prototype.sort` is stable in
-  // modern engines, so equal-severity actions keep caller order.
-  const ranked = [...top1].sort(
-    (a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity],
-  );
+  // Sort by severity desc with a deterministic tiebreak (title, then
+  // link) so the top-5 is stable regardless of how the caller iterated
+  // projects (Map/Object.entries order is not guaranteed).
+  const ranked = [...top1].sort((a, b) => {
+    const bySeverity = SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity];
+    if (bySeverity !== 0) return bySeverity;
+    const byTitle = a.title.localeCompare(b.title);
+    if (byTitle !== 0) return byTitle;
+    return (a.link ?? "").localeCompare(b.link ?? "");
+  });
 
   const result: NbaResult = {
     actions: ranked.slice(0, PORTFOLIO_TOP_N),
