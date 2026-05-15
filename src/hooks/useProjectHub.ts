@@ -251,16 +251,20 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
     useState<Resolved<DigestEntry> | null>(null);
   useEffect(() => {
     const key = repo;
+    let cancelled = false;
     void (async () => {
       try {
         const entry = await loadDigest(repo, currentWeekKey());
-        if (!mounted.current) return;
+        if (cancelled || !mounted.current) return;
         setDigestResolved({ key, data: entry, error: null });
       } catch (e) {
-        if (!mounted.current) return;
+        if (cancelled || !mounted.current) return;
         setDigestResolved({ key, data: null, error: toError(e) });
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [repo]);
   const digestSection = deriveSection(digestResolved, repo);
 
@@ -279,6 +283,7 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
     useState<Resolved<CustomerHealthScore> | null>(null);
   useEffect(() => {
     const key = healthKey;
+    let cancelled = false;
     void (async () => {
       try {
         const finance = getProjectFinance(repo);
@@ -287,17 +292,20 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
           budget: finance?.budget ?? budget,
           paid: finance?.paid ?? paid,
         });
-        if (!mounted.current) return;
+        if (cancelled || !mounted.current) return;
         setHealthResolved({
           key,
           data: toCustomerHealthScore(result),
           error: null,
         });
       } catch (e) {
-        if (!mounted.current) return;
+        if (cancelled || !mounted.current) return;
         setHealthResolved({ key, data: null, error: toError(e) });
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [repo, tier, budget, paid, healthKey]);
   const healthSection = deriveSection(healthResolved, healthKey);
 
@@ -343,6 +351,7 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
     useState<Resolved<NextBestAction[]> | null>(null);
   useEffect(() => {
     const key = nbaKey;
+    let cancelled = false;
     void (async () => {
       try {
         const apiKey = getClaudeKey() ?? "";
@@ -351,7 +360,7 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
           { findings: failingFindings },
           apiKey,
         );
-        if (!mounted.current) return;
+        if (cancelled || !mounted.current) return;
         const actions = result.actions.map(toNextBestAction);
         setNbaResolved({
           key,
@@ -359,10 +368,13 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
           error: null,
         });
       } catch (e) {
-        if (!mounted.current) return;
+        if (cancelled || !mounted.current) return;
         setNbaResolved({ key, data: null, error: toError(e) });
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [repo, failingFindings, nbaKey]);
   const nbaSection = deriveSection(nbaResolved, nbaKey);
 
