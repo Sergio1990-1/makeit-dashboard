@@ -134,7 +134,10 @@ async function fetchGitHubEvents(
     const batch = (await res.json()) as GitHubEvent[];
     if (!Array.isArray(batch) || batch.length === 0) break;
     raw.push(...batch);
-    if (batch.length < 100 || raw.length >= PER_SOURCE_LIMIT) break;
+    // The /events endpoint ignores per_page and returns ≤30/page, so we
+    // page until the per-source cap is reached, an empty page is hit, or
+    // the 4-page bound — never short-circuit on a "small" page.
+    if (raw.length >= PER_SOURCE_LIMIT) break;
   }
 
   const events: PulseEvent[] = [];
@@ -219,16 +222,15 @@ async function fetchGitHubEvents(
 // ── Source 2: Pipeline runs ────────────────────────────────────────────────
 
 // The Pipeline live-status feed is global (not repo-scoped) and a
-// `PipelineResult` carries no completion timestamp. We anchor every run to
-// a SINGLE `anchorTs` captured once per aggregation (passed in by the
-// caller) rather than calling `new Date()` per row. Two consequences this
-// addresses deliberately:
-//   - all runs share one timestamp → stable relative order, single day
-//     bucket, no per-row clock skew;
-//   - because the aggregate is cached for 5 min per repo, repeated visits
-//     within that window return the *same* anchor — so `unreadCount`
-//     (lastVisitedStore, Task-05) does not re-flag every pipeline run as
-//     "new" on each Activity open.
+// `PipelineResult` carries no timestamp at all. We therefore surface ONLY
+// in-flight runs (`status === "running"`): a running task genuinely *is*
+// happening now, so anchoring it to a single `anchorTs` captured once per
+// aggregation is semantically correct. Completed/historical runs are
+// skipped — they have no timestamp and stamping them "now" would float
+// stale runs to the top of the timeline as if they just happened.
+// Anchoring to one shared `anchorTs` (vs. `new Date()` per row) plus the
+// 5-min per-repo cache also keeps `unreadCount` (lastVisitedStore,
+// Task-05) from re-flagging the same running run as "new" on each open.
 async function fetchPipelineEvents(
   anchorTs: string,
   cutoffMs: number,
@@ -237,6 +239,7 @@ async function fetchPipelineEvents(
   const status = await fetchPipelineStatus();
   const events: PulseEvent[] = [];
   for (const r of status.results ?? []) {
+    if (r.status !== "running") continue;
     const num = r.issue_number;
     const verdict = r.outcome ?? r.phase_status ?? r.status;
     events.push(
@@ -339,8 +342,9 @@ async function fetchAuditEvents(
  *   honoured even if a caller passes an older `since`.
  *
  * Returns events de-duplicated by `${source}:${id}`, sorted newest-first,
- * total ≤ 400. Never throws: a failing source contributes nothing. Results
- * are cached per repo in sessionStorage for 5 minutes.
+ * total ≤ 400. Never throws: a failing source contributes nothing. A
+ * complete, non-empty result is cached per repo in sessionStorage for 5
+ * minutes; partial (a source failed) or empty results are not cached.
  */
 export async function aggregatePulse(
   repo: string,
@@ -372,8 +376,12 @@ export async function aggregatePulse(
 
   const merged: PulseEvent[] = [];
   const seen = new Set<string>();
+  let anyRejected = false;
   for (const result of settled) {
-    if (result.status !== "fulfilled") continue;
+    if (result.status !== "fulfilled") {
+      anyRejected = true;
+      continue;
+    }
     for (const ev of result.value) {
       const key = `${ev.source}:${ev.id}`;
       if (seen.has(key)) continue;
@@ -384,6 +392,11 @@ export async function aggregatePulse(
 
   merged.sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp));
 
-  writeCache(repo, merged);
+  // Only cache a result we're confident is complete & non-empty. Caching a
+  // partial (a source rejected) or empty timeline would freeze a transient
+  // outage / cold-start for the full 5-min TTL even after services recover.
+  if (!anyRejected && merged.length > 0) {
+    writeCache(repo, merged);
+  }
   return merged;
 }
