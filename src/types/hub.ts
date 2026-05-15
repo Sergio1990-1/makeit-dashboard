@@ -129,7 +129,7 @@ export interface NextBestAction {
 
 /**
  * Aggregate Hub data — single source for ProjectHubPage and all tab components.
- * Per PRD-008 FR-42, viewes are presentation-only; this hook owns aggregation.
+ * Per PRD-008 FR-42, views are presentation-only; this hook owns aggregation.
  */
 export interface ProjectHubData {
   // Base (passed in + composed from useProjectHealth)
