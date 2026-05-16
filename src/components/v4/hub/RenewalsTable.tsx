@@ -8,7 +8,6 @@ import {
 import {
   parseRenewalsYaml,
   scanRenewals,
-  sortByExpiry,
   toRenewalsYaml,
   type RenewalsYaml,
 } from "../../../utils/renewalsScanner";
@@ -86,6 +85,41 @@ function urgencyOf(iso: string | null, now: number): Urgency {
   if (t < now) return "expired";
   if (t - now <= SOON_MS) return "soon";
   return "ok";
+}
+
+/**
+ * A renewal paired with its stable identity for the table. `manualIndex`
+ * is the row's index in the `manual` state array (or -1 for a virtual
+ * auto-scan row). Edit/save/delete and the React `key` target a row by
+ * this index, never by `manual.indexOf(r)` (which returns the FIRST
+ * match when two manual rows share type+name → editing the 2nd row would
+ * mutate the 1st) or by a name-derived key (which would collide).
+ */
+interface TrackedRow {
+  r: Renewal;
+  manualIndex: number;
+}
+
+/**
+ * Sort tracked rows by `expires_at` ascending (soonest first); undated
+ * rows sink to the bottom. Mirrors `sortByExpiry`'s comparator exactly,
+ * but on the wrapper so each row keeps its stable `manualIndex` through
+ * the sort (sorting `Renewal[]` and re-deriving the index by name would
+ * reintroduce the duplicate-name collision this wrapper exists to fix).
+ */
+function sortTrackedByExpiry(rows: TrackedRow[]): TrackedRow[] {
+  return [...rows].sort((a, b) => {
+    const ta = a.r.expires_at ? Date.parse(a.r.expires_at) : NaN;
+    const tb = b.r.expires_at ? Date.parse(b.r.expires_at) : NaN;
+    const aHas = !Number.isNaN(ta);
+    const bHas = !Number.isNaN(tb);
+    if (aHas && bHas) {
+      return ta !== tb ? ta - tb : a.r.name.localeCompare(b.r.name);
+    }
+    if (aHas) return -1;
+    if (bHas) return 1;
+    return a.r.name.localeCompare(b.r.name);
+  });
 }
 
 /** A new blank manual renewal. */
@@ -227,30 +261,37 @@ export function RenewalsTable({ repo, onCount }: Props) {
     void load();
   }, [load]);
 
-  // Merge for display: manual + non-shadowed auto-scan, sorted by
-  // expiry. `now` is read fresh every render (urgency colouring) — no
-  // memo: the input changes every tick so a memo would never hit.
+  // `now` is read fresh every render for urgency colouring; the table
+  // is a register (not a live timer), so an already-open table does not
+  // repaint an expired row until the next re-render — acceptable here.
   const now = Date.now();
   // Full tracked set (manual + non-shadowed auto-scan), sorted by
   // expiry, BEFORE the local type filter. This is the section's true
-  // record count; the type filter is only a view control.
-  const allTracked = useMemo(() => {
+  // record count; the type filter is only a view control. Each row
+  // carries `manualIndex` — its index in the `manual` array, or -1 for
+  // an auto-scan row — so edit/save/delete and the React key target a
+  // row by its stable position, never by `indexOf` (which collides when
+  // two manual rows share type+name) or a name-derived key.
+  const allTracked = useMemo<TrackedRow[]>(() => {
     const manualKeys = new Set(
       manual.map((r) => `${r.type}::${r.name.trim().toLowerCase()}`),
     );
-    const merged = [
-      ...manual,
-      ...autoScan.filter(
-        (r) => !manualKeys.has(`${r.type}::${r.name.trim().toLowerCase()}`),
-      ),
-    ];
-    return sortByExpiry(merged);
+    const rows: TrackedRow[] = manual.map((r, manualIndex) => ({
+      r,
+      manualIndex,
+    }));
+    autoScan.forEach((r) => {
+      if (!manualKeys.has(`${r.type}::${r.name.trim().toLowerCase()}`)) {
+        rows.push({ r, manualIndex: -1 });
+      }
+    });
+    return sortTrackedByExpiry(rows);
   }, [manual, autoScan]);
   const visible = useMemo(
     () =>
       filter === "all"
         ? allTracked
-        : allTracked.filter((r) => r.type === filter),
+        : allTracked.filter((row) => row.r.type === filter),
     [allTracked, filter],
   );
 
@@ -643,9 +684,16 @@ export function RenewalsTable({ repo, onCount }: Props) {
               </tr>
             </thead>
             <tbody>
-              {visible.map((r) => {
-                const manualIndex =
-                  r.source === "manual" ? manual.indexOf(r) : -1;
+              {visible.map(({ r, manualIndex }) => {
+                // Stable, collision-free row key: manual rows key by
+                // their `manual`-array index (unique even when two rows
+                // share type+name); auto-scan rows have no index but are
+                // already unique by type+name (scanner dedup), so a
+                // composite is safe and stable for them.
+                const rowKey =
+                  manualIndex !== -1
+                    ? `m-${manualIndex}`
+                    : `a-${r.type}-${r.name}`;
                 const isEditing =
                   manualIndex !== -1 &&
                   editingIndex === manualIndex &&
@@ -653,7 +701,7 @@ export function RenewalsTable({ repo, onCount }: Props) {
                 if (isEditing && draft) {
                   return (
                     <RenewalEditRow
-                      key={`edit-${manualIndex}`}
+                      key={rowKey}
                       draft={draft}
                       busy={busy}
                       onChange={setDraft}
@@ -669,10 +717,10 @@ export function RenewalsTable({ repo, onCount }: Props) {
                     : urg === "soon"
                       ? "var(--v4-caution, #ca8a04)"
                       : undefined;
-                const isAuto = r.source === "auto-scan";
+                const isAuto = manualIndex === -1;
                 return (
                   <tr
-                    key={`${r.source}-${r.type}-${r.name}`}
+                    key={rowKey}
                     title={
                       isAuto
                         ? "Auto-detected, fix in package.json"
@@ -856,6 +904,35 @@ function RenewalFormModal({
   onSave,
   onCancel,
 }: EditProps) {
+  // Minimal a11y for the add modal: Escape closes it and focus returns
+  // to the element that opened it (the "+ Добавить" button). A full
+  // focus-trap (Tab cycling within the dialog) is intentionally NOT done
+  // here — it's the same gap as tech-debt #395 (RiskRegister) and is to
+  // be solved once by a shared modal extraction there, not duplicated.
+  const onCancelRef = useRef(onCancel);
+  useEffect(() => {
+    onCancelRef.current = onCancel;
+  }, [onCancel]);
+  useEffect(() => {
+    const trigger =
+      typeof document !== "undefined"
+        ? (document.activeElement as HTMLElement | null)
+        : null;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onCancelRef.current();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      // Restore focus to the trigger so keyboard users aren't dropped at
+      // the top of the document after the dialog unmounts.
+      if (trigger && typeof trigger.focus === "function") trigger.focus();
+    };
+  }, []);
+
   const field: React.CSSProperties = {
     display: "flex",
     flexDirection: "column",

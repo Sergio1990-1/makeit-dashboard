@@ -69,8 +69,6 @@ export interface UsePortfolioPromisesState {
   loading: boolean;
   /** User-facing error, or null. Set only when every repo failed. */
   error: string | null;
-  /** True when the initial render was served from a fresh cache. */
-  fromCache: boolean;
   /** Drop the cache and re-fetch all repos. */
   refresh: () => void;
 }
@@ -191,7 +189,6 @@ export function usePortfolioPromises(): UsePortfolioPromisesState {
   );
   const [loading, setLoading] = useState<boolean>(cached === null);
   const [error, setError] = useState<string | null>(null);
-  const [fromCache] = useState<boolean>(cached !== null);
 
   // Guard a late state-set after unmount and a double-fire (Strict Mode
   // double-invoke / rapid refresh clicks).
@@ -242,5 +239,5 @@ export function usePortfolioPromises(): UsePortfolioPromisesState {
 
   const refresh = useCallback(() => load(true), [load]);
 
-  return { items, loading, error, fromCache, refresh };
+  return { items, loading, error, refresh };
 }
