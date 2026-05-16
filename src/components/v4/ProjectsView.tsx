@@ -629,10 +629,21 @@ export function ProjectsView({
                     grade={null}
                     kpis={scorecardKpis(p)}
                     drift={{
-                      daysSinceCommit:
-                        p.commitActivity?.total84d === 0
-                          ? null
-                          : p.daysSinceActivity,
+                      // True days-since-last-commit — DriftDots labels
+                      // this literally "commit: Nд назад" and grades it
+                      // against the `commit_cadence_days` norm, so it
+                      // must be commit recency, NOT `daysSinceActivity`
+                      // (which is max(lastCommit, any issue updatedAt)
+                      // and would hide real commit drift behind a fresh
+                      // issue edit). `null` only when the repo has no
+                      // commit at all.
+                      daysSinceCommit: p.lastCommitDate
+                        ? Math.floor(
+                            (Date.now() -
+                              new Date(p.lastCommitDate).getTime()) /
+                              86_400_000,
+                          )
+                        : null,
                     }}
                     daysSinceActivity={p.daysSinceActivity}
                     onSelectRepo={openProject}
