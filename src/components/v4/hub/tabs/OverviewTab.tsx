@@ -10,6 +10,7 @@ import type {
 } from "../../../../types/hub";
 import { Icon } from "../../health/Icon";
 import type { IconName } from "../../health/Icon";
+import { TaskMatrix } from "../TaskMatrix";
 
 /**
  * Open a Hub tab, optionally landing on a specific anchored section
@@ -44,6 +45,10 @@ export function OverviewTab({ data, onOpenTab }: Props) {
   const pulse = data.pulse ?? [];
   const risks = data.risks ?? [];
   const commitments = data.commitments ?? [];
+  // ProjectData (with its issues[]) flows in from useProjectHub via the
+  // parent Portfolio list — no extra fetch. Null while the project is
+  // still resolving; TaskMatrix renders an all-zero 5×4 grid for [].
+  const issues = data.project?.issues ?? [];
 
   // Visual order follows the attention hierarchy from
   // PROJECT_HUB_DESIGN_BRIEF.md §6: NBA (rank 1) top-left, risks and
@@ -55,6 +60,7 @@ export function OverviewTab({ data, onOpenTab }: Props) {
       <RisksSummary risks={risks} onOpenTab={onOpenTab} />
       <CommitmentsSummary commitments={commitments} onOpenTab={onOpenTab} />
       <PulseSummary events={pulse} onOpenTab={onOpenTab} />
+      <TaskMatrix issues={issues} />
     </div>
   );
 }

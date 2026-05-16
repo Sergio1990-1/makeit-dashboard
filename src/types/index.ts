@@ -8,6 +8,8 @@ export interface ProjectConfig {
 
 export type Phase = "pre-dev" | "development" | "support";
 export type Priority = "P1" | "P2" | "P3" | "P4";
+/** Pipeline complexity bucket, mirrored from the `complexity-*` GitHub label. */
+export type Complexity = "auto" | "assisted" | "manual";
 export type IssueStatus = "Todo" | "In Progress" | "Review" | "Done";
 
 export interface Issue {
@@ -17,6 +19,8 @@ export interface Issue {
   url: string;
   status: IssueStatus;
   priority: Priority | null;
+  /** Pipeline-assigned complexity (`complexity-*` label), `null` until classify ran. */
+  complexity: Complexity | null;
   labels: string[];
   repo: string;
   milestoneTitle: string | null;
