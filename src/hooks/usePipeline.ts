@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import {
   isPipelineRunning,
   fetchPipelineStatus,
@@ -30,146 +30,220 @@ function nextDelayMs(notRunningStreak: number): number {
   return POLL_IDLE_MIN_MS;
 }
 
-export function usePipeline() {
-  const [available, setAvailable] = useState<boolean | null>(null);
-  const [status, setStatus] = useState<PipelineStatus | null>(null);
-  const [stats, setStats] = useState<PipelineStats | null>(null);
-  const [statsProject, setStatsProject] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [starting, setStarting] = useState(false);
-  const [stopping, setStopping] = useState(false);
+interface PipelineState {
+  available: boolean | null;
+  status: PipelineStatus | null;
+  stats: PipelineStats | null;
+  statsProject: string | null;
+  error: string | null;
+  starting: boolean;
+  stopping: boolean;
+}
 
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const notRunningStreakRef = useRef(0);
-  const stoppedRef = useRef(false);
-  // Epoch invalidates in-flight polls. Bumped on stop/start/unmount so a
-  // fetch that resolves after a remount or restart can't schedule a stale
-  // timer the new instance also owns.
-  const epochRef = useRef(0);
+/**
+ * One process-wide pipeline engine shared by every `usePipeline()` consumer.
+ *
+ * The pipeline API is a single global resource (the feed is not repo-scoped),
+ * so N mounted consumers must not each run their own ~2s poll loop. The engine
+ * owns exactly one poll loop plus the epoch/timer/backoff bookkeeping; consumers
+ * subscribe via `useSyncExternalStore` and read a shared snapshot. Polling is
+ * reference-counted: it starts when the first consumer mounts and stops when
+ * the last unmounts, so an idle app (no pipeline UI on screen) does no polling —
+ * same gating as before, just deduplicated across instances.
+ */
+const listeners = new Set<() => void>();
 
-  const stopPolling = useCallback(() => {
-    stoppedRef.current = true;
-    epochRef.current += 1;
-    if (timerRef.current !== null) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    notRunningStreakRef.current = 0;
-  }, []);
+let state: PipelineState = {
+  available: null,
+  status: null,
+  stats: null,
+  statsProject: null,
+  error: null,
+  starting: false,
+  stopping: false,
+};
 
-  const scheduleNext = useCallback((delay: number, fn: () => void) => {
-    if (stoppedRef.current) return;
-    if (timerRef.current !== null) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(fn, delay);
-  }, []);
+// `useSyncExternalStore` requires getSnapshot to return a referentially stable
+// value between mutations. We replace `state` wholesale on every change and
+// hand back the same object until the next change.
+function getSnapshot(): PipelineState {
+  return state;
+}
 
-  const pollOnce = useCallback(async () => {
-    const myEpoch = epochRef.current;
+function setState(patch: Partial<PipelineState>): void {
+  state = { ...state, ...patch };
+  for (const fn of listeners) {
     try {
-      const s = await fetchPipelineStatus();
-      if (epochRef.current !== myEpoch) return;
-      setStatus(s);
-      setError(null);
-      if (s.running) {
-        notRunningStreakRef.current = 0;
-      } else {
-        notRunningStreakRef.current += 1;
-      }
-    } catch (err) {
-      if (epochRef.current !== myEpoch) return;
-      console.error("[pipeline] poll error:", err);
-      setError(err instanceof Error ? err.message : "Ошибка статуса");
-      // On error, treat as idle for backoff but keep polling so we recover
-      // automatically once the API comes back (e.g. after LaunchAgent reload).
-      notRunningStreakRef.current += 1;
+      fn();
+    } catch (e) {
+      // A bad listener must never poison the notify loop.
+      console.warn("[pipeline] listener threw:", e);
     }
-    if (epochRef.current !== myEpoch) return;
-    scheduleNext(nextDelayMs(notRunningStreakRef.current), () => void pollOnce());
-  }, [scheduleNext]);
+  }
+}
 
-  const startPolling = useCallback(() => {
-    // Bump epoch first so any in-flight pollOnce from a prior run won't
-    // schedule a duplicate timer when it resolves.
-    epochRef.current += 1;
-    stoppedRef.current = false;
-    notRunningStreakRef.current = 0;
-    if (timerRef.current !== null) clearTimeout(timerRef.current);
-    // Run first poll immediately, subsequent polls scheduled by pollOnce itself.
-    void pollOnce();
-  }, [pollOnce]);
+let refCount = 0;
+let timer: ReturnType<typeof setTimeout> | null = null;
+let notRunningStreak = 0;
+let stopped = false;
+// Epoch invalidates in-flight polls. Bumped on stop/start so a fetch that
+// resolves after a restart can't schedule a stale timer the live loop owns.
+let epoch = 0;
 
-  const checkAvailability = useCallback(async () => {
-    const ok = await isPipelineRunning();
-    setAvailable(ok);
-    if (ok) {
-      // Always start polling once the API is reachable — backoff keeps idle
-      // load tiny, and we recover automatically after pipeline restarts.
+function stopPolling(): void {
+  stopped = true;
+  epoch += 1;
+  if (timer !== null) {
+    clearTimeout(timer);
+    timer = null;
+  }
+  notRunningStreak = 0;
+}
+
+function scheduleNext(delay: number, fn: () => void): void {
+  if (stopped) return;
+  if (timer !== null) clearTimeout(timer);
+  timer = setTimeout(fn, delay);
+}
+
+async function pollOnce(): Promise<void> {
+  const myEpoch = epoch;
+  try {
+    const s = await fetchPipelineStatus();
+    if (epoch !== myEpoch) return;
+    setState({ status: s, error: null });
+    if (s.running) {
+      notRunningStreak = 0;
+    } else {
+      notRunningStreak += 1;
+    }
+  } catch (err) {
+    if (epoch !== myEpoch) return;
+    console.error("[pipeline] poll error:", err);
+    setState({ error: err instanceof Error ? err.message : "Ошибка статуса" });
+    // On error, treat as idle for backoff but keep polling so we recover
+    // automatically once the API comes back (e.g. after LaunchAgent reload).
+    notRunningStreak += 1;
+  }
+  if (epoch !== myEpoch) return;
+  scheduleNext(nextDelayMs(notRunningStreak), () => void pollOnce());
+}
+
+function startPolling(): void {
+  // Bump epoch first so any in-flight pollOnce from a prior run won't
+  // schedule a duplicate timer when it resolves.
+  epoch += 1;
+  stopped = false;
+  notRunningStreak = 0;
+  if (timer !== null) clearTimeout(timer);
+  // Run first poll immediately, subsequent polls scheduled by pollOnce itself.
+  void pollOnce();
+}
+
+async function checkAvailability(): Promise<boolean> {
+  // Capture epoch before the await: if a teardown/restart (stopPolling,
+  // startPolling, start) intervenes while the probe is in flight, this
+  // result is stale — bail so we don't double-start or clobber the state
+  // a fresher probe will set. Same guard pattern as pollOnce.
+  const myEpoch = epoch;
+  const ok = await isPipelineRunning();
+  if (epoch !== myEpoch) return ok;
+  setState({ available: ok });
+  // refCount can drop to 0 while this probe is in flight (consumer mounted
+  // then unmounted). Only kick off the shared loop if a consumer is still
+  // listening — otherwise an idle app would poll forever with nothing on
+  // screen. A later mount re-probes (refCount 0→1) and starts it then.
+  if (ok && refCount > 0) {
+    // Backoff keeps idle load tiny, and we recover automatically after
+    // pipeline restarts.
+    startPolling();
+  }
+  return ok;
+}
+
+async function loadStats(project: string): Promise<void> {
+  try {
+    const s = await fetchPipelineStats(project);
+    setState({ stats: s, statsProject: project });
+  } catch {
+    // Stats are non-critical — silently ignore
+  }
+}
+
+async function start(req: PipelineStartRequest): Promise<boolean> {
+  setState({ error: null, starting: true });
+  try {
+    await startPipeline(req);
+    // Give background task time to set running=true before first poll.
+    await new Promise((r) => setTimeout(r, 1500));
+    // The consumer may have unmounted during the wait (refCount 0,
+    // stopPolling already ran). startPolling() clears `stopped`, so
+    // restarting here would resurrect a poll loop with no listeners.
+    // The pipeline did start server-side; a later mount re-probes and
+    // picks it up.
+    if (refCount > 0) {
+      // Reset backoff streak so we drop back to fast (2s) cadence immediately.
+      notRunningStreak = 0;
       startPolling();
     }
-    return ok;
-  }, [startPolling]);
+    return true;
+  } catch (err) {
+    setState({ error: err instanceof Error ? err.message : "Ошибка запуска" });
+    return false;
+  } finally {
+    setState({ starting: false });
+  }
+}
 
-  useEffect(() => {
+async function stop(): Promise<void> {
+  setState({ error: null, stopping: true });
+  try {
+    await stopPipeline();
+    await pollOnce();
+  } catch (err) {
+    setState({ error: err instanceof Error ? err.message : "Ошибка остановки" });
+  } finally {
+    setState({ stopping: false });
+  }
+}
+
+/**
+ * Reference-counted subscription. The first consumer to mount probes
+ * availability (which kicks off the shared poll loop); the last to unmount
+ * tears the loop down so an idle app does no background polling.
+ */
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  refCount += 1;
+  if (refCount === 1) {
+    stopped = false;
     void checkAvailability();
-    return stopPolling;
-  }, [checkAvailability, stopPolling]);
-
-  const loadStats = useCallback(async (project: string) => {
-    try {
-      const s = await fetchPipelineStats(project);
-      setStats(s);
-      setStatsProject(project);
-    } catch {
-      // Stats are non-critical — silently ignore
+  }
+  return () => {
+    listeners.delete(listener);
+    refCount -= 1;
+    if (refCount === 0) {
+      stopPolling();
     }
-  }, []);
-
-  const start = useCallback(
-    async (req: PipelineStartRequest): Promise<boolean> => {
-      setError(null);
-      setStarting(true);
-      try {
-        await startPipeline(req);
-        // Give background task time to set running=true before first poll.
-        await new Promise((r) => setTimeout(r, 1500));
-        // Reset backoff streak so we drop back to fast (2s) cadence immediately.
-        notRunningStreakRef.current = 0;
-        startPolling();
-        return true;
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Ошибка запуска");
-        return false;
-      } finally {
-        setStarting(false);
-      }
-    },
-    [startPolling],
-  );
-
-  const stop = useCallback(async () => {
-    setError(null);
-    setStopping(true);
-    try {
-      await stopPipeline();
-      await pollOnce();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка остановки");
-    } finally {
-      setStopping(false);
-    }
-  }, [pollOnce]);
-
-  return {
-    available,
-    status,
-    stats,
-    statsProject,
-    error,
-    starting,
-    stopping,
-    start,
-    stop,
-    refresh: checkAvailability,
-    loadStats,
   };
+}
+
+export function usePipeline() {
+  const s = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return useMemo(
+    () => ({
+      available: s.available,
+      status: s.status,
+      stats: s.stats,
+      statsProject: s.statsProject,
+      error: s.error,
+      starting: s.starting,
+      stopping: s.stopping,
+      start,
+      stop,
+      refresh: checkAvailability,
+      loadStats,
+    }),
+    [s],
+  );
 }
