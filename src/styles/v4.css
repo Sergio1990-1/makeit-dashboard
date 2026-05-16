@@ -358,6 +358,7 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 .v4-ratelimit-seg--ok { color: var(--v4-success-700); }
 .v4-ratelimit-seg--warn { color: var(--v4-warn-700); }
 .v4-ratelimit-seg--crit { color: var(--v4-danger-700); }
+.v4-ratelimit-reset { color: var(--v4-ink-500); }
 .v4-top-right {
   display: flex;
   align-items: center;
