@@ -182,16 +182,24 @@ export async function verifyFindings(
   // `file|line|description_hash`. Only successful results populate the cache.
   //
   // The Auditor backend does NOT persist or echo `description_hash` (it is
-  // not part of its VerificationResult model), so any prior report that came
-  // back from a server round-trip has `description_hash` absent on every
-  // result. Rather than skip those — which permanently emptied the cross-run
-  // cache and re-spent the Claude budget — recover the hash from the current
-  // finding addressed by `finding_index`. The hash basis is identical to the
-  // producer side (`descriptionHash(finding.description)`, see below), so a
-  // key computed here matches one stamped on the next run for the same text.
-  // If the index no longer maps to the same bug (audit changed) the recovered
-  // hash simply won't match the new finding's key — no false cache hit, the
-  // existing "different bug at same line ≠ stale verdict" guarantee holds.
+  // not part of its VerificationResult model), so any prior report fetched
+  // from a server round-trip has `description_hash` absent on every result.
+  // Skipping those (the old behavior) permanently emptied the cross-run
+  // cache and re-spent the Claude budget. We instead recover the hash from
+  // the current finding at `finding_index` — but ONLY when that index can
+  // be trusted to still point at the same finding:
+  //   1. the finding set is the same size (`total_findings` unchanged), and
+  //   2. the finding now at `finding_index` has the same file:line as `r`.
+  // Both must hold. `finding_index` is an index into the PREVIOUS run's
+  // findings; if the set changed size or the slot moved, the index is
+  // stale and recovering off it would key an old verdict under an
+  // unrelated finding's hash — a silent false cache hit (a different bug
+  // inheriting a stale verdict, the exact thing `description_hash` exists
+  // to prevent). On any mismatch we skip: conservative, loses this run's
+  // cache rather than risk a wrong verdict. When `description_hash` IS
+  // present (in-memory report re-stamped by this client) the fast path is
+  // unchanged.
+  const sameFindingSet = priorReport?.total_findings === findings.length;
   const priorCache = new Map<string, VerificationResult>();
   if (priorReport?.results) {
     for (const r of priorReport.results) {
@@ -199,9 +207,10 @@ export async function verifyFindings(
       if (r.line == null) continue;
       let hash = r.description_hash;
       if (!hash) {
-        const desc = findings[r.finding_index]?.description;
-        if (desc == null) continue; // unrecoverable — keep existing skip
-        hash = descriptionHash(desc);
+        if (!sameFindingSet) continue;
+        const f = findings[r.finding_index];
+        if (!f || f.file !== r.file || f.line !== r.line) continue;
+        hash = descriptionHash(f.description);
       }
       priorCache.set(`${r.file}|${r.line}|${hash}`, r);
     }
