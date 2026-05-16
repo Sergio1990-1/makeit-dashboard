@@ -4,6 +4,7 @@ import type { HealthScore } from "../../../types/health";
 import type { ProjectTier } from "../../../utils/driftNorm";
 import { useDriftNorm } from "../../../hooks/useDriftNorm";
 import { DriftDots, type DriftDaysInput } from "./DriftDots";
+import { SEVERITY_COLORS } from "./constants";
 
 /**
  * ProjectScorecard — preview card for the Portfolio Surface
@@ -68,20 +69,26 @@ const PHASE_BADGE: Record<Phase, { icon: string; label: string; color: string }>
   "pre-dev": { icon: "◻", label: "pre-dev", color: "var(--v4-purple-700, #5B21B6)" },
 };
 
-// Grade → tone. Colors carry their own readable value (kept off pure theme
-// vars) and the letter itself is the primary, non-color signal.
+// Grade → tone. Shared severity palette (see ./constants) so this can't
+// drift apart from DriftDots; the letter itself is the primary, non-color
+// signal.
 const GRADE_TONE: Record<HealthGrade, string> = {
-  A: "#16a34a",
-  B: "#65a30d",
-  C: "#ca8a04",
-  D: "#ea580c",
-  F: "#dc2626",
+  A: SEVERITY_COLORS.ok,
+  B: SEVERITY_COLORS.strong,
+  C: SEVERITY_COLORS.warn,
+  D: SEVERITY_COLORS.elevated,
+  F: SEVERITY_COLORS.danger,
 };
 
+/** Numeric tier (1|2|3), accepting either the numeric or `tier-N` form. */
+function tierNumber(tier: ProjectTier): 1 | 2 | 3 {
+  if (tier === 1 || tier === "tier-1") return 1;
+  if (tier === 2 || tier === "tier-2") return 2;
+  return 3;
+}
+
 function tierLabel(tier: ProjectTier): string {
-  if (tier === 1 || tier === "tier-1") return "T1";
-  if (tier === 2 || tier === "tier-2") return "T2";
-  return "T3";
+  return `T${tierNumber(tier)}`;
 }
 
 /** Days → short relative RU string. `null`/invalid → "—". */
@@ -93,14 +100,22 @@ function relativeDays(days: number | null | undefined): string {
   return `${d}д назад`;
 }
 
-/** Compact USD ($1,2k / $940). Non-finite → null (footer skips it). */
+/**
+ * Compact USD ($940 / $1,2k / $3,5M). Non-finite/negative → null (footer
+ * skips it). Uses Intl `ru-RU` formatting (decimal comma + thousands
+ * grouping) and an M tier so large sums no longer fall back to an ungrouped
+ * `$1250k`-style string.
+ */
 function compactUsd(n: number | null | undefined): string | null {
   if (n === null || n === undefined || !Number.isFinite(n) || n < 0) return null;
-  if (n >= 1000) {
-    const k = n / 1000;
-    return `$${k.toFixed(k % 1 === 0 ? 0 : 1).replace(".", ",")}k`;
-  }
-  return `$${Math.round(n)}`;
+  const ru = (v: number, maxFrac: number): string =>
+    new Intl.NumberFormat("ru-RU", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: maxFrac,
+    }).format(v);
+  if (n >= 1_000_000) return `$${ru(n / 1_000_000, 1)}M`;
+  if (n >= 1000) return `$${ru(n / 1000, 1)}k`;
+  return `$${ru(Math.round(n), 0)}`;
 }
 
 interface KpiItemProps {
@@ -121,7 +136,7 @@ function KpiItem({ icon, value, label, danger }: KpiItemProps) {
         alignItems: "baseline",
         gap: 4,
         fontSize: 12,
-        color: isAlert ? "#dc2626" : "var(--v4-ink-800, #1B2235)",
+        color: isAlert ? SEVERITY_COLORS.danger : "var(--v4-ink-800, #1B2235)",
         fontWeight: isAlert ? 700 : 500,
       }}
     >
@@ -152,7 +167,7 @@ export function ProjectScorecard({
   // thresholds (issue: "Берёт … norm из useDriftNorm(repo)").
   const { norm, loading: normLoading } = useDriftNorm(repo, tier);
 
-  const phaseBadge = PHASE_BADGE[phase] ?? PHASE_BADGE["pre-dev"];
+  const phaseBadge = PHASE_BADGE[phase];
   const gradeTone = grade ? GRADE_TONE[grade] : "var(--v4-ink-400, #94A0B8)";
   const cost = compactUsd(costMtdUsd);
 
@@ -205,7 +220,7 @@ export function ProjectScorecard({
               {repo}
             </span>
             <span
-              title={`Tier ${tierLabel(tier).slice(1)}`}
+              title={`Tier ${tierNumber(tier)}`}
               style={{
                 fontSize: 10,
                 fontWeight: 700,

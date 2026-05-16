@@ -93,6 +93,13 @@ export function PortfolioNextActions({
   const { actions, loading, error, ageDays, hasCache, budgetFallback, regenerate } =
     usePortfolioNba(perProjectActions);
 
+  // Regenerate invalidates the cache *before* recomputing, so firing it with
+  // no per-project input would compute an empty result and silently wipe the
+  // actions currently on screen. Until live cross-portfolio collection lands
+  // (Epic-012 Task-09, #367) the mounting surface passes `undefined` — keep
+  // the button disabled in that state rather than letting it erase the cache.
+  const canRegenerate = !!perProjectActions?.length;
+
   const openProject = useCallback(
     (repo: string | undefined) => {
       // Engine rows carry an optional `repo`; ignore anything we can't map
@@ -156,8 +163,12 @@ export function PortfolioNextActions({
             type="button"
             className="v4-btn v4-ai-btn"
             onClick={regenerate}
-            disabled={loading}
-            title="Сбросить кэш и пересчитать действия по портфелю"
+            disabled={loading || !canRegenerate}
+            title={
+              canRegenerate
+                ? "Сбросить кэш и пересчитать действия по портфелю"
+                : "Нет данных по проектам для пересчёта — кэш не трогаем"
+            }
           >
             {loading ? "Генерация…" : "Регенерировать"}
           </button>
