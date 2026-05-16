@@ -35,6 +35,12 @@ pnpm-debug.log*
 # Coverage
 coverage/
 
+# Playwright E2E
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
 # Backups
 *.backup
 *.backup2
