@@ -19,6 +19,17 @@ import { SEVERITY_COLORS, DRIFT_WARN_MULT, DRIFT_STALE_MULT } from "./constants"
  * («commit: 4д назад, норма 2д»), an `aria-label` with the same text plus
  * the severity word, and a glyph (●/◐/▲) so red/green is distinguishable
  * without color perception. `role="img"` so SR announces the label.
+ *
+ * Grounded-only rendering (issue #457): a signal is "supplied at the
+ * portfolio level" only when the caller passes its `daysSinceX` prop with
+ * a value (a number, or `null` meaning "tracked but no measurement yet").
+ * When the prop is absent / `undefined` the signal is simply not wired in
+ * this surface — we render NO dot for it rather than a perpetual grey
+ * "нет данных", which read as broken. Today only commit is supplied; the
+ * rest stay hidden until their data path lands (separate cost decision,
+ * #456/#462). Explicit `null` is still shown as the honest grey
+ * "нет данных" so a tracked-but-empty signal (e.g. a repo with zero
+ * commits) is NOT silently dropped.
  */
 
 export type DriftSeverity = "ok" | "warn" | "stale" | "unknown";
@@ -115,6 +126,18 @@ export function DriftDots({
     client_touch_interval_days: daysSinceClientTouch,
   };
 
+  // Render only signals actually supplied by this surface. `undefined`
+  // means the caller does not wire this signal here at all (vs. `null` =
+  // tracked but no measurement yet) — hiding it avoids the misleading
+  // perpetual grey "нет данных" dot (issue #457).
+  const groundedKeys = DRIFT_KEYS.filter(
+    ({ key }) => daysByKey[key] !== undefined,
+  );
+
+  // Nothing wired (shouldn't happen — commit is always supplied) → render
+  // nothing rather than an empty labelled group.
+  if (groundedKeys.length === 0) return null;
+
   return (
     <div
       className="v4-drift-dots"
@@ -122,7 +145,7 @@ export function DriftDots({
       aria-label="Drift-индикаторы"
       style={{ display: "flex", alignItems: "center", gap: 8 }}
     >
-      {DRIFT_KEYS.map(({ key, label }) => {
+      {groundedKeys.map(({ key, label }) => {
         const days = daysByKey[key];
         const normValue = norm ? norm[key] : undefined;
         // While the norm is still loading we can't classify — show muted.
