@@ -49,7 +49,6 @@ import {
 import { isOnboardingRuleId } from "../utils/onboardingReadinessRules";
 import {
   computeProjectNBA,
-  invalidateNbaCache,
   type NbaAction,
   type NbaCommitmentInput,
   type NbaRiskInput,
@@ -858,25 +857,21 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
   );
   const [nbaResolved, setNbaResolved] =
     useState<Resolved<NextBestAction[]> | null>(null);
-  // The engine week-caches per repo with NO input signature, so a
-  // same-ISO-week call returns the prior result even when risks/overdue
-  // changed — `nbaKey` alone only re-runs this effect, it never reaches
-  // the engine cache (#460). Remember the last signature applied per
-  // repo so a signal change for a repo (even after navigating away and
-  // back) drops that repo's stale entry and forces a real recompute,
-  // while switching to a *different* repo still reuses its own valid
-  // per-repo week cache (no spurious Claude call / #389 portfolio
-  // cascade). One small entry per visited repo (~12 max). Residual
-  // cross-page-reload staleness is tracked separately as tech-debt.
-  const lastNbaSigByRepo = useRef<Map<string, string>>(new Map());
+  // The engine week-caches per repo and (since #476) keys the entry by
+  // the input signature, so we pass `nbaKey` straight through as that
+  // signature: a same-ISO-week call recomputes when risks/findings/
+  // overdue changed and serves the cache otherwise — including across a
+  // full page reload, since the gate lives in the stored envelope, not a
+  // hook-side ref. This supersedes the #460 `lastNbaSigByRepo` ref +
+  // its invalidate-on-change workaround (removed here): the engine now
+  // owns same-week staleness end to end. Switching to a *different* repo
+  // still reuses that repo's own valid week+sig cache (no spurious
+  // Claude call / #389 portfolio cascade). `invalidateNbaCache` is no
+  // longer imported here (the engine sig replaced its only use in this
+  // hook); it remains in the engine module for the Regenerate flow.
   useEffect(() => {
     const key = nbaKey;
     let cancelled = false;
-    const prevSig = lastNbaSigByRepo.current.get(repo);
-    if (prevSig !== undefined && prevSig !== key) {
-      invalidateNbaCache({ kind: "project", repo });
-    }
-    lastNbaSigByRepo.current.set(repo, key);
     void (async () => {
       try {
         const apiKey = getClaudeKey() ?? "";
@@ -888,6 +883,7 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
             overdueCommitments,
           },
           apiKey,
+          nbaKey,
         );
         if (cancelled || !mounted.current) return;
         const actions = result.actions.map(toNextBestAction);
