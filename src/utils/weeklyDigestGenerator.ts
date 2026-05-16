@@ -166,13 +166,17 @@ export function recentWeekKeys(count: number, from: Date = new Date()): string[]
 }
 
 /**
- * Epoch ms at which a digest for `weekKey` should expire from cache:
- * the end (Sunday 23:59:59.999 UTC) of that ISO week. A past week's
- * digest never needs refreshing (the week is closed), so its TTL is
+ * Epoch ms of the end (Sunday 23:59:59.999 UTC) of ISO week `weekKey` —
+ * the point a digest for that week stops being authoritative. A past
+ * week never needs refreshing (the week is closed), so its value is
  * already in the past and any cached value is still served (we only
  * treat *missing* as stale for closed weeks — see `readCache`).
+ *
+ * Exported as the single source of this cutoff: `PortfolioDigestPanel`
+ * uses it for its own sessionStorage cache TTL so the two cache layers
+ * can't drift apart (#415).
  */
-function weekEndMs(weekKey: string): number {
+export function weekEndMs(weekKey: string): number {
   const m = weekKey.match(/^(\d{4})-(\d{2})$/);
   if (!m) return 0;
   const year = Number(m[1]);
@@ -630,6 +634,7 @@ export async function generateDigest(
 export async function loadDigest(
   repo: string,
   weekISO: string | Date,
+  force = false,
 ): Promise<DigestEntry | null> {
   let weekKey: string;
   try {
@@ -638,8 +643,14 @@ export async function loadDigest(
     return null;
   }
 
-  const cached = readCache(repo, weekKey);
-  if (cached !== null) return cached;
+  // `force` bypasses the localStorage cache so a forced portfolio
+  // regenerate re-reads the committed per-project digest (source of
+  // truth) instead of a possibly-stale cached copy. The committed file
+  // re-seeds the cache below either way (#415).
+  if (!force) {
+    const cached = readCache(repo, weekKey);
+    if (cached !== null) return cached;
+  }
 
   try {
     const file = await readFile(DIGEST_REPO, digestPath(repo, weekKey));
@@ -696,6 +707,10 @@ export async function loadDigestHistory(
  * "No digest" note rather than omitted silently, so the roll-up makes
  * coverage gaps visible. Never throws — a failed per-project read is
  * counted as "no digest".
+ *
+ * `options.force` (Regenerate) is threaded into each per-project
+ * `loadDigest` so the roll-up re-reads committed per-project digests
+ * instead of stitching from possibly-stale localStorage caches (#415).
  */
 export async function generatePortfolioDigest(
   weekISO: string | Date,
@@ -707,7 +722,7 @@ export async function generatePortfolioDigest(
   const loaded = await Promise.all(
     repos.map(async (repo) => ({
       repo,
-      entry: await loadDigest(repo, weekKey).catch(() => null),
+      entry: await loadDigest(repo, weekKey, options.force).catch(() => null),
     })),
   );
 
