@@ -8732,27 +8732,41 @@ ul.v4-rsh-list {
 
 
 
-/* ── Project card → Health button overlay ──────────────────────────────
-   The card itself comes from ProjectCardV4 untouched; this is a small
-   floating CTA pinned to its top-right corner so the user can drill into
-   the health page without disturbing the card's existing layout. The card
-   header gets extra right padding inside the cell so the wrapped badges row
-   reserves space for the absolute button and chips never slide under it. */
-.v4-project-cell { position: relative; }
-.v4-project-cell > .v4-pcard--full > .v4-pcard-row {
-  padding-right: 88px;
+/* ── Portfolio Surface (Epic-010 Task-06) ─────────────────────────────
+   The Projects tab is two responsive grids stacked under the page head:
+
+     1. `.v4-portfolio-widgets` — the four cross-project widgets
+        (NextActions / Renewals / PromiseTracker / DigestPanel).
+        2×2 @≥1024, single column <768 (the 768–1024 band keeps 2×2 —
+        the widgets are list panels that read fine at half width).
+     2. `.v4-scorecard-grid` — the ProjectScorecard cards.
+        3-col @≥1024, 2-col @≥768, 1-col <768.
+
+   Mobile-first base = single column; min-width queries widen it. Only
+   `:root`-defined `--v4-*` tokens are used (gaps reuse the existing card
+   grid rhythm of 14/18px). The Scorecard owns its own card chrome. */
+.v4-portfolio-widgets {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
 }
-.v4-project-health-btn {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  z-index: 2;
-  padding: 4px 10px;
-  font-size: 11px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  backdrop-filter: blur(4px);
+.v4-scorecard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 768px) {
+  .v4-scorecard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1024px) {
+  .v4-portfolio-widgets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .v4-scorecard-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 /* ── Project Hub (Epic-009) ───────────────────────────────────────────
