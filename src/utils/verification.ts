@@ -179,17 +179,31 @@ export async function verifyFindings(
   const verifiedAt0 = new Date().toISOString();
 
   // Build prior-verdict cache from an optional previous report. Key is
-  // `file|line|description_hash`. Legacy results without a description_hash
-  // are skipped — better to lose one run's cache than silently inherit a
-  // verdict for a now-different bug at the same location. Only successful
-  // results populate the cache.
+  // `file|line|description_hash`. Only successful results populate the cache.
+  //
+  // The Auditor backend does NOT persist or echo `description_hash` (it is
+  // not part of its VerificationResult model), so any prior report that came
+  // back from a server round-trip has `description_hash` absent on every
+  // result. Rather than skip those — which permanently emptied the cross-run
+  // cache and re-spent the Claude budget — recover the hash from the current
+  // finding addressed by `finding_index`. The hash basis is identical to the
+  // producer side (`descriptionHash(finding.description)`, see below), so a
+  // key computed here matches one stamped on the next run for the same text.
+  // If the index no longer maps to the same bug (audit changed) the recovered
+  // hash simply won't match the new finding's key — no false cache hit, the
+  // existing "different bug at same line ≠ stale verdict" guarantee holds.
   const priorCache = new Map<string, VerificationResult>();
   if (priorReport?.results) {
     for (const r of priorReport.results) {
       if (r.error) continue;
       if (r.line == null) continue;
-      if (!r.description_hash) continue;
-      priorCache.set(`${r.file}|${r.line}|${r.description_hash}`, r);
+      let hash = r.description_hash;
+      if (!hash) {
+        const desc = findings[r.finding_index]?.description;
+        if (desc == null) continue; // unrecoverable — keep existing skip
+        hash = descriptionHash(desc);
+      }
+      priorCache.set(`${r.file}|${r.line}|${hash}`, r);
     }
   }
 
