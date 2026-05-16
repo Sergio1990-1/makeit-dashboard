@@ -9,6 +9,9 @@ interface NavItem {
   label: string;
   count?: number;
   badge?: number;
+  /** Portfolio NBA count pill (Epic-010 Task-07, FR-10). undefined/0 → no
+   *  pill. Distinct from `badge` (red danger) — this is a warn-tone pill. */
+  nba?: number;
   /** Optional pulsing dot for "new activity since last visit". */
   pulse?: PulseKind;
   icon: ReactElement;
@@ -29,6 +32,9 @@ interface Props {
   /** Number of portfolio-wide critical health fails. Shown as a red badge
    *  on the «Дашборд» nav item. 0/undefined → no badge rendered. */
   criticalFails?: number;
+  /** Portfolio NBA action count for the «Проекты» pill (Epic-010 Task-07,
+   *  FR-10). undefined/0 → no pill (no cache or empty portfolio NBA). */
+  nbaBadge?: number;
   /** Per-tab activity pulses (null = no dot). */
   pulses?: Partial<Record<TabId, PulseKind>>;
   user?: { initials: string; name: string; role: string };
@@ -106,6 +112,7 @@ export function Sidebar({
   monitorsCount,
   auditAlerts,
   criticalFails,
+  nbaBadge,
   pulses,
   user = { initials: "SM", name: "Сергей М.", role: "owner · MakeIT" },
   isOpen,
@@ -126,7 +133,7 @@ export function Sidebar({
           // count down so we don't double-mount the hook here.
           badge: criticalFails && criticalFails > 0 ? criticalFails : undefined,
         },
-        { id: "projects", label: "Проекты", count: projectsCount, icon: ICON_LIST, pulse: p.projects },
+        { id: "projects", label: "Проекты", count: projectsCount, nba: nbaBadge, icon: ICON_LIST, pulse: p.projects },
         { id: "milestones", label: "Milestones", count: milestonesCount, icon: ICON_CLOCK, pulse: p.milestones },
         { id: "uptime", label: "Мониторинг", count: monitorsCount || undefined, icon: ICON_MONITOR, pulse: p.uptime },
       ],
@@ -192,6 +199,16 @@ export function Sidebar({
                   {item.icon}
                   {item.label}
                   {item.count !== undefined && <span className="v4-nav-count">{item.count}</span>}
+                  {item.nba !== undefined && item.nba > 0 && (
+                    <span
+                      className="sidebar-badge"
+                      role="status"
+                      aria-label={`${item.nba} рекомендованных действий по портфелю`}
+                      title={`${item.nba} рекомендованных действий по портфелю`}
+                    >
+                      {item.nba}
+                    </span>
+                  )}
                   {item.badge !== undefined && item.badge > 0 && (
                     <span className="v4-nav-badge">{item.badge}</span>
                   )}

@@ -100,6 +100,17 @@ function readCachedEnvelope(): { actions: NbaResult["actions"]; weekStartMs: num
   }
 }
 
+/**
+ * Read-only count of cached portfolio NBA actions for the sidebar badge
+ * (Epic-010 Task-07, #349, FR-10). Returns null when there is no usable
+ * cache — deliberately distinct from 0 so the badge stays hidden rather than
+ * rendering «0». Never triggers a compute / Claude call.
+ */
+export function readPortfolioNbaCount(): number | null {
+  const env = readCachedEnvelope();
+  return env === null ? null : env.actions.length;
+}
+
 export interface UsePortfolioNbaState {
   /** Top-5 portfolio actions (empty array = clean / no cache). */
   actions: NbaResult["actions"];
