@@ -1,4 +1,5 @@
 import type { ProjectNorm } from "../../../utils/driftNorm";
+import { SEVERITY_COLORS, DRIFT_WARN_MULT, DRIFT_STALE_MULT } from "./constants";
 
 /**
  * DriftDots — four colored dots showing how stale each project signal is
@@ -42,12 +43,12 @@ interface DotStyle {
   word: string;
 }
 
-// Tints carry their own readable color (not a theme var) so the dot is
-// legible on both light and dark Scorecards; the glyph adds a non-color cue.
+// Shared severity palette (see ./constants) so dot color can't drift apart
+// from ProjectScorecard's grade tone; the glyph adds a non-color cue.
 const DOT_STYLE: Record<DriftSeverity, DotStyle> = {
-  ok: { bg: "#16a34a", glyph: "●", word: "в норме" },
-  warn: { bg: "#ca8a04", glyph: "◐", word: "отставание" },
-  stale: { bg: "#dc2626", glyph: "▲", word: "просрочено" },
+  ok: { bg: SEVERITY_COLORS.ok, glyph: "●", word: "в норме" },
+  warn: { bg: SEVERITY_COLORS.warn, glyph: "◐", word: "отставание" },
+  stale: { bg: SEVERITY_COLORS.danger, glyph: "▲", word: "просрочено" },
   unknown: { bg: "var(--v4-ink-300, #C5CCDA)", glyph: "○", word: "нет данных" },
 };
 
@@ -67,8 +68,8 @@ function classifyDrift(
   if (norm === undefined || !Number.isFinite(norm) || norm <= 0) {
     return "unknown";
   }
-  if (days >= norm * 3) return "stale";
-  if (days >= norm * 1.5) return "warn";
+  if (days >= norm * DRIFT_STALE_MULT) return "stale";
+  if (days >= norm * DRIFT_WARN_MULT) return "warn";
   return "ok";
 }
 
