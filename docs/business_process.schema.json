@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://makeit/dashboard/business_process.schema.json",
+  "title": "MakeIT business_process.yaml",
+  "description": "Canonical, layout-free business-process contract. Lives at docs/business_process.yaml in each project repo. Produced by the makeit-bizproc Claude Code skill, consumed (parsed + rendered) by the dashboard ProcessesTab. Pixel geometry is intentionally NOT part of the schema — the diagram derives all coordinates deterministically from `lane` + `col`.",
+  "type": "object",
+  "required": ["version", "project", "processes"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Schema version. Bump only on breaking changes."
+    },
+    "project": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repo / project name this file describes."
+    },
+    "processes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/process" }
+    }
+  },
+  "definitions": {
+    "process": {
+      "type": "object",
+      "required": ["id", "name", "lanes", "nodes", "flows"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "description": "Stable kebab-case id, unique within the file."
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "lanes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/lane" }
+        },
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/node" }
+        },
+        "flows": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/flow" }
+        }
+      }
+    },
+    "lane": {
+      "type": "object",
+      "required": ["id", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]*$",
+          "description": "Stable id; referenced by node.lane."
+        },
+        "name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "type", "lane", "col", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable id, unique within the process; referenced by flow.from/to."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["start", "end", "task", "gateway"],
+          "description": "start/end = events (circles), task = activity (rounded rect), gateway = exclusive decision (diamond)."
+        },
+        "lane": {
+          "type": "string",
+          "description": "Must match a lane.id within the same process."
+        },
+        "col": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Left→right column index. Drives deterministic layout; multiple nodes may share a col across different lanes."
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "sub": {
+          "type": "string",
+          "description": "Optional service/system/module the step is automated by (e.g. qc_workflow). Renders the task with the system/artifact style."
+        }
+      }
+    },
+    "flow": {
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "Source node id (must exist in the same process)."
+        },
+        "to": {
+          "type": "string",
+          "description": "Target node id (must exist in the same process)."
+        },
+        "label": {
+          "type": "string",
+          "description": "Branch annotation, e.g. a gateway condition (\"да\" / \"> 5%\" / \"повтор\")."
+        }
+      }
+    }
+  }
+}

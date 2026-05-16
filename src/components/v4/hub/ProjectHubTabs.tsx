@@ -19,6 +19,7 @@ const TABS: readonly TabSpec[] = [
   { id: "activity", label: "Activity" },
   { id: "decisions", label: "Decisions & Risks" },
   { id: "delivery", label: "Delivery" },
+  { id: "processes", label: "Бизнес-процессы" },
 ] as const;
 
 /**

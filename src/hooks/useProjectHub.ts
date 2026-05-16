@@ -926,6 +926,7 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
       health: loading,
       activity: false,
       decisions: false,
+      processes: false,
       delivery:
         doraSection.loading ||
         digestSection.loading ||

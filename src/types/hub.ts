@@ -7,7 +7,13 @@ import type { ProjectData } from "./index";
 import type { HealthReport } from "./health";
 import type { DoraMetricsResult } from "../utils/doraCalculator";
 
-export type HubTab = "overview" | "health" | "activity" | "decisions" | "delivery";
+export type HubTab =
+  | "overview"
+  | "health"
+  | "activity"
+  | "decisions"
+  | "delivery"
+  | "processes";
 
 /**
  * Anchored sections inside the Decisions & Risks tab, in render order.

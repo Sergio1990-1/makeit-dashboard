@@ -1,0 +1,82 @@
+# Golden example for the docs/business_process.yaml contract.
+#
+# This is the reference the future `makeit-bizproc` Claude Code skill is
+# benchmarked against, and the byte-equivalent of EXAMPLE_BUSINESS_PROCESS
+# in src/utils/bizProcessParser.ts (the in-app "показать пример" preview).
+# Validate against docs/business_process.schema.json.
+#
+# Contract rules worth remembering:
+#   - layout-free: NO pixel coords. `col` (0-based) + `lane` fully
+#     determine placement; the dashboard derives all geometry.
+#   - node.lane MUST reference a lane.id in the same process.
+#   - flow.from / flow.to MUST reference node.id in the same process.
+#   - node.type: start | end (events) · task (activity) · gateway (decision).
+#   - node.sub: optional — the service/module that automates the step;
+#     renders with the system/artifact (dashed purple) style.
+
+version: 1
+project: example
+
+processes:
+  - id: order-fulfillment
+    name: Выполнение заказа
+    lanes:
+      - { id: client, name: Клиент }
+      - { id: manager, name: Менеджер }
+      - { id: prod, name: Производство }
+      - { id: qc, name: ОТК }
+      - { id: wh, name: Склад / Отгрузка }
+    nodes:
+      - { id: s,        type: start,   lane: client,  col: 0,  name: Заявка на пошив }
+      - { id: order,    type: task,    lane: manager, col: 1,  name: Оформить заказ, sub: order_service }
+      - { id: gStock,   type: gateway, lane: manager, col: 2,  name: Ткань на складе? }
+      - { id: reserve,  type: task,    lane: wh,      col: 3,  name: Зарезервировать ткань }
+      - { id: purchase, type: task,    lane: manager, col: 3,  name: Закупка у поставщика, sub: purchase_order }
+      - { id: plan,     type: task,    lane: prod,    col: 4,  name: План раскроя }
+      - { id: cut,      type: task,    lane: prod,    col: 5,  name: Раскрой }
+      - { id: sew,      type: task,    lane: prod,    col: 6,  name: Пошив }
+      - { id: qcCheck,  type: task,    lane: qc,      col: 7,  name: Контроль качества, sub: qc_workflow }
+      - { id: gQc,      type: gateway, lane: qc,      col: 8,  name: Брак? }
+      - { id: ship,     type: task,    lane: wh,      col: 9,  name: Упаковка и отгрузка }
+      - { id: e,        type: end,     lane: client,  col: 10, name: Заказ выдан }
+    flows:
+      - { from: s,        to: order }
+      - { from: order,    to: gStock }
+      - { from: gStock,   to: reserve,  label: да }
+      - { from: gStock,   to: purchase, label: нет }
+      - { from: reserve,  to: plan }
+      - { from: purchase, to: plan }
+      - { from: plan,     to: cut }
+      - { from: cut,      to: sew }
+      - { from: sew,      to: qcCheck }
+      - { from: qcCheck,  to: gQc }
+      - { from: gQc,      to: sew,  label: да · переделка }
+      - { from: gQc,      to: ship, label: нет }
+      - { from: ship,     to: e }
+
+  - id: qc-workflow
+    name: Цикл контроля качества
+    lanes:
+      - { id: prod, name: Производство }
+      - { id: qc, name: Контролёр ОТК }
+      - { id: mgr, name: Начальник цеха }
+    nodes:
+      - { id: s,      type: start,   lane: prod, col: 0, name: Партия готова }
+      - { id: sample, type: task,    lane: qc,   col: 1, name: Отбор выборки }
+      - { id: insp,   type: task,    lane: qc,   col: 2, name: Инспекция по чек-листу, sub: qc_checklist }
+      - { id: gDef,   type: gateway, lane: qc,   col: 3, name: Дефекты? }
+      - { id: grade,  type: gateway, lane: mgr,  col: 4, name: Уровень брака }
+      - { id: rework, type: task,    lane: prod, col: 5, name: Доработка }
+      - { id: reject, type: task,    lane: mgr,  col: 5, name: Списание партии }
+      - { id: pass,   type: task,    lane: qc,   col: 5, name: Акт приёмки }
+      - { id: e,      type: end,     lane: qc,   col: 6, name: Партия принята }
+    flows:
+      - { from: s,      to: sample }
+      - { from: sample, to: insp }
+      - { from: insp,   to: gDef }
+      - { from: gDef,   to: pass,   label: нет }
+      - { from: gDef,   to: grade,  label: да }
+      - { from: grade,  to: rework, label: "≤ 5%" }
+      - { from: grade,  to: reject, label: "> 5%" }
+      - { from: rework, to: insp,   label: повтор }
+      - { from: pass,   to: e }

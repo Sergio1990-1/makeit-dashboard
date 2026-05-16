@@ -15,6 +15,7 @@ const HealthTab = lazy(() => import("./tabs/HealthTab"));
 const ActivityTab = lazy(() => import("./tabs/ActivityTab"));
 const DecisionsRisksTab = lazy(() => import("./tabs/DecisionsRisksTab"));
 const DeliveryTab = lazy(() => import("./tabs/DeliveryTab"));
+const ProcessesTab = lazy(() => import("./tabs/ProcessesTab"));
 
 interface Props {
   repo: string;
@@ -28,6 +29,7 @@ const HUB_TABS: readonly HubTab[] = [
   "activity",
   "decisions",
   "delivery",
+  "processes",
 ] as const;
 
 function isHubTab(value: string | null): value is HubTab {
@@ -236,6 +238,7 @@ export function ProjectHubPage({ repo, project, onBackToList }: Props) {
             />
           )}
           {activeTab === "delivery" && <DeliveryTab repo={repo} data={data} />}
+          {activeTab === "processes" && <ProcessesTab repo={repo} />}
         </Suspense>
       </div>
     </div>
