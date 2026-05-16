@@ -4,6 +4,109 @@
  */
 
 export interface paths {
+    "/discovery/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Discovery List
+         * @description List all discovery jobs, optionally filtered by project.
+         */
+        get: operations["discovery_list_discovery_list_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/discovery/result/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Discovery Result
+         * @description Get full result of a completed discovery job.
+         */
+        get: operations["discovery_result_discovery_result__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/discovery/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Discovery Start
+         * @description Launch a discovery agent for a project.
+         *
+         *     Starts background feature gap analysis via Claude CLI.
+         *     Returns a job_id for tracking progress.
+         */
+        post: operations["discovery_start_discovery_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/discovery/status/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Discovery Status
+         * @description Get current status of a discovery job.
+         */
+        get: operations["discovery_status_discovery_status__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/discovery/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Discovery
+         * @description Delete a discovery job and its files from disk.
+         */
+        delete: operations["delete_discovery_discovery__job_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -53,100 +156,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/settings/keys": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Settings List Keys */
-        get: operations["settings_list_keys_settings_keys_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Settings Get All */
-        get: operations["settings_get_all_settings_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/settings/{key}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Settings Get */
-        get: operations["settings_get_settings__key__get"];
-        /** Settings Put */
-        put: operations["settings_put_settings__key__put"];
-        post?: never;
-        /** Settings Delete */
-        delete: operations["settings_delete_settings__key__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/start": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Start Pipeline
-         * @description Start the pipeline in the background.
-         */
-        post: operations["start_pipeline_pipeline_start_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/stop": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Stop Pipeline
-         * @description Gracefully stop the running pipeline after current tasks finish.
-         */
-        post: operations["stop_pipeline_pipeline_stop_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/status": {
+    "/issue/{repo}/{issue_number}/context": {
         parameters: {
             query?: never;
             header?: never;
@@ -154,155 +164,21 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Status
-         * @description Return current pipeline status.
-         */
-        get: operations["get_status_pipeline_status_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/limits": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Limits
-         * @description Return current rate-limiter status (Claude + GitHub).
+         * Get Issue Context
+         * @description Return the full :class:`IssueContext` JSON for ``{repo}#{issue_number}``.
          *
-         *     Phase-0.7: GitHub rate-limit buckets are added so the dashboard can
-         *     warn when GraphQL/REST is low — pre-batch ``run_batch`` aborts when
-         *     GraphQL drops below 500 (see :func:`batch_coordinator._check_graphql_headroom`).
-         *     Without this surface the dashboard could only show "running=False"
-         *     with no actionable reason.
-         */
-        get: operations["get_limits_pipeline_limits_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/mcp/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Mcp Health
-         * @description Return the MCP server health (epic-026 Task-09).
+         *     ``repo`` is captured via ``{repo:path}`` so values containing a
+         *     forward slash (e.g. ``Sergio1990-1/makeit-pipeline``) route
+         *     correctly.  The captured value is validated against a strict
+         *     ``owner/name`` pattern before being passed to the store to
+         *     prevent path-traversal attacks via ``..`` segments.
          *
-         *     Non-blocking (INV-E26-3): reads ``pipeline_state.mcp_health_snapshot``
-         *     which the pipeline populates whenever it runs an MCP health probe
-         *     during a batch.  If no snapshot is cached yet (fresh process /
-         *     pipeline not running) we fall back to introspecting the registered
-         *     FastMCP instance synchronously — listing tools is an in-process dict
-         *     lookup, so it never shells out.
-         *
-         *     Status mapping:
-         *       * ``unavailable`` — MCP disabled in config, OR ≥3 consecutive probe
-         *         failures (``_MCP_UNAVAILABLE_FAILURE_THRESHOLD``),
-         *         OR cached snapshot reports no tools.
-         *       * ``degraded`` — soft-disable active / 1-2 consecutive probe
-         *         failures / probe partially succeeded.
-         *       * ``healthy`` — last probe returned ACK and ≥1 tool registered.
+         *     Returns 404 when no context is stored.  The detail message
+         *     contains only the requested ``repo`` / ``issue_number`` — no
+         *     internal paths — so a probe cannot use the response to map the
+         *     contexts directory layout.
          */
-        get: operations["get_mcp_health_pipeline_mcp_health_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/classify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Classify Issues
-         * @description Classify issues with SSE progress updates.
-         *
-         *     Streams newline-delimited JSON events:
-         *       {"type":"progress","done":3,"total":23,"current":"#450 → assisted"}
-         *       {"type":"done","classified":23,"results":[...]}
-         */
-        post: operations["classify_issues_pipeline_classify_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/stats": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Stats
-         * @description Return agent vs manual completion stats.
-         */
-        get: operations["get_stats_pipeline_stats_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/projects/{owner}/{repo}/analytics": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Project Analytics
-         * @description Return project analytics: breakdowns, velocity, burndown, ETA.
-         */
-        get: operations["get_project_analytics_pipeline_projects__owner___repo__analytics_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/projects": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Projects
-         * @description Return all enabled projects with summary analytics.
-         */
-        get: operations["list_projects_pipeline_projects_get"];
+        get: operations["get_issue_context_issue__repo___issue_number__context_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -347,6 +223,162 @@ export interface paths {
          *       path component).
          */
         get: operations["list_admin_bypass_merges_pipeline_admin_bypass_merges_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pipeline/classify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Classify Issues
+         * @description Classify issues with SSE progress updates.
+         *
+         *     Streams newline-delimited JSON events:
+         *       {"type":"progress","done":3,"total":23,"current":"#450 → assisted"}
+         *       {"type":"done","classified":23,"results":[...]}
+         */
+        post: operations["classify_issues_pipeline_classify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pipeline/debate/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Debate List
+         * @description List all debates, optionally filtered by project.
+         */
+        get: operations["debate_list_pipeline_debate_list_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pipeline/debate/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Debate Start
+         * @description Launch a multi-agent debate.
+         *
+         *     Starts a background debate via the DebateEngine.
+         *     Returns an id for tracking progress.
+         */
+        post: operations["debate_start_pipeline_debate_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pipeline/debate/{debate_id}/message": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Debate User Message
+         * @description Inject a user message into a running debate.
+         *
+         *     The message is delivered to all participants in the next round.
+         *     Only allowed when the debate status is 'running'.
+         */
+        post: operations["debate_user_message_pipeline_debate__debate_id__message_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pipeline/debate/{debate_id}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Debate Result
+         * @description Get full result of a completed debate.
+         */
+        get: operations["debate_result_pipeline_debate__debate_id__result_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pipeline/debate/{debate_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Debate Status
+         * @description Get current status of a debate.
+         */
+        get: operations["debate_status_pipeline_debate__debate_id__status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pipeline/limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Limits
+         * @description Return current rate-limiter status (Claude + GitHub).
+         *
+         *     Phase-0.7: GitHub rate-limit buckets are added so the dashboard can
+         *     warn when GraphQL/REST is low — pre-batch ``run_batch`` aborts when
+         *     GraphQL drops below 500 (see :func:`batch_coordinator._check_graphql_headroom`).
+         *     Without this surface the dashboard could only show "running=False"
+         *     with no actionable reason.
+         */
+        get: operations["get_limits_pipeline_limits_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -463,7 +495,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/transcript/upload": {
+    "/pipeline/mcp/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Mcp Health
+         * @description Return the MCP server health (epic-026 Task-09).
+         *
+         *     Non-blocking (INV-E26-3): reads ``pipeline_state.mcp_health_snapshot``
+         *     which the pipeline populates whenever it runs an MCP health probe
+         *     during a batch.  If no snapshot is cached yet (fresh process /
+         *     pipeline not running) we fall back to introspecting the registered
+         *     FastMCP instance synchronously — listing tools is an in-process dict
+         *     lookup, so it never shells out.
+         *
+         *     Status mapping:
+         *       * ``unavailable`` — MCP disabled in config, OR ≥3 consecutive probe
+         *         failures (``_MCP_UNAVAILABLE_FAILURE_THRESHOLD``),
+         *         OR cached snapshot reports no tools.
+         *       * ``degraded`` — soft-disable active / 1-2 consecutive probe
+         *         failures / probe partially succeeded.
+         *       * ``healthy`` — last probe returned ACK and ≥1 tool registered.
+         */
+        get: operations["get_mcp_health_pipeline_mcp_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pipeline/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Projects
+         * @description Return all enabled projects with summary analytics.
+         */
+        get: operations["list_projects_pipeline_projects_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pipeline/projects/{owner}/{repo}/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Project Analytics
+         * @description Return project analytics: breakdowns, velocity, burndown, ETA.
+         */
+        get: operations["get_project_analytics_pipeline_projects__owner___repo__analytics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pipeline/quality/bulk-reject": {
         parameters: {
             query?: never;
             header?: never;
@@ -473,189 +580,39 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Upload Transcript
-         * @description Upload an audio or text file for transcript processing.
+         * Tuning Bulk Reject
+         * @description Reject multiple pending changes in one call.
+         */
+        post: operations["tuning_bulk_reject_pipeline_quality_bulk_reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pipeline/quality/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Quality Config Get
+         * @description Return the live QualityConfig + cooldown/apply state.
+         */
+        get: operations["quality_config_get_pipeline_quality_config_get"];
+        put?: never;
+        /**
+         * Quality Config Update
+         * @description Update mutable QualityConfig fields via in-memory override.
          *
-         *     Saves the file to disk and starts background processing.
-         *     Returns a job_id for tracking progress.
-         *
-         *     Parameters
-         *     ----------
-         *     resume:
-         *         Optional job_id to resume a previously failed/interrupted job.
-         *         When provided, the file is ignored and the existing job is restarted.
-         *     language:
-         *         Language hint for transcription (used in content hash dedup).
+         *     Writes the non-None fields into ``_runtime_quality_overrides``,
+         *     which is applied in every subsequent ``load_config()`` call.
+         *     Not persisted across API restarts — edit ``~/.makeit-pipeline/config.yaml``
+         *     manually for permanent changes.
          */
-        post: operations["upload_transcript_transcript_upload_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/transcript/status/{job_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Transcript Status
-         * @description Get current status of a transcript processing job.
-         */
-        get: operations["transcript_status_transcript_status__job_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/transcript/result/{job_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Transcript Result
-         * @description Get full result of a completed transcript job.
-         */
-        get: operations["transcript_result_transcript_result__job_id__get"];
-        /**
-         * Update Transcript Brief
-         * @description Overwrite BRIEF.md for a completed transcript job.
-         */
-        put: operations["update_transcript_brief_transcript_result__job_id__put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/transcript/debug/{job_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Transcript Debug
-         * @description Get debug info for a transcript job.
-         *
-         *     Traceback is only returned when ``?include_traceback=true`` is
-         *     passed explicitly — avoids leaking internal paths via the
-         *     nginx-proxied VPS endpoint by default.
-         */
-        get: operations["transcript_debug_transcript_debug__job_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/transcript/list": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Transcript List
-         * @description List all transcript jobs, optionally filtered by project.
-         */
-        get: operations["transcript_list_transcript_list_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/transcript/{job_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Delete Transcript
-         * @description Delete a transcript job and its files from disk.
-         */
-        delete: operations["delete_transcript_transcript__job_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/quality/snapshot": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Quality Snapshot
-         * @description Return quality snapshot for the current week.
-         */
-        get: operations["quality_snapshot_pipeline_quality_snapshot_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/quality/trends": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Quality Trends
-         * @description Return weekly snapshots with trend analysis.
-         */
-        get: operations["quality_trends_pipeline_quality_trends_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/quality/findings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Quality Findings
-         * @description Return finding distribution by category.
-         */
-        get: operations["quality_findings_pipeline_quality_findings_get"];
-        put?: never;
-        post?: never;
+        post: operations["quality_config_update_pipeline_quality_config_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -682,7 +639,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/pipeline/timeline/{repo}/{issue_number}": {
+    "/pipeline/quality/findings": {
         parameters: {
             query?: never;
             header?: never;
@@ -690,23 +647,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Issue Timeline
-         * @description Return structured timeline for a specific issue.
-         *
-         *     As of epic-027 Task-05, timeline events are persisted inside
-         *     :attr:`IssueContext.phase_history` rather than in a JSONL file.  This
-         *     endpoint loads the context via :class:`IssueContextStore` and maps
-         *     each :class:`PhaseHistoryEntry` through
-         *     :func:`timeline_logger._entry_to_legacy_dict` so the external
-         *     response shape is unchanged.
-         *
-         *     ``repo`` is captured via ``{repo:path}`` so values containing a
-         *     forward slash (e.g. ``Sergio1990-1/Sewing-ERP``) route correctly.
-         *     The captured value is validated against the strict ``owner/name``
-         *     pattern defined in ``_CONTEXT_REPO_RE`` to prevent path-traversal
-         *     attacks via ``..`` segments.
+         * Quality Findings
+         * @description Return finding distribution by category.
          */
-        get: operations["issue_timeline_pipeline_timeline__repo___issue_number__get"];
+        get: operations["quality_findings_pipeline_quality_findings_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -738,7 +682,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/issue/{repo}/{issue_number}/context": {
+    "/pipeline/quality/lessons/{project_slug}": {
         parameters: {
             query?: never;
             header?: never;
@@ -746,21 +690,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Issue Context
-         * @description Return the full :class:`IssueContext` JSON for ``{repo}#{issue_number}``.
-         *
-         *     ``repo`` is captured via ``{repo:path}`` so values containing a
-         *     forward slash (e.g. ``Sergio1990-1/makeit-pipeline``) route
-         *     correctly.  The captured value is validated against a strict
-         *     ``owner/name`` pattern before being passed to the store to
-         *     prevent path-traversal attacks via ``..`` segments.
-         *
-         *     Returns 404 when no context is stored.  The detail message
-         *     contains only the requested ``repo`` / ``issue_number`` — no
-         *     internal paths — so a probe cannot use the response to map the
-         *     contexts directory layout.
+         * Quality Lessons
+         * @description Return lessons-retro.md / lessons-review.md / lessons-learned.md
+         *     for one enabled project. ``project_slug`` is the repo short name
+         *     (e.g. ``moliyakg``, ``mankassa-app``).
          */
-        get: operations["get_issue_context_issue__repo___issue_number__context_get"];
+        get: operations["quality_lessons_pipeline_quality_lessons__project_slug__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -818,6 +753,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/pipeline/quality/pending/{change_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Tuning Preview
+         * @description Dry-run preview: resolve targets, check dedup, generate diff.
+         *
+         *     Never mutates target files. Always safe to call. Mirrors the
+         *     real ``_apply_change`` pipeline (scope → prune → rotate-check →
+         *     dedup → append) using ``_compute_pruned_text`` and
+         *     ``_is_duplicate_in_lines`` so the diff the dashboard renders
+         *     matches what would actually be written on apply.
+         */
+        post: operations["tuning_preview_pipeline_quality_pending__change_id__preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/pipeline/quality/pending/{change_id}/reject": {
         parameters: {
             query?: never;
@@ -858,78 +819,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/pipeline/quality/tuning-history": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Tuning History
-         * @description Return history of applied/rejected/rolled-back tuning changes.
-         */
-        get: operations["tuning_history_pipeline_quality_tuning_history_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/quality/config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Quality Config Get
-         * @description Return the live QualityConfig + cooldown/apply state.
-         */
-        get: operations["quality_config_get_pipeline_quality_config_get"];
-        put?: never;
-        /**
-         * Quality Config Update
-         * @description Update mutable QualityConfig fields via in-memory override.
-         *
-         *     Writes the non-None fields into ``_runtime_quality_overrides``,
-         *     which is applied in every subsequent ``load_config()`` call.
-         *     Not persisted across API restarts — edit ``~/.makeit-pipeline/config.yaml``
-         *     manually for permanent changes.
-         */
-        post: operations["quality_config_update_pipeline_quality_config_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/quality/lessons/{project_slug}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Quality Lessons
-         * @description Return lessons-retro.md / lessons-review.md / lessons-learned.md
-         *     for one enabled project. ``project_slug`` is the repo short name
-         *     (e.g. ``moliyakg``, ``mankassa-app``).
-         */
-        get: operations["quality_lessons_pipeline_quality_lessons__project_slug__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/quality/pending/{change_id}/preview": {
+    "/pipeline/quality/retro/run": {
         parameters: {
             query?: never;
             header?: never;
@@ -939,36 +829,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Tuning Preview
-         * @description Dry-run preview: resolve targets, check dedup, generate diff.
-         *
-         *     Never mutates target files. Always safe to call. Mirrors the
-         *     real ``_apply_change`` pipeline (scope → prune → rotate-check →
-         *     dedup → append) using ``_compute_pruned_text`` and
-         *     ``_is_duplicate_in_lines`` so the diff the dashboard renders
-         *     matches what would actually be written on apply.
+         * Retro Run
+         * @description Trigger a manual retrospective in the background.
          */
-        post: operations["tuning_preview_pipeline_quality_pending__change_id__preview_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/quality/bulk-reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Tuning Bulk Reject
-         * @description Reject multiple pending changes in one call.
-         */
-        post: operations["tuning_bulk_reject_pipeline_quality_bulk_reject_post"];
+        post: operations["retro_run_pipeline_quality_retro_run_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1015,50 +879,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/pipeline/quality/retro/run": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Retro Run
-         * @description Trigger a manual retrospective in the background.
-         */
-        post: operations["retro_run_pipeline_quality_retro_run_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/research/start": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Research Start
-         * @description Launch a research agent for a project.
-         *
-         *     Starts background market & competitor research via Claude CLI.
-         *     Returns a job_id for tracking progress.
-         */
-        post: operations["research_start_research_start_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/research/status/{job_id}": {
+    "/pipeline/quality/snapshot": {
         parameters: {
             query?: never;
             header?: never;
@@ -1066,10 +887,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Research Status
-         * @description Get current status of a research job.
+         * Quality Snapshot
+         * @description Return quality snapshot for the current week.
          */
-        get: operations["research_status_research_status__job_id__get"];
+        get: operations["quality_snapshot_pipeline_quality_snapshot_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1078,7 +899,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/research/result/{job_id}": {
+    "/pipeline/quality/trends": {
         parameters: {
             query?: never;
             header?: never;
@@ -1086,10 +907,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Research Result
-         * @description Get full result of a completed research job.
+         * Quality Trends
+         * @description Return weekly snapshots with trend analysis.
          */
-        get: operations["research_result_research_result__job_id__get"];
+        get: operations["quality_trends_pipeline_quality_trends_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1098,7 +919,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/research/list": {
+    "/pipeline/quality/tuning-history": {
         parameters: {
             query?: never;
             header?: never;
@@ -1106,136 +927,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Research List
-         * @description List all research jobs, optionally filtered by project.
+         * Tuning History
+         * @description Return history of applied/rejected/rolled-back tuning changes.
          */
-        get: operations["research_list_research_list_get"];
+        get: operations["tuning_history_pipeline_quality_tuning_history_get"];
         put?: never;
         post?: never;
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/research/{job_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Delete Research
-         * @description Delete a research job and its files from disk.
-         */
-        delete: operations["delete_research_research__job_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/discovery/start": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Discovery Start
-         * @description Launch a discovery agent for a project.
-         *
-         *     Starts background feature gap analysis via Claude CLI.
-         *     Returns a job_id for tracking progress.
-         */
-        post: operations["discovery_start_discovery_start_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/discovery/status/{job_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Discovery Status
-         * @description Get current status of a discovery job.
-         */
-        get: operations["discovery_status_discovery_status__job_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/discovery/result/{job_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Discovery Result
-         * @description Get full result of a completed discovery job.
-         */
-        get: operations["discovery_result_discovery_result__job_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/discovery/list": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Discovery List
-         * @description List all discovery jobs, optionally filtered by project.
-         */
-        get: operations["discovery_list_discovery_list_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/discovery/{job_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Delete Discovery
-         * @description Delete a discovery job and its files from disk.
-         */
-        delete: operations["delete_discovery_discovery__job_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1317,7 +1015,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/pipeline/debate/start": {
+    "/pipeline/start": {
         parameters: {
             query?: never;
             header?: never;
@@ -1327,20 +1025,17 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Debate Start
-         * @description Launch a multi-agent debate.
-         *
-         *     Starts a background debate via the DebateEngine.
-         *     Returns an id for tracking progress.
+         * Start Pipeline
+         * @description Start the pipeline in the background.
          */
-        post: operations["debate_start_pipeline_debate_start_post"];
+        post: operations["start_pipeline_pipeline_start_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/pipeline/debate/{debate_id}/status": {
+    "/pipeline/stats": {
         parameters: {
             query?: never;
             header?: never;
@@ -1348,10 +1043,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Debate Status
-         * @description Get current status of a debate.
+         * Get Stats
+         * @description Return agent vs manual completion stats.
          */
-        get: operations["debate_status_pipeline_debate__debate_id__status_get"];
+        get: operations["get_stats_pipeline_stats_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1360,7 +1055,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/pipeline/debate/{debate_id}/result": {
+    "/pipeline/status": {
         parameters: {
             query?: never;
             header?: never;
@@ -1368,10 +1063,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Debate Result
-         * @description Get full result of a completed debate.
+         * Get Status
+         * @description Return current pipeline status.
          */
-        get: operations["debate_result_pipeline_debate__debate_id__result_get"];
+        get: operations["get_status_pipeline_status_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1380,27 +1075,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/pipeline/debate/list": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Debate List
-         * @description List all debates, optionally filtered by project.
-         */
-        get: operations["debate_list_pipeline_debate_list_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/pipeline/debate/{debate_id}/message": {
+    "/pipeline/stop": {
         parameters: {
             query?: never;
             header?: never;
@@ -1410,14 +1085,339 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Debate User Message
-         * @description Inject a user message into a running debate.
-         *
-         *     The message is delivered to all participants in the next round.
-         *     Only allowed when the debate status is 'running'.
+         * Stop Pipeline
+         * @description Gracefully stop the running pipeline after current tasks finish.
          */
-        post: operations["debate_user_message_pipeline_debate__debate_id__message_post"];
+        post: operations["stop_pipeline_pipeline_stop_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pipeline/timeline/{repo}/{issue_number}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Issue Timeline
+         * @description Return structured timeline for a specific issue.
+         *
+         *     As of epic-027 Task-05, timeline events are persisted inside
+         *     :attr:`IssueContext.phase_history` rather than in a JSONL file.  This
+         *     endpoint loads the context via :class:`IssueContextStore` and maps
+         *     each :class:`PhaseHistoryEntry` through
+         *     :func:`timeline_logger._entry_to_legacy_dict` so the external
+         *     response shape is unchanged.
+         *
+         *     ``repo`` is captured via ``{repo:path}`` so values containing a
+         *     forward slash (e.g. ``Sergio1990-1/Sewing-ERP``) route correctly.
+         *     The captured value is validated against the strict ``owner/name``
+         *     pattern defined in ``_CONTEXT_REPO_RE`` to prevent path-traversal
+         *     attacks via ``..`` segments.
+         */
+        get: operations["issue_timeline_pipeline_timeline__repo___issue_number__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/research/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Research List
+         * @description List all research jobs, optionally filtered by project.
+         */
+        get: operations["research_list_research_list_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/research/result/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Research Result
+         * @description Get full result of a completed research job.
+         */
+        get: operations["research_result_research_result__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/research/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Research Start
+         * @description Launch a research agent for a project.
+         *
+         *     Starts background market & competitor research via Claude CLI.
+         *     Returns a job_id for tracking progress.
+         */
+        post: operations["research_start_research_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/research/status/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Research Status
+         * @description Get current status of a research job.
+         */
+        get: operations["research_status_research_status__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/research/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Research
+         * @description Delete a research job and its files from disk.
+         */
+        delete: operations["delete_research_research__job_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Settings Get All */
+        get: operations["settings_get_all_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Settings List Keys */
+        get: operations["settings_list_keys_settings_keys_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settings/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Settings Get */
+        get: operations["settings_get_settings__key__get"];
+        /** Settings Put */
+        put: operations["settings_put_settings__key__put"];
+        post?: never;
+        /** Settings Delete */
+        delete: operations["settings_delete_settings__key__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transcript/debug/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Transcript Debug
+         * @description Get debug info for a transcript job.
+         *
+         *     Traceback is only returned when ``?include_traceback=true`` is
+         *     passed explicitly — avoids leaking internal paths via the
+         *     nginx-proxied VPS endpoint by default.
+         */
+        get: operations["transcript_debug_transcript_debug__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transcript/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Transcript List
+         * @description List all transcript jobs, optionally filtered by project.
+         */
+        get: operations["transcript_list_transcript_list_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transcript/result/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Transcript Result
+         * @description Get full result of a completed transcript job.
+         */
+        get: operations["transcript_result_transcript_result__job_id__get"];
+        /**
+         * Update Transcript Brief
+         * @description Overwrite BRIEF.md for a completed transcript job.
+         */
+        put: operations["update_transcript_brief_transcript_result__job_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transcript/status/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Transcript Status
+         * @description Get current status of a transcript processing job.
+         */
+        get: operations["transcript_status_transcript_status__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transcript/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Transcript
+         * @description Upload an audio or text file for transcript processing.
+         *
+         *     Saves the file to disk and starts background processing.
+         *     Returns a job_id for tracking progress.
+         *
+         *     Parameters
+         *     ----------
+         *     resume:
+         *         Optional job_id to resume a previously failed/interrupted job.
+         *         When provided, the file is ignored and the existing job is restarted.
+         *     language:
+         *         Language hint for transcription (used in content hash dedup).
+         */
+        post: operations["upload_transcript_transcript_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transcript/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Transcript
+         * @description Delete a transcript job and its files from disk.
+         */
+        delete: operations["delete_transcript_transcript__job_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1442,110 +1442,110 @@ export interface components {
          * @description One item in research/discovery history.
          */
         AgentListItem: {
-            /** Job Id */
-            job_id: string;
-            /** Status */
-            status: string;
-            /** Project */
-            project: string;
-            /** Created At */
-            created_at: string;
             /** Agent Type */
             agent_type: string;
+            /** Created At */
+            created_at: string;
+            /** Job Id */
+            job_id: string;
+            /** Project */
+            project: string;
+            /** Status */
+            status: string;
         };
         /**
          * AgentResultResponse
          * @description Response with full result of a research/discovery job.
          */
         AgentResultResponse: {
-            /** Job Id */
-            job_id: string;
-            /** Status */
-            status: string;
             /**
-             * Report Md
+             * Created At
              * @default
              */
-            report_md: string;
+            created_at: string;
+            /** Job Id */
+            job_id: string;
             /**
              * Project
              * @default
              */
             project: string;
             /**
-             * Created At
+             * Report Md
              * @default
              */
-            created_at: string;
+            report_md: string;
+            /** Status */
+            status: string;
         };
         /**
          * AgentStatsResponse
          * @description Response for GET /pipeline/stats.
          */
         AgentStatsResponse: {
-            /** Total Issues */
-            total_issues: number;
-            /** Closed Issues */
-            closed_issues: number;
             /** Agent Completed */
             agent_completed: number;
-            /** Manual Completed */
-            manual_completed: number;
-            complexity_breakdown?: components["schemas"]["ComplexityBreakdown"] | null;
-            /** Model Usage */
-            model_usage?: {
-                [key: string]: number;
-            } | null;
-            /** First Pass Rate */
-            first_pass_rate?: number | null;
             /** Avg Duration Seconds */
             avg_duration_seconds?: number | null;
-            /** Cost Per Task Usd */
-            cost_per_task_usd?: number | null;
             /** Avg Phase Seconds */
             avg_phase_seconds?: {
                 [key: string]: number;
             };
+            /** Closed Issues */
+            closed_issues: number;
+            complexity_breakdown?: components["schemas"]["ComplexityBreakdown"] | null;
+            /** Cost Per Task Usd */
+            cost_per_task_usd?: number | null;
+            /** First Pass Rate */
+            first_pass_rate?: number | null;
+            /** Manual Completed */
+            manual_completed: number;
+            /** Model Usage */
+            model_usage?: {
+                [key: string]: number;
+            } | null;
+            /** Total Issues */
+            total_issues: number;
         };
         /**
          * AgentStatusResponse
          * @description Response for research/discovery job status query.
          */
         AgentStatusResponse: {
-            /** Job Id */
-            job_id: string;
-            /** Status */
-            status: string;
-            /**
-             * Stage
-             * @default
-             */
-            stage: string;
-            /**
-             * Progress
-             * @default 0
-             */
-            progress: number;
-            /**
-             * Error
-             * @default
-             */
-            error: string;
-            /**
-             * Project
-             * @default
-             */
-            project: string;
             /**
              * Created At
              * @default
              */
             created_at: string;
             /**
+             * Error
+             * @default
+             */
+            error: string;
+            /** Job Id */
+            job_id: string;
+            /**
+             * Progress
+             * @default 0
+             */
+            progress: number;
+            /**
+             * Project
+             * @default
+             */
+            project: string;
+            /**
+             * Stage
+             * @default
+             */
+            stage: string;
+            /**
              * Started At
              * @default
              */
             started_at: string;
+            /** Status */
+            status: string;
         };
         /**
          * ApplyPreviewResponse
@@ -1554,54 +1554,54 @@ export interface components {
         ApplyPreviewResponse: {
             /** Change Id */
             change_id: string;
-            /** Targets */
-            targets: string[];
-            /** Scoped Projects */
-            scoped_projects?: string[] | null;
-            /**
-             * Dedup Hit
-             * @default false
-             */
-            dedup_hit: boolean;
-            /** Validation */
-            validation?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Preview Diff
-             * @default
-             */
-            preview_diff: string;
-            /**
-             * Would Rotate
-             * @default false
-             */
-            would_rotate: boolean;
             /**
              * Current Line Count
              * @default 0
              */
             current_line_count: number;
+            /**
+             * Dedup Hit
+             * @default false
+             */
+            dedup_hit: boolean;
+            /**
+             * Preview Diff
+             * @default
+             */
+            preview_diff: string;
+            /** Scoped Projects */
+            scoped_projects?: string[] | null;
+            /** Targets */
+            targets: string[];
+            /** Validation */
+            validation?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Would Rotate
+             * @default false
+             */
+            would_rotate: boolean;
         };
         /** Body_upload_transcript_transcript_upload_post */
         Body_upload_transcript_transcript_upload_post: {
-            /**
-             * Project Context
-             * @default
-             */
-            project_context: string;
-            /**
-             * Transcription Model
-             * @default fast
-             */
-            transcription_model: string;
             /**
              * Language
              * @default auto
              */
             language: string;
+            /**
+             * Project Context
+             * @default
+             */
+            project_context: string;
             /** Resume */
             resume?: string | null;
+            /**
+             * Transcription Model
+             * @default fast
+             */
+            transcription_model: string;
         };
         /**
          * BulkRejectRequest
@@ -1618,32 +1618,32 @@ export interface components {
         };
         /** BulkRejectResponse */
         BulkRejectResponse: {
-            /** Rejected */
-            rejected: string[];
             /** Failed */
             failed: {
                 [key: string]: unknown;
             }[];
+            /** Rejected */
+            rejected: string[];
         };
         /**
          * BurndownEntry
          * @description Single week entry for burndown data.
          */
         BurndownEntry: {
-            /** Week */
-            week: string;
             /** Open Count */
             open_count: number;
+            /** Week */
+            week: string;
         };
         /**
          * ClassifyRequest
          * @description Request body for POST /pipeline/classify.
          */
         ClassifyRequest: {
-            /** Project */
-            project: string;
             /** Issue Numbers */
             issue_numbers?: number[] | null;
+            /** Project */
+            project: string;
         };
         /**
          * ComplexityBreakdown
@@ -1651,15 +1651,15 @@ export interface components {
          */
         ComplexityBreakdown: {
             /**
-             * Auto
-             * @default 0
-             */
-            auto: number;
-            /**
              * Assisted
              * @default 0
              */
             assisted: number;
+            /**
+             * Auto
+             * @default 0
+             */
+            auto: number;
             /**
              * Manual
              * @default 0
@@ -1676,107 +1676,107 @@ export interface components {
          * @description Simplified KPI snapshot for the dashboard (7-day period).
          */
         DashboardQualitySnapshot: {
-            /**
-             * Period Days
-             * @default 7
-             */
-            period_days: number;
-            /** Total Issues */
-            total_issues: number;
-            /** Merged Count */
-            merged_count: number;
-            /** First Pass Rate */
-            first_pass_rate: number;
             /** Avg Duration Seconds */
             avg_duration_seconds: number;
-            /** Cost Per Task Usd */
-            cost_per_task_usd: number;
-            /** Retry Rate */
-            retry_rate: number;
-            /** Qa Pass Rate */
-            qa_pass_rate: number | null;
-            /** Top Error Classes */
-            top_error_classes: {
-                [key: string]: unknown;
-            }[];
-            /**
-             * Fail Closed Trigger Count
-             * @default 0
-             */
-            fail_closed_trigger_count: number;
-            /** Fail Closed By Reason */
-            fail_closed_by_reason?: {
-                [key: string]: number;
-            };
             /**
              * Context Corruption Count
              * @default 0
              */
             context_corruption_count: number;
-            /**
-             * Reconciler Inconsistencies
-             * @default 0
-             */
-            reconciler_inconsistencies: number;
-            /** Phase Timeout Count */
-            phase_timeout_count?: {
-                [key: string]: number;
-            };
+            /** Cost Per Task Usd */
+            cost_per_task_usd: number;
             /**
              * Debate Abort Count
              * @default 0
              */
             debate_abort_count: number;
+            /** Fail Closed By Reason */
+            fail_closed_by_reason?: {
+                [key: string]: number;
+            };
+            /**
+             * Fail Closed Trigger Count
+             * @default 0
+             */
+            fail_closed_trigger_count: number;
+            /** First Pass Rate */
+            first_pass_rate: number;
             /** Mcp Resource Use Count */
             mcp_resource_use_count?: {
                 [key: string]: number;
             };
+            /** Merged Count */
+            merged_count: number;
+            /**
+             * Period Days
+             * @default 7
+             */
+            period_days: number;
+            /** Phase Timeout Count */
+            phase_timeout_count?: {
+                [key: string]: number;
+            };
+            /** Qa Pass Rate */
+            qa_pass_rate: number | null;
+            /**
+             * Reconciler Inconsistencies
+             * @default 0
+             */
+            reconciler_inconsistencies: number;
+            /** Retry Rate */
+            retry_rate: number;
+            /** Top Error Classes */
+            top_error_classes: {
+                [key: string]: unknown;
+            }[];
+            /** Total Issues */
+            total_issues: number;
         };
         /**
          * DebateListItem
          * @description One item in debate history.
          */
         DebateListItem: {
-            /** Id */
-            id: string;
-            /** Status */
-            status: string;
-            /** Topic */
-            topic: string;
-            /** Project */
-            project: string;
-            /** Created At */
-            created_at: string;
-            /**
-             * Total Cost
-             * @default 0
-             */
-            total_cost: number;
             /**
              * Consensus Level
              * @default contested
              */
             consensus_level: string;
+            /** Created At */
+            created_at: string;
             /** Finished At */
             finished_at?: string | null;
+            /** Id */
+            id: string;
+            /** Project */
+            project: string;
+            /** Status */
+            status: string;
+            /** Topic */
+            topic: string;
+            /**
+             * Total Cost
+             * @default 0
+             */
+            total_cost: number;
         };
         /**
          * DebateMessageResponse
          * @description A single message in the debate transcript.
          */
         DebateMessageResponse: {
+            /** Content */
+            content: string;
             /** Id */
             id: string;
-            /** Sender */
-            sender: string | {
-                [key: string]: string;
-            };
             /** Round */
             round?: number | null;
             /** Round Type */
             round_type?: string | null;
-            /** Content */
-            content: string;
+            /** Sender */
+            sender: string | {
+                [key: string]: string;
+            };
             /** Timestamp */
             timestamp: string;
         };
@@ -1785,19 +1785,6 @@ export interface components {
          * @description Response for GET /pipeline/debate/{id}/result.
          */
         DebateResultResponse: {
-            /** Id */
-            id: string;
-            /** Status */
-            status: string;
-            /**
-             * Topic
-             * @default
-             */
-            topic: string;
-            /** Debate Result */
-            debate_result?: {
-                [key: string]: unknown;
-            } | null;
             /**
              * Adr Markdown
              * @default
@@ -1810,22 +1797,25 @@ export interface components {
             cost_summary: {
                 [key: string]: unknown;
             };
+            /** Debate Result */
+            debate_result?: {
+                [key: string]: unknown;
+            } | null;
+            /** Id */
+            id: string;
+            /** Status */
+            status: string;
+            /**
+             * Topic
+             * @default
+             */
+            topic: string;
         };
         /**
          * DebateStartRequest
          * @description Request body for POST /pipeline/debate/start.
          */
         DebateStartRequest: {
-            /**
-             * Topic
-             * @description Debate topic
-             */
-            topic: string;
-            /**
-             * Project
-             * @description Repo name from config.yaml
-             */
-            project?: string | null;
             /**
              * Brief
              * @description Markdown brief text
@@ -1841,29 +1831,22 @@ export interface components {
              * @description Custom participant list
              */
             participants?: components["schemas"]["Participant"][] | null;
+            /**
+             * Project
+             * @description Repo name from config.yaml
+             */
+            project?: string | null;
+            /**
+             * Topic
+             * @description Debate topic
+             */
+            topic: string;
         };
         /**
          * DebateStatusResponse
          * @description Response for GET /pipeline/debate/{id}/status.
          */
         DebateStatusResponse: {
-            /** Id */
-            id: string;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "queued" | "running" | "done" | "error";
-            /**
-             * Stage
-             * @default
-             */
-            stage: string;
-            /**
-             * Progress
-             * @default 0
-             */
-            progress: number;
             /**
              * Current Round
              * @default 0
@@ -1872,15 +1855,32 @@ export interface components {
             /** Current Speaker */
             current_speaker?: string | null;
             /**
+             * Error
+             * @default
+             */
+            error: string;
+            /** Id */
+            id: string;
+            /**
              * Messages
              * @default []
              */
             messages: components["schemas"]["DebateMessageResponse"][];
             /**
-             * Error
+             * Progress
+             * @default 0
+             */
+            progress: number;
+            /**
+             * Stage
              * @default
              */
-            error: string;
+            stage: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "done" | "error";
         };
         /**
          * DiscoveryStartRequest
@@ -1923,58 +1923,58 @@ export interface components {
          * @description A single lessons file (retro/review/legacy) for one project.
          */
         LessonsFileEntry: {
-            /** Project */
-            project: string;
-            /** Filename */
-            filename: string;
             /** Content */
             content: string;
-            /** Size Bytes */
-            size_bytes: number;
+            /** Filename */
+            filename: string;
             /** Line Count */
             line_count: number;
             /** Mtime */
             mtime?: string | null;
+            /** Project */
+            project: string;
+            /** Size Bytes */
+            size_bytes: number;
         };
         /**
          * LessonsFileResponse
          * @description All three lessons files for one project.
          */
         LessonsFileResponse: {
-            /** Project */
-            project: string;
             /** Files */
             files: components["schemas"]["LessonsFileEntry"][];
+            /** Project */
+            project: string;
         };
         /**
          * LimitsResponse
          * @description Response for GET /pipeline/limits.
          */
         LimitsResponse: {
-            /** Paused */
-            paused: boolean;
-            /** Call Count */
-            call_count: number;
-            /** Max Calls */
-            max_calls: number;
-            /** Remaining Pct */
-            remaining_pct: number;
-            /** Rate Limit Hits */
-            rate_limit_hits: number;
-            /** Session Elapsed Hours */
-            session_elapsed_hours: number;
-            /** Session Hours */
-            session_hours: number;
-            /** Session Expired */
-            session_expired: boolean;
-            /** Api Fallback Enabled */
-            api_fallback_enabled: boolean;
             /** Api Fallback Confirmed */
             api_fallback_confirmed: boolean;
+            /** Api Fallback Enabled */
+            api_fallback_enabled: boolean;
+            /** Call Count */
+            call_count: number;
             /** Github */
             github?: {
                 [key: string]: components["schemas"]["GitHubRateLimitBucket"] | null;
             } | null;
+            /** Max Calls */
+            max_calls: number;
+            /** Paused */
+            paused: boolean;
+            /** Rate Limit Hits */
+            rate_limit_hits: number;
+            /** Remaining Pct */
+            remaining_pct: number;
+            /** Session Elapsed Hours */
+            session_elapsed_hours: number;
+            /** Session Expired */
+            session_expired: boolean;
+            /** Session Hours */
+            session_hours: number;
         };
         /**
          * MCPHealthResponse
@@ -1994,6 +1994,8 @@ export interface components {
          *     freshness uniformly.
          */
         MCPHealthResponse: {
+            /** Last Probe */
+            last_probe: string;
             /**
              * Status
              * @enum {string}
@@ -2001,8 +2003,6 @@ export interface components {
             status: "healthy" | "degraded" | "unavailable";
             /** Tools Registered */
             tools_registered: number;
-            /** Last Probe */
-            last_probe: string;
         };
         /**
          * MessageResponse
@@ -2018,55 +2018,55 @@ export interface components {
          */
         Participant: {
             /**
-             * Provider
-             * @description Provider name: anthropic, openai, gemini
-             */
-            provider: string;
-            /**
              * Model
              * @description Model override (e.g. gpt-4o)
              */
             model?: string | null;
+            /**
+             * Provider
+             * @description Provider name: anthropic, openai, gemini
+             */
+            provider: string;
         };
         /**
          * PendingChangeResponse
          * @description Single pending change from AutoTuner.
          */
         PendingChangeResponse: {
-            /** Id */
-            id: string;
-            /** Created At */
-            created_at: string;
-            /** Retro Period */
-            retro_period: string;
-            /** Tier */
-            tier: number;
-            /** Target */
-            target: string;
-            /** Change Type */
-            change_type: string;
-            /** Content */
-            content: string;
-            /** Rationale */
-            rationale: string;
-            /** Confidence */
-            confidence: number;
-            /** Status */
-            status: string;
             /** Applied At */
             applied_at?: string | null;
             /** Backup Path */
             backup_path?: string | null;
+            /** Change Type */
+            change_type: string;
+            /** Confidence */
+            confidence: number;
+            /** Content */
+            content: string;
+            /** Created At */
+            created_at: string;
+            /** Id */
+            id: string;
             /** Pr Url */
             pr_url?: string | null;
+            /** Rationale */
+            rationale: string;
+            /** Rejection Reason */
+            rejection_reason?: string | null;
+            /** Retro Period */
+            retro_period: string;
             /** Scoped Projects */
             scoped_projects?: string[] | null;
+            /** Status */
+            status: string;
+            /** Target */
+            target: string;
+            /** Tier */
+            tier: number;
             /** Validation */
             validation?: {
                 [key: string]: unknown;
             } | null;
-            /** Rejection Reason */
-            rejection_reason?: string | null;
         };
         /**
          * PendingChangesListResponse
@@ -2081,22 +2081,17 @@ export interface components {
          * @description Response for GET /pipeline/status.
          */
         PipelineStatusResponse: {
-            /** Running */
-            running: boolean;
-            /** Stopping */
-            stopping: boolean;
-            /** Current Project */
-            current_project: string | null;
             /** Active Tasks */
             active_tasks: number;
-            /** Results */
-            results: {
+            /**
+             * Batch Summary
+             * @default {}
+             */
+            batch_summary: {
                 [key: string]: unknown;
-            }[];
-            /** Queue */
-            queue: {
-                [key: string]: unknown;
-            }[];
+            };
+            /** Current Project */
+            current_project: string | null;
             /**
              * Issue Stages
              * @default {}
@@ -2107,33 +2102,36 @@ export interface components {
                 }[];
             };
             /**
-             * Batch Summary
-             * @default {}
-             */
-            batch_summary: {
-                [key: string]: unknown;
-            };
-            /**
              * Last Abort Reason
              * @default {}
              */
             last_abort_reason: {
                 [key: string]: unknown;
             };
+            /** Queue */
+            queue: {
+                [key: string]: unknown;
+            }[];
+            /** Results */
+            results: {
+                [key: string]: unknown;
+            }[];
+            /** Running */
+            running: boolean;
+            /** Stopping */
+            stopping: boolean;
         };
         /**
          * ProjectAnalyticsResponse
          * @description Response for GET /pipeline/projects/{owner}/{repo}/analytics.
          */
         ProjectAnalyticsResponse: {
-            /** Total */
-            total: number;
-            /** Open */
-            open: number;
-            /** Closed */
-            closed: number;
-            /** In Progress */
-            in_progress: number;
+            /** Agent Success Rate By Complexity */
+            agent_success_rate_by_complexity: {
+                [key: string]: number | null;
+            };
+            /** Burndown */
+            burndown: components["schemas"]["BurndownEntry"][];
             /** By Complexity */
             by_complexity: {
                 [key: string]: number;
@@ -2150,36 +2148,38 @@ export interface components {
             by_workflow: {
                 [key: string]: number;
             };
-            /** Agent Success Rate By Complexity */
-            agent_success_rate_by_complexity: {
-                [key: string]: number | null;
-            };
-            /** Weekly Velocity */
-            weekly_velocity: components["schemas"]["WeeklyVelocityEntry"][];
-            /** Burndown */
-            burndown: components["schemas"]["BurndownEntry"][];
+            /** Closed */
+            closed: number;
             /** Estimated Completion Weeks */
             estimated_completion_weeks: number | null;
+            /** In Progress */
+            in_progress: number;
+            /** Open */
+            open: number;
+            /** Total */
+            total: number;
+            /** Weekly Velocity */
+            weekly_velocity: components["schemas"]["WeeklyVelocityEntry"][];
         };
         /**
          * ProjectSummary
          * @description Summary analytics for a single project in the projects list.
          */
         ProjectSummary: {
-            /** Repo */
-            repo: string;
-            /** Enabled */
-            enabled: boolean;
-            /** Total */
-            total: number;
-            /** Open */
-            open: number;
-            /** Closed */
-            closed: number;
             /** By Complexity */
             by_complexity: {
                 [key: string]: number;
             };
+            /** Closed */
+            closed: number;
+            /** Enabled */
+            enabled: boolean;
+            /** Open */
+            open: number;
+            /** Repo */
+            repo: string;
+            /** Total */
+            total: number;
         };
         /**
          * ProjectsListResponse
@@ -2198,35 +2198,12 @@ export interface components {
          *     additional round-trips.
          */
         QualityConfigResponse: {
-            /** Retro Enabled */
-            retro_enabled: boolean;
-            /**
-             * Retro Mode
-             * @enum {string}
-             */
-            retro_mode: "reporting" | "auto_apply";
+            /** Auto Apply Cooldown Hours */
+            auto_apply_cooldown_hours: number;
             /** Auto Apply Lessons */
             auto_apply_lessons: boolean;
             /** Auto Apply Min Confidence */
             auto_apply_min_confidence: number;
-            /** Auto Apply Cooldown Hours */
-            auto_apply_cooldown_hours: number;
-            /** Kpi Degradation Threshold */
-            kpi_degradation_threshold: number;
-            /** Retro Min Sample Size */
-            retro_min_sample_size: number;
-            /** Lessons Max Lines */
-            lessons_max_lines: number;
-            /** Lessons Max Bytes */
-            lessons_max_bytes: number;
-            /** Lessons Ttl Days */
-            lessons_ttl_days: number;
-            /** Validate Numeric Claims */
-            validate_numeric_claims: boolean;
-            /** Validation Tolerance */
-            validation_tolerance: number;
-            /** Last Apply At */
-            last_apply_at?: string | null;
             /**
              * Cooldown Active
              * @default false
@@ -2237,6 +2214,29 @@ export interface components {
              * @default 0
              */
             cooldown_remaining_hours: number;
+            /** Kpi Degradation Threshold */
+            kpi_degradation_threshold: number;
+            /** Last Apply At */
+            last_apply_at?: string | null;
+            /** Lessons Max Bytes */
+            lessons_max_bytes: number;
+            /** Lessons Max Lines */
+            lessons_max_lines: number;
+            /** Lessons Ttl Days */
+            lessons_ttl_days: number;
+            /** Retro Enabled */
+            retro_enabled: boolean;
+            /** Retro Min Sample Size */
+            retro_min_sample_size: number;
+            /**
+             * Retro Mode
+             * @enum {string}
+             */
+            retro_mode: "reporting" | "auto_apply";
+            /** Validate Numeric Claims */
+            validate_numeric_claims: boolean;
+            /** Validation Tolerance */
+            validation_tolerance: number;
         };
         /**
          * QualityConfigUpdateRequest
@@ -2247,22 +2247,22 @@ export interface components {
          *     ``~/.makeit-pipeline/config.yaml`` manually if needed.
          */
         QualityConfigUpdateRequest: {
-            /** Retro Mode */
-            retro_mode?: ("reporting" | "auto_apply") | null;
+            /** Auto Apply Cooldown Hours */
+            auto_apply_cooldown_hours?: number | null;
             /** Auto Apply Lessons */
             auto_apply_lessons?: boolean | null;
             /** Auto Apply Min Confidence */
             auto_apply_min_confidence?: number | null;
-            /** Auto Apply Cooldown Hours */
-            auto_apply_cooldown_hours?: number | null;
             /** Kpi Degradation Threshold */
             kpi_degradation_threshold?: number | null;
-            /** Lessons Max Lines */
-            lessons_max_lines?: number | null;
             /** Lessons Max Bytes */
             lessons_max_bytes?: number | null;
+            /** Lessons Max Lines */
+            lessons_max_lines?: number | null;
             /** Lessons Ttl Days */
             lessons_ttl_days?: number | null;
+            /** Retro Mode */
+            retro_mode?: ("reporting" | "auto_apply") | null;
             /** Validate Numeric Claims */
             validate_numeric_claims?: boolean | null;
             /** Validation Tolerance */
@@ -2273,56 +2273,59 @@ export interface components {
          * @description Error distribution by class.
          */
         QualityErrorsResponse: {
-            /** Classes */
-            classes: {
-                [key: string]: number;
-            };
             /** By Week */
             by_week: {
                 [key: string]: unknown;
             }[];
+            /** Classes */
+            classes: {
+                [key: string]: number;
+            };
         };
         /**
          * QualityFindingsResponse
          * @description Finding distribution by category.
          */
         QualityFindingsResponse: {
-            /** Categories */
-            categories: {
-                [key: string]: number;
-            };
             /** By Week */
             by_week: {
                 [key: string]: unknown;
             }[];
+            /** Categories */
+            categories: {
+                [key: string]: number;
+            };
         };
         /**
          * QualitySnapshotResponse
          * @description Single quality snapshot.
          */
         QualitySnapshotResponse: {
-            /** Period Start */
-            period_start: string;
-            /** Period End */
-            period_end: string;
-            /** Total Issues */
-            total_issues: number;
-            /** Merged Count */
-            merged_count: number;
-            /** Error Count */
-            error_count: number;
-            /** First Pass Success Rate */
-            first_pass_success_rate: number;
-            /** Retry Rate */
-            retry_rate: number;
-            /** Avg Finding Density */
-            avg_finding_density: number;
+            /**
+             * Avg Cost Per Issue
+             * @default 0
+             */
+            avg_cost_per_issue: number;
             /** Avg Duration Sec */
             avg_duration_sec: number;
+            /** Avg Finding Density */
+            avg_finding_density: number;
+            /** Error Count */
+            error_count: number;
             /** Error Recovery Rate */
             error_recovery_rate: number;
+            /** First Pass Success Rate */
+            first_pass_success_rate: number;
+            /** Merged Count */
+            merged_count: number;
+            /** Period End */
+            period_end: string;
+            /** Period Start */
+            period_start: string;
             /** Qa Pass Rate */
             qa_pass_rate: number | null;
+            /** Retry Rate */
+            retry_rate: number;
             /** Rollback Rate */
             rollback_rate: number;
             /**
@@ -2331,20 +2334,17 @@ export interface components {
              */
             success_rate: number;
             /**
-             * Avg Cost Per Issue
-             * @default 0
+             * Top Error Classes
+             * @default []
              */
-            avg_cost_per_issue: number;
+            top_error_classes: unknown[][];
             /**
              * Top Finding Categories
              * @default []
              */
             top_finding_categories: unknown[][];
-            /**
-             * Top Error Classes
-             * @default []
-             */
-            top_error_classes: unknown[][];
+            /** Total Issues */
+            total_issues: number;
         };
         /**
          * QualityTrendsResponse
@@ -2370,34 +2370,34 @@ export interface components {
          *     paths / stack traces are logged but not returned).
          */
         ReplayJobStatus: {
-            /** Job Id */
-            job_id: string;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "running" | "completed" | "failed";
-            /** Regressions Count */
-            regressions_count?: number | null;
-            /** Total */
-            total?: number | null;
-            /** Regression Rate */
-            regression_rate?: number | null;
-            /** Report Path */
-            report_path?: string | null;
+            /** Baseline Version */
+            baseline_version?: string | null;
             /** Error */
             error?: string | null;
+            /** Finished At */
+            finished_at?: string | null;
+            /** Job Id */
+            job_id: string;
+            /** Prompt Version */
+            prompt_version?: string | null;
+            /** Regression Rate */
+            regression_rate?: number | null;
+            /** Regressions Count */
+            regressions_count?: number | null;
+            /** Report Path */
+            report_path?: string | null;
             /**
              * Started At
              * Format: date-time
              */
             started_at: string;
-            /** Finished At */
-            finished_at?: string | null;
-            /** Prompt Version */
-            prompt_version?: string | null;
-            /** Baseline Version */
-            baseline_version?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "running" | "completed" | "failed";
+            /** Total */
+            total?: number | null;
         };
         /**
          * ReplayRequest
@@ -2411,23 +2411,6 @@ export interface components {
          */
         ReplayRequest: {
             /**
-             * Since
-             * @description ISO-8601 date/timestamp; historical issues older than this are excluded from the replay sample. ``None`` replays all terminal issues.
-             */
-            since?: string | null;
-            /**
-             * Sample
-             * @description Max number of historical issues to replay (hard cap: 50).
-             * @default 20
-             */
-            sample: number;
-            /**
-             * Prompt Version
-             * @description Label for the prompt revision under evaluation (reported in MD output).
-             * @default new
-             */
-            prompt_version: string;
-            /**
              * Baseline Version
              * @description Label for the baseline revision being compared against.
              * @default prod
@@ -2439,6 +2422,23 @@ export interface components {
              * @default 1
              */
             n_samples_per_issue: number;
+            /**
+             * Prompt Version
+             * @description Label for the prompt revision under evaluation (reported in MD output).
+             * @default new
+             */
+            prompt_version: string;
+            /**
+             * Sample
+             * @description Max number of historical issues to replay (hard cap: 50).
+             * @default 20
+             */
+            sample: number;
+            /**
+             * Since
+             * @description ISO-8601 date/timestamp; historical issues older than this are excluded from the replay sample. ``None`` replays all terminal issues.
+             */
+            since?: string | null;
         };
         /**
          * ResearchStartRequest
@@ -2446,15 +2446,15 @@ export interface components {
          */
         ResearchStartRequest: {
             /**
-             * Project
-             * @description Project slug, e.g. 'Sewing-ERP'
-             */
-            project: string;
-            /**
              * Product Description
              * @description What the product does
              */
             product_description: string;
+            /**
+             * Project
+             * @description Project slug, e.g. 'Sewing-ERP'
+             */
+            project: string;
             /**
              * Region
              * @description ISO country code for market context
@@ -2475,34 +2475,34 @@ export interface components {
          * @description Response from triggering a manual retrospective.
          */
         RetroRunResponse: {
-            /** Status */
-            status: string;
             /** Period */
             period: string;
+            /** Status */
+            status: string;
         };
         /**
          * RetroSummaryItem
          * @description Summary entry for the retros list endpoint.
          */
         RetroSummaryItem: {
-            /** Period */
-            period: string;
-            /** Summary */
-            summary: string;
             /** Patterns Count */
             patterns_count: number;
+            /** Period */
+            period: string;
             /** Recommendations Count */
             recommendations_count: number;
             /** Rule Changes Count */
             rule_changes_count: number;
+            /** Summary */
+            summary: string;
         };
         /**
          * StartRequest
          * @description Request body for POST /pipeline/start.
          */
         StartRequest: {
-            /** Project */
-            project?: string | null;
+            /** Complexity Filter */
+            complexity_filter?: ("auto" | "assisted" | "manual") | null;
             /**
              * Labels
              * @default []
@@ -2513,42 +2513,42 @@ export interface components {
              * @default 4
              */
             limit: number;
-            /** Complexity Filter */
-            complexity_filter?: ("auto" | "assisted" | "manual") | null;
             /** Milestone */
             milestone?: string | null;
+            /** Project */
+            project?: string | null;
         };
         /**
          * TimelineEntry
          * @description Single timeline event for an issue run.
          */
         TimelineEntry: {
-            /** Timestamp */
-            timestamp: string;
-            /** Phase */
-            phase: string;
-            /** Event */
-            event: string;
-            /** Status */
-            status?: string | null;
             /** Cost Usd */
             cost_usd?: number | null;
-            /** Duration Seconds */
-            duration_seconds?: number | null;
             /** Detail */
             detail?: string | null;
+            /** Duration Seconds */
+            duration_seconds?: number | null;
+            /** Event */
+            event: string;
+            /** Phase */
+            phase: string;
+            /** Status */
+            status?: string | null;
+            /** Timestamp */
+            timestamp: string;
         };
         /**
          * TimelineResponse
          * @description Timeline of events for a specific issue.
          */
         TimelineResponse: {
-            /** Repo */
-            repo: string;
-            /** Issue Number */
-            issue_number: number;
             /** Entries */
             entries: components["schemas"]["TimelineEntry"][];
+            /** Issue Number */
+            issue_number: number;
+            /** Repo */
+            repo: string;
         };
         /**
          * TranscriptBriefUpdateRequest
@@ -2563,33 +2563,33 @@ export interface components {
          * @description Response for job creation.
          */
         TranscriptJobResponse: {
-            /** Job Id */
-            job_id: string;
-            /** Status */
-            status: string;
             /**
              * Brief Url
              * @default
              */
             brief_url: string;
+            /** Job Id */
+            job_id: string;
+            /** Status */
+            status: string;
         };
         /**
          * TranscriptListItem
          * @description One item in transcript history.
          */
         TranscriptListItem: {
-            /** Job Id */
-            job_id: string;
-            /** Status */
-            status: string;
-            /** File Name */
-            file_name: string;
-            /** Project */
-            project: string;
             /** Created At */
             created_at: string;
+            /** File Name */
+            file_name: string;
             /** File Type */
             file_type: string;
+            /** Job Id */
+            job_id: string;
+            /** Project */
+            project: string;
+            /** Status */
+            status: string;
             /**
              * Transcription Model
              * @default fast
@@ -2601,79 +2601,114 @@ export interface components {
          * @description Response with full results.
          */
         TranscriptResultResponse: {
-            /** Job Id */
-            job_id: string;
-            /** Status */
-            status: string;
             /**
              * Brief Content
              * @default
              */
             brief_content: string;
             /**
-             * Transcript Text
-             * @default
-             */
-            transcript_text: string;
-            /**
-             * File Name
-             * @default
-             */
-            file_name: string;
-            /**
-             * Project
-             * @default
-             */
-            project: string;
-            /**
-             * Uncertain Count
-             * @default 0
-             */
-            uncertain_count: number;
-            /**
              * Contradiction Count
              * @default 0
              */
             contradiction_count: number;
-            /**
-             * Topic Count
-             * @default 0
-             */
-            topic_count: number;
             /**
              * Decision Count
              * @default 0
              */
             decision_count: number;
             /**
-             * Requirement Count
-             * @default 0
-             */
-            requirement_count: number;
-            /**
              * Duration Seconds
              * @default 0
              */
             duration_seconds: number;
             /**
-             * Speaker Count
-             * @default 0
+             * File Name
+             * @default
              */
-            speaker_count: number;
+            file_name: string;
+            /** Job Id */
+            job_id: string;
+            /**
+             * Project
+             * @default
+             */
+            project: string;
             /** Quality Report */
             quality_report?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Requirement Count
+             * @default 0
+             */
+            requirement_count: number;
+            /**
+             * Speaker Count
+             * @default 0
+             */
+            speaker_count: number;
+            /** Status */
+            status: string;
+            /**
+             * Topic Count
+             * @default 0
+             */
+            topic_count: number;
+            /**
+             * Transcript Text
+             * @default
+             */
+            transcript_text: string;
+            /**
+             * Uncertain Count
+             * @default 0
+             */
+            uncertain_count: number;
         };
         /**
          * TranscriptStatusResponse
          * @description Response for job status query.
          */
         TranscriptStatusResponse: {
+            /**
+             * Duration Seconds
+             * @default 0
+             */
+            duration_seconds: number;
+            /**
+             * Error
+             * @default
+             */
+            error: string;
+            /**
+             * File Name
+             * @default
+             */
+            file_name: string;
             /** Job Id */
             job_id: string;
-            /** Status */
-            status: string;
+            /**
+             * Language
+             * @default auto
+             */
+            language: string;
+            /**
+             * Progress
+             * @default 0
+             */
+            progress: number;
+            /**
+             * Project
+             * @default
+             */
+            project: string;
+            /** Quality */
+            quality?: string | null;
+            /**
+             * Speaker Count
+             * @default 0
+             */
+            speaker_count: number;
             /**
              * Stage
              * @default
@@ -2685,62 +2720,27 @@ export interface components {
              */
             stage_detail: string;
             /**
-             * Progress
-             * @default 0
-             */
-            progress: number;
-            /**
-             * Error
-             * @default
-             */
-            error: string;
-            /**
-             * File Name
-             * @default
-             */
-            file_name: string;
-            /**
-             * Project
-             * @default
-             */
-            project: string;
-            /**
              * Started At
              * @default
              */
             started_at: string;
-            /**
-             * Duration Seconds
-             * @default 0
-             */
-            duration_seconds: number;
-            /**
-             * Speaker Count
-             * @default 0
-             */
-            speaker_count: number;
+            /** Status */
+            status: string;
             /**
              * Transcription Model
              * @default fast
              */
             transcription_model: string;
-            /**
-             * Language
-             * @default auto
-             */
-            language: string;
-            /** Quality */
-            quality?: string | null;
         };
         /**
          * TuningApplyResponse
          * @description Response from applying a tuning change.
          */
         TuningApplyResponse: {
-            /** Status */
-            status: string;
             /** Pr Url */
             pr_url?: string | null;
+            /** Status */
+            status: string;
         };
         /**
          * TuningHistoryResponse
@@ -2779,26 +2779,26 @@ export interface components {
         };
         /** ValidationError */
         ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
             msg: string;
             /** Error Type */
             type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
         };
         /**
          * WeeklyVelocityEntry
          * @description Single week entry for velocity data.
          */
         WeeklyVelocityEntry: {
-            /** Week */
-            week: string;
             /** Closed */
             closed: number;
+            /** Week */
+            week: string;
         };
         /** _SettingsValueBody */
         _SettingsValueBody: {
@@ -2814,6 +2814,165 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    discovery_list_discovery_list_get: {
+        parameters: {
+            query?: {
+                project?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentListItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discovery_result_discovery_result__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentResultResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discovery_start_discovery_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiscoveryStartRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discovery_status_discovery_status__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_discovery_discovery__job_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     health_health_get: {
         parameters: {
             query?: never;
@@ -2860,78 +3019,13 @@ export interface operations {
             };
         };
     };
-    settings_list_keys_settings_keys_get: {
+    get_issue_context_issue__repo___issue_number__context_get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string[];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    settings_get_all_settings_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    }[];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    settings_get_settings__key__get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
-                key: string;
+                repo: string;
+                issue_number: number;
             };
             cookie?: never;
         };
@@ -2943,8 +3037,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_admin_bypass_merges_pipeline_admin_bypass_merges_get: {
+        parameters: {
+            query?: {
+                since?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "application/json": {
-                        [key: string]: string;
+                        [key: string]: unknown;
                     };
                 };
             };
@@ -2955,185 +3080,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    settings_put_settings__key__put: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                key: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["_SettingsValueBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    settings_delete_settings__key__delete: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                key: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    start_pipeline_pipeline_start_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["StartRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    stop_pipeline_pipeline_stop_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageResponse"];
-                };
-            };
-        };
-    };
-    get_status_pipeline_status_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PipelineStatusResponse"];
-                };
-            };
-        };
-    };
-    get_limits_pipeline_limits_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LimitsResponse"];
-                };
-            };
-        };
-    };
-    get_mcp_health_pipeline_mcp_health_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MCPHealthResponse"];
                 };
             };
         };
@@ -3171,7 +3117,7 @@ export interface operations {
             };
         };
     };
-    get_stats_pipeline_stats_get: {
+    debate_list_pipeline_debate_list_get: {
         parameters: {
             query?: {
                 project?: string | null;
@@ -3188,7 +3134,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AgentStatsResponse"];
+                    "application/json": components["schemas"]["DebateListItem"][];
                 };
             };
             /** @description Validation Error */
@@ -3202,68 +3148,18 @@ export interface operations {
             };
         };
     };
-    get_project_analytics_pipeline_projects__owner___repo__analytics_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                owner: string;
-                repo: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProjectAnalyticsResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_projects_pipeline_projects_get: {
+    debate_start_pipeline_debate_start_post: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProjectsListResponse"];
-                };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DebateStartRequest"];
             };
         };
-    };
-    list_admin_bypass_merges_pipeline_admin_bypass_merges_get: {
-        parameters: {
-            query?: {
-                since?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -3283,6 +3179,125 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    debate_user_message_pipeline_debate__debate_id__message_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                debate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    debate_result_pipeline_debate__debate_id__result_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                debate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DebateResultResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    debate_status_pipeline_debate__debate_id__status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                debate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DebateStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_limits_pipeline_limits_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LimitsResponse"];
                 };
             };
         };
@@ -3427,18 +3442,14 @@ export interface operations {
             };
         };
     };
-    upload_transcript_transcript_upload_post: {
+    get_mcp_health_pipeline_mcp_health_get: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
-            content: {
-                "application/x-www-form-urlencoded": components["schemas"]["Body_upload_transcript_transcript_upload_post"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -3446,26 +3457,38 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TranscriptJobResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["MCPHealthResponse"];
                 };
             };
         };
     };
-    transcript_status_transcript_status__job_id__get: {
+    list_projects_pipeline_projects_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectsListResponse"];
+                };
+            };
+        };
+    };
+    get_project_analytics_pipeline_projects__owner___repo__analytics_get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                job_id: string;
+                owner: string;
+                repo: string;
             };
             cookie?: never;
         };
@@ -3477,7 +3500,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TranscriptStatusResponse"];
+                    "application/json": components["schemas"]["ProjectAnalyticsResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3491,49 +3514,16 @@ export interface operations {
             };
         };
     };
-    transcript_result_transcript_result__job_id__get: {
+    tuning_bulk_reject_pipeline_quality_bulk_reject_post: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TranscriptResultResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_transcript_brief_transcript_result__job_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["TranscriptBriefUpdateRequest"];
+                "application/json": components["schemas"]["BulkRejectRequest"];
             };
         };
         responses: {
@@ -3543,9 +3533,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BulkRejectResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3559,15 +3547,11 @@ export interface operations {
             };
         };
     };
-    transcript_debug_transcript_debug__job_id__get: {
+    quality_config_get_pipeline_quality_config_get: {
         parameters: {
-            query?: {
-                include_traceback?: boolean;
-            };
+            query?: never;
             header?: never;
-            path: {
-                job_id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -3578,9 +3562,31 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["QualityConfigResponse"];
+                };
+            };
+        };
+    };
+    quality_config_update_pipeline_quality_config_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QualityConfigUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualityConfigResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3594,9 +3600,10 @@ export interface operations {
             };
         };
     };
-    transcript_list_transcript_list_get: {
+    quality_errors_pipeline_quality_errors_get: {
         parameters: {
             query?: {
+                weeks?: number;
                 project?: string | null;
             };
             header?: never;
@@ -3611,7 +3618,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TranscriptListItem"][];
+                    "application/json": components["schemas"]["QualityErrorsResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3625,12 +3632,317 @@ export interface operations {
             };
         };
     };
-    delete_transcript_transcript__job_id__delete: {
+    quality_findings_pipeline_quality_findings_get: {
+        parameters: {
+            query?: {
+                weeks?: number;
+                project?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualityFindingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    quality_kpi_pipeline_quality_kpi_get: {
+        parameters: {
+            query?: {
+                project?: string | null;
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardQualitySnapshot"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    quality_lessons_pipeline_quality_lessons__project_slug__get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                job_id: string;
+                project_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LessonsFileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tuning_pending_pipeline_quality_pending_get: {
+        parameters: {
+            query?: {
+                /** @description Project short name */
+                project?: string | null;
+                /** @description Tier filter */
+                tier?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingChangesListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tuning_apply_pipeline_quality_pending__change_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                change_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningApplyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tuning_preview_pipeline_quality_pending__change_id__preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                change_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyPreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tuning_reject_pipeline_quality_pending__change_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                change_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningRejectResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tuning_rollback_pipeline_quality_pending__change_id__rollback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                change_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningRollbackResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retro_run_pipeline_quality_retro_run_post: {
+        parameters: {
+            query?: {
+                /** @description ISO week, e.g. 2026-W14 */
+                period?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetroRunResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retro_list_pipeline_quality_retros_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetroListResponse"];
+                };
+            };
+        };
+    };
+    retro_detail_pipeline_quality_retros__period__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                period: string;
             };
             cookie?: never;
         };
@@ -3721,293 +4033,6 @@ export interface operations {
             };
         };
     };
-    quality_findings_pipeline_quality_findings_get: {
-        parameters: {
-            query?: {
-                weeks?: number;
-                project?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QualityFindingsResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    quality_errors_pipeline_quality_errors_get: {
-        parameters: {
-            query?: {
-                weeks?: number;
-                project?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QualityErrorsResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    issue_timeline_pipeline_timeline__repo___issue_number__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                repo: string;
-                issue_number: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TimelineResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    quality_kpi_pipeline_quality_kpi_get: {
-        parameters: {
-            query?: {
-                project?: string | null;
-                days?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DashboardQualitySnapshot"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_issue_context_issue__repo___issue_number__context_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                repo: string;
-                issue_number: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    tuning_pending_pipeline_quality_pending_get: {
-        parameters: {
-            query?: {
-                /** @description Project short name */
-                project?: string | null;
-                /** @description Tier filter */
-                tier?: number | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PendingChangesListResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    tuning_apply_pipeline_quality_pending__change_id__apply_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                change_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TuningApplyResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    tuning_reject_pipeline_quality_pending__change_id__reject_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                change_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TuningRejectResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    tuning_rollback_pipeline_quality_pending__change_id__rollback_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                change_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TuningRollbackResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     tuning_history_pipeline_quality_tuning_history_get: {
         parameters: {
             query?: {
@@ -4028,557 +4053,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TuningHistoryResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    quality_config_get_pipeline_quality_config_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QualityConfigResponse"];
-                };
-            };
-        };
-    };
-    quality_config_update_pipeline_quality_config_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["QualityConfigUpdateRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QualityConfigResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    quality_lessons_pipeline_quality_lessons__project_slug__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                project_slug: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LessonsFileResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    tuning_preview_pipeline_quality_pending__change_id__preview_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                change_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApplyPreviewResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    tuning_bulk_reject_pipeline_quality_bulk_reject_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BulkRejectRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BulkRejectResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    retro_list_pipeline_quality_retros_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RetroListResponse"];
-                };
-            };
-        };
-    };
-    retro_detail_pipeline_quality_retros__period__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                period: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    retro_run_pipeline_quality_retro_run_post: {
-        parameters: {
-            query?: {
-                /** @description ISO week, e.g. 2026-W14 */
-                period?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RetroRunResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    research_start_research_start_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ResearchStartRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AgentJobResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    research_status_research_status__job_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AgentStatusResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    research_result_research_result__job_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AgentResultResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    research_list_research_list_get: {
-        parameters: {
-            query?: {
-                project?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AgentListItem"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_research_research__job_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    discovery_start_discovery_start_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DiscoveryStartRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AgentJobResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    discovery_status_discovery_status__job_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AgentStatusResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    discovery_result_discovery_result__job_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AgentResultResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    discovery_list_discovery_list_get: {
-        parameters: {
-            query?: {
-                project?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AgentListItem"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_discovery_discovery__job_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
                 };
             };
             /** @description Validation Error */
@@ -4691,7 +4165,7 @@ export interface operations {
             };
         };
     };
-    debate_start_pipeline_debate_start_post: {
+    start_pipeline_pipeline_start_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -4700,7 +4174,566 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DebateStartRequest"];
+                "application/json": components["schemas"]["StartRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_stats_pipeline_stats_get: {
+        parameters: {
+            query?: {
+                project?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentStatsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_status_pipeline_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineStatusResponse"];
+                };
+            };
+        };
+    };
+    stop_pipeline_pipeline_stop_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+        };
+    };
+    issue_timeline_pipeline_timeline__repo___issue_number__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repo: string;
+                issue_number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_list_research_list_get: {
+        parameters: {
+            query?: {
+                project?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentListItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_result_research_result__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentResultResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_start_research_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResearchStartRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_status_research_status__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_research_research__job_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    settings_get_all_settings_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    settings_list_keys_settings_keys_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    settings_get_settings__key__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    settings_put_settings__key__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["_SettingsValueBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    settings_delete_settings__key__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transcript_debug_transcript_debug__job_id__get: {
+        parameters: {
+            query?: {
+                include_traceback?: boolean;
+            };
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transcript_list_transcript_list_get: {
+        parameters: {
+            query?: {
+                project?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranscriptListItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transcript_result_transcript_result__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TranscriptResultResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_transcript_brief_transcript_result__job_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TranscriptBriefUpdateRequest"];
             };
         };
         responses: {
@@ -4726,12 +4759,12 @@ export interface operations {
             };
         };
     };
-    debate_status_pipeline_debate__debate_id__status_get: {
+    transcript_status_transcript_status__job_id__get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                debate_id: string;
+                job_id: string;
             };
             cookie?: never;
         };
@@ -4743,7 +4776,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DebateStatusResponse"];
+                    "application/json": components["schemas"]["TranscriptStatusResponse"];
                 };
             };
             /** @description Validation Error */
@@ -4757,47 +4790,18 @@ export interface operations {
             };
         };
     };
-    debate_result_pipeline_debate__debate_id__result_get: {
+    upload_transcript_transcript_upload_post: {
         parameters: {
             query?: never;
-            header?: never;
-            path: {
-                debate_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DebateResultResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    debate_list_pipeline_debate_list_get: {
-        parameters: {
-            query?: {
-                project?: string | null;
-            };
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["Body_upload_transcript_transcript_upload_post"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -4805,7 +4809,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DebateListItem"][];
+                    "application/json": components["schemas"]["TranscriptJobResponse"];
                 };
             };
             /** @description Validation Error */
@@ -4819,20 +4823,16 @@ export interface operations {
             };
         };
     };
-    debate_user_message_pipeline_debate__debate_id__message_post: {
+    delete_transcript_transcript__job_id__delete: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                debate_id: string;
+                job_id: string;
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UserMessageRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

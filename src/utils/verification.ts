@@ -26,7 +26,11 @@ export interface VerifyProgress {
   current: number; // 1-based count of findings processed
   total: number;
   currentFile: string;
-  currentLine: number | null;
+  // Backend `Finding.line` / `VerificationResult.line` is optional
+  // (`number | null` and may be absent) per the generated contract (#447);
+  // `undefined` is treated identically to `null` ("no line") at every
+  // display site.
+  currentLine: number | null | undefined;
   confirmed: number;
   falsePositive: number;
   uncertain: number;
@@ -303,7 +307,7 @@ export async function verifyFindings(
 
   // Progress is emitted continuously across all phases; current counts up
   // over every finalized result (including synthetic).
-  function emitProgress(file: string, line: number | null) {
+  function emitProgress(file: string, line: number | null | undefined) {
     onProgress({
       current: results.length,
       total: totalPlanned,

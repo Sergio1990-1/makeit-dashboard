@@ -27,6 +27,12 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
+      # Contract drift-check (#447): regenerate API types from the committed
+      # OpenAPI snapshots and fail if the committed generated types differ.
+      # Catches hand-edits and openapi-typescript version drift. Offline:
+      # generates from src/types/generated/*.openapi.json, no backend needed.
+      - run: npm run gen:api-types
+      - run: git diff --exit-code -- src/types/generated/auditor.ts src/types/generated/pipeline.ts
       - run: npm run lint
       - run: npx tsc --noEmit
       - run: npm run build

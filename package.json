@@ -10,9 +10,12 @@
     "preview": "vite preview",
     "test:e2e": "playwright test",
     "test:e2e:typecheck": "tsc -p tsconfig.e2e.json --noEmit",
-    "gen:api-types:pipeline": "openapi-typescript ${PIPELINE_OPENAPI:-http://127.0.0.1:8766/openapi.json} -o src/types/generated/pipeline.ts",
-    "gen:api-types:auditor": "openapi-typescript ${AUDITOR_OPENAPI:-http://127.0.0.1:8765/openapi.json} -o src/types/generated/auditor.ts",
-    "gen:api-types": "npm run gen:api-types:pipeline && npm run gen:api-types:auditor"
+    "gen:api-types:pipeline": "openapi-typescript src/types/generated/pipeline.openapi.json -o src/types/generated/pipeline.ts",
+    "gen:api-types:auditor": "openapi-typescript src/types/generated/auditor.openapi.json -o src/types/generated/auditor.ts",
+    "gen:api-types": "npm run gen:api-types:pipeline && npm run gen:api-types:auditor",
+    "snapshot:api:pipeline": "curl -fsS ${PIPELINE_OPENAPI:-http://127.0.0.1:8766/openapi.json} | python3 -c \"import json,sys; json.dump(json.load(sys.stdin), open('src/types/generated/pipeline.openapi.json','w'), indent=2, sort_keys=True, ensure_ascii=False); open('src/types/generated/pipeline.openapi.json','a').write('\\n')\"",
+    "snapshot:api:auditor": "curl -fsS ${AUDITOR_OPENAPI:-http://127.0.0.1:8765/openapi.json} | python3 -c \"import json,sys; json.dump(json.load(sys.stdin), open('src/types/generated/auditor.openapi.json','w'), indent=2, sort_keys=True, ensure_ascii=False); open('src/types/generated/auditor.openapi.json','a').write('\\n')\"",
+    "snapshot:api": "npm run snapshot:api:pipeline && npm run snapshot:api:auditor"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
