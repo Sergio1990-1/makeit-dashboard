@@ -8,8 +8,11 @@ import {
   searchCodeSymbol,
 } from "./github-actions";
 import { assertNotHardStopped, effectiveModel, logCall } from "./claudeBudget";
+import { SONNET_MODEL } from "./claudeModels";
 
-export const VERIFY_MODEL = "claude-sonnet-4-6";
+/** Model the verifier requests. Re-exported for `verification.ts`, which
+ * stamps it onto each `VerificationResult`. */
+export const VERIFY_MODEL = SONNET_MODEL;
 
 const VERIFY_SYSTEM_PROMPT = `You are a skeptical senior code reviewer verifying an automated audit finding.
 

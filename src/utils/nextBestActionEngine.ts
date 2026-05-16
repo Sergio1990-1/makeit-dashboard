@@ -19,12 +19,18 @@
  * hard-stop the engine returns the last good cached result plus a
  * `warning` instead of throwing, so the UI degrades rather than breaks.
  *
- * Cache: `localStorage`, week-scoped.
- *   - per-project   → `makeit_nba:{repo}`
- *   - portfolio     → `makeit_portfolio_nba`
+ * Cache: `localStorage`, week-scoped — **per-project only**.
+ *   - per-project → `makeit_nba:{repo}`
  * A cache entry is fresh only within the ISO week it was written; a new
  * week always forces a real recompute. `invalidateNbaCache(scope)`
- * powers the "Regenerate" button (UI wiring is Epic-010, out of scope).
+ * powers the "Regenerate" button (Epic-010 UI wiring landed in #418/#349).
+ *
+ * The portfolio aggregate is intentionally NOT cached: it is a pure,
+ * cheap, deterministic sort+slice over the per-project results the
+ * caller already holds (no Claude call). Caching it under a week key
+ * desynced it from the per-project caches whenever a single project was
+ * invalidated and recomputed mid-week, so it always recomputes from its
+ * live input instead.
  */
 
 import Anthropic from "@anthropic-ai/sdk";
@@ -35,6 +41,7 @@ import {
   isHardStopped,
   logCall,
 } from "./claudeBudget";
+import { SONNET_MODEL } from "./claudeModels";
 import { maybeDispatchAuthLostFromError } from "./external-auth-events";
 
 // ── Public types ───────────────────────────────────────────────────────────
@@ -126,7 +133,6 @@ export type NbaScope = { kind: "project"; repo: string } | { kind: "portfolio" }
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const PROJECT_KEY_PREFIX = "makeit_nba";
-const PORTFOLIO_KEY = "makeit_portfolio_nba";
 
 const PROJECT_TOP_N = 3;
 const PORTFOLIO_TOP_N = 5;
@@ -136,8 +142,6 @@ const MAX_RISKS = 3;
 const MAX_COMMITMENTS = 3;
 const MAX_DRIFT = 5;
 const MAX_INBOX = 5;
-
-const SONNET_MODEL = "claude-sonnet-4-6";
 
 /** Numeric weight per severity — higher = ranked first in portfolio. */
 const SEVERITY_RANK: Record<HealthSeverity, number> = {
@@ -172,10 +176,15 @@ interface CacheEnvelope {
   result: NbaResult;
 }
 
-function scopeKey(scope: NbaScope): string {
-  return scope.kind === "project"
-    ? `${PROJECT_KEY_PREFIX}:${scope.repo}`
-    : PORTFOLIO_KEY;
+/**
+ * Only the per-project scope is cached (see the module header): the
+ * portfolio aggregate is recomputed live, so the cache helpers below
+ * are deliberately typed to reject the portfolio scope at compile time.
+ */
+type ProjectScope = Extract<NbaScope, { kind: "project" }>;
+
+function scopeKey(scope: ProjectScope): string {
+  return `${PROJECT_KEY_PREFIX}:${scope.repo}`;
 }
 
 /**
@@ -184,7 +193,7 @@ function scopeKey(scope: NbaScope): string {
  * caller recomputes. `requireFresh=false` (budget hard-stop fallback)
  * returns even a stale entry so the UI has *something* to show.
  */
-function readCache(scope: NbaScope, requireFresh: boolean): NbaResult | null {
+function readCache(scope: ProjectScope, requireFresh: boolean): NbaResult | null {
   if (typeof localStorage === "undefined") return null;
   let raw: string | null;
   try {
@@ -210,7 +219,7 @@ function readCache(scope: NbaScope, requireFresh: boolean): NbaResult | null {
   }
 }
 
-function writeCache(scope: NbaScope, result: NbaResult): void {
+function writeCache(scope: ProjectScope, result: NbaResult): void {
   if (typeof localStorage === "undefined") return;
   const env: CacheEnvelope = { week: isoWeekKey(), result };
   try {
@@ -223,10 +232,15 @@ function writeCache(scope: NbaScope, result: NbaResult): void {
 
 /**
  * Drop the cached entry for one scope so the next compute call makes a
- * real Claude request. Powers the "Regenerate" button — UI wiring lands
- * with Epic-010 (out of scope for this task).
+ * real Claude request. Powers the "Regenerate" button (Epic-010 UI).
+ *
+ * The portfolio scope is a no-op: that aggregate is never cached, so the
+ * next `computePortfolioNBA` call already recomputes from live input.
+ * Accepting it keeps the public API symmetric for callers that invalidate
+ * both scopes from one handler.
  */
 export function invalidateNbaCache(scope: NbaScope): void {
+  if (scope.kind !== "project") return;
   if (typeof localStorage === "undefined") return;
   try {
     localStorage.removeItem(scopeKey(scope));
@@ -408,7 +422,7 @@ export async function computeProjectNBA(
   inputs: NbaInputs,
   apiKey: string,
 ): Promise<NbaResult> {
-  const scope: NbaScope = { kind: "project", repo };
+  const scope: ProjectScope = { kind: "project", repo };
 
   const fresh = readCache(scope, true);
   if (fresh !== null) return fresh;
@@ -515,22 +529,25 @@ export async function computeProjectNBA(
 
 /**
  * Cross-portfolio top-5. Aggregation is local (no Claude call): take the
- * #1 action from each project, sort by severity (then preserve input
- * order for ties — stable), keep the top 5. Result is week-cached under
- * `makeit_portfolio_nba`.
+ * #1 action from each project, sort by severity (then a deterministic
+ * tiebreak), keep the top 5.
+ *
+ * Intentionally NOT cached. The result is a pure function of
+ * `perProjectActions`; the per-project results are already week-cached
+ * upstream, so recomputing here is cheap and — crucially — always
+ * reflects the *current* per-project state. A week-keyed portfolio cache
+ * used to go stale whenever a single project was invalidated and
+ * recomputed mid-week, desyncing the portfolio view from the projects
+ * it summarises (issue #389).
  *
  * `perProjectActions` is the list of per-project results the caller
  * already computed (one entry per project). Empty input → empty result.
- * `budgetFallback` is true if ANY contributing project fell back.
+ * `budgetFallback` is true if ANY contributing project fell back. Stays
+ * `async` to preserve the existing call signature.
  */
 export async function computePortfolioNBA(
   perProjectActions: NbaResult[],
 ): Promise<NbaResult> {
-  const scope: NbaScope = { kind: "portfolio" };
-
-  const fresh = readCache(scope, true);
-  if (fresh !== null) return fresh;
-
   // Take the top-1 from each project that produced at least one action.
   const top1: NbaAction[] = [];
   let anyFallback = false;
@@ -550,10 +567,8 @@ export async function computePortfolioNBA(
     return (a.link ?? "").localeCompare(b.link ?? "");
   });
 
-  const result: NbaResult = {
+  return {
     actions: ranked.slice(0, PORTFOLIO_TOP_N),
     budgetFallback: anyFallback,
   };
-  writeCache(scope, result);
-  return result;
 }
