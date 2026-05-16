@@ -28,6 +28,8 @@ import {
   extractCommitments,
 } from "../utils/commitmentsExtractor";
 import { extractDecisions } from "../utils/decisionLogExtractor";
+import { aggregatePulse } from "../utils/activityPulseAggregator";
+import { unreadCount } from "../utils/lastVisitedStore";
 import {
   computeDora,
   type DoraMetricsResult,
@@ -156,6 +158,39 @@ async function fetchCommitmentsYaml(
     return res?.data ?? null;
   } catch {
     return null;
+  }
+}
+
+// ── Activity Pulse read (Epic-011 Task-06/07 → Hub Overview wiring, #452) ──
+// The Overview "Pulse" block and the header inbox badge must show the SAME
+// unified timeline the Activity tab renders. Both go through the single
+// `aggregatePulse` producer (GitHub events + pipeline + transcripts + audit,
+// deduped, newest-first), so the Overview card can never drift from the
+// Activity tab. `aggregatePulse` owns its own 5-min sessionStorage cache,
+// so reading it here as well as in ActivityTab is one shared cached read,
+// not a duplicate fetch.
+
+/** Pulse lookback window (days) — matches ActivityTab's `PULSE_WINDOW_DAYS`
+ *  and the aggregator's own 30-day floor; kept explicit, not a magic `""`. */
+const PULSE_WINDOW_DAYS = 30;
+
+/**
+ * Aggregate the project's activity timeline. Best-effort, exactly like
+ * `fetchTopRisks` / `fetchCommitmentsYaml`: `aggregatePulse` never throws
+ * by contract (a failing source degrades to empty), but it is still
+ * wrapped so a rejected promise can't escape — any failure collapses to
+ * `[]`, so a single dead source (e.g. Pipeline Mac offline) degrades the
+ * Pulse block alone and never crashes the rest of the Hub. The lookback
+ * mirrors ActivityTab's exact call so the same cache entry is reused.
+ */
+async function fetchPulse(repo: string): Promise<ProjectHubData["pulse"]> {
+  try {
+    const since = new Date(
+      Date.now() - PULSE_WINDOW_DAYS * 86_400_000,
+    ).toISOString();
+    return await aggregatePulse(repo, since);
+  } catch {
+    return [];
   }
 }
 
@@ -317,20 +352,37 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
   // this same batch — keeping the table and the card on one producer.
   const [commitmentsYamlResolved, setCommitmentsYamlResolved] =
     useState<Resolved<CommitmentsYaml> | null>(null);
+  // Activity Pulse (Epic-011 Task-06/07) for the Overview block + inbox
+  // badge (#452). Same repo-keyed effect as commits/PRs/risks/commitments:
+  // `aggregatePulse` is also a per-repo read with nothing for the Hub to
+  // do while it loads, so it rides the existing Promise.all rather than
+  // introducing a second uncoordinated fetch. `fetchPulse` is best-effort
+  // (any failure → []), so this resolves to a real (possibly empty) list,
+  // never an error. The aggregator's own 5-min sessionStorage cache means
+  // this shares one read with ActivityTab — not a duplicate fetch.
+  const [pulseResolved, setPulseResolved] =
+    useState<Resolved<ProjectHubData["pulse"]> | null>(null);
   useEffect(() => {
     const key = repo;
     let cancelled = false;
     void (async () => {
       // Run in parallel — they're independent and the Hub has nothing
       // to do with either response while we wait.
-      const [briefRes, commitsRes, prsRes, risksRes, commitmentsYamlRes] =
-        await Promise.all([
-          readMarkdown(repo, "docs/BRIEF.md").catch(() => null),
-          listRecentCommits(repo, 100).catch(() => [] as CommitInfo[]),
-          fetchDoraPRs(repo),
-          fetchTopRisks(repo),
-          fetchCommitmentsYaml(repo),
-        ]);
+      const [
+        briefRes,
+        commitsRes,
+        prsRes,
+        risksRes,
+        commitmentsYamlRes,
+        pulseRes,
+      ] = await Promise.all([
+        readMarkdown(repo, "docs/BRIEF.md").catch(() => null),
+        listRecentCommits(repo, 100).catch(() => [] as CommitInfo[]),
+        fetchDoraPRs(repo),
+        fetchTopRisks(repo),
+        fetchCommitmentsYaml(repo),
+        fetchPulse(repo),
+      ]);
       if (cancelled || !mounted.current) return;
       setBriefMd(briefRes?.content ?? null);
       setCommitsResolved({ key, data: commitsRes, error: null });
@@ -341,6 +393,7 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
         data: commitmentsYamlRes,
         error: null,
       });
+      setPulseResolved({ key, data: pulseRes, error: null });
     })();
     return () => {
       cancelled = true;
@@ -404,6 +457,26 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
     );
     return list.length > 0 ? list : EMPTY_COMMITMENTS;
   }, [commitmentsYamlFresh, commitmentsYamlResolved, briefMd]);
+
+  // Only surface pulse events resolved for *this* repo; a stale result
+  // from the previous repo (navigation mid-fetch) reads as not-yet-loaded
+  // (empty), never as the old repo's timeline. Falls back to the stable
+  // `EMPTY_PULSE` so downstream memo deps keep reference equality and the
+  // Overview Pulse empty state appears only when there are genuinely no
+  // events (all sources empty / offline). The inbox badge is derived from
+  // the SAME resolved list via `unreadCount` — the exact function (and
+  // therefore the exact "newer than this device's last Activity visit"
+  // definition) `ProjectHubPage` recomputes for the header badge — so the
+  // contract value here can never disagree with what the badge shows.
+  const pulseFresh = pulseResolved !== null && pulseResolved.key === repo;
+  const pulse = useMemo<ProjectHubData["pulse"]>(() => {
+    const list = pulseFresh ? (pulseResolved?.data ?? []) : [];
+    return list.length > 0 ? list : EMPTY_PULSE;
+  }, [pulseFresh, pulseResolved]);
+  const inboxCount = useMemo(
+    () => unreadCount(pulse, repo),
+    [pulse, repo],
+  );
 
   // ── DORA (Epic-012 Task-03) ────────────────────────────────────────
   // `computeDora` is pure-injectable and synchronous. We feed it the
@@ -622,8 +695,8 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
     risks,
     commitments,
     renewals: EMPTY_RENEWALS,
-    pulse: EMPTY_PULSE,
-    inboxCount: 0,
+    pulse,
+    inboxCount,
     digest: digestSection.data,
     dora: doraSection.data,
     customerHealth: healthSection.data,
