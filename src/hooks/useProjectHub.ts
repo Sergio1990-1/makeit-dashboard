@@ -33,10 +33,14 @@ import { aggregatePulse } from "../utils/activityPulseAggregator";
 import { unreadCount } from "../utils/lastVisitedStore";
 import {
   computeDora,
+  type DoraAuditFinding,
+  type DoraIncident,
   type DoraMetricsResult,
   type DoraPullRequest,
 } from "../utils/doraCalculator";
 import { listMergedPRsInWindow } from "../utils/github-actions";
+import { fetchAuditFindings } from "../utils/auditor";
+import { fetchMonitors } from "../utils/betterstack";
 import { currentWeekKey, loadDigest } from "../utils/weeklyDigestGenerator";
 import {
   computeHealth,
@@ -54,6 +58,8 @@ import {
   getClaudeKey,
   getProjectFinance,
   getToken,
+  getWorkerUrl,
+  MONITOR_MATCH,
 } from "../utils/config";
 
 // Stable empty stubs so consumers can rely on reference equality. The Hub
@@ -98,6 +104,87 @@ async function fetchDoraPRs(repo: string): Promise<DoraPullRequest[]> {
     return prs.map((pr) => ({
       createdAt: pr.created_at,
       mergedAt: pr.merged_at,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Resolve the incidents input for DORA MTTR from the real BetterStack
+ * monitor matched to `repo` (#461). The doraCalculator contract draws a
+ * deliberate distinction we honour here without ever fabricating data:
+ *
+ *  - `null`  → no per-repo monitor signal at all (no `MONITOR_MATCH`
+ *    rule, no worker URL configured, the worker is unreachable, or no
+ *    live monitor matches the repo's keywords). MTTR reads an honest
+ *    `n/a` — we genuinely cannot say anything about recovery time.
+ *  - `[]`    → a monitor IS matched for the repo, but the BetterStack
+ *    Cloudflare worker (`getWorkerUrl()`) only proxies the *monitor
+ *    list* (status + uptime%), not incident history (see
+ *    docs/DELIVERY.md §MTTR — extending the worker with an `/incidents`
+ *    endpoint is a pre-existing external blocker). So there are
+ *    genuinely zero retrievable downtime records — also an honest
+ *    `n/a`, NOT a fabricated MTTR=0.
+ *
+ * The matcher is the existing `MONITOR_MATCH` keyword lookup (same
+ * url/name keyword test used by App.tsx's `getMonitorForRepo` and the
+ * Monitoring tab's `getProjectName`) — not a new heuristic. Best-effort:
+ * any failure (no worker, network, proxy 5xx, auth lost) collapses to
+ * `null`, so a dead BetterStack source degrades MTTR alone and never
+ * blocks or crashes the rest of the Hub.
+ */
+async function fetchDoraIncidents(
+  repo: string,
+): Promise<DoraIncident[] | null> {
+  const keywords = MONITOR_MATCH[repo];
+  // No matching rule for this repo → genuinely no monitor → honest n/a.
+  if (!keywords || keywords.length === 0) return null;
+  const url = getWorkerUrl();
+  if (!url) return null;
+  try {
+    const monitors = await fetchMonitors(url);
+    const matched = monitors.some((m) =>
+      keywords.some(
+        (kw) =>
+          m.name.toLowerCase().includes(kw.toLowerCase()) ||
+          m.url.toLowerCase().includes(kw.toLowerCase()),
+      ),
+    );
+    // Monitor exists for this repo but the worker exposes no incident
+    // history: zero retrievable downtime records → honest `[]` (n/a),
+    // never a fabricated incident. No live monitor matched → `null`.
+    return matched ? [] : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve real audit findings for `repo` and map them to the DORA
+ * calculator's `DoraAuditFinding` shape (#461) so Change Failure Rate
+ * sees the critical-audit signal, not just `fix:` commits. A findings
+ * report carries one run-level `timestamp` (no per-finding timestamp —
+ * same convention `activityPulseAggregator` relies on), so every finding
+ * inherits `findings.timestamp` and keeps its `severity` (already the
+ * exact `critical|high|medium|low` union the calculator expects).
+ *
+ * Auditor keys projects by the bare repo name (mirrors every other
+ * `fetchAuditFindings` call site). Best-effort: auditor offline / never
+ * ran / HTTP error → `[]`, so CFR honestly falls back to the fix-only
+ * signal (a documented lower-bound) instead of crashing the Hub.
+ */
+async function fetchDoraAuditFindings(
+  repo: string,
+): Promise<DoraAuditFinding[]> {
+  const project = repo.includes("/") ? repo.split("/")[1] : repo;
+  try {
+    const report = await fetchAuditFindings(project);
+    const timestamp = report.timestamp;
+    if (!timestamp) return [];
+    return (report.findings ?? []).map((f) => ({
+      timestamp,
+      severity: f.severity,
     }));
   } catch {
     return [];
@@ -415,6 +502,19 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
   // this shares one read with ActivityTab — not a duplicate fetch.
   const [pulseResolved, setPulseResolved] =
     useState<Resolved<ProjectHubData["pulse"]> | null>(null);
+  // DORA incidents + audit findings (#461). Same repo-keyed effect as
+  // commits/PRs: both are per-repo best-effort reads with nothing for
+  // the Hub to do while they load, and DORA must see them resolve in the
+  // SAME batch as commits so MTTR/CFR never flash n/a→value. Riding the
+  // existing Promise.all keeps all four DORA inputs (commits, PRs,
+  // incidents, findings) on one coordinated fetch rather than racing
+  // separate effects. `incidents` carries the honest tri-state from
+  // `fetchDoraIncidents` (`null` = no monitor, `[]` = monitor-but-no
+  // history); `auditFindings` is best-effort `[]` on any auditor failure.
+  const [incidentsResolved, setIncidentsResolved] =
+    useState<Resolved<DoraIncident[] | null> | null>(null);
+  const [auditFindingsResolved, setAuditFindingsResolved] =
+    useState<Resolved<DoraAuditFinding[]> | null>(null);
   useEffect(() => {
     const key = repo;
     let cancelled = false;
@@ -428,6 +528,8 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
         risksRes,
         commitmentsYamlRes,
         pulseRes,
+        incidentsRes,
+        auditFindingsRes,
       ] = await Promise.all([
         readMarkdown(repo, "docs/BRIEF.md").catch(() => null),
         listRecentCommits(repo, 100).catch(() => [] as CommitInfo[]),
@@ -435,6 +537,8 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
         fetchTopRisks(repo),
         fetchCommitmentsYaml(repo),
         fetchPulse(repo),
+        fetchDoraIncidents(repo),
+        fetchDoraAuditFindings(repo),
       ]);
       if (cancelled || !mounted.current) return;
       setBriefMd(briefRes?.content ?? null);
@@ -447,6 +551,12 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
         error: null,
       });
       setPulseResolved({ key, data: pulseRes, error: null });
+      // `incidentsRes` is intentionally nullable (no-monitor honest
+      // n/a). The `Resolved.data` slot is `T | null`, so `null` data is
+      // a valid resolved value here — the freshness guard distinguishes
+      // "resolved to null" from "not yet resolved", not the data itself.
+      setIncidentsResolved({ key, data: incidentsRes, error: null });
+      setAuditFindingsResolved({ key, data: auditFindingsRes, error: null });
     })();
     return () => {
       cancelled = true;
@@ -531,38 +641,66 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
     [pulse, repo],
   );
 
-  // ── DORA (Epic-012 Task-03) ────────────────────────────────────────
+  // Only count incidents/findings resolved for *this* repo; a stale
+  // result from the previous repo (navigation mid-fetch) reads as
+  // not-yet-loaded. NOTE for incidents: `null` is a *meaningful* resolved
+  // value (no matched monitor → honest MTTR n/a), distinct from "not yet
+  // loaded" — so freshness is keyed off `key === repo`, never the data
+  // value, exactly like `commitsFresh`/`prsFresh`. Both are fetched in
+  // the same Promise.all as commits, so they are fresh together with it.
+  const incidentsFresh =
+    incidentsResolved !== null && incidentsResolved.key === repo;
+  const incidents = useMemo<DoraIncident[] | null>(
+    () => (incidentsFresh ? (incidentsResolved?.data ?? null) : null),
+    [incidentsFresh, incidentsResolved],
+  );
+  const auditFindingsFresh =
+    auditFindingsResolved !== null && auditFindingsResolved.key === repo;
+  const auditFindings = useMemo<DoraAuditFinding[]>(
+    () => (auditFindingsFresh ? (auditFindingsResolved?.data ?? []) : []),
+    [auditFindingsFresh, auditFindingsResolved],
+  );
+
+  // ── DORA (Epic-012 Task-03; real MTTR/CFR inputs #461) ─────────────
   // `computeDora` is pure-injectable and synchronous. We feed it the
   // commits + merged PRs loaded above (Deploy Frequency + Change Failure
   // Rate from real commit subjects; Lead Time from median merged−created
-  // over the PR window, #405). The remaining inputs degrade by the
+  // over the PR window, #405) plus the real per-repo BetterStack monitor
+  // match and real auditor findings (#461). Every input degrades by the
   // calculator's own documented contract, not silently:
   //   - `pullRequests` — real merged PRs in the window. Empty (no token /
   //     API failure / no merged PRs) yields an honest `n/a` Lead Time
   //     dash rather than a fabricated 0h.
-  //   - `incidents: null` — no per-repo BetterStack monitor matching in
-  //     the Hub today → MTTR `n/a`.
-  //   - `auditFindings: []` — CFR falls back to the fix-only signal.
-  // Gated on `commitsFresh`: commits and PRs are fetched in the same
-  // Promise.all and set together, so when commits are fresh the PRs for
-  // this repo are too — no Lead Time n/a→value flash. It carries its own
-  // loading slice for tab-skeleton parity with the async producers — an
-  // empty-history repo resolves to a real (all-low) metric set, not a
-  // perpetual spinner.
+  //   - `incidents` — the real `MONITOR_MATCH` decision: `null` when no
+  //     monitor is matched for this repo (honest MTTR `n/a`), `[]` when a
+  //     monitor exists but the worker exposes no incident history (also
+  //     honest `n/a`, never a fabricated MTTR=0). Real incident durations
+  //     await the worker `/incidents` endpoint — a pre-existing external
+  //     blocker tracked in docs/DELIVERY.md, not regressed here.
+  //   - `auditFindings` — real auditor findings; CFR now sees critical
+  //     audit signals, not just `fix:` commits. Empty (auditor offline /
+  //     never ran) honestly falls back to the documented fix-only
+  //     lower-bound.
+  // Gated on `commitsFresh`: commits, PRs, incidents and findings are
+  // fetched in the same Promise.all and set together, so when commits are
+  // fresh the other three for this repo are too — no MTTR/CFR/Lead Time
+  // n/a→value flash. It carries its own loading slice for tab-skeleton
+  // parity with the async producers — an empty-history repo resolves to a
+  // real metric set, not a perpetual spinner.
   const doraSection = useMemo<Section<DoraMetricsResult>>(() => {
     if (!commitsFresh) {
       return { data: null, loading: true, error: null };
     }
     try {
       const metrics = computeDora(
-        { commits, pullRequests, incidents: null, auditFindings: [] },
+        { commits, pullRequests, incidents, auditFindings },
         DORA_WINDOW_DAYS,
       );
       return { data: metrics, loading: false, error: null };
     } catch (e) {
       return { data: null, loading: false, error: toError(e) };
     }
-  }, [commitsFresh, commits, pullRequests]);
+  }, [commitsFresh, commits, pullRequests, incidents, auditFindings]);
 
   // ── Weekly Digest (Epic-012 Task-02) ───────────────────────────────
   // Latest digest for the current ISO week. `loadDigest` resolves from
