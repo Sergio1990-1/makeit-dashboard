@@ -7,8 +7,7 @@ import type { BpNode, BpProcess } from "../../../types/bizProcess";
  * carries NO pixel coordinates. Pure presentational — no data fetching,
  * no state. House style matches makeit-process-map.html; colours come from
  * v4 tokens via classes in src/styles/v4-bizproc.css (so light/dark both
- * work). Same column/swimlane layout + Manhattan edge routing as the
- * business-process-concept.html prototype, ported to React/SVG.
+ * work). Deterministic column/swimlane layout + Manhattan edge routing.
  */
 
 interface Props {
