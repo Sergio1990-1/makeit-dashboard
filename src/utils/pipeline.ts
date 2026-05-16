@@ -194,6 +194,21 @@ export interface PipelineStats {
   cost_per_task_usd?: number;
 }
 
+/**
+ * Raw `GET /pipeline/stats` payload (backend `AgentStatsResponse` in
+ * makeit-pipeline `api.py`). The backend is the source of truth; two
+ * fields differ in representation from the dashboard's `PipelineStats`
+ * and are converted at the boundary in `fetchPipelineStats`:
+ *   - `model_usage` is a `{model: count}` map, not a `ModelUsage[]`.
+ *   - `first_pass_rate` is a 0–1 fraction (`round(fp/len, 3)`), not the
+ *     0–100 percentage the UI renders.
+ */
+interface BackendPipelineStats
+  extends Omit<PipelineStats, "model_usage" | "first_pass_rate"> {
+  model_usage?: Record<string, number> | null;
+  first_pass_rate?: number | null;
+}
+
 /* ── Live phase constants (new /pipeline/status format) ── */
 
 export const PHASE_ORDER = [
@@ -463,7 +478,25 @@ export async function fetchPipelineStats(project: string): Promise<PipelineStats
     { cache: "no-store" },
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json() as Promise<PipelineStats>;
+  const raw = (await res.json()) as BackendPipelineStats;
+  const { model_usage, first_pass_rate, ...rest } = raw;
+  return {
+    ...rest,
+    // dict → array the UI iterates; absent/null → undefined.
+    model_usage:
+      model_usage && typeof model_usage === "object"
+        ? Object.entries(model_usage).map(([model, count]) => ({
+            model,
+            count,
+          }))
+        : undefined,
+    // fraction (0–1) → percentage (0–100) the UI renders. Keep 0 (a real
+    // 0% rate) distinct from absent — gate on the number type, not truthiness.
+    first_pass_rate:
+      typeof first_pass_rate === "number"
+        ? first_pass_rate * 100
+        : undefined,
+  };
 }
 
 export async function startPipeline(req: PipelineStartRequest): Promise<string> {
