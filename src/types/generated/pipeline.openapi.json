@@ -1,0 +1,5664 @@
+{
+  "components": {
+    "schemas": {
+      "AgentJobResponse": {
+        "description": "Response for research/discovery job creation.",
+        "properties": {
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "title": "AgentJobResponse",
+        "type": "object"
+      },
+      "AgentListItem": {
+        "description": "One item in research/discovery history.",
+        "properties": {
+          "agent_type": {
+            "title": "Agent Type",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "project": {
+            "title": "Project",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "status",
+          "project",
+          "created_at",
+          "agent_type"
+        ],
+        "title": "AgentListItem",
+        "type": "object"
+      },
+      "AgentResultResponse": {
+        "description": "Response with full result of a research/discovery job.",
+        "properties": {
+          "created_at": {
+            "default": "",
+            "title": "Created At",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "project": {
+            "default": "",
+            "title": "Project",
+            "type": "string"
+          },
+          "report_md": {
+            "default": "",
+            "title": "Report Md",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "title": "AgentResultResponse",
+        "type": "object"
+      },
+      "AgentStatsResponse": {
+        "description": "Response for GET /pipeline/stats.",
+        "properties": {
+          "agent_completed": {
+            "title": "Agent Completed",
+            "type": "integer"
+          },
+          "avg_duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Duration Seconds"
+          },
+          "avg_phase_seconds": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Avg Phase Seconds",
+            "type": "object"
+          },
+          "closed_issues": {
+            "title": "Closed Issues",
+            "type": "integer"
+          },
+          "complexity_breakdown": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ComplexityBreakdown"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cost_per_task_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Per Task Usd"
+          },
+          "first_pass_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Pass Rate"
+          },
+          "manual_completed": {
+            "title": "Manual Completed",
+            "type": "integer"
+          },
+          "model_usage": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Usage"
+          },
+          "total_issues": {
+            "title": "Total Issues",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_issues",
+          "closed_issues",
+          "agent_completed",
+          "manual_completed"
+        ],
+        "title": "AgentStatsResponse",
+        "type": "object"
+      },
+      "AgentStatusResponse": {
+        "description": "Response for research/discovery job status query.",
+        "properties": {
+          "created_at": {
+            "default": "",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "default": "",
+            "title": "Error",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "progress": {
+            "default": 0,
+            "title": "Progress",
+            "type": "integer"
+          },
+          "project": {
+            "default": "",
+            "title": "Project",
+            "type": "string"
+          },
+          "stage": {
+            "default": "",
+            "title": "Stage",
+            "type": "string"
+          },
+          "started_at": {
+            "default": "",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "title": "AgentStatusResponse",
+        "type": "object"
+      },
+      "ApplyPreviewResponse": {
+        "description": "Dry-run preview for a pending change before applying.",
+        "properties": {
+          "change_id": {
+            "title": "Change Id",
+            "type": "string"
+          },
+          "current_line_count": {
+            "default": 0,
+            "title": "Current Line Count",
+            "type": "integer"
+          },
+          "dedup_hit": {
+            "default": false,
+            "title": "Dedup Hit",
+            "type": "boolean"
+          },
+          "preview_diff": {
+            "default": "",
+            "title": "Preview Diff",
+            "type": "string"
+          },
+          "scoped_projects": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scoped Projects"
+          },
+          "targets": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Targets",
+            "type": "array"
+          },
+          "validation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validation"
+          },
+          "would_rotate": {
+            "default": false,
+            "title": "Would Rotate",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "change_id",
+          "targets"
+        ],
+        "title": "ApplyPreviewResponse",
+        "type": "object"
+      },
+      "Body_upload_transcript_transcript_upload_post": {
+        "properties": {
+          "language": {
+            "default": "auto",
+            "title": "Language",
+            "type": "string"
+          },
+          "project_context": {
+            "default": "",
+            "title": "Project Context",
+            "type": "string"
+          },
+          "resume": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume"
+          },
+          "transcription_model": {
+            "default": "fast",
+            "title": "Transcription Model",
+            "type": "string"
+          }
+        },
+        "title": "Body_upload_transcript_transcript_upload_post",
+        "type": "object"
+      },
+      "BulkRejectRequest": {
+        "description": "Bulk-reject one or more pending changes in a single call.",
+        "properties": {
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ids",
+            "type": "array"
+          },
+          "reason": {
+            "default": "bulk_manual",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "BulkRejectRequest",
+        "type": "object"
+      },
+      "BulkRejectResponse": {
+        "properties": {
+          "failed": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Failed",
+            "type": "array"
+          },
+          "rejected": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rejected",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rejected",
+          "failed"
+        ],
+        "title": "BulkRejectResponse",
+        "type": "object"
+      },
+      "BurndownEntry": {
+        "description": "Single week entry for burndown data.",
+        "properties": {
+          "open_count": {
+            "title": "Open Count",
+            "type": "integer"
+          },
+          "week": {
+            "title": "Week",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week",
+          "open_count"
+        ],
+        "title": "BurndownEntry",
+        "type": "object"
+      },
+      "ClassifyRequest": {
+        "description": "Request body for POST /pipeline/classify.",
+        "properties": {
+          "issue_numbers": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue Numbers"
+          },
+          "project": {
+            "title": "Project",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project"
+        ],
+        "title": "ClassifyRequest",
+        "type": "object"
+      },
+      "ComplexityBreakdown": {
+        "description": "Breakdown of issues by complexity category.",
+        "properties": {
+          "assisted": {
+            "default": 0,
+            "title": "Assisted",
+            "type": "integer"
+          },
+          "auto": {
+            "default": 0,
+            "title": "Auto",
+            "type": "integer"
+          },
+          "manual": {
+            "default": 0,
+            "title": "Manual",
+            "type": "integer"
+          },
+          "unclassified": {
+            "default": 0,
+            "title": "Unclassified",
+            "type": "integer"
+          }
+        },
+        "title": "ComplexityBreakdown",
+        "type": "object"
+      },
+      "DashboardQualitySnapshot": {
+        "description": "Simplified KPI snapshot for the dashboard (7-day period).",
+        "properties": {
+          "avg_duration_seconds": {
+            "title": "Avg Duration Seconds",
+            "type": "number"
+          },
+          "context_corruption_count": {
+            "default": 0,
+            "title": "Context Corruption Count",
+            "type": "integer"
+          },
+          "cost_per_task_usd": {
+            "title": "Cost Per Task Usd",
+            "type": "number"
+          },
+          "debate_abort_count": {
+            "default": 0,
+            "title": "Debate Abort Count",
+            "type": "integer"
+          },
+          "fail_closed_by_reason": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Fail Closed By Reason",
+            "type": "object"
+          },
+          "fail_closed_trigger_count": {
+            "default": 0,
+            "title": "Fail Closed Trigger Count",
+            "type": "integer"
+          },
+          "first_pass_rate": {
+            "title": "First Pass Rate",
+            "type": "number"
+          },
+          "mcp_resource_use_count": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Mcp Resource Use Count",
+            "type": "object"
+          },
+          "merged_count": {
+            "title": "Merged Count",
+            "type": "integer"
+          },
+          "period_days": {
+            "default": 7,
+            "title": "Period Days",
+            "type": "integer"
+          },
+          "phase_timeout_count": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Phase Timeout Count",
+            "type": "object"
+          },
+          "qa_pass_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qa Pass Rate"
+          },
+          "reconciler_inconsistencies": {
+            "default": 0,
+            "title": "Reconciler Inconsistencies",
+            "type": "integer"
+          },
+          "retry_rate": {
+            "title": "Retry Rate",
+            "type": "number"
+          },
+          "top_error_classes": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Top Error Classes",
+            "type": "array"
+          },
+          "total_issues": {
+            "title": "Total Issues",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_issues",
+          "merged_count",
+          "first_pass_rate",
+          "avg_duration_seconds",
+          "cost_per_task_usd",
+          "retry_rate",
+          "qa_pass_rate",
+          "top_error_classes"
+        ],
+        "title": "DashboardQualitySnapshot",
+        "type": "object"
+      },
+      "DebateListItem": {
+        "description": "One item in debate history.",
+        "properties": {
+          "consensus_level": {
+            "default": "contested",
+            "title": "Consensus Level",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "project": {
+            "title": "Project",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          },
+          "total_cost": {
+            "default": 0.0,
+            "title": "Total Cost",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "topic",
+          "project",
+          "created_at"
+        ],
+        "title": "DebateListItem",
+        "type": "object"
+      },
+      "DebateMessageResponse": {
+        "description": "A single message in the debate transcript.",
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "round": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Round"
+          },
+          "round_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Round Type"
+          },
+          "sender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              }
+            ],
+            "title": "Sender"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "sender",
+          "content",
+          "timestamp"
+        ],
+        "title": "DebateMessageResponse",
+        "type": "object"
+      },
+      "DebateResultResponse": {
+        "description": "Response for GET /pipeline/debate/{id}/result.",
+        "properties": {
+          "adr_markdown": {
+            "default": "",
+            "title": "Adr Markdown",
+            "type": "string"
+          },
+          "cost_summary": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Cost Summary",
+            "type": "object"
+          },
+          "debate_result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Debate Result"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "topic": {
+            "default": "",
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "DebateResultResponse",
+        "type": "object"
+      },
+      "DebateStartRequest": {
+        "description": "Request body for POST /pipeline/debate/start.",
+        "properties": {
+          "brief": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Markdown brief text",
+            "title": "Brief"
+          },
+          "context_files": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "File paths relative to project root",
+            "title": "Context Files"
+          },
+          "participants": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Participant"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Custom participant list",
+            "title": "Participants"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Repo name from config.yaml",
+            "title": "Project"
+          },
+          "topic": {
+            "description": "Debate topic",
+            "minLength": 1,
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic"
+        ],
+        "title": "DebateStartRequest",
+        "type": "object"
+      },
+      "DebateStatusResponse": {
+        "description": "Response for GET /pipeline/debate/{id}/status.",
+        "properties": {
+          "current_round": {
+            "default": 0,
+            "title": "Current Round",
+            "type": "integer"
+          },
+          "current_speaker": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Speaker"
+          },
+          "error": {
+            "default": "",
+            "title": "Error",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "messages": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DebateMessageResponse"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "progress": {
+            "default": 0,
+            "title": "Progress",
+            "type": "integer"
+          },
+          "stage": {
+            "default": "",
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "running",
+              "done",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "DebateStatusResponse",
+        "type": "object"
+      },
+      "DiscoveryStartRequest": {
+        "description": "Request body for POST /discovery/start.",
+        "properties": {
+          "project": {
+            "description": "Project slug, e.g. 'Sewing-ERP'",
+            "title": "Project",
+            "type": "string"
+          },
+          "research_path": {
+            "default": "",
+            "description": "Path to RESEARCH.md (optional)",
+            "title": "Research Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project"
+        ],
+        "title": "DiscoveryStartRequest",
+        "type": "object"
+      },
+      "GitHubRateLimitBucket": {
+        "description": "One GitHub rate-limit bucket (REST or GraphQL).",
+        "properties": {
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "remaining": {
+            "title": "Remaining",
+            "type": "integer"
+          },
+          "reset_at": {
+            "title": "Reset At",
+            "type": "integer"
+          },
+          "reset_seconds": {
+            "title": "Reset Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "limit",
+          "remaining",
+          "reset_at",
+          "reset_seconds"
+        ],
+        "title": "GitHubRateLimitBucket",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "LessonsFileEntry": {
+        "description": "A single lessons file (retro/review/legacy) for one project.",
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "line_count": {
+            "title": "Line Count",
+            "type": "integer"
+          },
+          "mtime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mtime"
+          },
+          "project": {
+            "title": "Project",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project",
+          "filename",
+          "content",
+          "size_bytes",
+          "line_count"
+        ],
+        "title": "LessonsFileEntry",
+        "type": "object"
+      },
+      "LessonsFileResponse": {
+        "description": "All three lessons files for one project.",
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/LessonsFileEntry"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "project": {
+            "title": "Project",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project",
+          "files"
+        ],
+        "title": "LessonsFileResponse",
+        "type": "object"
+      },
+      "LimitsResponse": {
+        "description": "Response for GET /pipeline/limits.",
+        "properties": {
+          "api_fallback_confirmed": {
+            "title": "Api Fallback Confirmed",
+            "type": "boolean"
+          },
+          "api_fallback_enabled": {
+            "title": "Api Fallback Enabled",
+            "type": "boolean"
+          },
+          "call_count": {
+            "title": "Call Count",
+            "type": "integer"
+          },
+          "github": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/GitHubRateLimitBucket"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Github"
+          },
+          "max_calls": {
+            "title": "Max Calls",
+            "type": "integer"
+          },
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "rate_limit_hits": {
+            "title": "Rate Limit Hits",
+            "type": "integer"
+          },
+          "remaining_pct": {
+            "title": "Remaining Pct",
+            "type": "number"
+          },
+          "session_elapsed_hours": {
+            "title": "Session Elapsed Hours",
+            "type": "number"
+          },
+          "session_expired": {
+            "title": "Session Expired",
+            "type": "boolean"
+          },
+          "session_hours": {
+            "title": "Session Hours",
+            "type": "number"
+          }
+        },
+        "required": [
+          "paused",
+          "call_count",
+          "max_calls",
+          "remaining_pct",
+          "rate_limit_hits",
+          "session_elapsed_hours",
+          "session_hours",
+          "session_expired",
+          "api_fallback_enabled",
+          "api_fallback_confirmed"
+        ],
+        "title": "LimitsResponse",
+        "type": "object"
+      },
+      "MCPHealthResponse": {
+        "description": "Response for GET /pipeline/mcp/health (epic-026 Task-09).\n\nStatus mapping:\n  * ``healthy``     — last probe returned ACK and ≥1 tool is registered.\n  * ``degraded``    — soft-disable active (1-2 consecutive probe failures)\n                      or MCP server answered partially.\n  * ``unavailable`` — MCP disabled in config, or ≥3 consecutive probe\n                      failures (``MCP_PROBE_FAIL_ALERT_THRESHOLD`` in\n                      :mod:`makeit_pipeline.mcp_health_probe`).\n\n``last_probe`` is an ISO-8601 UTC timestamp (timezone-aware). When the\nendpoint reports the config-disabled case without running a probe the\nfield still carries the current time so dashboards can reason about\nfreshness uniformly.",
+        "properties": {
+          "last_probe": {
+            "title": "Last Probe",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "healthy",
+              "degraded",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tools_registered": {
+            "minimum": 0.0,
+            "title": "Tools Registered",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "tools_registered",
+          "last_probe"
+        ],
+        "title": "MCPHealthResponse",
+        "type": "object"
+      },
+      "MessageResponse": {
+        "description": "Generic message response.",
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "MessageResponse",
+        "type": "object"
+      },
+      "Participant": {
+        "description": "A debate participant configuration.",
+        "properties": {
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Model override (e.g. gpt-4o)",
+            "title": "Model"
+          },
+          "provider": {
+            "description": "Provider name: anthropic, openai, gemini",
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider"
+        ],
+        "title": "Participant",
+        "type": "object"
+      },
+      "PendingChangeResponse": {
+        "description": "Single pending change from AutoTuner.",
+        "properties": {
+          "applied_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied At"
+          },
+          "backup_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backup Path"
+          },
+          "change_type": {
+            "title": "Change Type",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "pr_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pr Url"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "rejection_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejection Reason"
+          },
+          "retro_period": {
+            "title": "Retro Period",
+            "type": "string"
+          },
+          "scoped_projects": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scoped Projects"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "integer"
+          },
+          "validation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validation"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "retro_period",
+          "tier",
+          "target",
+          "change_type",
+          "content",
+          "rationale",
+          "confidence",
+          "status"
+        ],
+        "title": "PendingChangeResponse",
+        "type": "object"
+      },
+      "PendingChangesListResponse": {
+        "description": "List of pending changes.",
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/PendingChangeResponse"
+            },
+            "title": "Changes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "changes"
+        ],
+        "title": "PendingChangesListResponse",
+        "type": "object"
+      },
+      "PipelineStatusResponse": {
+        "description": "Response for GET /pipeline/status.",
+        "properties": {
+          "active_tasks": {
+            "title": "Active Tasks",
+            "type": "integer"
+          },
+          "batch_summary": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Batch Summary",
+            "type": "object"
+          },
+          "current_project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Project"
+          },
+          "issue_stages": {
+            "additionalProperties": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "default": {},
+            "title": "Issue Stages",
+            "type": "object"
+          },
+          "last_abort_reason": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Last Abort Reason",
+            "type": "object"
+          },
+          "queue": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Queue",
+            "type": "array"
+          },
+          "results": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "running": {
+            "title": "Running",
+            "type": "boolean"
+          },
+          "stopping": {
+            "title": "Stopping",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "running",
+          "stopping",
+          "current_project",
+          "active_tasks",
+          "results",
+          "queue"
+        ],
+        "title": "PipelineStatusResponse",
+        "type": "object"
+      },
+      "ProjectAnalyticsResponse": {
+        "description": "Response for GET /pipeline/projects/{owner}/{repo}/analytics.",
+        "properties": {
+          "agent_success_rate_by_complexity": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Agent Success Rate By Complexity",
+            "type": "object"
+          },
+          "burndown": {
+            "items": {
+              "$ref": "#/components/schemas/BurndownEntry"
+            },
+            "title": "Burndown",
+            "type": "array"
+          },
+          "by_complexity": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Complexity",
+            "type": "object"
+          },
+          "by_priority": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Priority",
+            "type": "object"
+          },
+          "by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Status",
+            "type": "object"
+          },
+          "by_workflow": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Workflow",
+            "type": "object"
+          },
+          "closed": {
+            "title": "Closed",
+            "type": "integer"
+          },
+          "estimated_completion_weeks": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Completion Weeks"
+          },
+          "in_progress": {
+            "title": "In Progress",
+            "type": "integer"
+          },
+          "open": {
+            "title": "Open",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "weekly_velocity": {
+            "items": {
+              "$ref": "#/components/schemas/WeeklyVelocityEntry"
+            },
+            "title": "Weekly Velocity",
+            "type": "array"
+          }
+        },
+        "required": [
+          "total",
+          "open",
+          "closed",
+          "in_progress",
+          "by_complexity",
+          "by_priority",
+          "by_status",
+          "by_workflow",
+          "agent_success_rate_by_complexity",
+          "weekly_velocity",
+          "burndown",
+          "estimated_completion_weeks"
+        ],
+        "title": "ProjectAnalyticsResponse",
+        "type": "object"
+      },
+      "ProjectSummary": {
+        "description": "Summary analytics for a single project in the projects list.",
+        "properties": {
+          "by_complexity": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Complexity",
+            "type": "object"
+          },
+          "closed": {
+            "title": "Closed",
+            "type": "integer"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "open": {
+            "title": "Open",
+            "type": "integer"
+          },
+          "repo": {
+            "title": "Repo",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "repo",
+          "enabled",
+          "total",
+          "open",
+          "closed",
+          "by_complexity"
+        ],
+        "title": "ProjectSummary",
+        "type": "object"
+      },
+      "ProjectsListResponse": {
+        "description": "Response for GET /pipeline/projects.",
+        "properties": {
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectSummary"
+            },
+            "title": "Projects",
+            "type": "array"
+          }
+        },
+        "required": [
+          "projects"
+        ],
+        "title": "ProjectsListResponse",
+        "type": "object"
+      },
+      "QualityConfigResponse": {
+        "description": "Current ``QualityConfig`` snapshot exposed to the dashboard.\n\nIncludes live runtime state (cooldown remaining) derived from the\n``AutoTuner`` so the UI can show the \"next eligible\" time without\nadditional round-trips.",
+        "properties": {
+          "auto_apply_cooldown_hours": {
+            "title": "Auto Apply Cooldown Hours",
+            "type": "integer"
+          },
+          "auto_apply_lessons": {
+            "title": "Auto Apply Lessons",
+            "type": "boolean"
+          },
+          "auto_apply_min_confidence": {
+            "title": "Auto Apply Min Confidence",
+            "type": "number"
+          },
+          "cooldown_active": {
+            "default": false,
+            "title": "Cooldown Active",
+            "type": "boolean"
+          },
+          "cooldown_remaining_hours": {
+            "default": 0.0,
+            "title": "Cooldown Remaining Hours",
+            "type": "number"
+          },
+          "kpi_degradation_threshold": {
+            "title": "Kpi Degradation Threshold",
+            "type": "number"
+          },
+          "last_apply_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Apply At"
+          },
+          "lessons_max_bytes": {
+            "title": "Lessons Max Bytes",
+            "type": "integer"
+          },
+          "lessons_max_lines": {
+            "title": "Lessons Max Lines",
+            "type": "integer"
+          },
+          "lessons_ttl_days": {
+            "title": "Lessons Ttl Days",
+            "type": "integer"
+          },
+          "retro_enabled": {
+            "title": "Retro Enabled",
+            "type": "boolean"
+          },
+          "retro_min_sample_size": {
+            "title": "Retro Min Sample Size",
+            "type": "integer"
+          },
+          "retro_mode": {
+            "enum": [
+              "reporting",
+              "auto_apply"
+            ],
+            "title": "Retro Mode",
+            "type": "string"
+          },
+          "validate_numeric_claims": {
+            "title": "Validate Numeric Claims",
+            "type": "boolean"
+          },
+          "validation_tolerance": {
+            "title": "Validation Tolerance",
+            "type": "number"
+          }
+        },
+        "required": [
+          "retro_enabled",
+          "retro_mode",
+          "auto_apply_lessons",
+          "auto_apply_min_confidence",
+          "auto_apply_cooldown_hours",
+          "kpi_degradation_threshold",
+          "retro_min_sample_size",
+          "lessons_max_lines",
+          "lessons_max_bytes",
+          "lessons_ttl_days",
+          "validate_numeric_claims",
+          "validation_tolerance"
+        ],
+        "title": "QualityConfigResponse",
+        "type": "object"
+      },
+      "QualityConfigUpdateRequest": {
+        "description": "Partial update for mutable ``QualityConfig`` fields.\n\nStored in a process-wide in-memory override applied on the next\n``load_config()`` call. Lost on API restart. Persist by editing\n``~/.makeit-pipeline/config.yaml`` manually if needed.",
+        "properties": {
+          "auto_apply_cooldown_hours": {
+            "anyOf": [
+              {
+                "maximum": 168.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Apply Cooldown Hours"
+          },
+          "auto_apply_lessons": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Apply Lessons"
+          },
+          "auto_apply_min_confidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.5,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Apply Min Confidence"
+          },
+          "kpi_degradation_threshold": {
+            "anyOf": [
+              {
+                "maximum": 0.5,
+                "minimum": 0.01,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kpi Degradation Threshold"
+          },
+          "lessons_max_bytes": {
+            "anyOf": [
+              {
+                "maximum": 1000000.0,
+                "minimum": 1024.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lessons Max Bytes"
+          },
+          "lessons_max_lines": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 10.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lessons Max Lines"
+          },
+          "lessons_ttl_days": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lessons Ttl Days"
+          },
+          "retro_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "reporting",
+                  "auto_apply"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retro Mode"
+          },
+          "validate_numeric_claims": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validate Numeric Claims"
+          },
+          "validation_tolerance": {
+            "anyOf": [
+              {
+                "maximum": 0.5,
+                "minimum": 0.01,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validation Tolerance"
+          }
+        },
+        "title": "QualityConfigUpdateRequest",
+        "type": "object"
+      },
+      "QualityErrorsResponse": {
+        "description": "Error distribution by class.",
+        "properties": {
+          "by_week": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "By Week",
+            "type": "array"
+          },
+          "classes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Classes",
+            "type": "object"
+          }
+        },
+        "required": [
+          "classes",
+          "by_week"
+        ],
+        "title": "QualityErrorsResponse",
+        "type": "object"
+      },
+      "QualityFindingsResponse": {
+        "description": "Finding distribution by category.",
+        "properties": {
+          "by_week": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "By Week",
+            "type": "array"
+          },
+          "categories": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Categories",
+            "type": "object"
+          }
+        },
+        "required": [
+          "categories",
+          "by_week"
+        ],
+        "title": "QualityFindingsResponse",
+        "type": "object"
+      },
+      "QualitySnapshotResponse": {
+        "description": "Single quality snapshot.",
+        "properties": {
+          "avg_cost_per_issue": {
+            "default": 0.0,
+            "title": "Avg Cost Per Issue",
+            "type": "number"
+          },
+          "avg_duration_sec": {
+            "title": "Avg Duration Sec",
+            "type": "number"
+          },
+          "avg_finding_density": {
+            "title": "Avg Finding Density",
+            "type": "number"
+          },
+          "error_count": {
+            "title": "Error Count",
+            "type": "integer"
+          },
+          "error_recovery_rate": {
+            "title": "Error Recovery Rate",
+            "type": "number"
+          },
+          "first_pass_success_rate": {
+            "title": "First Pass Success Rate",
+            "type": "number"
+          },
+          "merged_count": {
+            "title": "Merged Count",
+            "type": "integer"
+          },
+          "period_end": {
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "title": "Period Start",
+            "type": "string"
+          },
+          "qa_pass_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qa Pass Rate"
+          },
+          "retry_rate": {
+            "title": "Retry Rate",
+            "type": "number"
+          },
+          "rollback_rate": {
+            "title": "Rollback Rate",
+            "type": "number"
+          },
+          "success_rate": {
+            "default": 0.0,
+            "title": "Success Rate",
+            "type": "number"
+          },
+          "top_error_classes": {
+            "default": [],
+            "items": {
+              "items": {},
+              "type": "array"
+            },
+            "title": "Top Error Classes",
+            "type": "array"
+          },
+          "top_finding_categories": {
+            "default": [],
+            "items": {
+              "items": {},
+              "type": "array"
+            },
+            "title": "Top Finding Categories",
+            "type": "array"
+          },
+          "total_issues": {
+            "title": "Total Issues",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "period_start",
+          "period_end",
+          "total_issues",
+          "merged_count",
+          "error_count",
+          "first_pass_success_rate",
+          "retry_rate",
+          "avg_finding_density",
+          "avg_duration_sec",
+          "error_recovery_rate",
+          "qa_pass_rate",
+          "rollback_rate"
+        ],
+        "title": "QualitySnapshotResponse",
+        "type": "object"
+      },
+      "QualityTrendsResponse": {
+        "description": "Weekly snapshots with trend analysis.",
+        "properties": {
+          "snapshots": {
+            "items": {
+              "$ref": "#/components/schemas/QualitySnapshotResponse"
+            },
+            "title": "Snapshots",
+            "type": "array"
+          },
+          "trends": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Trends",
+            "type": "object"
+          }
+        },
+        "required": [
+          "snapshots",
+          "trends"
+        ],
+        "title": "QualityTrendsResponse",
+        "type": "object"
+      },
+      "ReplayJobStatus": {
+        "description": "Response for GET /pipeline/replay/{job_id}.\n\nPopulated progressively as the background task runs. While ``status =\nrunning`` only ``job_id`` / ``started_at`` are guaranteed — the numeric\nfields (``regressions_count`` / ``total`` / ``regression_rate``) and\n``report_path`` arrive on ``completed``.  On ``failed`` the ``error``\nfield carries a sanitized message suitable for user display (internal\npaths / stack traces are logged but not returned).",
+        "properties": {
+          "baseline_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Version"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "prompt_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Version"
+          },
+          "regression_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regression Rate"
+          },
+          "regressions_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Regressions Count"
+          },
+          "report_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Path"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "running",
+              "completed",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          }
+        },
+        "required": [
+          "job_id",
+          "status",
+          "started_at"
+        ],
+        "title": "ReplayJobStatus",
+        "type": "object"
+      },
+      "ReplayRequest": {
+        "description": "Request body for POST /pipeline/replay.\n\nMirrors the CLI ``makeit-pipeline replay`` flags so dashboard operators\ncan trigger the same offline regression harness without shelling in.\nPydantic enforces the ``1 <= sample <= 50`` cap at the API boundary so a\nmalicious/confused caller cannot spend unbounded LLM budget (epic-030\nrisk section — replay cost is O(sample * n_samples_per_issue)).",
+        "properties": {
+          "baseline_version": {
+            "default": "prod",
+            "description": "Label for the baseline revision being compared against.",
+            "title": "Baseline Version",
+            "type": "string"
+          },
+          "n_samples_per_issue": {
+            "default": 1,
+            "description": "How many times to replay each issue for averaging (default 1).",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "N Samples Per Issue",
+            "type": "integer"
+          },
+          "prompt_version": {
+            "default": "new",
+            "description": "Label for the prompt revision under evaluation (reported in MD output).",
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "sample": {
+            "default": 20,
+            "description": "Max number of historical issues to replay (hard cap: 50).",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Sample",
+            "type": "integer"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO-8601 date/timestamp; historical issues older than this are excluded from the replay sample. ``None`` replays all terminal issues.",
+            "title": "Since"
+          }
+        },
+        "title": "ReplayRequest",
+        "type": "object"
+      },
+      "ResearchStartRequest": {
+        "description": "Request body for POST /research/start.",
+        "properties": {
+          "product_description": {
+            "description": "What the product does",
+            "minLength": 1,
+            "title": "Product Description",
+            "type": "string"
+          },
+          "project": {
+            "description": "Project slug, e.g. 'Sewing-ERP'",
+            "title": "Project",
+            "type": "string"
+          },
+          "region": {
+            "default": "KG",
+            "description": "ISO country code for market context",
+            "title": "Region",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project",
+          "product_description"
+        ],
+        "title": "ResearchStartRequest",
+        "type": "object"
+      },
+      "RetroListResponse": {
+        "description": "List of available retrospective periods.",
+        "properties": {
+          "retros": {
+            "items": {
+              "$ref": "#/components/schemas/RetroSummaryItem"
+            },
+            "title": "Retros",
+            "type": "array"
+          }
+        },
+        "required": [
+          "retros"
+        ],
+        "title": "RetroListResponse",
+        "type": "object"
+      },
+      "RetroRunResponse": {
+        "description": "Response from triggering a manual retrospective.",
+        "properties": {
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "period"
+        ],
+        "title": "RetroRunResponse",
+        "type": "object"
+      },
+      "RetroSummaryItem": {
+        "description": "Summary entry for the retros list endpoint.",
+        "properties": {
+          "patterns_count": {
+            "title": "Patterns Count",
+            "type": "integer"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "recommendations_count": {
+            "title": "Recommendations Count",
+            "type": "integer"
+          },
+          "rule_changes_count": {
+            "title": "Rule Changes Count",
+            "type": "integer"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "summary",
+          "patterns_count",
+          "recommendations_count",
+          "rule_changes_count"
+        ],
+        "title": "RetroSummaryItem",
+        "type": "object"
+      },
+      "StartRequest": {
+        "description": "Request body for POST /pipeline/start.",
+        "properties": {
+          "complexity_filter": {
+            "anyOf": [
+              {
+                "enum": [
+                  "auto",
+                  "assisted",
+                  "manual"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Complexity Filter"
+          },
+          "labels": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Labels",
+            "type": "array"
+          },
+          "limit": {
+            "default": 4,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "milestone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Milestone"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          }
+        },
+        "title": "StartRequest",
+        "type": "object"
+      },
+      "TimelineEntry": {
+        "description": "Single timeline event for an issue run.",
+        "properties": {
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds"
+          },
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "phase": {
+            "title": "Phase",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timestamp",
+          "phase",
+          "event"
+        ],
+        "title": "TimelineEntry",
+        "type": "object"
+      },
+      "TimelineResponse": {
+        "description": "Timeline of events for a specific issue.",
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "issue_number": {
+            "title": "Issue Number",
+            "type": "integer"
+          },
+          "repo": {
+            "title": "Repo",
+            "type": "string"
+          }
+        },
+        "required": [
+          "repo",
+          "issue_number",
+          "entries"
+        ],
+        "title": "TimelineResponse",
+        "type": "object"
+      },
+      "TranscriptBriefUpdateRequest": {
+        "description": "Body of PUT /transcript/result/{job_id} — overwrite BRIEF.md.",
+        "properties": {
+          "content": {
+            "maxLength": 1048576,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "title": "TranscriptBriefUpdateRequest",
+        "type": "object"
+      },
+      "TranscriptJobResponse": {
+        "description": "Response for job creation.",
+        "properties": {
+          "brief_url": {
+            "default": "",
+            "title": "Brief Url",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "title": "TranscriptJobResponse",
+        "type": "object"
+      },
+      "TranscriptListItem": {
+        "description": "One item in transcript history.",
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "file_name": {
+            "title": "File Name",
+            "type": "string"
+          },
+          "file_type": {
+            "title": "File Type",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "project": {
+            "title": "Project",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "transcription_model": {
+            "default": "fast",
+            "title": "Transcription Model",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "status",
+          "file_name",
+          "project",
+          "created_at",
+          "file_type"
+        ],
+        "title": "TranscriptListItem",
+        "type": "object"
+      },
+      "TranscriptResultResponse": {
+        "description": "Response with full results.",
+        "properties": {
+          "brief_content": {
+            "default": "",
+            "title": "Brief Content",
+            "type": "string"
+          },
+          "contradiction_count": {
+            "default": 0,
+            "title": "Contradiction Count",
+            "type": "integer"
+          },
+          "decision_count": {
+            "default": 0,
+            "title": "Decision Count",
+            "type": "integer"
+          },
+          "duration_seconds": {
+            "default": 0.0,
+            "title": "Duration Seconds",
+            "type": "number"
+          },
+          "file_name": {
+            "default": "",
+            "title": "File Name",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "project": {
+            "default": "",
+            "title": "Project",
+            "type": "string"
+          },
+          "quality_report": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Report"
+          },
+          "requirement_count": {
+            "default": 0,
+            "title": "Requirement Count",
+            "type": "integer"
+          },
+          "speaker_count": {
+            "default": 0,
+            "title": "Speaker Count",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "topic_count": {
+            "default": 0,
+            "title": "Topic Count",
+            "type": "integer"
+          },
+          "transcript_text": {
+            "default": "",
+            "title": "Transcript Text",
+            "type": "string"
+          },
+          "uncertain_count": {
+            "default": 0,
+            "title": "Uncertain Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "title": "TranscriptResultResponse",
+        "type": "object"
+      },
+      "TranscriptStatusResponse": {
+        "description": "Response for job status query.",
+        "properties": {
+          "duration_seconds": {
+            "default": 0.0,
+            "title": "Duration Seconds",
+            "type": "number"
+          },
+          "error": {
+            "default": "",
+            "title": "Error",
+            "type": "string"
+          },
+          "file_name": {
+            "default": "",
+            "title": "File Name",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "language": {
+            "default": "auto",
+            "title": "Language",
+            "type": "string"
+          },
+          "progress": {
+            "default": 0,
+            "title": "Progress",
+            "type": "integer"
+          },
+          "project": {
+            "default": "",
+            "title": "Project",
+            "type": "string"
+          },
+          "quality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality"
+          },
+          "speaker_count": {
+            "default": 0,
+            "title": "Speaker Count",
+            "type": "integer"
+          },
+          "stage": {
+            "default": "",
+            "title": "Stage",
+            "type": "string"
+          },
+          "stage_detail": {
+            "default": "",
+            "title": "Stage Detail",
+            "type": "string"
+          },
+          "started_at": {
+            "default": "",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "transcription_model": {
+            "default": "fast",
+            "title": "Transcription Model",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "title": "TranscriptStatusResponse",
+        "type": "object"
+      },
+      "TuningApplyResponse": {
+        "description": "Response from applying a tuning change.",
+        "properties": {
+          "pr_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pr Url"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "TuningApplyResponse",
+        "type": "object"
+      },
+      "TuningHistoryResponse": {
+        "description": "History of tuning changes.",
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/PendingChangeResponse"
+            },
+            "title": "Changes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "changes"
+        ],
+        "title": "TuningHistoryResponse",
+        "type": "object"
+      },
+      "TuningRejectResponse": {
+        "description": "Response from rejecting a tuning change.",
+        "properties": {
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "TuningRejectResponse",
+        "type": "object"
+      },
+      "TuningRollbackResponse": {
+        "description": "Response from rolling back a tuning change.",
+        "properties": {
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "TuningRollbackResponse",
+        "type": "object"
+      },
+      "UserMessageRequest": {
+        "description": "Request body for POST /pipeline/debate/{id}/message.",
+        "properties": {
+          "content": {
+            "description": "User message content",
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "title": "UserMessageRequest",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "WeeklyVelocityEntry": {
+        "description": "Single week entry for velocity data.",
+        "properties": {
+          "closed": {
+            "title": "Closed",
+            "type": "integer"
+          },
+          "week": {
+            "title": "Week",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week",
+          "closed"
+        ],
+        "title": "WeeklyVelocityEntry",
+        "type": "object"
+      },
+      "_SettingsValueBody": {
+        "properties": {
+          "value": {
+            "maxLength": 65536,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "title": "_SettingsValueBody",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "REST API for the MakeIT autonomous development pipeline.",
+    "title": "MakeIT Pipeline API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/discovery/list": {
+      "get": {
+        "description": "List all discovery jobs, optionally filtered by project.",
+        "operationId": "discovery_list_discovery_list_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentListItem"
+                  },
+                  "title": "Response Discovery List Discovery List Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Discovery List"
+      }
+    },
+    "/discovery/result/{job_id}": {
+      "get": {
+        "description": "Get full result of a completed discovery job.",
+        "operationId": "discovery_result_discovery_result__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentResultResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Discovery Result"
+      }
+    },
+    "/discovery/start": {
+      "post": {
+        "description": "Launch a discovery agent for a project.\n\nStarts background feature gap analysis via Claude CLI.\nReturns a job_id for tracking progress.",
+        "operationId": "discovery_start_discovery_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscoveryStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentJobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Discovery Start"
+      }
+    },
+    "/discovery/status/{job_id}": {
+      "get": {
+        "description": "Get current status of a discovery job.",
+        "operationId": "discovery_status_discovery_status__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Discovery Status"
+      }
+    },
+    "/discovery/{job_id}": {
+      "delete": {
+        "description": "Delete a discovery job and its files from disk.",
+        "operationId": "delete_discovery_discovery__job_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Discovery Discovery  Job Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Discovery"
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Health Health Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/health/all": {
+      "get": {
+        "description": "Unified health of pipeline + auditor + SSH tunnel.\n\nReplaces the three-curl operator workflow from CLAUDE.md §Remote\nAccess. Dashboard polls this every ~30s and renders a coloured\ndot per service. All three checks run in parallel so total\nresponse time is bounded by the slowest individual check\n(currently ``auditor`` at 5 s).\n\nEach sub-check converts any failure mode — timeout, connection\nrefused, non-2xx — into ``status: \"down\"`` rather than bubbling\nup. We never want this endpoint to 500; dashboards interpret a\nmissing response the same way as \"pipeline is itself down\",\nwhich would be misleading when only auditor / tunnel are out.",
+        "operationId": "health_all_health_all_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Health All Health All Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health All"
+      }
+    },
+    "/issue/{repo}/{issue_number}/context": {
+      "get": {
+        "description": "Return the full :class:`IssueContext` JSON for ``{repo}#{issue_number}``.\n\n``repo`` is captured via ``{repo:path}`` so values containing a\nforward slash (e.g. ``Sergio1990-1/makeit-pipeline``) route\ncorrectly.  The captured value is validated against a strict\n``owner/name`` pattern before being passed to the store to\nprevent path-traversal attacks via ``..`` segments.\n\nReturns 404 when no context is stored.  The detail message\ncontains only the requested ``repo`` / ``issue_number`` — no\ninternal paths — so a probe cannot use the response to map the\ncontexts directory layout.",
+        "operationId": "get_issue_context_issue__repo___issue_number__context_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "repo",
+            "required": true,
+            "schema": {
+              "title": "Repo",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "issue_number",
+            "required": true,
+            "schema": {
+              "title": "Issue Number",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Get Issue Context Issue  Repo   Issue Number  Context Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Issue Context"
+      }
+    },
+    "/pipeline/admin_bypass_merges": {
+      "get": {
+        "description": "Return merges that bypassed branch protection via ``--admin``.\n\nReads ``metrics.jsonl`` and returns every record with\n``admin_bypassed=true`` (and ``result='merged'``) so the dashboard\ncan flag them for post-hoc human review.\n\nParameters\n----------\nsince:\n    Optional ISO-8601 timestamp.  Records with ``ts >= since`` are\n    included; everything older is dropped.  Invalid input yields\n    ``HTTP 400`` so the dashboard can render a clear error rather\n    than silently returning the full history.\n\nBehaviour notes\n---------------\n- Missing ``metrics.jsonl`` (fresh install / never ran) → empty list,\n  *not* a 5xx.  The dashboard must be able to render this lane on\n  day-1 even before any metric has been logged.\n- Malformed JSON lines are skipped (mirrors\n  ``_compute_success_rate_by_complexity``); we never let a single\n  bad record break the response.\n- The endpoint reads ``metrics.jsonl`` directly — no path traversal\n  surface (``since`` is parsed as a datetime and never used as a\n  path component).",
+        "operationId": "list_admin_bypass_merges_pipeline_admin_bypass_merges_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Admin Bypass Merges Pipeline Admin Bypass Merges Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Admin Bypass Merges"
+      }
+    },
+    "/pipeline/classify": {
+      "post": {
+        "description": "Classify issues with SSE progress updates.\n\nStreams newline-delimited JSON events:\n  {\"type\":\"progress\",\"done\":3,\"total\":23,\"current\":\"#450 → assisted\"}\n  {\"type\":\"done\",\"classified\":23,\"results\":[...]}",
+        "operationId": "classify_issues_pipeline_classify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Classify Issues"
+      }
+    },
+    "/pipeline/debate/list": {
+      "get": {
+        "description": "List all debates, optionally filtered by project.",
+        "operationId": "debate_list_pipeline_debate_list_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DebateListItem"
+                  },
+                  "title": "Response Debate List Pipeline Debate List Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Debate List"
+      }
+    },
+    "/pipeline/debate/start": {
+      "post": {
+        "description": "Launch a multi-agent debate.\n\nStarts a background debate via the DebateEngine.\nReturns an id for tracking progress.",
+        "operationId": "debate_start_pipeline_debate_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DebateStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Debate Start Pipeline Debate Start Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Debate Start"
+      }
+    },
+    "/pipeline/debate/{debate_id}/message": {
+      "post": {
+        "description": "Inject a user message into a running debate.\n\nThe message is delivered to all participants in the next round.\nOnly allowed when the debate status is 'running'.",
+        "operationId": "debate_user_message_pipeline_debate__debate_id__message_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "debate_id",
+            "required": true,
+            "schema": {
+              "title": "Debate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Debate User Message Pipeline Debate  Debate Id  Message Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Debate User Message"
+      }
+    },
+    "/pipeline/debate/{debate_id}/result": {
+      "get": {
+        "description": "Get full result of a completed debate.",
+        "operationId": "debate_result_pipeline_debate__debate_id__result_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "debate_id",
+            "required": true,
+            "schema": {
+              "title": "Debate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DebateResultResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Debate Result"
+      }
+    },
+    "/pipeline/debate/{debate_id}/status": {
+      "get": {
+        "description": "Get current status of a debate.",
+        "operationId": "debate_status_pipeline_debate__debate_id__status_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "debate_id",
+            "required": true,
+            "schema": {
+              "title": "Debate Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DebateStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Debate Status"
+      }
+    },
+    "/pipeline/limits": {
+      "get": {
+        "description": "Return current rate-limiter status (Claude + GitHub).\n\nPhase-0.7: GitHub rate-limit buckets are added so the dashboard can\nwarn when GraphQL/REST is low — pre-batch ``run_batch`` aborts when\nGraphQL drops below 500 (see :func:`batch_coordinator._check_graphql_headroom`).\nWithout this surface the dashboard could only show \"running=False\"\nwith no actionable reason.",
+        "operationId": "get_limits_pipeline_limits_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimitsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Limits"
+      }
+    },
+    "/pipeline/logs": {
+      "get": {
+        "description": "List available agent log files, optionally filtered by issue number or stage.\n\nReturns newest-first list with filename, size, and parsed metadata.",
+        "operationId": "list_logs_pipeline_logs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "issue",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Issue"
+            }
+          },
+          {
+            "in": "query",
+            "name": "stage",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stage"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Logs Pipeline Logs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Logs"
+      }
+    },
+    "/pipeline/logs/tail": {
+      "get": {
+        "description": "Return the last *lines* lines of a whitelisted LaunchAgent log.\n\nUnlike ``/pipeline/logs/{filename}`` which serves per-issue JSONL\nagent logs, this endpoint exposes the stdout/stderr captured by\nthe Mac-hosted services (pipeline API, auditor API) so dashboard\nusers don't need SSH to see recent runtime output.\n\nRegistered before ``/pipeline/logs/{filename}`` because FastAPI\nroutes by insertion order; the parametric route would otherwise\ncapture ``tail`` as a filename and shadow this handler.\n\nParameters\n----------\nservice:\n    One of ``pipeline`` / ``auditor`` (whitelist).  Any other\n    value yields 400 — no arbitrary path access.\nlines:\n    How many tail lines to return.  Clamped to ``1 <= lines <= 1000``\n    to bound memory / response size.",
+        "operationId": "tail_system_log_pipeline_logs_tail_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "service",
+            "required": true,
+            "schema": {
+              "title": "Service",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lines",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "title": "Lines",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Tail System Log Pipeline Logs Tail Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tail System Log"
+      }
+    },
+    "/pipeline/logs/{filename}": {
+      "get": {
+        "description": "Return raw lines from a specific log file with pagination.\n\nArgs:\n    filename: The .jsonl log filename.\n    offset: Line number to start from (0-based).\n    limit: Max lines to return.",
+        "operationId": "get_log_pipeline_logs__filename__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "filename",
+            "required": true,
+            "schema": {
+              "title": "Filename",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Log Pipeline Logs  Filename  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Log"
+      }
+    },
+    "/pipeline/logs/{filename}/events": {
+      "get": {
+        "description": "Return parsed human-readable events from a log file.\n\nExtracts tool_use, assistant text, and result events — the\nsame summaries shown in the dashboard live view.",
+        "operationId": "get_log_events_pipeline_logs__filename__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "filename",
+            "required": true,
+            "schema": {
+              "title": "Filename",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Log Events Pipeline Logs  Filename  Events Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Log Events"
+      }
+    },
+    "/pipeline/mcp/health": {
+      "get": {
+        "description": "Return the MCP server health (epic-026 Task-09).\n\nNon-blocking (INV-E26-3): reads ``pipeline_state.mcp_health_snapshot``\nwhich the pipeline populates whenever it runs an MCP health probe\nduring a batch.  If no snapshot is cached yet (fresh process /\npipeline not running) we fall back to introspecting the registered\nFastMCP instance synchronously — listing tools is an in-process dict\nlookup, so it never shells out.\n\nStatus mapping:\n  * ``unavailable`` — MCP disabled in config, OR ≥3 consecutive probe\n    failures (``_MCP_UNAVAILABLE_FAILURE_THRESHOLD``),\n    OR cached snapshot reports no tools.\n  * ``degraded`` — soft-disable active / 1-2 consecutive probe\n    failures / probe partially succeeded.\n  * ``healthy`` — last probe returned ACK and ≥1 tool registered.",
+        "operationId": "get_mcp_health_pipeline_mcp_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MCPHealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Mcp Health"
+      }
+    },
+    "/pipeline/projects": {
+      "get": {
+        "description": "Return all enabled projects with summary analytics.",
+        "operationId": "list_projects_pipeline_projects_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectsListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Projects"
+      }
+    },
+    "/pipeline/projects/{owner}/{repo}/analytics": {
+      "get": {
+        "description": "Return project analytics: breakdowns, velocity, burndown, ETA.",
+        "operationId": "get_project_analytics_pipeline_projects__owner___repo__analytics_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner",
+            "required": true,
+            "schema": {
+              "title": "Owner",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "repo",
+            "required": true,
+            "schema": {
+              "title": "Repo",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectAnalyticsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Project Analytics"
+      }
+    },
+    "/pipeline/quality/bulk-reject": {
+      "post": {
+        "description": "Reject multiple pending changes in one call.",
+        "operationId": "tuning_bulk_reject_pipeline_quality_bulk_reject_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkRejectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkRejectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tuning Bulk Reject"
+      }
+    },
+    "/pipeline/quality/config": {
+      "get": {
+        "description": "Return the live QualityConfig + cooldown/apply state.",
+        "operationId": "quality_config_get_pipeline_quality_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityConfigResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Quality Config Get"
+      },
+      "post": {
+        "description": "Update mutable QualityConfig fields via in-memory override.\n\nWrites the non-None fields into ``_runtime_quality_overrides``,\nwhich is applied in every subsequent ``load_config()`` call.\nNot persisted across API restarts — edit ``~/.makeit-pipeline/config.yaml``\nmanually for permanent changes.",
+        "operationId": "quality_config_update_pipeline_quality_config_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QualityConfigUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityConfigResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Quality Config Update"
+      }
+    },
+    "/pipeline/quality/errors": {
+      "get": {
+        "description": "Return error distribution by class.",
+        "operationId": "quality_errors_pipeline_quality_errors_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "weeks",
+            "required": false,
+            "schema": {
+              "default": 4,
+              "maximum": 104,
+              "minimum": 1,
+              "title": "Weeks",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityErrorsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Quality Errors"
+      }
+    },
+    "/pipeline/quality/findings": {
+      "get": {
+        "description": "Return finding distribution by category.",
+        "operationId": "quality_findings_pipeline_quality_findings_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "weeks",
+            "required": false,
+            "schema": {
+              "default": 4,
+              "maximum": 104,
+              "minimum": 1,
+              "title": "Weeks",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityFindingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Quality Findings"
+      }
+    },
+    "/pipeline/quality/kpi": {
+      "get": {
+        "description": "Return simplified KPI snapshot for dashboard over last N days.\n\nAggregates metrics.jsonl records for the requested period and\nreturns a compact set of KPIs suitable for dashboard display.",
+        "operationId": "quality_kpi_pipeline_quality_kpi_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardQualitySnapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Quality Kpi"
+      }
+    },
+    "/pipeline/quality/lessons/{project_slug}": {
+      "get": {
+        "description": "Return lessons-retro.md / lessons-review.md / lessons-learned.md\nfor one enabled project. ``project_slug`` is the repo short name\n(e.g. ``moliyakg``, ``mankassa-app``).",
+        "operationId": "quality_lessons_pipeline_quality_lessons__project_slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_slug",
+            "required": true,
+            "schema": {
+              "title": "Project Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonsFileResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Quality Lessons"
+      }
+    },
+    "/pipeline/quality/pending": {
+      "get": {
+        "description": "Return pending tuning changes, optionally filtered.\n\nFilters:\n- ``project``: match against ``scoped_projects`` AND a case-\n  insensitive substring of ``content`` (so changes without a\n  scoped_projects list still filter correctly).\n- ``tier``: exact match on ``tier``.",
+        "operationId": "tuning_pending_pipeline_quality_pending_get",
+        "parameters": [
+          {
+            "description": "Project short name",
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Project short name",
+              "title": "Project"
+            }
+          },
+          {
+            "description": "Tier filter",
+            "in": "query",
+            "name": "tier",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 3,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Tier filter",
+              "title": "Tier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingChangesListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tuning Pending"
+      }
+    },
+    "/pipeline/quality/pending/{change_id}/apply": {
+      "post": {
+        "description": "Apply a pending tuning change.\n\nTier 1 changes are applied directly.  Tier 2-3 changes create a\nPR via Claude Opus agent.",
+        "operationId": "tuning_apply_pipeline_quality_pending__change_id__apply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "change_id",
+            "required": true,
+            "schema": {
+              "title": "Change Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningApplyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tuning Apply"
+      }
+    },
+    "/pipeline/quality/pending/{change_id}/preview": {
+      "post": {
+        "description": "Dry-run preview: resolve targets, check dedup, generate diff.\n\nNever mutates target files. Always safe to call. Mirrors the\nreal ``_apply_change`` pipeline (scope → prune → rotate-check →\ndedup → append) using ``_compute_pruned_text`` and\n``_is_duplicate_in_lines`` so the diff the dashboard renders\nmatches what would actually be written on apply.",
+        "operationId": "tuning_preview_pipeline_quality_pending__change_id__preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "change_id",
+            "required": true,
+            "schema": {
+              "title": "Change Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplyPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tuning Preview"
+      }
+    },
+    "/pipeline/quality/pending/{change_id}/reject": {
+      "post": {
+        "description": "Reject a pending tuning change.",
+        "operationId": "tuning_reject_pipeline_quality_pending__change_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "change_id",
+            "required": true,
+            "schema": {
+              "title": "Change Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningRejectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tuning Reject"
+      }
+    },
+    "/pipeline/quality/pending/{change_id}/rollback": {
+      "post": {
+        "description": "Rollback an applied tuning change.",
+        "operationId": "tuning_rollback_pipeline_quality_pending__change_id__rollback_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "change_id",
+            "required": true,
+            "schema": {
+              "title": "Change Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningRollbackResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tuning Rollback"
+      }
+    },
+    "/pipeline/quality/retro/run": {
+      "post": {
+        "description": "Trigger a manual retrospective in the background.",
+        "operationId": "retro_run_pipeline_quality_retro_run_post",
+        "parameters": [
+          {
+            "description": "ISO week, e.g. 2026-W14",
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ISO week, e.g. 2026-W14",
+              "title": "Period"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetroRunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retro Run"
+      }
+    },
+    "/pipeline/quality/retros": {
+      "get": {
+        "description": "List available retrospective reports from logs/retros/.",
+        "operationId": "retro_list_pipeline_quality_retros_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetroListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Retro List"
+      }
+    },
+    "/pipeline/quality/retros/{period}": {
+      "get": {
+        "description": "Return a specific retrospective report as JSON.",
+        "operationId": "retro_detail_pipeline_quality_retros__period__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "period",
+            "required": true,
+            "schema": {
+              "title": "Period",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Retro Detail Pipeline Quality Retros  Period  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retro Detail"
+      }
+    },
+    "/pipeline/quality/snapshot": {
+      "get": {
+        "description": "Return quality snapshot for the current week.",
+        "operationId": "quality_snapshot_pipeline_quality_snapshot_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualitySnapshotResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Quality Snapshot"
+      }
+    },
+    "/pipeline/quality/trends": {
+      "get": {
+        "description": "Return weekly snapshots with trend analysis.",
+        "operationId": "quality_trends_pipeline_quality_trends_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "weeks",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "maximum": 104,
+              "minimum": 1,
+              "title": "Weeks",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityTrendsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Quality Trends"
+      }
+    },
+    "/pipeline/quality/tuning-history": {
+      "get": {
+        "description": "Return history of applied/rejected/rolled-back tuning changes.",
+        "operationId": "tuning_history_pipeline_quality_tuning_history_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tier",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 3,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tier"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TuningHistoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tuning History"
+      }
+    },
+    "/pipeline/replay": {
+      "post": {
+        "description": "Kick off a replay-harness job and return its ``job_id``.\n\nThe heavy lifting (collecting ``ReplayInput``s, running the harness,\nrendering the MD report) is scheduled as an ``asyncio`` task so this\nhandler returns immediately with ``202 Accepted``.  Poll\n:func:`get_replay` with the returned ``job_id`` for status /\nregression numbers / report path.\n\n``sample`` > 50 / ``sample`` < 1 / ``n_samples_per_issue`` < 1 are all\nrejected by Pydantic (422) before this handler runs — we don't\nre-validate here.\n\nSide effect: when ``len(replay_jobs) >= MAX_REPLAY_JOBS``, oldest\nterminal (completed/failed) entries are evicted by ``started_at`` to\nbound memory growth on long-lived LaunchAgent deployments.",
+        "operationId": "start_replay_pipeline_replay_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplayRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Start Replay Pipeline Replay Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Replay"
+      }
+    },
+    "/pipeline/replay/{job_id}": {
+      "delete": {
+        "description": "Delete a terminal replay job from the in-memory store.\n\nReturns:\n    * ``200 {\"deleted\": true, \"job_id\": ...}`` — record removed.\n    * ``404`` — no such job (never started, or already evicted/deleted).\n    * ``409`` — job is still ``running`` (symmetric with\n      ``/research/{job_id}`` / ``/discovery/{job_id}`` semantics: we\n      don't permit deleting an in-flight record because the background\n      worker still mutates it and ``_replay_tasks`` still tracks it).\n\nNote: this is an in-memory delete; there is no job_dir on disk to\nremove (report files live under ``~/.makeit-pipeline/reports/`` and\nare intentionally preserved for audit — matching the module docstring\nabove).",
+        "operationId": "delete_replay_pipeline_replay__job_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Replay Pipeline Replay  Job Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Replay"
+      },
+      "get": {
+        "description": "Return the current status of a replay job.\n\nReturns 404 if ``job_id`` is unknown (never started, or store was\nwiped by a restart).  The response payload shape is\n:class:`ReplayJobStatus` — see its docstring for which fields are\npopulated in each terminal state.",
+        "operationId": "get_replay_pipeline_replay__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplayJobStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Replay"
+      }
+    },
+    "/pipeline/start": {
+      "post": {
+        "description": "Start the pipeline in the background.",
+        "operationId": "start_pipeline_pipeline_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Pipeline"
+      }
+    },
+    "/pipeline/stats": {
+      "get": {
+        "description": "Return agent vs manual completion stats.",
+        "operationId": "get_stats_pipeline_stats_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentStatsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Stats"
+      }
+    },
+    "/pipeline/status": {
+      "get": {
+        "description": "Return current pipeline status.",
+        "operationId": "get_status_pipeline_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Status"
+      }
+    },
+    "/pipeline/stop": {
+      "post": {
+        "description": "Gracefully stop the running pipeline after current tasks finish.",
+        "operationId": "stop_pipeline_pipeline_stop_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Stop Pipeline"
+      }
+    },
+    "/pipeline/timeline/{repo}/{issue_number}": {
+      "get": {
+        "description": "Return structured timeline for a specific issue.\n\nAs of epic-027 Task-05, timeline events are persisted inside\n:attr:`IssueContext.phase_history` rather than in a JSONL file.  This\nendpoint loads the context via :class:`IssueContextStore` and maps\neach :class:`PhaseHistoryEntry` through\n:func:`timeline_logger._entry_to_legacy_dict` so the external\nresponse shape is unchanged.\n\n``repo`` is captured via ``{repo:path}`` so values containing a\nforward slash (e.g. ``Sergio1990-1/Sewing-ERP``) route correctly.\nThe captured value is validated against the strict ``owner/name``\npattern defined in ``_CONTEXT_REPO_RE`` to prevent path-traversal\nattacks via ``..`` segments.",
+        "operationId": "issue_timeline_pipeline_timeline__repo___issue_number__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "repo",
+            "required": true,
+            "schema": {
+              "title": "Repo",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "issue_number",
+            "required": true,
+            "schema": {
+              "title": "Issue Number",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Issue Timeline"
+      }
+    },
+    "/research/list": {
+      "get": {
+        "description": "List all research jobs, optionally filtered by project.",
+        "operationId": "research_list_research_list_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgentListItem"
+                  },
+                  "title": "Response Research List Research List Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Research List"
+      }
+    },
+    "/research/result/{job_id}": {
+      "get": {
+        "description": "Get full result of a completed research job.",
+        "operationId": "research_result_research_result__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentResultResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Research Result"
+      }
+    },
+    "/research/start": {
+      "post": {
+        "description": "Launch a research agent for a project.\n\nStarts background market & competitor research via Claude CLI.\nReturns a job_id for tracking progress.",
+        "operationId": "research_start_research_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResearchStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentJobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Research Start"
+      }
+    },
+    "/research/status/{job_id}": {
+      "get": {
+        "description": "Get current status of a research job.",
+        "operationId": "research_status_research_status__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Research Status"
+      }
+    },
+    "/research/{job_id}": {
+      "delete": {
+        "description": "Delete a research job and its files from disk.",
+        "operationId": "delete_research_research__job_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Research Research  Job Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Research"
+      }
+    },
+    "/settings": {
+      "get": {
+        "operationId": "settings_get_all_settings_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object"
+                  },
+                  "title": "Response Settings Get All Settings Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Settings Get All"
+      }
+    },
+    "/settings/keys": {
+      "get": {
+        "operationId": "settings_list_keys_settings_keys_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Settings List Keys Settings Keys Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Settings List Keys"
+      }
+    },
+    "/settings/{key}": {
+      "delete": {
+        "operationId": "settings_delete_settings__key__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Settings Delete"
+      },
+      "get": {
+        "operationId": "settings_get_settings__key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Settings Get Settings  Key  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Settings Get"
+      },
+      "put": {
+        "operationId": "settings_put_settings__key__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/_SettingsValueBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Settings Put"
+      }
+    },
+    "/transcript/debug/{job_id}": {
+      "get": {
+        "description": "Get debug info for a transcript job.\n\nTraceback is only returned when ``?include_traceback=true`` is\npassed explicitly — avoids leaking internal paths via the\nnginx-proxied VPS endpoint by default.",
+        "operationId": "transcript_debug_transcript_debug__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_traceback",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Traceback",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Transcript Debug Transcript Debug  Job Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Transcript Debug"
+      }
+    },
+    "/transcript/list": {
+      "get": {
+        "description": "List all transcript jobs, optionally filtered by project.",
+        "operationId": "transcript_list_transcript_list_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TranscriptListItem"
+                  },
+                  "title": "Response Transcript List Transcript List Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Transcript List"
+      }
+    },
+    "/transcript/result/{job_id}": {
+      "get": {
+        "description": "Get full result of a completed transcript job.",
+        "operationId": "transcript_result_transcript_result__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptResultResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Transcript Result"
+      },
+      "put": {
+        "description": "Overwrite BRIEF.md for a completed transcript job.",
+        "operationId": "update_transcript_brief_transcript_result__job_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranscriptBriefUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Transcript Brief Transcript Result  Job Id  Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Transcript Brief"
+      }
+    },
+    "/transcript/status/{job_id}": {
+      "get": {
+        "description": "Get current status of a transcript processing job.",
+        "operationId": "transcript_status_transcript_status__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Transcript Status"
+      }
+    },
+    "/transcript/upload": {
+      "post": {
+        "description": "Upload an audio or text file for transcript processing.\n\nSaves the file to disk and starts background processing.\nReturns a job_id for tracking progress.\n\nParameters\n----------\nresume:\n    Optional job_id to resume a previously failed/interrupted job.\n    When provided, the file is ignored and the existing job is restarted.\nlanguage:\n    Language hint for transcription (used in content hash dedup).",
+        "operationId": "upload_transcript_transcript_upload_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_transcript_transcript_upload_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptJobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Transcript"
+      }
+    },
+    "/transcript/{job_id}": {
+      "delete": {
+        "description": "Delete a transcript job and its files from disk.",
+        "operationId": "delete_transcript_transcript__job_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Transcript Transcript  Job Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Transcript"
+      }
+    }
+  }
+}

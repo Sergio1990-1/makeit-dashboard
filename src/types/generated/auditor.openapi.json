@@ -1,0 +1,1048 @@
+{
+  "components": {
+    "schemas": {
+      "AuditMetaRequest": {
+        "properties": {
+          "issue_urls": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Issue Urls",
+            "type": "array"
+          },
+          "issues_created": {
+            "title": "Issues Created",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "issues_created",
+          "issue_urls"
+        ],
+        "title": "AuditMetaRequest",
+        "type": "object"
+      },
+      "Finding": {
+        "description": "Single audit finding.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/FindingCategory",
+            "default": "bug"
+          },
+          "code_snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Exact source text of the reported line (LLM findings only).",
+            "title": "Code Snippet"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "LLM confidence, None for deterministic",
+            "title": "Confidence"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "file": {
+            "title": "File",
+            "type": "string"
+          },
+          "function": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Function"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "recommendation": {
+            "default": "",
+            "title": "Recommendation",
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "source": {
+            "$ref": "#/components/schemas/FindingSource"
+          },
+          "tool": {
+            "description": "Tool that found the issue: ruff, mypy, semgrep, llm, etc.",
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "severity",
+          "source",
+          "tool",
+          "file",
+          "description"
+        ],
+        "title": "Finding",
+        "type": "object"
+      },
+      "FindingCategory": {
+        "enum": [
+          "bug",
+          "security",
+          "business_logic",
+          "architecture",
+          "performance",
+          "data_integrity",
+          "accessibility",
+          "ux_design"
+        ],
+        "title": "FindingCategory",
+        "type": "string"
+      },
+      "FindingSource": {
+        "enum": [
+          "deterministic",
+          "llm",
+          "both"
+        ],
+        "title": "FindingSource",
+        "type": "string"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Severity": {
+        "enum": [
+          "critical",
+          "high",
+          "medium",
+          "low"
+        ],
+        "title": "Severity",
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "Verdict": {
+        "enum": [
+          "CONFIRMED",
+          "FALSE_POSITIVE",
+          "UNCERTAIN",
+          "NOT_A_BUG"
+        ],
+        "title": "Verdict",
+        "type": "string"
+      },
+      "VerificationReportRequest": {
+        "properties": {
+          "audit_timestamp": {
+            "title": "Audit Timestamp",
+            "type": "string"
+          },
+          "confirmed_count": {
+            "title": "Confirmed Count",
+            "type": "integer"
+          },
+          "error_count": {
+            "title": "Error Count",
+            "type": "integer"
+          },
+          "false_positive_count": {
+            "title": "False Positive Count",
+            "type": "integer"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "not_a_bug_count": {
+            "default": 0,
+            "title": "Not A Bug Count",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/VerificationResult"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "total_findings": {
+            "title": "Total Findings",
+            "type": "integer"
+          },
+          "uncertain_count": {
+            "title": "Uncertain Count",
+            "type": "integer"
+          },
+          "verified_at": {
+            "title": "Verified At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "audit_timestamp",
+          "verified_at",
+          "model",
+          "total_findings",
+          "confirmed_count",
+          "false_positive_count",
+          "uncertain_count",
+          "error_count",
+          "results"
+        ],
+        "title": "VerificationReportRequest",
+        "type": "object"
+      },
+      "VerificationResult": {
+        "description": "Verdict for a single audit finding after AI verification against actual code.",
+        "properties": {
+          "code_snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code Snippet"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "file": {
+            "title": "File",
+            "type": "string"
+          },
+          "finding_index": {
+            "title": "Finding Index",
+            "type": "integer"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "verdict": {
+            "$ref": "#/components/schemas/Verdict"
+          },
+          "verified_at": {
+            "title": "Verified At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "finding_index",
+          "verdict",
+          "reason",
+          "file",
+          "verified_at",
+          "model"
+        ],
+        "title": "VerificationResult",
+        "type": "object"
+      },
+      "VerifyCoverage": {
+        "description": "Coverage statistics from spec-based QA verification.",
+        "properties": {
+          "covered": {
+            "title": "Covered",
+            "type": "integer"
+          },
+          "not_covered": {
+            "title": "Not Covered",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "uncertain": {
+            "title": "Uncertain",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "covered",
+          "not_covered",
+          "uncertain"
+        ],
+        "title": "VerifyCoverage",
+        "type": "object"
+      },
+      "VerifyRequest": {
+        "description": "Request body for the verify endpoint.",
+        "properties": {
+          "changed_only": {
+            "default": false,
+            "title": "Changed Only",
+            "type": "boolean"
+          },
+          "pr_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pr Number"
+          },
+          "spec_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spec Path"
+          }
+        },
+        "title": "VerifyRequest",
+        "type": "object"
+      },
+      "VerifyResult": {
+        "description": "Result of a spec-based QA verification run (L1 only, no GPU).",
+        "properties": {
+          "changed_files": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Changed Files",
+            "type": "array"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/VerifyCoverage"
+          },
+          "duration_seconds": {
+            "default": 0.0,
+            "title": "Duration Seconds",
+            "type": "number"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "pr_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pr Number"
+          },
+          "project": {
+            "title": "Project",
+            "type": "string"
+          },
+          "spec_files": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Spec Files",
+            "type": "array"
+          },
+          "status": {
+            "description": "pass or fail",
+            "title": "Status",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project",
+          "status",
+          "timestamp",
+          "coverage"
+        ],
+        "title": "VerifyResult",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Local service bridging makeit-auditor CLI with the browser dashboard.",
+    "title": "MakeIT Auditor API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/audit/{project}/cancel": {
+      "post": {
+        "description": "Abort an active audit run.",
+        "operationId": "cancel_audit_api_audit__project__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Cancel Audit Api Audit  Project  Cancel Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Audit"
+      }
+    },
+    "/api/audit/{project}/findings": {
+      "get": {
+        "description": "Return the complete findings payload from the latest run.",
+        "operationId": "get_audit_findings_api_audit__project__findings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Audit Findings Api Audit  Project  Findings Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Audit Findings"
+      }
+    },
+    "/api/audit/{project}/meta": {
+      "post": {
+        "description": "Persist the number of GitHub issues created for the latest audit run.",
+        "operationId": "save_audit_meta_api_audit__project__meta_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuditMetaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Save Audit Meta Api Audit  Project  Meta Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Audit Meta"
+      }
+    },
+    "/api/audit/{project}/run": {
+      "post": {
+        "description": "Start a full audit run in the background.",
+        "operationId": "run_audit_api_audit__project__run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Run Audit Api Audit  Project  Run Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Audit"
+      }
+    },
+    "/api/audit/{project}/status": {
+      "get": {
+        "description": "Return the current running status of the background pipeline for this project.\n\nEach project now has its own persisted status slot, so querying project A's\nstatus no longer returns 'idle' just because project B happened to run last.",
+        "operationId": "get_audit_status_api_audit__project__status_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Audit Status Api Audit  Project  Status Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Audit Status"
+      }
+    },
+    "/api/audit/{project}/verification": {
+      "get": {
+        "description": "Return verification report for the latest audit, or 404 if not verified.",
+        "operationId": "get_verification_api_audit__project__verification_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Verification Api Audit  Project  Verification Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Verification"
+      },
+      "post": {
+        "description": "Persist verification report for the latest audit run + log FPs globally.",
+        "operationId": "save_verification_api_audit__project__verification_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationReportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Save Verification Api Audit  Project  Verification Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Verification"
+      }
+    },
+    "/api/audit/{project}/verify": {
+      "post": {
+        "description": "Run spec-based QA verification (L1 only, no GPU).\n\nReturns pass/fail status, findings, and coverage statistics.\nRuns inline since L1 checks complete in seconds.",
+        "operationId": "verify_project_api_audit__project__verify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Project"
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "description": "Return all configured projects alongside their last run summary.\n\nPer-project run_data is memoized by (audit_result + audit_meta + verification)\nmtime. A poll on an unchanged project avoids re-parsing the 75 KB+ audit_result.json.\nNew runs and manual edits to the report files invalidate the cache automatically\nbecause their mtimes advance — no TTL, no manual flush.",
+        "operationId": "get_projects_api_projects_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Get Projects Api Projects Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Projects"
+      }
+    },
+    "/api/ux/{project}/cancel": {
+      "post": {
+        "description": "Cancel an active UX audit.",
+        "operationId": "cancel_ux_audit_api_ux__project__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Cancel Ux Audit Api Ux  Project  Cancel Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Ux Audit"
+      }
+    },
+    "/api/ux/{project}/results": {
+      "get": {
+        "description": "Return the latest UX audit results (findings + screenshots) from disk.",
+        "operationId": "get_ux_results_api_ux__project__results_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Ux Results Api Ux  Project  Results Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ux Results"
+      }
+    },
+    "/api/ux/{project}/run": {
+      "post": {
+        "description": "Start a UX audit (L1 + screenshots + Vision LLM) in the background.",
+        "operationId": "run_ux_audit_api_ux__project__run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Run Ux Audit Api Ux  Project  Run Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Ux Audit"
+      }
+    },
+    "/api/ux/{project}/status": {
+      "get": {
+        "description": "Return the current UX audit status, loaded from disk so it survives restarts.",
+        "operationId": "get_ux_status_api_ux__project__status_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Ux Status Api Ux  Project  Status Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Ux Status"
+      }
+    }
+  }
+}

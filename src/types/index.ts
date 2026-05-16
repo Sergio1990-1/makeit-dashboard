@@ -1,3 +1,5 @@
+import type { components as auditorComponents } from "./generated/auditor";
+
 export interface ProjectConfig {
   repo: string;
   client: string;
@@ -226,18 +228,23 @@ export interface AuditRunStatus {
   error: string | null;
 }
 
-export interface AuditFinding {
-  category?: "bug" | "security" | "business_logic" | "architecture" | "performance" | "data_integrity";
-  severity: "critical" | "high" | "medium" | "low";
-  source: "deterministic" | "llm" | "both";
-  tool: string;
-  file: string;
-  line: number | null;
-  function: string | null;
-  description: string;
-  recommendation: string;
-  confidence: number | null;
-}
+/**
+ * Single audit finding. Derived from the makeit-auditor backend's `Finding`
+ * schema (src/types/generated/auditor.ts — the wire contract, source of
+ * truth per #447). Notable points reconciled toward the backend during the
+ * #447 auditor-client migration:
+ *  - `category` is the backend `FindingCategory` enum, which includes
+ *    `accessibility` and `ux_design` (the old hand-written type was missing
+ *    both — silent drift now closed). It is required in the backend model
+ *    (pydantic default `"bug"`), so it is non-optional here; callers that
+ *    defensively do `f.category || "bug"` keep working unchanged.
+ *  - `code_snippet` exists on the backend `Finding` (LLM findings only) and
+ *    was absent from the old hand-written type — now exposed.
+ */
+export type AuditFinding = auditorComponents["schemas"]["Finding"];
+export type FindingCategory = auditorComponents["schemas"]["FindingCategory"];
+export type Severity = auditorComponents["schemas"]["Severity"];
+export type FindingSource = auditorComponents["schemas"]["FindingSource"];
 
 export interface AuditFindings {
   project: string;
@@ -256,27 +263,24 @@ export interface GeneratedIssue {
   finding_index: number;
 }
 
-// Verification types
-export type Verdict = "CONFIRMED" | "FALSE_POSITIVE" | "UNCERTAIN" | "NOT_A_BUG";
+// Verification types — derived from the makeit-auditor backend (#447).
+export type Verdict = auditorComponents["schemas"]["Verdict"];
 
-export interface VerificationResult {
-  finding_index: number;
-  verdict: Verdict;
-  reason: string;
-  code_snippet: string | null;
-  file: string;
-  line: number | null;
-  verified_at: string;
-  model: string;
-  error: string | null;
-  /**
-   * Stable hash of the finding's description (first 64 chars). Used by
-   * the verification cache so a new bug at the same file:line as a
-   * fixed/different prior bug does not silently inherit its verdict.
-   * Absent on legacy reports — those fall back to file|line matching.
-   */
-  description_hash?: string;
-}
+/**
+ * Verdict for a single audit finding after AI verification.
+ *
+ * The wire shape is the backend `VerificationResult` (source of truth, #447).
+ * `description_hash` is intentionally NOT part of the backend model: it is a
+ * frontend-only client-side cache key (see `utils/verification.ts`, which
+ * documents that the backend "does NOT persist or echo description_hash").
+ * It is therefore added here as an optional extension on top of the
+ * generated shape — this is a deliberate frontend addition, not contract
+ * drift. Absent on any report fetched from the backend; stamped locally.
+ */
+export type VerificationResult =
+  auditorComponents["schemas"]["VerificationResult"] & {
+    description_hash?: string;
+  };
 
 // ══════════════════════════════════════════
 // UX AUDIT TYPES
