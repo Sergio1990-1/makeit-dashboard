@@ -169,8 +169,10 @@ const CFR_ELITE = 0.05;      // ≤ 5%
 const CFR_HIGH = 0.10;       // ≤ 10%
 const CFR_MEDIUM = 0.15;     // ≤ 15%
 
-function tierForDeployFreq(perDay: number | null): DoraTier {
-  if (perDay === null) return "na";
+// Note: unlike the other tierFor* helpers, deployFreq is never null at the
+// call site (it's `deploys.length / windowDays`, guarded by windowDays > 0),
+// so the parameter is `number` and there is no `na` branch here.
+function tierForDeployFreq(perDay: number): DoraTier {
   if (perDay >= DF_ELITE) return "elite";
   if (perDay >= DF_HIGH) return "high";
   if (perDay >= DF_MEDIUM) return "medium";

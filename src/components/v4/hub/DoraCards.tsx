@@ -54,7 +54,8 @@ function formatHours(hours: number | null): string {
 /** Fraction in `[0, 1]` → percentage string. `null` → `—`. */
 function formatPercent(value: number | null): string {
   if (value === null || Number.isNaN(value)) return "—";
-  const pct = Math.round(value * 1000) / 10; // one decimal
+  // value is a [0,1] fraction → ×100 to a percent, then round to 1 decimal.
+  const pct = Math.round(value * 100 * 10) / 10;
   const text = Number.isInteger(pct) ? pct.toString() : pct.toFixed(1);
   return `${text}%`;
 }
