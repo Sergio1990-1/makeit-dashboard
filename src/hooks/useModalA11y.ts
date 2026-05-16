@@ -1,6 +1,17 @@
 import { useEffect, useRef } from "react";
 
 /**
+ * Mount stack of active modals. Only the topmost entry reacts to
+ * Escape / Tab so stacked dialogs don't both fire on one keypress —
+ * e.g. a save-conflict `ConflictDialog` mounts over a still-mounted
+ * `RiskFormModal` (the form isn't dismissed until the write succeeds),
+ * and both attach a window `keydown` listener. `e.stopPropagation()`
+ * does not stop a sibling listener on the same target, so without this
+ * gate one Escape would cancel the form AND dismiss the conflict.
+ */
+const modalStack: symbol[] = [];
+
+/**
  * Accessibility behaviour every `aria-modal="true"` dialog must back up
  * with real focus management. A dialog that claims `aria-modal` but lets
  * Tab walk into the obscured page and ignores Escape is broken for
@@ -43,6 +54,12 @@ export function useModalA11y<T extends HTMLElement = HTMLDivElement>(
         ? document.activeElement
         : null;
 
+    // Claim "topmost" for the lifetime of this dialog. Popped on
+    // unmount; the dialog mounted last owns the keyboard.
+    const token = Symbol();
+    modalStack.push(token);
+    const isTopmost = () => modalStack[modalStack.length - 1] === token;
+
     const FOCUSABLE =
       'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -63,6 +80,9 @@ export function useModalA11y<T extends HTMLElement = HTMLDivElement>(
     }
 
     const onKey = (e: KeyboardEvent) => {
+      // Only the topmost dialog owns Escape and the Tab trap; an
+      // underlying co-mounted dialog stays inert until it's on top.
+      if (!isTopmost()) return;
       if (e.key === "Escape") {
         e.stopPropagation();
         onCloseRef.current();
@@ -94,6 +114,8 @@ export function useModalA11y<T extends HTMLElement = HTMLDivElement>(
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
+      const i = modalStack.indexOf(token);
+      if (i !== -1) modalStack.splice(i, 1);
       // Restore focus to the initiator if it's still in the document.
       if (initiator && initiator.isConnected) initiator.focus();
     };

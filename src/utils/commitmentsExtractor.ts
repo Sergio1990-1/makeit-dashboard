@@ -171,10 +171,21 @@ function parseBriefBullet(bullet: string): {
   return { text, due, client };
 }
 
+/**
+ * Field separator for composite dedup keys: U+001F (unit separator),
+ * built via `String.fromCharCode` so the source stays plain ASCII — a
+ * literal control byte here was the #393 regression that made git flag
+ * this file binary. `norm` collapses every whitespace run to a single
+ * space, so this char can never occur inside a normalised field; that
+ * keeps the parts unambiguous, whereas a plain-space join would let
+ * text "a b" / client "c" collide with text "a" / client "b c".
+ */
+const KEY_SEP = String.fromCharCode(31);
+
 /** Fold text for the dedup key — lowercase + collapsed whitespace. */
 function dedupKey(text: string, client: string): string {
   const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
-  return `${norm(text)} ${norm(client)}`;
+  return `${norm(text)}${KEY_SEP}${norm(client)}`;
 }
 
 /**
@@ -190,7 +201,7 @@ function dedupKey(text: string, client: string): string {
  */
 function intraBriefKey(text: string, client: string, due: string): string {
   const dueToken = due.trim().toLowerCase().replace(/\s+/g, " ");
-  return `${dedupKey(text, client)} ${dueToken}`;
+  return `${dedupKey(text, client)}${KEY_SEP}${dueToken}`;
 }
 
 /**
