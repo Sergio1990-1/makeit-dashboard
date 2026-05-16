@@ -1,27 +1,67 @@
 /** API client for the makeit-pipeline local server (port 8766). */
 
 import { PIPELINE_BASE_URL } from "./config";
+import type { components } from "../types/generated/pipeline";
+
+// Backend wire-contract schemas (makeit-pipeline FastAPI/Pydantic, source
+// of truth per #447). Deriving the client's types from the committed
+// generated snapshot makes `tsc`/CI fail on backend↔frontend drift instead
+// of letting it surface in production. Mirrors the #483 auditor migration.
+type StartRequest = components["schemas"]["StartRequest"];
+type BackendComplexityFilter = NonNullable<StartRequest["complexity_filter"]>;
 
 /**
  * UI selection for the complexity filter. `auto`/`assisted`/`manual` are
- * the backend's literals (`StartRequest.complexity_filter`); `all` is a
- * UI-only sentinel meaning "no filter" — it is never sent on the wire
- * (the send sites map it to `undefined`).
+ * the backend's literals (`StartRequest.complexity_filter`, derived from the
+ * generated schema); `all` is a UI-only sentinel meaning "no filter" — it is
+ * never sent on the wire (the send sites map it to `undefined`). Modelled as
+ * `BackendEnum | "all"` so a backend enum change is caught by `tsc` while the
+ * deliberate frontend-only `"all"` value is preserved (same intent as the
+ * auditor `description_hash` deliberate-frontend-addition pattern in #483).
  */
-export type ComplexityFilter = "auto" | "assisted" | "manual" | "all";
+export type ComplexityFilter = BackendComplexityFilter | "all";
 
+/**
+ * Caller-facing input for `startPipeline`. This is a deliberate frontend
+ * input shape, NOT the wire body: every field is optional here because the
+ * UI omits unset filters, and the send site (`startPipeline`) assembles a
+ * `StartRequest`-typed body (backend = source of truth). Drift reconciled
+ * toward the backend: the backend `StartRequest` requires `labels`/`limit`
+ * (pydantic defaults) and types the rest as `T | null`; the frontend keeps
+ * them optional-and-omitted. Runtime is byte-identical — `JSON.stringify`
+ * already drops `undefined` keys, and the backend applies the same defaults
+ * it declares in its schema.
+ */
 export interface PipelineStartRequest {
   project?: string;
   labels?: string[];
   limit?: number;
-  /** Backend `Literal["auto","assisted","manual"] | None` — the UI-only
-   *  `"all"` is stripped to `undefined` before the request is built. */
-  complexity_filter?: "auto" | "assisted" | "manual";
+  /** Backend `Literal["auto","assisted","manual"] | None` (derived from
+   *  the generated `StartRequest`). The UI-only `"all"` is stripped to
+   *  `undefined` before the request is built. */
+  complexity_filter?: BackendComplexityFilter;
   /** Open-milestone title to filter issues by (AND with labels). Backend
    * accepts the title string, normalises whitespace-only to "no filter", and
    * passes through the special tokens `*` and `none` unchanged. */
   milestone?: string;
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * `/pipeline/status` rich shapes — DELIBERATE FRONTEND-ONLY TYPES (#447).
+ *
+ * The backend `PipelineStatusResponse` (generated `components["schemas"]
+ * ["PipelineStatusResponse"]`) serializes `results`, `queue`, `issue_stages`
+ * and `last_abort_reason` as *untyped dicts* — `{ [k: string]: unknown }[]`
+ * etc. The pipeline backend builds those payloads from plain Python dicts,
+ * NOT Pydantic models, so the OpenAPI snapshot legitimately has no detailed
+ * schema for `PipelineResult` / `PipelineQueueItem` / `PipelineStageEntry` /
+ * `PipelineAbortReason`. These are therefore the dashboard's own structural
+ * model of an intentionally loosely-typed payload — they have NO backend
+ * schema counterpart by design. This is the "legitimately frontend-only"
+ * case (#447 rule 3): keep + document, do NOT fabricate a generated alias
+ * (there is none) and do NOT refresh the snapshot to invent one. Field
+ * names mirror the backend's dict keys; the runtime is unchanged.
+ * ────────────────────────────────────────────────────────────────────────── */
 
 export type PhaseStatus =
   | "running"
@@ -134,6 +174,16 @@ export interface PipelineAbortReason {
   retry_after_ts: number | null;
 }
 
+/**
+ * `/pipeline/status` — the dashboard's structural refinement of the backend
+ * `PipelineStatusResponse`. The backend types `results`/`queue`/
+ * `issue_stages`/`last_abort_reason` as untyped `unknown` dicts (see the
+ * frontend-only block above), so this richer shape cannot be a plain alias
+ * and is kept frontend-only by design. Top-level field names mirror the
+ * backend `PipelineStatusResponse`; `batch_summary` exists on the backend
+ * response but is unused by the dashboard — intentionally not surfaced, not
+ * drift.
+ */
 export interface PipelineStatus {
   running: boolean;
   stopping: boolean;
@@ -148,48 +198,44 @@ export interface PipelineStatus {
 
 /**
  * Phase-0.7: GitHub rate-limit bucket (REST or GraphQL) surfaced via
- * `/pipeline/limits`.  Pre-batch ``run_batch`` aborts when GraphQL drops
- * below 500 — surfacing the bucket lets the dashboard warn before the
- * user's Start click bounces.
+ * `/pipeline/limits`. Backend wire contract (`GitHubRateLimitBucket`,
+ * source of truth #447); structurally identical to the old hand-written
+ * `{limit;remaining;reset_at;reset_seconds}` — no drift.
  */
-export interface GitHubRateLimitBucket {
-  limit: number;
-  remaining: number;
-  reset_at: number;       // unix-ts
-  reset_seconds: number;  // server-side computed
-}
+export type GitHubRateLimitBucket = components["schemas"]["GitHubRateLimitBucket"];
 
-export interface PipelineLimits {
-  // Anthropic / Claude CLI rate-limiter (existing).
-  paused: boolean;
-  call_count: number;
-  max_calls: number;
-  remaining_pct: number;
-  rate_limit_hits: number;
-  session_elapsed_hours: number;
-  session_hours: number;
-  session_expired: boolean;
-  api_fallback_enabled: boolean;
-  api_fallback_confirmed: boolean;
-  /** Phase-0.7: GitHub rate-limit buckets.  `null` = probe unavailable. */
-  github?: {
-    graphql?: GitHubRateLimitBucket | null;
-    rest?: GitHubRateLimitBucket | null;
-  } | null;
-}
+/**
+ * `GET /pipeline/limits` — backend `LimitsResponse` wire contract (source
+ * of truth #447). One reconciliation toward the backend: the old
+ * hand-written `github` field named its keys explicitly (`{ graphql?;
+ * rest? }`), whereas the backend serializes it as a generic
+ * `{ [bucket: string]: GitHubRateLimitBucket | null } | null` dict. The
+ * generated index-signature shape is the truth and still supports the
+ * dashboard's `.graphql`/`.rest` access (the dict only ever carries those
+ * two keys). No runtime change — same JSON, same access pattern.
+ */
+export type PipelineLimits = components["schemas"]["LimitsResponse"];
 
-export interface ComplexityBreakdown {
-  auto: number;
-  assisted: number;
-  manual: number;
-  unclassified: number;
-}
+// Backend wire contract for the complexity breakdown (source of truth).
+// The generated schema marks every field required-with-default (`0`), which
+// is structurally identical to the old hand-written `{auto;assisted;manual;
+// unclassified}` — no drift.
+export type ComplexityBreakdown = components["schemas"]["ComplexityBreakdown"];
 
 export interface ModelUsage {
   model: string;
   count: number;
 }
 
+/**
+ * Normalized `/pipeline/stats` shape the dashboard UI consumes. This is a
+ * deliberate frontend-derived type, NOT the wire contract: `fetchPipelineStats`
+ * adapts the raw backend `AgentStatsResponse` (see `BackendPipelineStats`) at
+ * the boundary — `model_usage` is reshaped from a `{model: count}` map to a
+ * `ModelUsage[]` the UI iterates, and `first_pass_rate` is converted from the
+ * backend's 0–1 fraction to the 0–100 percentage the UI renders. The
+ * normalization layer and its runtime are intentionally preserved.
+ */
 export interface PipelineStats {
   total_issues: number;
   closed_issues: number;
@@ -203,19 +249,18 @@ export interface PipelineStats {
 }
 
 /**
- * Raw `GET /pipeline/stats` payload (backend `AgentStatsResponse` in
- * makeit-pipeline `api.py`). The backend is the source of truth; two
- * fields differ in representation from the dashboard's `PipelineStats`
- * and are converted at the boundary in `fetchPipelineStats`:
+ * Raw `GET /pipeline/stats` payload — the backend `AgentStatsResponse` wire
+ * contract (source of truth, #447), derived from the generated snapshot so
+ * any backend change is caught by `tsc`. Two fields differ in representation
+ * from the dashboard's normalized `PipelineStats` and are converted at the
+ * boundary in `fetchPipelineStats`:
  *   - `model_usage` is a `{model: count}` map, not a `ModelUsage[]`.
  *   - `first_pass_rate` is a 0–1 fraction (`round(fp/len, 3)`), not the
  *     0–100 percentage the UI renders.
+ * (The backend also carries `avg_phase_seconds`, which the normalized UI
+ * shape does not surface — intentionally dropped, not drift.)
  */
-interface BackendPipelineStats
-  extends Omit<PipelineStats, "model_usage" | "first_pass_rate"> {
-  model_usage?: Record<string, number> | null;
-  first_pass_rate?: number | null;
-}
+type BackendPipelineStats = components["schemas"]["AgentStatsResponse"];
 
 /* ── Live phase constants (new /pipeline/status format) ── */
 
@@ -271,6 +316,16 @@ export const STAGE_LABEL: Record<string, string> = {
 
 /* ══════════════════════════════════════════
    ISSUE CONTEXT (epic-027)
+
+   DELIBERATE FRONTEND-ONLY TYPES (#447). The backend `GET /issue/{repo}/
+   {issue}/context` operation declares its 200 body as `application/json:
+   unknown` in the generated snapshot — the pipeline serializes the
+   `IssueContext` from a plain dict, NOT a Pydantic model, so there is NO
+   `components["schemas"]["IssueContext*"]` to alias. These types are the
+   dashboard's own structural model of an intentionally untyped response
+   (legitimately frontend-only, #447 rule 3): keep + document, do NOT
+   fabricate a generated alias and do NOT refresh the snapshot. Field names
+   mirror the backend's dict keys; runtime is unchanged.
    ══════════════════════════════════════════ */
 
 // Issue lifecycle status — kept loose (string) so a new pipeline-side enum
@@ -431,6 +486,12 @@ export async function fetchPipelineLimits(): Promise<PipelineLimits | null> {
 /**
  * Per-project monthly budget snapshot (epic-035 Task-05).
  *
+ * DELIBERATE FRONTEND-ONLY TYPE (#447): the `/pipeline/budget/{owner}/{repo}`
+ * endpoint is NOT present in the generated OpenAPI snapshot at all (the
+ * pipeline does not register it on the documented app / returns a raw dict),
+ * so there is NO `components["schemas"][...]` to alias. Kept + documented as
+ * legitimately frontend-only — not fabricated, snapshot not refreshed.
+ *
  * `monthly_cap_usd === null` → cap not configured for this project;
  * `percentage` is also `null` and the widget renders a "cap not set" badge.
  *
@@ -487,9 +548,32 @@ export async function fetchPipelineStats(project: string): Promise<PipelineStats
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const raw = (await res.json()) as BackendPipelineStats;
-  const { model_usage, first_pass_rate, ...rest } = raw;
+  // `rest` still carries `avg_phase_seconds` (part of `AgentStatsResponse`
+  // but unused by the normalized UI shape) — harmless: it is spread into
+  // the returned object and simply ignored by every consumer. Not drift;
+  // the normalization layer never surfaced it.
+  const {
+    model_usage,
+    first_pass_rate,
+    complexity_breakdown,
+    avg_duration_seconds,
+    cost_per_task_usd,
+    ...rest
+  } = raw;
   return {
     ...rest,
+    // Drift reconciled toward the backend (#447): the backend
+    // `AgentStatsResponse` types `complexity_breakdown` / `avg_duration_seconds`
+    // / `cost_per_task_usd` as `… | null`, while the dashboard's normalized
+    // `PipelineStats` uses `undefined` for "absent" (consistent with
+    // `model_usage` / `first_pass_rate` below). Normalize `null → undefined`
+    // here. Runtime is byte-identical: every consumer guards these fields with
+    // truthiness / `!= null` / optional chaining (`stats?.complexity_breakdown
+    // && …`, `?? 0`, `stats.avg_duration_seconds != null`), so `null` and
+    // `undefined` were already indistinguishable downstream.
+    complexity_breakdown: complexity_breakdown ?? undefined,
+    avg_duration_seconds: avg_duration_seconds ?? undefined,
+    cost_per_task_usd: cost_per_task_usd ?? undefined,
     // dict → array the UI iterates; absent/null → undefined.
     model_usage:
       model_usage && typeof model_usage === "object"
@@ -508,11 +592,22 @@ export async function fetchPipelineStats(project: string): Promise<PipelineStats
 }
 
 export async function startPipeline(req: PipelineStartRequest): Promise<string> {
-  console.log("[pipeline] starting:", JSON.stringify(req));
+  // Drift reconciled toward the backend (#447): the generated `StartRequest`
+  // marks `labels`/`limit` required (pydantic defaults) and types
+  // `project`/`complexity_filter`/`milestone` as `T | null`. The dashboard
+  // omits unset filters instead of sending them, so the wire body is a
+  // `Partial<StartRequest>`: every key is optional (the backend applies the
+  // exact defaults it declares for any key the UI omits) and `T | null`
+  // accepts the `T | undefined` the UI passes. `Partial` (not `any`/cast)
+  // keeps the field NAMES and VALUE types checked against the backend, so a
+  // genuine rename/retyping still fails `tsc`. Runtime is byte-identical:
+  // `JSON.stringify` already drops `undefined` keys exactly as before.
+  const body: Partial<StartRequest> = req;
+  console.log("[pipeline] starting:", JSON.stringify(body));
   const res = await fetch(`${PIPELINE_BASE_URL}/pipeline/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(req),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -541,12 +636,34 @@ export async function stopPipeline(): Promise<string> {
    RESEARCH / DISCOVERY AGENTS
    ══════════════════════════════════════════ */
 
+/**
+ * Caller-facing input for `startResearchAgent`. Deliberate frontend input
+ * shape: `region` is optional here even though the backend
+ * `ResearchStartRequest` schema marks it required (it carries a pydantic
+ * default of `"KG"`, which openapi-typescript renders as a required key).
+ * Drift reconciled toward the backend at the send boundary — the wire body
+ * is typed `Partial<ResearchStartRequest>` so an omitted `region` lets the
+ * backend apply its declared default. `project`/`product_description` stay
+ * required (backend requires both; `product_description` is
+ * `Field(..., min_length=1)`). Runtime byte-identical: `JSON.stringify`
+ * drops the omitted `region`, exactly as before.
+ */
 export interface ResearchStartRequest {
   project: string;
   /** Backend requires a non-empty description (Field(..., min_length=1)). */
   product_description: string;
   region?: string;
 }
+
+// Backend wire contract for POST /research/start (source of truth #447).
+type BackendResearchStartRequest = components["schemas"]["ResearchStartRequest"];
+
+// `ResearchAgentKind` / `ResearchAgentStatusValue` / `ResearchAgentStatus` /
+// `ResearchHistoryItem` are the dashboard's NORMALIZED projections of the
+// raw backend `AgentStatusResponse` / `AgentListItem` (both now aliased to
+// the generated snapshot above/below). `fetchResearchStatus` /
+// `fetchResearchHistory` adapt the raw wire shapes into these — deliberate
+// frontend-derived types, kept separate from the contract; runtime unchanged.
 
 /** Job-type discriminator. The backend does NOT expose this on the
  *  status endpoint — only /research/list & /discovery/list carry
@@ -578,17 +695,17 @@ export interface ResearchAgentStatus {
   finished_at?: string;
 }
 
-/** Raw shape returned by GET /research/status and /discovery/status. */
-interface AgentStatusResponse {
-  job_id: string;
-  status: string;
-  stage?: string;
-  progress?: number;
-  error?: string;
-  project?: string;
-  created_at?: string;
-  started_at?: string;
-}
+/**
+ * Raw shape returned by GET /research/status and /discovery/status —
+ * backend `AgentStatusResponse` wire contract (source of truth #447),
+ * derived from the generated snapshot. Drift reconciled toward the
+ * backend: the old hand-written type marked `stage`/`progress`/`error`/
+ * `project`/`created_at`/`started_at` optional, but the backend declares
+ * them required (each with a pydantic default — `""`/`0`). The adapter in
+ * `fetchResearchStatus` already guards every field with `??`/`||`, so
+ * those guards are now harmless defensive no-ops — runtime unchanged.
+ */
+type AgentStatusResponse = components["schemas"]["AgentStatusResponse"];
 
 export interface ResearchHistoryItem {
   id: string;
@@ -603,10 +720,16 @@ export interface ResearchHistoryItem {
 }
 
 export async function startResearchAgent(req: ResearchStartRequest): Promise<{ id: string }> {
+  // Drift reconciled toward the backend (#447): the wire body must match
+  // the generated `ResearchStartRequest`. `Partial<…>` (not `any`/cast)
+  // keeps every field NAME and VALUE type checked against the backend while
+  // allowing the UI to omit `region` (backend applies its `"KG"` default).
+  // Runtime byte-identical: `JSON.stringify` drops omitted keys as before.
+  const body: Partial<BackendResearchStartRequest> = req;
   const res = await fetch(`${PIPELINE_BASE_URL}/research/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(req),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -617,10 +740,15 @@ export async function startResearchAgent(req: ResearchStartRequest): Promise<{ i
 }
 
 export async function startDiscoveryAgent(project: string): Promise<{ id: string }> {
+  // Wire body checked against the backend `DiscoveryStartRequest` (#447):
+  // `research_path` carries a server default, so the UI omits it and the
+  // backend fills it in. `Partial<…>` keeps `project`'s name/type verified.
+  // Runtime byte-identical (same `{project}` payload as before).
+  const body: Partial<components["schemas"]["DiscoveryStartRequest"]> = { project };
   const res = await fetch(`${PIPELINE_BASE_URL}/discovery/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ project }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -663,7 +791,18 @@ export async function fetchResearchStatus(
 
 // ---------------------------------------------------------------------------
 // Complexity classification
+//
+// DELIBERATE FRONTEND-ONLY RESPONSE TYPES (#447): `POST /pipeline/classify`
+// streams an NDJSON progress/result feed; its generated 200 body is
+// `application/json: unknown` (no Pydantic response model). So
+// `ClassifyResult`/`ClassifyResponse`/`ClassifyProgress` have NO backend
+// schema counterpart by design — keep + document, do not fabricate aliases.
+// The REQUEST body, however, IS modeled (`ClassifyRequest`) and is derived
+// from the generated snapshot below so a backend rename is caught by `tsc`.
 // ---------------------------------------------------------------------------
+
+/** Backend wire contract for the POST /pipeline/classify request body. */
+type ClassifyRequest = components["schemas"]["ClassifyRequest"];
 
 export interface ClassifyResult {
   number: number;
@@ -691,7 +830,11 @@ export async function classifyIssues(
   issueNumbers?: number[],
   onProgress?: (p: ClassifyProgress) => void,
 ): Promise<ClassifyResponse> {
-  const body: Record<string, unknown> = { project };
+  // Wire body checked against the backend `ClassifyRequest` (#447). The
+  // `issue_numbers` key is still set only when non-empty, so the serialized
+  // JSON is byte-identical to before; `Partial<…>` just makes `tsc` fail if
+  // the backend renames/retypes a field.
+  const body: Partial<ClassifyRequest> = { project };
   if (issueNumbers?.length) body.issue_numbers = issueNumbers;
 
   const res = await fetch(`${PIPELINE_BASE_URL}/pipeline/classify`, {
@@ -762,6 +905,15 @@ export async function classifyIssues(
    ISSUE TIMELINE
    ══════════════════════════════════════════ */
 
+/**
+ * Normalized timeline entry the dashboard's `IssueTimeline` consumes. This
+ * is a deliberate frontend-derived shape, NOT the wire contract:
+ * `fetchTimeline` adapts each raw backend timeline entry (the generated
+ * `TimelineResponse["entries"][number]`) — `phase` → `stage`, ISO-8601
+ * `timestamp` → Unix seconds `ts`, and `event`/`status` collapsed into the
+ * small `status` vocabulary via `normalizeTimelineStatus`. Normalization
+ * runtime preserved.
+ */
 export interface TimelineEntry {
   stage: string;
   status: string;
@@ -772,26 +924,16 @@ export interface TimelineEntry {
 }
 
 /**
- * Raw per-entry shape returned by `GET /pipeline/timeline/{repo:path}/{issue}`
- * (backend `TimelineEntry` Pydantic model in makeit-pipeline `api.py`).
- * Field names/types here mirror the backend exactly; `fetchTimeline` adapts
- * them to the dashboard's `TimelineEntry`.
+ * Raw `GET /pipeline/timeline/{repo:path}/{issue}` envelope — the backend
+ * `TimelineResponse` wire contract (source of truth #447), derived from the
+ * generated snapshot. Identical to the old hand-written
+ * `{repo;issue_number;entries}`, and `entries` carries the backend
+ * `TimelineEntry` shape (`timestamp`/`phase`/`event` required;
+ * `status`/`cost_usd`/`duration_seconds`/`detail` `T | null` optional) —
+ * no drift. `fetchTimeline` adapts each entry to the dashboard's normalized
+ * `TimelineEntry`.
  */
-interface BackendTimelineEntry {
-  timestamp: string; // ISO-8601
-  phase: string;
-  event: string; // phase_start | phase_complete | phase_failed | retry | escalation | merge | cleanup
-  status?: string | null; // PhaseStatus value or "in_progress"
-  cost_usd?: number | null;
-  duration_seconds?: number | null;
-  detail?: string | null;
-}
-
-interface BackendTimelineResponse {
-  repo: string;
-  issue_number: number;
-  entries: BackendTimelineEntry[];
-}
+type BackendTimelineResponse = components["schemas"]["TimelineResponse"];
 
 /**
  * Map the backend's `event`/`status` pair onto the small status vocabulary
@@ -853,14 +995,13 @@ export async function fetchTimeline(
   });
 }
 
-/** Backend list-item shape returned by /research/list and /discovery/list. */
-interface AgentListItem {
-  job_id: string;
-  status: string;
-  project: string;
-  created_at: string;
-  agent_type: string;
-}
+/**
+ * Backend list-item shape returned by /research/list and /discovery/list —
+ * the `AgentListItem` wire contract (source of truth #447), derived from
+ * the generated snapshot. Structurally identical to the old hand-written
+ * `{job_id;status;project;created_at;agent_type}` — no drift.
+ */
+type AgentListItem = components["schemas"]["AgentListItem"];
 
 export async function fetchResearchHistory(project: string): Promise<ResearchHistoryItem[]> {
   const res = await fetch(
