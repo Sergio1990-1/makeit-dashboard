@@ -96,11 +96,11 @@ export function DeliveryTab({ repo, data }: Props) {
         aria-labelledby="delivery-dora-title"
       >
         <h2 id="delivery-dora-title" className="delivery-section-title">
-          DORA
+          DevOps-метрики
         </h2>
         {dora === null ? (
           <p className="delivery-empty">
-            DORA-метрики ещё считаются (или недостаточно активности на main).
+            DevOps-метрики ещё считаются (или недостаточно активности на main).
           </p>
         ) : (
           <DoraCards metrics={dora} />
@@ -117,7 +117,7 @@ export function DeliveryTab({ repo, data }: Props) {
             id="delivery-health-title"
             className="delivery-section-title"
           >
-            Customer Health
+            Здоровье клиента
           </h2>
           {customerHealth === null ? (
             <p className="delivery-empty">
@@ -136,7 +136,7 @@ export function DeliveryTab({ repo, data }: Props) {
             id="delivery-onboarding-title"
             className="delivery-section-title"
           >
-            Onboarding Readiness
+            Готовность к онбордингу
           </h2>
           {!hasOnboarding ? (
             <p className="delivery-empty">
@@ -155,10 +155,10 @@ export function DeliveryTab({ repo, data }: Props) {
         aria-labelledby="delivery-digest-title"
       >
         <h2 id="delivery-digest-title" className="delivery-section-title">
-          Weekly Digest
+          Недельный дайджест
         </h2>
         {/* Always mount: DigestViewer owns its own per-week empty state
-            («…ещё не сгенерирован. Нажмите «Regenerate».») which is now
+            («…ещё не сгенерирован. Нажмите «Перегенерировать».») which is now
             actionable since `input` is supplied — so the FIRST digest can
             be created, not just regenerated. */}
         <DigestViewer repo={repo} input={digestInput} />

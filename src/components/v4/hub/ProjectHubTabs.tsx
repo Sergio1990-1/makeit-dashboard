@@ -14,11 +14,11 @@ interface TabSpec {
 }
 
 const TABS: readonly TabSpec[] = [
-  { id: "overview", label: "Overview" },
-  { id: "health", label: "Health" },
-  { id: "activity", label: "Activity" },
-  { id: "decisions", label: "Decisions & Risks" },
-  { id: "delivery", label: "Delivery" },
+  { id: "overview", label: "Обзор" },
+  { id: "health", label: "Здоровье" },
+  { id: "activity", label: "Активность" },
+  { id: "decisions", label: "Решения и риски" },
+  { id: "delivery", label: "Поставка" },
   { id: "processes", label: "Бизнес-процессы" },
 ] as const;
 

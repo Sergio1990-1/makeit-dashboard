@@ -95,7 +95,7 @@ function NbaBlock({ nba, onOpenTab }: NbaBlockProps) {
           <Icon name="lightbulb" />
         </span>
         <h3 className="v4-hub-mini-title" id="v4-hub-mini-nba-title">
-          Next Best Action
+          Что делать дальше
         </h3>
       </header>
 
@@ -416,13 +416,13 @@ function filterUrgentCommitments(commitments: Commitment[]): Commitment[] {
 function severityLabel(severity: Risk["severity"]): string {
   switch (severity) {
     case "critical":
-      return "Critical";
+      return "Критичный";
     case "high":
-      return "High";
+      return "Высокий";
     case "med":
-      return "Medium";
+      return "Средний";
     case "low":
-      return "Low";
+      return "Низкий";
     default:
       return severity;
   }

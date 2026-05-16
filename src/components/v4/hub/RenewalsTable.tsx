@@ -723,7 +723,7 @@ export function RenewalsTable({ repo, onCount }: Props) {
                     key={rowKey}
                     title={
                       isAuto
-                        ? "Auto-detected, fix in package.json"
+                        ? "Определено автоматически, правьте в package.json"
                         : undefined
                     }
                   >
@@ -749,16 +749,16 @@ export function RenewalsTable({ repo, onCount }: Props) {
                     <td style={cellStyle}>{r.notes || "—"}</td>
                     <td style={cellStyle}>
                       <span style={pillStyle}>
-                        {isAuto ? "Auto-scan" : "Manual"}
+                        {isAuto ? "Автоскан" : "Вручную"}
                       </span>
                     </td>
                     <td style={cellStyle}>
                       {isAuto ? (
                         <span
                           style={{ fontSize: 12, color: "var(--v4-ink-500)" }}
-                          title="Auto-detected, fix in package.json"
+                          title="Определено автоматически, правьте в package.json"
                         >
-                          read-only
+                          только чтение
                         </span>
                       ) : (
                         <div style={{ display: "flex", gap: 6 }}>

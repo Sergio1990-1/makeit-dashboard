@@ -63,13 +63,13 @@ export function ProjectHubHeader({ data }: Props) {
             </span>
           )}
           {client && <span className="v4-hub-client">{client}</span>}
-          <span className="v4-hub-meta">last activity: {formatLastActivity(lastActivity)}</span>
+          <span className="v4-hub-meta">последняя активность: {formatLastActivity(lastActivity)}</span>
         </div>
       </div>
       <div className="v4-hub-header-health" aria-label="Health summary">
         <div
           className={hasGrade ? `v4-hub-grade v4-hub-grade--${grade.toLowerCase()}` : "v4-hub-grade"}
-          aria-label={hasGrade ? `Grade ${grade}` : "Grade not yet available"}
+          aria-label={hasGrade ? `Оценка ${grade}` : "Оценка пока недоступна"}
         >
           {grade}
         </div>
@@ -77,7 +77,7 @@ export function ProjectHubHeader({ data }: Props) {
         <div className="v4-sparkline-placeholder" aria-hidden="true" />
       </div>
       <div className="v4-hub-nba-row">
-        <span className="v4-hub-nba-label">Next Best Action:</span>
+        <span className="v4-hub-nba-label">Что делать дальше:</span>
         <span className="v4-hub-nba-text">{nbaText}</span>
         <button
           type="button"

@@ -229,7 +229,7 @@ export function CustomerHealthGauge({
             color: "var(--v4-ink-500)",
           }}
         >
-          Customer Health
+          Здоровье клиента
         </div>
         <button
           type="button"
@@ -315,7 +315,7 @@ export function CustomerHealthGauge({
                   width="100%"
                   height={GAUGE_H}
                   role="img"
-                  aria-label={`Customer Health: ${Math.round(score)} из 100, зона ${zone.label}`}
+                  aria-label={`Здоровье клиента: ${Math.round(score)} из 100, зона ${zone.label}`}
                 >
                   {/* Track */}
                   <path
@@ -392,10 +392,10 @@ export function CustomerHealthGauge({
               >
                 {(
                   [
-                    ["Sentiment", c.sentiment],
-                    ["Cadence", c.cadence],
-                    ["Delivery", c.delivery],
-                    ["Paid", c.paid],
+                    ["Настроение", c.sentiment],
+                    ["Ритм", c.cadence],
+                    ["Поставка", c.delivery],
+                    ["Оплата", c.paid],
                   ] as const
                 ).map(([label, value]) => (
                   <div

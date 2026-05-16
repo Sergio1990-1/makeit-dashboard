@@ -22,6 +22,17 @@ function resetAt(epochSec: number): string {
   });
 }
 
+/** Time left until `epochSec`, minute-granular: "42м", "1ч 5м", "<1м". */
+function untilReset(epochSec: number): string {
+  const ms = epochSec * 1000 - Date.now();
+  if (ms <= 0) return "<1м";
+  const totalMin = Math.ceil(ms / 60000);
+  if (totalMin < 60) return `${totalMin}м`;
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return m === 0 ? `${h}ч` : `${h}ч ${m}м`;
+}
+
 /**
  * Header widget showing remaining GitHub REST + GraphQL quota. Self-
  * contained: owns its own polling hook so the Topbar stays presentational
@@ -33,6 +44,9 @@ export function RateLimitPill() {
   if (!data) return null;
 
   const { rest, graphql } = data;
+  // Earliest of the two independent reset windows — the next time any
+  // quota refreshes, which is the number worth surfacing.
+  const nearestReset = Math.min(rest.reset, graphql.reset);
   const title =
     `GitHub API лимит (опрос не тратит лимит)\n` +
     `REST: ${rest.remaining}/${rest.limit}, сброс ${resetAt(rest.reset)}\n` +
@@ -47,6 +61,8 @@ export function RateLimitPill() {
       <span className={`v4-ratelimit-seg v4-ratelimit-seg--${tier(graphql)}`}>
         GQL {compact(graphql.remaining)}
       </span>
+      <span className="v4-ratelimit-sep">·</span>
+      <span className="v4-ratelimit-reset">↻ {untilReset(nearestReset)}</span>
     </span>
   );
 }
