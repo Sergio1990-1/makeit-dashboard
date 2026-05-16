@@ -9,7 +9,10 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test:e2e": "playwright test",
-    "test:e2e:typecheck": "tsc -p tsconfig.e2e.json --noEmit"
+    "test:e2e:typecheck": "tsc -p tsconfig.e2e.json --noEmit",
+    "gen:api-types:pipeline": "openapi-typescript ${PIPELINE_OPENAPI:-http://127.0.0.1:8766/openapi.json} -o src/types/generated/pipeline.ts",
+    "gen:api-types:auditor": "openapi-typescript ${AUDITOR_OPENAPI:-http://127.0.0.1:8765/openapi.json} -o src/types/generated/auditor.ts",
+    "gen:api-types": "npm run gen:api-types:pipeline && npm run gen:api-types:auditor"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
@@ -32,6 +35,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+    "openapi-typescript": "^7.13.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.0",
     "vite": "^8.0.1",
