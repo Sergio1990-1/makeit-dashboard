@@ -76,7 +76,7 @@ export function PipelineView({
   const [limit, setLimit] = useState<number>(() => Number(localStorage.getItem(STORAGE.limit)) || 4);
   const [complexityFilter, setComplexityFilter] = useState<ComplexityFilter>(() => {
     const stored = localStorage.getItem(STORAGE.complexity);
-    const valid: ComplexityFilter[] = ["auto", "assisted", "all"];
+    const valid: ComplexityFilter[] = ["auto", "assisted", "manual", "all"];
     return stored && valid.includes(stored as ComplexityFilter)
       ? (stored as ComplexityFilter)
       : "all";
