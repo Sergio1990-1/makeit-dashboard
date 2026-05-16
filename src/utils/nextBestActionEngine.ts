@@ -23,8 +23,14 @@
  *   - per-project → `makeit_nba:{repo}`
  *   - portfolio   → `makeit_portfolio_nba`
  * A cache entry is fresh only within the ISO week it was written; a new
- * week always forces a real recompute. `invalidateNbaCache(scope)`
- * powers the "Regenerate" button (Epic-010 UI wiring landed in #418/#349).
+ * week always forces a real recompute. #476: a per-project entry also
+ * carries the signature of the inputs that produced it, so
+ * `computeProjectNBA(repo, inputs, apiKey, sig)` recomputes when the
+ * signals changed *within* the same ISO week — including across a full
+ * page reload (the engine gates on the stored `env.sig`, so no hook-side
+ * ref workaround is needed). A no-sig caller (portfolio) keeps the pure
+ * ISO-week behavior. `invalidateNbaCache(scope)` powers the "Regenerate"
+ * button (Epic-010 UI wiring landed in #418/#349).
  *
  * #389: the portfolio aggregate is derived from the per-project results,
  * so a mid-week per-project invalidation could leave the week-scoped
@@ -178,6 +184,16 @@ function isoWeekKey(d: Date = new Date()): string {
 interface CacheEnvelope {
   week: string;
   result: NbaResult;
+  /**
+   * Signature of the inputs that produced `result` (#476). Optional: a
+   * caller may not supply one (portfolio aggregate, budget-degrade reads)
+   * and envelopes written before #476 lack it entirely. `readCache` only
+   * gates on it when the caller passes a defined `sig` AND `requireFresh`
+   * — so a no-sig caller keeps the pure ISO-week behavior, and an old
+   * sig-less envelope is treated as stale exactly once (one recompute,
+   * then a rewrite carries the sig and the cache stabilises).
+   */
+  sig?: string;
 }
 
 function scopeKey(scope: NbaScope): string {
@@ -191,8 +207,22 @@ function scopeKey(scope: NbaScope): string {
  * returns `null` when the entry is from an earlier ISO week so the
  * caller recomputes. `requireFresh=false` (budget hard-stop fallback)
  * returns even a stale entry so the UI has *something* to show.
+ *
+ * `sig` (#476) is the signature of the inputs the caller is about to
+ * compute over. It is ONLY consulted when `requireFresh === true` AND a
+ * defined `sig` is supplied: then a stored `env.sig` differing from it
+ * (including the `undefined → defined` case for a pre-#476 envelope)
+ * means the same-ISO-week entry was produced by *different* inputs, so
+ * it is treated as stale and `null` is returned for a recompute. When
+ * `sig` is undefined the check is skipped entirely — every existing
+ * no-sig caller (portfolio aggregate, budget-degrade `requireFresh=false`
+ * reads) keeps its exact pre-#476 ISO-week-only behavior.
  */
-function readCache(scope: NbaScope, requireFresh: boolean): NbaResult | null {
+function readCache(
+  scope: NbaScope,
+  requireFresh: boolean,
+  sig?: string,
+): NbaResult | null {
   if (typeof localStorage === "undefined") return null;
   let raw: string | null;
   try {
@@ -212,15 +242,28 @@ function readCache(scope: NbaScope, requireFresh: boolean): NbaResult | null {
       return null;
     }
     if (requireFresh && env.week !== isoWeekKey()) return null;
+    // Signature gate (#476): only when the caller supplied a defined
+    // `sig` and wants a fresh entry. `env.sig !== sig` covers both a
+    // genuine input change and a pre-#476 envelope (`env.sig` undefined
+    // vs a defined incoming `sig`) → treated as stale → one recompute,
+    // then `writeCache` rewrites with `sig` and the cache stabilises.
+    if (requireFresh && sig !== undefined && env.sig !== sig) return null;
     return env.result;
   } catch {
     return null;
   }
 }
 
-function writeCache(scope: NbaScope, result: NbaResult): void {
+function writeCache(
+  scope: NbaScope,
+  result: NbaResult,
+  sig?: string,
+): void {
   if (typeof localStorage === "undefined") return;
-  const env: CacheEnvelope = { week: isoWeekKey(), result };
+  // Store `sig` only when supplied — a no-sig caller (portfolio) writes a
+  // sig-less envelope exactly as before, and `JSON.stringify` drops the
+  // undefined key so the on-disk shape is unchanged for those callers.
+  const env: CacheEnvelope = { week: isoWeekKey(), result, sig };
   try {
     localStorage.setItem(scopeKey(scope), JSON.stringify(env));
   } catch {
@@ -408,29 +451,44 @@ function parseActions(text: string, repo: string): NbaAction[] {
  * Top-3 next actions for one project.
  *
  * Order of operations:
- *   1. Fresh week-cache hit → return it, no Claude call.
- *   2. No actionable signal → return empty result (and cache it so we
- *      don't re-prompt an empty project every render).
+ *   1. Fresh week-cache hit (same ISO week AND, when `sig` is supplied,
+ *      same input signature) → return it, no Claude call.
+ *   2. No actionable signal → return empty result (and cache it, keyed by
+ *      `sig`, so we don't re-prompt an empty project every render).
  *   3. Budget hard-stop → return stale cache + warning, never throw.
  *   4. Otherwise call Claude (Sonnet, or Haiku on budget fallback),
  *      parse, cache, return.
  *
  * `apiKey` is injected by the caller (pure-injectable — the engine never
  * reads it from config/localStorage itself).
+ *
+ * `sig` (#476) is an optional signature of `inputs`. When supplied, a
+ * same-ISO-week cache entry produced by a *different* signature (or by a
+ * pre-#476 sig-less write) is treated as stale → one recompute, then the
+ * rewrite carries `sig` and the cache stabilises. Omitting `sig`
+ * preserves the exact pre-#476 behavior (ISO-week-only freshness) for
+ * every existing caller (`portfolioNbaCollector`). The stale-fallback
+ * budget-degrade `readCache(scope, false)` reads deliberately pass NO
+ * sig — they intentionally serve any last-good cache.
  */
 export async function computeProjectNBA(
   repo: string,
   inputs: NbaInputs,
   apiKey: string,
+  sig?: string,
 ): Promise<NbaResult> {
   const scope: NbaScope = { kind: "project", repo };
 
-  const fresh = readCache(scope, true);
+  const fresh = readCache(scope, true, sig);
   if (fresh !== null) return fresh;
 
   if (!hasAnySignal(inputs)) {
     const empty: NbaResult = { actions: [], budgetFallback: false };
-    writeCache(scope, empty);
+    // Key the empty result by `sig` too: an empty cached under an old
+    // signature must not serve under a new one (otherwise a project that
+    // gained a risk/commitment after a no-signal run would keep showing
+    // empty for the rest of the ISO week).
+    writeCache(scope, empty, sig);
     return empty;
   }
 
@@ -510,7 +568,7 @@ export async function computeProjectNBA(
       actions: parseActions(text, repo),
       budgetFallback,
     };
-    writeCache(scope, result);
+    writeCache(scope, result, sig);
     return result;
   } catch (e) {
     // Network / parse / auth failure must not break the dashboard.
