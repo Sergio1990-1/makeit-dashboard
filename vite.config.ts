@@ -88,6 +88,29 @@ export default defineConfig({
               },
             },
           },
+          {
+            // #486: Auditor / Pipeline / Transcripts / settings / monitors
+            // live on separate, runtime-configured origins (AUDITOR_URL /
+            // PIPELINE_URL / BetterStack worker), so match by path family
+            // rather than host. NetworkFirst keeps online behaviour
+            // unchanged; offline (or on a 6s network stall) it serves the
+            // last response within the TTL so those tabs degrade
+            // gracefully instead of blanking.
+            urlPattern:
+              /\/(pipeline|audit|findings|runs|verify|transcripts|settings|monitors|uptime)\b/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'cache-api',
+              networkTimeoutSeconds: 6,
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 60 * 30,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
         ],
       },
     }),

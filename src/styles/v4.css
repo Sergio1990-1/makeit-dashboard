@@ -2472,6 +2472,14 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 }
 .v4-pcard-heat-grid .v4-cc { height: 14px; }
 
+/* #491: ProgressMatrix is a fixed-width grid (≈680px min: 170+100+70+70+70
+   + 4 flexible cols). Wrap it in a horizontal scroll container so narrow
+   phones scroll instead of clipping. The min-width only engages when the
+   viewport is narrower than the grid — the panel is always wider on
+   desktop, so this is a no-op there (desktop intentionally frozen). */
+.v4-pm-scroll { overflow-x: auto; }
+.v4-pm-scroll > div { min-width: 680px; }
+
 /* Quick-actions kebab menu */
 .v4-pcard-menu { position: relative; }
 .v4-pcard-menu-btn {
@@ -6787,7 +6795,7 @@ ul.v4-rsh-list {
 }
 .v4-burger { display: none; }
 @media (max-width: 700px) {
-  .v4-content { padding: 0 14px 28px; }
+  .v4-content { padding: 0 14px max(28px, env(safe-area-inset-bottom)); }
   .v4-top { padding: env(safe-area-inset-top) 14px 0; }
   .v4-kpi-row { grid-template-columns: 1fr; }
   .v4-ms-grid { grid-template-columns: 1fr; }
@@ -7908,7 +7916,7 @@ ul.v4-rsh-list {
   .v4-top-right .icon-btn { padding: 6px; }
 
   /* PAGE HEADER */
-  .v4-content { padding: 0 12px 24px; }
+  .v4-content { padding: 0 12px max(24px, env(safe-area-inset-bottom)); }
   .v4-ph { padding-top: 16px; gap: 8px; flex-wrap: wrap; }
   .v4-ph h1 { font-size: 22px; line-height: 1.15; letter-spacing: -0.01em; }
   .v4-ph .v4-sub { font-size: 12px; }
@@ -7973,13 +7981,17 @@ ul.v4-rsh-list {
   /* PIPELINE CONFIG */
   .v4-pl-cx-grid { grid-template-columns: 1fr !important; }
 
-  /* CHAT BUTTON — smaller floating */
-  .v4-chat-btn { right: 12px; bottom: 12px; }
+  /* #493: lift sub-10px badges/counters to a readable size on phones — the
+     sidebar is a full-width drawer here so there's room. Scoped to ≤720px,
+     desktop intentionally frozen. */
+  .v4-nav-badge,
+  .sidebar-badge { font-size: 10px; }
+  .v4-nav-count { font-size: 11px; }
 }
 
 /* ≤ 480px — extra-tight phones */
 @media (max-width: 480px) {
-  .v4-content { padding: 0 10px 20px; }
+  .v4-content { padding: 0 10px max(20px, env(safe-area-inset-bottom)); }
   .v4-ph h1 { font-size: 20px; }
   .v4-mshero-num { font-size: 28px; }
   .v4-mshero-ring { width: 80px; height: 80px; }
