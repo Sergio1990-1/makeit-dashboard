@@ -1353,6 +1353,13 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
   grid-template-columns: 8px 1fr 14px;
   align-items: center;
 }
+/* .v4-ai-row sets an unconditional cursor:pointer (it's normally a
+   clickable row). A promise/renewal row for an unknown repo renders as
+   a non-interactive <div>, not a <button>, so it must not look
+   clickable — genuine <button> rows still get the pointer. */
+.v4-promise-row:not(button) {
+  cursor: default;
+}
 .v4-promise-dot {
   width: 8px;
   height: 8px;
@@ -1384,7 +1391,7 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
 .v4-promise-repo {
   font-size: 11px;
   color: var(--v4-ink-500);
-  background: var(--v4-line-soft, #eef0f4);
+  background: var(--v4-line-soft);
   padding: 1px 6px;
   border-radius: 4px;
 }
