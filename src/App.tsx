@@ -602,7 +602,6 @@ function AppInner({ onFirstFetchDone }: AppInnerProps = {}) {
               projects={projects}
               getMonitor={getMonitorForRepo}
               onFinanceClick={() => setFinanceOpen(true)}
-              onJumpToTab={(t) => navigateTab(t)}
               selectedRepo={healthRepo}
               onSelectRepo={setHealthRepo}
             />

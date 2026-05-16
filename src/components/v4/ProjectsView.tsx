@@ -1,7 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ProjectData, Monitor, Phase } from "../../types";
-import { ProjectCardV4 } from "./ProjectCardV4";
 import { ProjectHubPage } from "./hub/ProjectHubPage";
+import {
+  ProjectScorecard,
+  type ScorecardKpis,
+} from "./portfolio/ProjectScorecard";
+import { PortfolioNextActions } from "./portfolio/PortfolioNextActions";
+import { PortfolioRenewals } from "./portfolio/PortfolioRenewals";
+import { PortfolioPromiseTracker } from "./portfolio/PortfolioPromiseTracker";
+import { PortfolioDigestPanel } from "./portfolio/PortfolioDigestPanel";
 import { calcRiskScore } from "../../utils/riskScore";
 import { useToast } from "./toastContext";
 
@@ -9,7 +16,6 @@ interface Props {
   projects: ProjectData[];
   getMonitor: (repo: string) => Monitor | undefined;
   onFinanceClick: () => void;
-  onJumpToTab?: (tab: "pipeline" | "audit") => void;
   /** Selected repo for the embedded ProjectHubPage. Lifted to the parent
    *  so the topbar breadcrumb can include the project name. */
   selectedRepo: string | null;
@@ -101,6 +107,35 @@ function isStaleProject(p: ProjectData): boolean {
   );
 }
 
+// Portfolio default tier for the Scorecard. The dashboard has no per-repo
+// tier in its data model (classification lives in the Health engine, loaded
+// async per-project — fetching it for every card would be an N+1 the
+// Scorecard explicitly forbids). Tier 2 ("active, lower-stakes") is the
+// neutral middle; `useDriftNorm` inside the card still resolves any
+// per-repo override from its own store, so drift colouring stays correct.
+const SCORECARD_TIER = 2 as const;
+
+// KPIs the Scorecard shows. `open` mirrors the existing card; in-progress /
+// blocked are derived from the already-loaded `issues` list (no extra
+// fetch — pure reduce). Overdue client commitments are not in this view's
+// data model (the Promise Tracker widget above owns that cross-project
+// surface), so the per-card value is 0 here.
+function scorecardKpis(p: ProjectData): ScorecardKpis {
+  let inProgress = 0;
+  let blocked = 0;
+  for (const i of p.issues) {
+    if (i.status === "Done") continue;
+    if (i.status === "In Progress") inProgress += 1;
+    if (i.isBlocked) blocked += 1;
+  }
+  return {
+    open: p.openCount,
+    inProgress,
+    blocked,
+    overdueCommitments: 0,
+  };
+}
+
 function compareBy(
   a: ProjectData,
   b: ProjectData,
@@ -134,7 +169,6 @@ export function ProjectsView({
   projects,
   getMonitor,
   onFinanceClick,
-  onJumpToTab,
   selectedRepo,
   onSelectRepo,
 }: Props) {
@@ -372,6 +406,19 @@ export function ProjectsView({
       .filter((g) => g.items.length > 0);
   }, [sorted, state.groupByPhase]);
 
+  // Single repo-selection entry point shared by every Scorecard AND the
+  // four portfolio widgets. It is exactly what the old ProjectCardV4 Health
+  // button called — `onSelectRepo(repo)` — so Epic-009 Hub-routing and the
+  // `?repo=` pushState effect behave identically (one history entry per
+  // selection, no double push: passing this as the widgets' `onOpenProject`
+  // bypasses their self-contained URL-navigation fallback).
+  const openProject = useCallback(
+    (repo: string) => {
+      onSelectRepo(repo);
+    },
+    [onSelectRepo],
+  );
+
   if (selectedRepo) {
     return (
       <ProjectHubPage
@@ -412,6 +459,23 @@ export function ProjectsView({
             Финансы
           </button>
         </div>
+      </div>
+
+      <div style={{ height: 10 }} />
+
+      {/* Portfolio Surface — cross-project widgets (Epic-010 Task-06).
+          2×2 grid @≥1024, stacked <768. Each widget gets the same
+          `openProject` handler the Scorecards use, so a deep-link from a
+          widget drives the identical `selectedRepo` → Hub-routing path
+          (no self-contained URL-navigation fallback fires). */}
+      <div className="v4-portfolio-widgets">
+        <PortfolioNextActions
+          perProjectActions={undefined}
+          onOpenProject={openProject}
+        />
+        <PortfolioRenewals onOpenProject={openProject} />
+        <PortfolioPromiseTracker onOpenProject={openProject} />
+        <PortfolioDigestPanel />
       </div>
 
       <div style={{ height: 10 }} />
@@ -539,7 +603,11 @@ export function ProjectsView({
         </div>
       )}
 
-      {/* Cards */}
+      {/* Scorecard grid — replaces ProjectCardV4 + Health button.
+          The whole Scorecard is the click target; it calls `openProject`
+          (= `onSelectRepo`) so clicking routes to the Hub exactly as the
+          old Health button did. 3-col @≥1024 / 2-col @≥768 / 1-col <768
+          (see the "Portfolio Surface" section in v4.css). */}
       {agg.count > 0 && (
         <div className="v4-projects-groups">
           {groups.map((g, i) => (
@@ -550,27 +618,25 @@ export function ProjectsView({
                   <span className="v4-projects-group-count">({g.items.length})</span>
                 </h2>
               )}
-              <div className="v4-projects-grid">
+              <div className="v4-scorecard-grid">
                 {g.items.map((p) => (
-                  <div key={p.repo} className="v4-project-cell">
-                    <ProjectCardV4
-                      project={p}
-                      monitor={getMonitor(p.repo)}
-                      onJumpToTab={onJumpToTab}
-                      onEditFinance={onFinanceClick}
-                    />
-                    <button
-                      type="button"
-                      className="v4-btn v4-project-health-btn"
-                      onClick={() => onSelectRepo(p.repo)}
-                      aria-label={`Открыть Health для ${p.repo}`}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>
-                        <path d="M12 22s-8-4.5-8-11.8A5 5 0 0 1 12 5a5 5 0 0 1 8 5.2c0 7.3-8 11.8-8 11.8z" />
-                      </svg>
-                      Health
-                    </button>
-                  </div>
+                  <ProjectScorecard
+                    key={p.repo}
+                    repo={p.repo}
+                    tier={SCORECARD_TIER}
+                    phase={p.phase}
+                    client={p.client}
+                    grade={null}
+                    kpis={scorecardKpis(p)}
+                    drift={{
+                      daysSinceCommit:
+                        p.commitActivity?.total84d === 0
+                          ? null
+                          : p.daysSinceActivity,
+                    }}
+                    daysSinceActivity={p.daysSinceActivity}
+                    onSelectRepo={openProject}
+                  />
                 ))}
               </div>
             </section>
