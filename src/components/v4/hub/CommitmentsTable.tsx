@@ -46,6 +46,14 @@ const COMMIT_MESSAGE = "chore(hub): update commitments";
 interface Props {
   /** Repo slug (`owner/repo` or bare name → dashboard owner). */
   repo: string;
+  /**
+   * Optional observer for the rendered row count. Fired with the
+   * number of commitment rows currently in the table (after load and
+   * on every local add/delete) so a parent (DecisionsRisksTab) can
+   * show an accurate section counter from the SAME data this table
+   * renders — no divergent second fetch.
+   */
+  onCount?: (count: number) => void;
 }
 
 /** A row plus a stable client-side key (Commitment has no id). */
@@ -222,7 +230,7 @@ function DraftForm({ initial, submitLabel, onSubmit, onCancel }: DraftFormProps)
   );
 }
 
-export function CommitmentsTable({ repo }: Props) {
+export function CommitmentsTable({ repo, onCount }: Props) {
   const [load, setLoad] = useState<LoadState>({ phase: "loading" });
   const [rows, setRows] = useState<Row[]>([]);
   /** sha of docs/commitments.yaml at load; undefined ⇒ file absent. */
@@ -298,6 +306,16 @@ export function CommitmentsTable({ repo }: Props) {
       ? { ...r, status: "overdue" as const }
       : r,
   );
+
+  // Report the rendered row count to an interested parent. Effect (not
+  // render) so it's a parent notification, not a synchronous local
+  // setState — fires after commit, only when the count or callback
+  // identity changes. `decorated` is a 1:1 map of `rows`, so
+  // `rows.length` is exactly what the table renders. Callers pass a
+  // stable `useCallback` per the standard effect-dependency contract.
+  useEffect(() => {
+    onCount?.(rows.length);
+  }, [rows.length, onCount]);
 
   function mutate(next: Row[]) {
     setRows(next);

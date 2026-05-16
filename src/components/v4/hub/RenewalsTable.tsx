@@ -148,12 +148,22 @@ const btnPrimary: React.CSSProperties = {
 interface Props {
   /** Repo slug (`owner/repo` or bare name → dashboard owner). */
   repo: string;
+  /**
+   * Optional observer for the tracked-record count. Fired with the
+   * total renewals (manual + non-shadowed auto-scan, BEFORE the
+   * in-table type filter) so a parent (DecisionsRisksTab) can show an
+   * accurate, stable section counter from the SAME data this table
+   * derives — no divergent second fetch. Deliberately the unfiltered
+   * total: the type filter is a local view control, not the section's
+   * record count.
+   */
+  onCount?: (count: number) => void;
 }
 
 type Phase = "loading" | "ready" | "error";
 type TypeFilter = RenewalType | "all";
 
-export function RenewalsTable({ repo }: Props) {
+export function RenewalsTable({ repo, onCount }: Props) {
   const [phase, setPhase] = useState<Phase>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
   /** `false` ⇒ docs/renewals.yaml does not exist yet (empty-state). */
@@ -221,7 +231,10 @@ export function RenewalsTable({ repo }: Props) {
   // expiry. `now` is read fresh every render (urgency colouring) — no
   // memo: the input changes every tick so a memo would never hit.
   const now = Date.now();
-  const visible = useMemo(() => {
+  // Full tracked set (manual + non-shadowed auto-scan), sorted by
+  // expiry, BEFORE the local type filter. This is the section's true
+  // record count; the type filter is only a view control.
+  const allTracked = useMemo(() => {
     const manualKeys = new Set(
       manual.map((r) => `${r.type}::${r.name.trim().toLowerCase()}`),
     );
@@ -231,11 +244,24 @@ export function RenewalsTable({ repo }: Props) {
         (r) => !manualKeys.has(`${r.type}::${r.name.trim().toLowerCase()}`),
       ),
     ];
-    const sorted = sortByExpiry(merged);
-    return filter === "all"
-      ? sorted
-      : sorted.filter((r) => r.type === filter);
-  }, [manual, autoScan, filter]);
+    return sortByExpiry(merged);
+  }, [manual, autoScan]);
+  const visible = useMemo(
+    () =>
+      filter === "all"
+        ? allTracked
+        : allTracked.filter((r) => r.type === filter),
+    [allTracked, filter],
+  );
+
+  // Report the tracked-record count to an interested parent. Effect
+  // (not render) so it's a parent notification, not a synchronous
+  // local setState — fires after commit, only when the count or
+  // callback identity changes. Unfiltered on purpose (see `onCount`
+  // doc). Callers pass a stable `useCallback`.
+  useEffect(() => {
+    onCount?.(allTracked.length);
+  }, [allTracked.length, onCount]);
 
   /**
    * Persist `next` manual list to renewals.yaml. Auto-scan rows are
