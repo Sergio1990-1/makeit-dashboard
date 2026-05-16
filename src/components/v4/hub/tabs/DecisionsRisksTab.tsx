@@ -21,13 +21,16 @@ import type { Decision } from "../../../../types/hub";
  *   4. Renewals        (#renewals)  — repo-driven CRUD over
  *                       renewals.yaml (+ package.json auto-scan).
  *
- * Deep-link: OverviewTab's NBA / Risks / Commitments summaries switch
- * to this tab via the parent's `?subtab=decisions`. FR-14 wants those
- * to land on the right section, so this tab reads `location.hash` on
- * mount and smooth-scrolls to the matching `<section id>` once the
- * sections are mounted (their containers render synchronously; the
+ * Deep-link: on mount this tab reads `location.hash` and, if it is one
+ * of `#decisions|#risks|#commitments|#renewals`, smooth-scrolls to the
+ * matching `<section id>` (containers render synchronously — the
  * self-fetching tables show their own loading state in place, so the
- * anchor target exists and resolves at the correct offset immediately).
+ * anchor exists at the correct offset immediately). This satisfies an
+ * externally-supplied `…#risks` URL. NOTE: the in-app OverviewTab
+ * summaries currently switch tabs via the parent's `?subtab=decisions`
+ * (state, no hash), so that path lands at the top of the tab, not on
+ * the originating section — wiring OverviewTab→section for the in-app
+ * path is tracked separately (FR-14 follow-up, issue #413).
  *
  * Active-section highlight in the nav is driven by a single
  * IntersectionObserver created once and disconnected on unmount — no
