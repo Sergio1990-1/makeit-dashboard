@@ -672,21 +672,90 @@ export interface TimelineEntry {
   status: string;
   ts: number;
   detail?: string;
-  elapsed?: number;
   cost_usd?: number;
   duration_seconds?: number;
+}
+
+/**
+ * Raw per-entry shape returned by `GET /pipeline/timeline/{repo:path}/{issue}`
+ * (backend `TimelineEntry` Pydantic model in makeit-pipeline `api.py`).
+ * Field names/types here mirror the backend exactly; `fetchTimeline` adapts
+ * them to the dashboard's `TimelineEntry`.
+ */
+interface BackendTimelineEntry {
+  timestamp: string; // ISO-8601
+  phase: string;
+  event: string; // phase_start | phase_complete | phase_failed | retry | escalation | merge | cleanup
+  status?: string | null; // PhaseStatus value or "in_progress"
+  cost_usd?: number | null;
+  duration_seconds?: number | null;
+  detail?: string | null;
+}
+
+interface BackendTimelineResponse {
+  repo: string;
+  issue_number: number;
+  entries: BackendTimelineEntry[];
+}
+
+/**
+ * Map the backend's `event`/`status` pair onto the small status vocabulary
+ * `IssueTimeline`'s `dotColor` understands (`completed` / `failed` /
+ * `in_progress` / `partial`). The `event` field is the richest signal; the
+ * `status` (`PhaseStatus` value or `"in_progress"`) refines completion into
+ * success vs. partial.
+ */
+function normalizeTimelineStatus(event: string, status?: string | null): string {
+  if (event === "phase_failed" || event === "escalation") return "failed";
+  if (event === "phase_start" || event === "retry") return "in_progress";
+  if (event === "phase_complete" || event === "merge" || event === "cleanup") {
+    if (status === "partial") return "partial";
+    if (
+      status === "retryable_failure" ||
+      status === "terminal_failure" ||
+      status === "blocked" ||
+      status === "timeout" ||
+      status === "timeout_with_pr"
+    ) {
+      return "failed";
+    }
+    return "completed";
+  }
+  if (status === "in_progress") return "in_progress";
+  return status ?? event;
 }
 
 export async function fetchTimeline(
   repo: string,
   issue: number,
 ): Promise<TimelineEntry[]> {
+  // `repo` is an `owner/name` slug. The backend route captures it via a
+  // FastAPI `{repo:path}` converter (it must keep the `/`), so split + encode
+  // each segment — same approach as `fetchBudget` — rather than
+  // `encodeURIComponent(repo)` which would emit `%2F` and miss the route.
+  const [owner, name] = repo.split("/", 2);
+  const repoPath = name
+    ? `${encodeURIComponent(owner)}/${encodeURIComponent(name)}`
+    : encodeURIComponent(repo);
   const res = await fetch(
-    `${PIPELINE_BASE_URL}/pipeline/timeline/${encodeURIComponent(repo)}/${issue}`,
+    `${PIPELINE_BASE_URL}/pipeline/timeline/${repoPath}/${issue}`,
     { cache: "no-store" },
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json() as Promise<TimelineEntry[]>;
+  const data = (await res.json()) as BackendTimelineResponse;
+  const entries = Array.isArray(data?.entries) ? data.entries : [];
+  return entries.map((e) => {
+    const parsedMs = Date.parse(e.timestamp);
+    return {
+      stage: e.phase,
+      status: normalizeTimelineStatus(e.event, e.status),
+      // Backend sends ISO-8601; the UI expects Unix seconds (it `* 1000`s it).
+      ts: Number.isNaN(parsedMs) ? 0 : parsedMs / 1000,
+      detail: e.detail ?? undefined,
+      cost_usd: e.cost_usd ?? undefined,
+      duration_seconds: e.duration_seconds ?? undefined,
+    };
+  });
 }
 
 /** Backend list-item shape returned by /research/list and /discovery/list. */
