@@ -219,11 +219,18 @@ const btnPrimary: React.CSSProperties = {
 
 interface Props {
   repo: string;
+  /**
+   * Optional observer for the rendered record count. Fired with
+   * `risks.length` whenever it changes (after load / CRUD). Lets a
+   * parent (DecisionsRisksTab) show an accurate section counter from
+   * the SAME data this table renders — no divergent second fetch.
+   */
+  onCount?: (count: number) => void;
 }
 
 type Phase = "loading" | "ready" | "error";
 
-export function RiskRegisterTable({ repo }: Props) {
+export function RiskRegisterTable({ repo, onCount }: Props) {
   const [phase, setPhase] = useState<Phase>("loading");
   const [loadError, setLoadError] = useState<string | null>(null);
   /** `null` ⇒ file does not exist yet (empty-state with "create"). */
@@ -275,6 +282,15 @@ export function RiskRegisterTable({ repo }: Props) {
   }, [load]);
 
   const sorted = useMemo(() => sortBySeverityDesc(risks), [risks]);
+
+  // Report the rendered count to an interested parent. Effect (not
+  // render) so it's a parent notification, not a synchronous local
+  // setState — fires after commit, only when the count or callback
+  // identity changes. Callers pass a stable `useCallback` per the
+  // standard effect-dependency contract.
+  useEffect(() => {
+    onCount?.(risks.length);
+  }, [risks.length, onCount]);
 
   /**
    * Persist `next` to the repo. On a sha conflict we DON'T silently

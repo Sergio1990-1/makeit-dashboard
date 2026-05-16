@@ -9564,3 +9564,157 @@ ul.v4-rsh-list {
 .v4-hub-activity .v4-hub-activity-empty-text {
   margin: 0;
 }
+
+/* ── Decisions & Risks tab (Epic-011 Task-08) ──────────────────────────
+   Four anchored sections (Decision Log / Risk Register / Commitments /
+   Renewals) plus an in-tab nav with scroll-spy active state. At ≥960px
+   the nav is a sticky left rail; below that it collapses to a sticky
+   horizontal bar above the content (degrades, never overflows). Every
+   selector is scoped under .v4-hub-decisions and reuses existing
+   semantic tokens only — no new palette. */
+.v4-hub-decisions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media (min-width: 960px) {
+  .v4-hub-decisions {
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 24px;
+  }
+}
+
+/* Nav: sticky horizontal scroller on narrow screens, sticky vertical
+   rail at ≥960px. position:sticky degrades to static where unsupported
+   without breaking the layout. */
+.v4-hub-decisions .v4-hub-decisions-nav {
+  position: sticky;
+  top: 8px;
+  z-index: 1;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding: 6px;
+  overflow-x: auto;
+  border: 1px solid var(--v4-line);
+  border-radius: 12px;
+  background: var(--v4-paper);
+}
+@media (min-width: 960px) {
+  .v4-hub-decisions .v4-hub-decisions-nav {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    overflow-x: visible;
+    top: 16px;
+  }
+}
+
+.v4-hub-decisions .v4-hub-decisions-navlink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--v4-ink-700);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.v4-hub-decisions .v4-hub-decisions-navlink:hover {
+  background: var(--v4-line-soft);
+}
+.v4-hub-decisions .v4-hub-decisions-navlink--on {
+  background: var(--v4-accent-50);
+  color: var(--v4-accent-700);
+}
+.v4-hub-decisions .v4-hub-decisions-navlink:focus-visible {
+  outline: 2px solid var(--v4-accent-500);
+  outline-offset: 2px;
+}
+.v4-hub-decisions .v4-hub-decisions-nav-ic {
+  display: inline-flex;
+  font-size: 15px;
+}
+.v4-hub-decisions .v4-hub-decisions-nav-label {
+  flex: 1;
+  min-width: 0;
+}
+.v4-hub-decisions .v4-hub-decisions-nav-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--v4-line-soft);
+  color: var(--v4-ink-700);
+  font-size: 11px;
+  font-weight: 700;
+}
+.v4-hub-decisions .v4-hub-decisions-navlink--on .v4-hub-decisions-nav-count {
+  background: var(--v4-accent-100);
+  color: var(--v4-accent-700);
+}
+
+.v4-hub-decisions .v4-hub-decisions-main {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  min-width: 0;
+}
+
+/* scroll-margin-top so a hash / nav scroll lands the heading below the
+   sticky nav rather than flush against the viewport top. */
+.v4-hub-decisions .v4-hub-decisions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-margin-top: 16px;
+}
+
+.v4-hub-decisions .v4-hub-decisions-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.v4-hub-decisions .v4-hub-decisions-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 16px;
+  background: var(--v4-sky-50);
+  color: var(--v4-sky-700);
+}
+.v4-hub-decisions .v4-hub-decisions-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--v4-ink-900);
+}
+.v4-hub-decisions .v4-hub-decisions-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--v4-line-soft);
+  color: var(--v4-ink-700);
+  font-size: 12px;
+  font-weight: 700;
+}
