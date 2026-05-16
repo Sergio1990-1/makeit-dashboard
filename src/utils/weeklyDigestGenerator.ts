@@ -166,11 +166,15 @@ export function recentWeekKeys(count: number, from: Date = new Date()): string[]
 }
 
 /**
- * Epoch ms at which a digest for `weekKey` should expire from cache:
- * the end (Sunday 23:59:59.999 UTC) of that ISO week. A past week's
- * digest never needs refreshing (the week is closed), so its TTL is
+ * Epoch ms of the end (Sunday 23:59:59.999 UTC) of ISO week `weekKey` —
+ * the point a digest for that week stops being authoritative. A past
+ * week never needs refreshing (the week is closed), so its value is
  * already in the past and any cached value is still served (we only
  * treat *missing* as stale for closed weeks — see `readCache`).
+ *
+ * Exported as the single source of this cutoff: `PortfolioDigestPanel`
+ * uses it for its own sessionStorage cache TTL so the two cache layers
+ * can't drift apart (#415).
  */
 export function weekEndMs(weekKey: string): number {
   const m = weekKey.match(/^(\d{4})-(\d{2})$/);
