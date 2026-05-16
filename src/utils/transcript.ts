@@ -166,8 +166,6 @@ export interface TranscriptListItem {
   status: "done" | "queued" | "transcribing" | "processing" | "error";
   created_at: string; // ISO timestamp
   transcription_model?: TranscriptionModel;
-  quality?: TranscriptQuality;
-  current_stage?: string; // for error display: stage where job failed
 }
 
 export async function fetchTranscriptList(): Promise<TranscriptListItem[]> {
@@ -186,8 +184,6 @@ export async function fetchTranscriptList(): Promise<TranscriptListItem[]> {
     status: item.status as TranscriptListItem["status"],
     created_at: item.created_at || "",
     transcription_model: (item.transcription_model as TranscriptionModel) || undefined,
-    quality: (item.quality as TranscriptQuality) || undefined,
-    current_stage: item.current_stage || undefined,
   }));
 }
 

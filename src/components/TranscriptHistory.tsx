@@ -3,7 +3,6 @@ import {
   fetchTranscriptList,
   deleteTranscript,
   type TranscriptListItem,
-  type TranscriptQuality,
   type TranscriptionModel,
 } from "../utils/transcript";
 
@@ -35,26 +34,6 @@ const STATUS_CLASS: Record<string, string> = {
 };
 
 const ACTIVE_STATUSES = new Set(["queued", "transcribing", "processing"]);
-
-const STAGE_LABELS: Record<string, string> = {
-  intake: "Приём",
-  stt: "Транскрипция",
-  enrichment: "Обогащение",
-  structuring: "Структуризация",
-  synthesis: "Синтез",
-};
-
-const QUALITY_LABEL: Record<TranscriptQuality, string> = {
-  pass: "ОК",
-  warning: "Замечания",
-  needs_review: "Проверить",
-};
-
-const QUALITY_CLASS: Record<TranscriptQuality, string> = {
-  pass: "pass",
-  warning: "warning",
-  needs_review: "needs-review",
-};
 
 export function TranscriptHistory({ onOpen, onResume, onRetry, refreshKey }: Props) {
   const [items, setItems] = useState<TranscriptListItem[]>([]);
@@ -240,23 +219,10 @@ export function TranscriptHistory({ onOpen, onResume, onRetry, refreshKey }: Pro
                       <span className={`tpc-status ${STATUS_CLASS[item.status] ?? ""}`}>
                         {isActive && <span className="tpc-status-pulse" />}
                         {STATUS_LABELS[item.status] ?? item.status}
-                        {item.status === "error" && item.current_stage && STAGE_LABELS[item.current_stage] && (
-                          <span className="tpc-status-stage"> ({STAGE_LABELS[item.current_stage]})</span>
-                        )}
                       </span>
                     </td>
                     <td className="tpc-history-quality">
-                      {item.status === "done" ? (
-                        item.quality ? (
-                          <span className={`tpc-quality-badge tpc-quality-badge--${QUALITY_CLASS[item.quality]} tpc-quality-badge--static tpc-quality-badge--sm`}>
-                            {QUALITY_LABEL[item.quality]}
-                          </span>
-                        ) : (
-                          <span className="tpc-text-muted">—</span>
-                        )
-                      ) : (
-                        <span className="tpc-text-muted">—</span>
-                      )}
+                      <span className="tpc-text-muted">—</span>
                     </td>
                     <td className="tpc-history-actions">
                       {item.status === "done" && (
