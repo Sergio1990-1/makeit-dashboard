@@ -13,13 +13,14 @@
  *
  * Defaults source-of-truth note:
  *   FR-40 specifies the canonical tier defaults live in
- *   `makeit-knowledge/Skills/PROJECT_NORMS_DEFAULTS.yaml`. The worktree
- *   used to ship Epic-012 has no access to the makeit-knowledge repo, so
- *   — following the Epic-012 #380 precedent — the defaults are HARD-CODED
- *   here in `DEFAULT_NORMS` and a tech-debt issue tracks migrating them
- *   into makeit-knowledge (`PROJECT_NORMS_DEFAULTS.yaml` + a
- *   `Skills/templates/hub/project_norm.yaml` bootstrap template). Until
- *   that migration lands, `DEFAULT_NORMS` IS the source of truth.
+ *   `makeit-knowledge/Skills/PROJECT_NORMS_DEFAULTS.yaml`. That file is
+ *   now the source of truth: tier defaults are fetched from it and
+ *   cached for the tab. The `DEFAULT_NORMS` literal below is kept ONLY
+ *   as a last-resort fallback for when that file is unreachable (no
+ *   token / offline / 404 / garbage YAML) — `loadProjectNorm` must never
+ *   throw and must never return a normless result, so drift detection
+ *   degrades to the baked-in copy rather than disappearing. Keep the two
+ *   in sync: a value change in the YAML should be mirrored here.
  *
  * Caching:
  *   Resolved norms are cached in localStorage under
@@ -56,15 +57,16 @@ export interface ProjectNorm {
 export type ProjectTier = 1 | 2 | 3 | "tier-1" | "tier-2" | "tier-3";
 
 /**
- * Hard-coded tier defaults — FUTURE
- * `makeit-knowledge/Skills/PROJECT_NORMS_DEFAULTS.yaml`.
+ * Last-resort tier defaults. Source of truth is
+ * `makeit-knowledge/Skills/PROJECT_NORMS_DEFAULTS.yaml` (fetched and
+ * cached per tab); this literal is used only when that file is
+ * unreachable, per the no-throw / never-normless contract above.
  *
  * tier-1 = client-facing / revenue-critical → strict (short intervals).
  * tier-2 = active but lower-stakes → medium.
  * tier-3 = side / experimental → lenient (long intervals).
  *
- * Keep the per-tier object literally mirror-able to YAML so the eventual
- * migration is a copy-paste, not a re-derivation.
+ * Mirrors the YAML 1:1 — keep them in sync on every value change.
  */
 export const DEFAULT_NORMS: Record<1 | 2 | 3, ProjectNorm> = {
   1: {
@@ -92,6 +94,10 @@ const CACHE_PREFIX = "makeit_drift_norm:";
 /** 24h in ms — norms change rarely; a daily refresh is plenty. */
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
+/** makeit-knowledge source of truth for tier defaults (FR-40). */
+const KNOWLEDGE_REPO = "Sergio1990-1/makeit-knowledge";
+const DEFAULTS_PATH = "Skills/PROJECT_NORMS_DEFAULTS.yaml";
+
 /** The four required keys — used for both normalisation and validation. */
 const NORM_KEYS = [
   "commit_cadence_days",
@@ -118,9 +124,15 @@ function tierKey(tier: ProjectTier): 1 | 2 | 3 {
   return 1;
 }
 
-/** A fresh copy of the tier default (never hand out the shared literal). */
-function tierDefault(tier: ProjectTier): ProjectNorm {
-  return { ...DEFAULT_NORMS[tierKey(tier)] };
+/**
+ * The tier default for `tier`: the makeit-knowledge value when present
+ * and valid, else the baked-in `DEFAULT_NORMS` copy. Always a fresh
+ * object (never hand out a shared literal). Never throws.
+ */
+async function resolveTierDefault(tier: ProjectTier): Promise<ProjectNorm> {
+  const key = tierKey(tier);
+  const fromKnowledge = (await loadKnowledgeDefaults())[key];
+  return { ...(fromKnowledge ?? DEFAULT_NORMS[key]) };
 }
 
 /**
@@ -144,6 +156,53 @@ function coerceNorm(parsed: unknown): ProjectNorm | null {
     out[key] = v;
   }
   return out;
+}
+
+/**
+ * Tab-lifetime cache of the knowledge tier defaults. `null` = not yet
+ * attempted; once a load is attempted (success OR failure) the result is
+ * frozen for the tab, so a portfolio fan-out doesn't refetch the file
+ * per card and an offline tab doesn't retry it per card. A hard refresh
+ * re-attempts (mirrors `checklist.ts`). Only tiers that coerce to a
+ * valid `ProjectNorm` are kept; a missing/invalid tier is simply absent
+ * and that tier alone falls through to the baked-in `DEFAULT_NORMS`.
+ */
+let knowledgeDefaultsCache: Partial<Record<1 | 2 | 3, ProjectNorm>> | null =
+  null;
+
+/**
+ * Load the tier defaults from makeit-knowledge. Never throws: any
+ * failure (no token, network, 404, garbage YAML, missing/invalid tier)
+ * just leaves that tier out of the map, and `resolveTierDefault` falls
+ * back to the baked-in copy so drift detection is never normless.
+ */
+async function loadKnowledgeDefaults(): Promise<
+  Partial<Record<1 | 2 | 3, ProjectNorm>>
+> {
+  if (knowledgeDefaultsCache) return knowledgeDefaultsCache;
+  const byKey: Partial<Record<1 | 2 | 3, ProjectNorm>> = {};
+  try {
+    const file = await readMarkdown(KNOWLEDGE_REPO, DEFAULTS_PATH);
+    if (file !== null) {
+      let parsed: unknown;
+      try {
+        parsed = yaml.load(file.content);
+      } catch {
+        parsed = null;
+      }
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const src = parsed as Record<string, unknown>;
+        for (const k of [1, 2, 3] as const) {
+          const norm = coerceNorm(src[`tier-${k}`]);
+          if (norm) byKey[k] = norm;
+        }
+      }
+    }
+  } catch {
+    // Auth/network/unexpected status — leave byKey empty, baked-in wins.
+  }
+  knowledgeDefaultsCache = byKey;
+  return byKey;
 }
 
 /** Read a still-valid cache entry, or `null` if missing/expired/corrupt. */
@@ -181,13 +240,14 @@ function writeCache(repo: string, norm: ProjectNorm): void {
  * Resolve the drift norms for `repo`.
  *
  * Order: fresh localStorage cache → per-project `docs/project_norm.yaml`
- * → tier default. The resolved value (override OR default) is cached for
- * 24h so a missing/invalid file doesn't cost a GitHub round-trip on
- * every drift recompute.
+ * → makeit-knowledge tier default → baked-in `DEFAULT_NORMS`. The
+ * resolved value is cached for 24h so a missing/invalid file doesn't
+ * cost a GitHub round-trip on every drift recompute.
  *
  * Never throws: any failure (no token, network, 404, garbage YAML)
- * degrades to the tier default. `repo` may be `repo-name` or
- * `owner/repo` — `github-contents.ts` resolves the owner.
+ * degrades to the next source and ultimately the baked-in tier default.
+ * `repo` may be `repo-name` or `owner/repo` — `github-contents.ts`
+ * resolves the owner.
  */
 export async function loadProjectNorm(
   repo: string,
@@ -216,7 +276,7 @@ export async function loadProjectNorm(
     resolved = null;
   }
 
-  const norm = resolved ?? tierDefault(tier);
+  const norm = resolved ?? (await resolveTierDefault(tier));
   // Cache the resolved value (override or default alike) so a missing
   // file is a once-a-day cost, not a per-call one.
   writeCache(repo, norm);
