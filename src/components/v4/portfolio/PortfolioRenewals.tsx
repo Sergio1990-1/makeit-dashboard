@@ -258,7 +258,7 @@ export function PortfolioRenewals({ onOpenProject }: Props) {
           <RenewalsSkeleton />
         ) : showEmpty ? (
           <div className="v4-empty v4-ai-empty v4-promise-empty">
-            Нет docs/renewals.yaml в проектах
+            Ближайших продлений нет
           </div>
         ) : (
           top.map((r) => (
