@@ -1,0 +1,12 @@
+# MakeIT Hub — commitments for makeit-dashboard.
+# makeit-dashboard is an INTERNAL Tier-3 tool (makeit-knowledge/PORTFOLIO.md:
+# type "Свой", client "—"). No external counterparty / contract / SOW exists
+# in this repo, so no client deliverable can be grounded. The row below is a
+# visible TODO placeholder, NOT a fabricated promise. Replace it with real
+# internal delivery commitments (text + YYYY-MM-DD due) or remove it if none.
+# status is only `open` | `done` — `overdue` is derived at render time.
+commitments:
+  - text: "TODO(human: makeit-dashboard is an internal Tier-3 tool with no client — list real internal delivery commitments with dates, or confirm there are none)"
+    due: ""
+    client: ""
+    status: open

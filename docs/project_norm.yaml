@@ -1,0 +1,16 @@
+# Drift norm override for makeit-dashboard. Seeded from the tier-3 baseline.
+# Tier grounded from makeit-knowledge/PORTFOLIO.md (makeit-dashboard = "Свой",
+# Tier 3, internal live dashboard). All four keys are required and must be
+# positive whole-day integers — a missing/zero/non-number key invalidates the
+# WHOLE file and the dashboard silently falls back to the tier default.
+#
+# Not tuned away from baseline on purpose: recent git history is a finite
+# Epic-010/011/012 build-out burst, not the steady-state cadence — keeping the
+# lenient tier-3 baseline avoids flagging a natural post-sprint slowdown on
+# this internal tool as drift. client_touch_interval_days is non-meaningful
+# here (internal tool, no client) but kept at the tier-3 baseline because the
+# schema requires all four keys.
+commit_cadence_days: 21
+deploy_freq_days: 45
+audit_freq_days: 120
+client_touch_interval_days: 60
