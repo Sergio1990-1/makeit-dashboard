@@ -441,7 +441,14 @@ export function ProjectsView({
   // opened — no network, no N+1. Repos not visited this session are absent
   // from the map → the Scorecard keeps its muted "—" (strictly better than
   // the previous always-"—", not a per-project portfolio fetch).
-  const { grades: healthGrades } = usePortfolioHealthCollection(projects);
+  // `selectedRepo` is the volatile re-collect trigger: this component
+  // stays mounted across Hub visits, so without it a grade cached during
+  // a visit would only surface after a full reload (project set is
+  // hardcoded → a repo-set-only key never changes in-session).
+  const { grades: healthGrades } = usePortfolioHealthCollection(
+    projects,
+    selectedRepo,
+  );
 
   if (selectedRepo) {
     return (
