@@ -327,6 +327,7 @@ export function ProgressMatrix({ projects }: Props) {
         </div>
       </div>
 
+      <div className="v4-pm-scroll">
       <div
         style={{
           display: "grid",
@@ -639,6 +640,7 @@ export function ProgressMatrix({ projects }: Props) {
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

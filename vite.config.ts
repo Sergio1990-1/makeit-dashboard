@@ -88,6 +88,34 @@ export default defineConfig({
               },
             },
           },
+          {
+            // #486: Auditor / Pipeline / Transcripts / settings / monitors
+            // live on separate, runtime-configured origins (AUDITOR_URL /
+            // PIPELINE_URL / BetterStack worker). Match cross-origin
+            // requests only (never the SPA's own assets/navigations) whose
+            // path is in the API family — host can't be hard-coded since
+            // the URLs come from runtime config.js. NetworkFirst keeps
+            // online behaviour unchanged; offline (or on a 6s network
+            // stall) it serves the last response within the TTL so those
+            // tabs degrade gracefully instead of blanking.
+            urlPattern: ({ url, sameOrigin }) =>
+              !sameOrigin &&
+              /\/(pipeline|audit|findings|runs|verify|transcripts|settings|monitors|uptime)\b/i.test(
+                url.pathname,
+              ),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'cache-api',
+              networkTimeoutSeconds: 6,
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 60 * 30,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
         ],
       },
     }),
