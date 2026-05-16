@@ -2,13 +2,21 @@
 
 import { PIPELINE_BASE_URL } from "./config";
 
-export type ComplexityFilter = "auto" | "assisted" | "all";
+/**
+ * UI selection for the complexity filter. `auto`/`assisted`/`manual` are
+ * the backend's literals (`StartRequest.complexity_filter`); `all` is a
+ * UI-only sentinel meaning "no filter" — it is never sent on the wire
+ * (the send sites map it to `undefined`).
+ */
+export type ComplexityFilter = "auto" | "assisted" | "manual" | "all";
 
 export interface PipelineStartRequest {
   project?: string;
   labels?: string[];
   limit?: number;
-  complexity_filter?: ComplexityFilter;
+  /** Backend `Literal["auto","assisted","manual"] | None` — the UI-only
+   *  `"all"` is stripped to `undefined` before the request is built. */
+  complexity_filter?: "auto" | "assisted" | "manual";
   /** Open-milestone title to filter issues by (AND with labels). Backend
    * accepts the title string, normalises whitespace-only to "no filter", and
    * passes through the special tokens `*` and `none` unchanged. */

@@ -18,6 +18,7 @@ const COMPLEXITY_OPTIONS: { value: ComplexityFilter; label: string; hint: string
   { value: "all", label: "All", hint: "Все задачи" },
   { value: "auto", label: "Auto", hint: "Sonnet — простые" },
   { value: "assisted", label: "Assisted", hint: "Opus — сложные" },
+  { value: "manual", label: "Manual", hint: "Ручной режим" },
 ];
 
 const COMPLEXITY_STYLE: Record<string, { label: string; color: string; bg: string }> = {
@@ -278,7 +279,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
   });
   const [complexityFilter, setComplexityFilter] = useState<ComplexityFilter>(() => {
     const stored = localStorage.getItem("pipeline_complexity");
-    const valid: ComplexityFilter[] = ["auto", "assisted", "all"];
+    const valid: ComplexityFilter[] = ["auto", "assisted", "manual", "all"];
     return stored && valid.includes(stored as ComplexityFilter) ? (stored as ComplexityFilter) : "all";
   });
   const [selectedMilestone, setSelectedMilestone] = useState<string>(() => {

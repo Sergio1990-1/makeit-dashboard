@@ -15,6 +15,7 @@ const COMPLEXITY_OPTIONS: { value: ComplexityFilter; label: string; hint: string
   { value: "all", label: "All", hint: "Все задачи" },
   { value: "auto", label: "Auto", hint: "Sonnet — простые" },
   { value: "assisted", label: "Assisted", hint: "Opus — сложные" },
+  { value: "manual", label: "Manual", hint: "Ручной режим" },
 ];
 
 interface Props {
