@@ -23,6 +23,10 @@ import {
   type RisksFile,
   sortBySeverityDesc,
 } from "../utils/risksRegister";
+import {
+  type CommitmentsYaml,
+  extractCommitments,
+} from "../utils/commitmentsExtractor";
 import { extractDecisions } from "../utils/decisionLogExtractor";
 import {
   computeDora,
@@ -115,6 +119,43 @@ async function fetchTopRisks(repo: string): Promise<Risk[]> {
     return sortBySeverityDesc(parseRisksFile(res.data)).slice(0, RISKS_TOP_N);
   } catch {
     return [];
+  }
+}
+
+// ── Commitments read (Epic-011 Task-02 → Hub Overview wiring, #451) ──
+// The Overview "Обещания — топ-3" card must show the SAME first three
+// rows the DecisionsRisks tab's CommitmentsTable renders. Both go
+// through the single `extractCommitments` producer (BRIEF `## Commitments`
+// merged with `docs/commitments.yaml`, dedup, derived `overdue`, and the
+// canonical sort: overdue → open-by-due-asc → done, undated last), so
+// the top-3 can never drift from the table's row order. Works from the
+// BRIEF section alone even before `docs/commitments.yaml` is adopted.
+
+/** Path of the CRUD-managed commitments file (mirrors CommitmentsTable). */
+const COMMITMENTS_PATH = "docs/commitments.yaml";
+
+/** How many top commitments the Overview "Обещания — топ-3" card shows. */
+const COMMITMENTS_TOP_N = 3;
+
+/**
+ * Read the project's `docs/commitments.yaml`. Best-effort, exactly like
+ * `fetchTopRisks`:
+ *  - file absent (`readYaml` → null on 404) → `null`, never an error;
+ *  - corrupt yaml (`readYaml` throws on parse) is swallowed → `null`,
+ *    so a single bad file degrades this section alone and never crashes
+ *    the rest of the Hub (the Commitments tab still surfaces the parse
+ *    error with its own retry affordance).
+ * The BRIEF↔yaml merge + top-N slice happens in a derived `useMemo`
+ * (next to `decisions`), since `briefMd` resolves alongside this read.
+ */
+async function fetchCommitmentsYaml(
+  repo: string,
+): Promise<CommitmentsYaml> {
+  try {
+    const res = await readYaml<CommitmentsYaml>(repo, COMMITMENTS_PATH);
+    return res?.data ?? null;
+  } catch {
+    return null;
   }
 }
 
@@ -266,23 +307,40 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
   // so this resolves to a real (possibly empty) list, never an error.
   const [risksResolved, setRisksResolved] =
     useState<Resolved<Risk[]> | null>(null);
+  // Commitments (Epic-011 Task-02) top-3 for the Overview card (#451).
+  // Same repo-keyed effect as commits/PRs/risks: `commitments.yaml` is
+  // also a per-repo read with nothing for the Hub to do while it loads,
+  // so it rides the existing Promise.all rather than introducing a
+  // second uncoordinated fetch. The raw yaml is stored here (best-effort
+  // → null, never an error); the BRIEF↔yaml merge + top-N slice is a
+  // derived `useMemo` (next to `decisions`) since `briefMd` resolves in
+  // this same batch — keeping the table and the card on one producer.
+  const [commitmentsYamlResolved, setCommitmentsYamlResolved] =
+    useState<Resolved<CommitmentsYaml> | null>(null);
   useEffect(() => {
     const key = repo;
     let cancelled = false;
     void (async () => {
       // Run in parallel — they're independent and the Hub has nothing
       // to do with either response while we wait.
-      const [briefRes, commitsRes, prsRes, risksRes] = await Promise.all([
-        readMarkdown(repo, "docs/BRIEF.md").catch(() => null),
-        listRecentCommits(repo, 100).catch(() => [] as CommitInfo[]),
-        fetchDoraPRs(repo),
-        fetchTopRisks(repo),
-      ]);
+      const [briefRes, commitsRes, prsRes, risksRes, commitmentsYamlRes] =
+        await Promise.all([
+          readMarkdown(repo, "docs/BRIEF.md").catch(() => null),
+          listRecentCommits(repo, 100).catch(() => [] as CommitInfo[]),
+          fetchDoraPRs(repo),
+          fetchTopRisks(repo),
+          fetchCommitmentsYaml(repo),
+        ]);
       if (cancelled || !mounted.current) return;
       setBriefMd(briefRes?.content ?? null);
       setCommitsResolved({ key, data: commitsRes, error: null });
       setPrsResolved({ key, data: prsRes, error: null });
       setRisksResolved({ key, data: risksRes, error: null });
+      setCommitmentsYamlResolved({
+        key,
+        data: commitmentsYamlRes,
+        error: null,
+      });
     })();
     return () => {
       cancelled = true;
@@ -320,6 +378,32 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
     () => extractDecisions(briefMd, commits),
     [briefMd, commits],
   );
+
+  // Only surface commitments resolved for *this* repo; a stale yaml
+  // result from the previous repo (navigation mid-fetch) reads as
+  // not-yet-loaded so the card never shows the old repo's promises.
+  // `extractCommitments` is the single shared producer (same one the
+  // CommitmentsTable uses): it merges the BRIEF `## Commitments` section
+  // with `docs/commitments.yaml`, derives `overdue`, and emits the
+  // canonical order overdue → open-by-due-asc → done (undated last) —
+  // so the top-N here is exactly the table's first N rows ("overdue,
+  // then nearest"). Works from the BRIEF section alone when there is no
+  // yaml file yet. Falls back to the stable `EMPTY_COMMITMENTS` so
+  // downstream memo deps keep reference equality and the Overview empty
+  // state appears only when there are genuinely no commitments.
+  const commitmentsYamlFresh =
+    commitmentsYamlResolved !== null &&
+    commitmentsYamlResolved.key === repo;
+  const commitments = useMemo<ProjectHubData["commitments"]>(() => {
+    const yamlData = commitmentsYamlFresh
+      ? (commitmentsYamlResolved?.data ?? null)
+      : null;
+    const list = extractCommitments(briefMd, yamlData).slice(
+      0,
+      COMMITMENTS_TOP_N,
+    );
+    return list.length > 0 ? list : EMPTY_COMMITMENTS;
+  }, [commitmentsYamlFresh, commitmentsYamlResolved, briefMd]);
 
   // ── DORA (Epic-012 Task-03) ────────────────────────────────────────
   // `computeDora` is pure-injectable and synchronous. We feed it the
@@ -536,7 +620,7 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
     health: report,
     decisions: finalDecisions,
     risks,
-    commitments: EMPTY_COMMITMENTS,
+    commitments,
     renewals: EMPTY_RENEWALS,
     pulse: EMPTY_PULSE,
     inboxCount: 0,
