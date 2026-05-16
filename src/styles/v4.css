@@ -339,6 +339,23 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+.v4-ratelimit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: var(--v4-surface-3);
+  font-family: var(--v4-mono);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: default;
+}
+.v4-ratelimit-sep { color: var(--v4-ink-300); }
+.v4-ratelimit-seg--ok { color: var(--v4-success-700); }
+.v4-ratelimit-seg--warn { color: var(--v4-warn-700); }
+.v4-ratelimit-seg--crit { color: var(--v4-danger-700); }
 .v4-top-right {
   display: flex;
   align-items: center;

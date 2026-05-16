@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useProjectHealth } from "./useProjectHealth";
 import type { ProjectData } from "../types";
 import type {
+  Commitment,
   CustomerHealthScore,
   DigestEntry,
   HubTab,
@@ -48,8 +49,12 @@ import {
 import { isOnboardingRuleId } from "../utils/onboardingReadinessRules";
 import {
   computeProjectNBA,
+  invalidateNbaCache,
   type NbaAction,
+  type NbaCommitmentInput,
+  type NbaRiskInput,
 } from "../utils/nextBestActionEngine";
+import type { HealthSeverity } from "../types/health";
 import {
   getClaudeKey,
   getProjectFinance,
@@ -64,6 +69,12 @@ import {
 const EMPTY_DECISIONS: ProjectHubData["decisions"] = [];
 const EMPTY_RISKS: ProjectHubData["risks"] = [];
 const EMPTY_COMMITMENTS: ProjectHubData["commitments"] = [];
+// Overdue subset fed to the NBA engine. Distinct from EMPTY_COMMITMENTS:
+// that one is the Overview top-3 (`ProjectHubData["commitments"]`); this
+// is the *full-list* overdue filter (NbaCommitmentInput[]), a different
+// shape and a different slice — see the `overdueCommitments` memo.
+const EMPTY_OVERDUE_COMMITMENTS: NbaCommitmentInput[] = [];
+const EMPTY_NBA_RISKS: NbaRiskInput[] = [];
 const EMPTY_RENEWALS: ProjectHubData["renewals"] = [];
 const EMPTY_PULSE: ProjectHubData["pulse"] = [];
 const EMPTY_NBA: ProjectHubData["nba"] = [];
@@ -295,6 +306,49 @@ function toNextBestAction(a: NbaAction): NextBestAction {
     text: a.title,
     reason: a.rationale,
   };
+}
+
+/**
+ * Bridge the Risk Register's severity vocabulary onto the NBA engine's.
+ * `RiskSeverity` uses the short `med` token (docs/risks.yaml schema,
+ * Epic-011 FR-29) whereas `NbaRiskInput.severity` is a `HealthSeverity`
+ * ("medium"); only that one token differs, the rest are identical.
+ * Kept here with the other consumer-side adapters so the engine stays
+ * decoupled from the register's on-disk schema.
+ */
+function riskSeverityToHealth(s: Risk["severity"]): HealthSeverity {
+  return s === "med" ? "medium" : s;
+}
+
+/**
+ * Map the *overdue* subset of the merged commitment list onto the NBA
+ * engine's `NbaCommitmentInput`. Takes the full `extractCommitments`
+ * output (NOT the Overview top-3) and keeps only the rows the producer
+ * already derived as `overdue`, quantifying `daysOverdue` for each.
+ *
+ * `now` defaults here (same default-param pattern as `extractCommitments`
+ * / `isOverdue` — the `Date.now()` impurity lives in this helper's
+ * signature, never in a component render body, so the `react-hooks/
+ * purity` rule stays satisfied). A malformed `due` (shouldn't reach
+ * here — the producer never marks such a row overdue) drops the
+ * `daysOverdue` hint so the engine just omits the count.
+ */
+function toOverdueCommitmentInputs(
+  commitments: Commitment[],
+  now: number = Date.now(),
+): NbaCommitmentInput[] {
+  return commitments
+    .filter((c) => c.status === "overdue")
+    .map((c) => {
+      const t = Date.parse(c.due);
+      return {
+        title: c.text,
+        dueDate: c.due,
+        daysOverdue: Number.isNaN(t)
+          ? undefined
+          : Math.max(0, Math.floor((now - t) / 86_400_000)),
+      };
+    });
 }
 
 /**
@@ -733,11 +787,14 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
 
   // ── Next Best Action (Epic-012 Task-05) ────────────────────────────
   // `computeProjectNBA` is pure-injectable: it weighs the signals we
-  // pass it. Risks are not yet a Hub producer (Epic-011 Task-03 is UI
-  // only), so we feed audit findings from the health report's failing
-  // entries. The engine is week-cached and never throws to the caller;
-  // still wrapped for section isolation. The store key folds in a fast
-  // signature of the findings so the NBA refreshes when they change.
+  // pass it. We feed it three Hub producers now that #450 (Risk
+  // Register) and #451 (Commitments) have landed: audit findings from
+  // the health report's failing entries, the risk register, and the
+  // *overdue* commitments. The engine is week-cached and never throws
+  // to the caller; still wrapped for section isolation. The store key
+  // folds in a fast signature of all three so the NBA refreshes when
+  // any of them change (a cache key on findings alone would serve a
+  // stale result that ignores risk/commitment movement — #460).
   const failingFindings = useMemo(
     () =>
       (report?.findings ?? [])
@@ -748,22 +805,88 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
         })),
     [report?.findings],
   );
+  // Map the Overview's risk list onto the engine's `NbaRiskInput`
+  // (severity vocab bridged: `med` → `medium`). Reuses the same `risks`
+  // memo the Overview card renders, so the engine reasons over exactly
+  // the register the user sees; the engine slices to MAX_RISKS itself.
+  // Stable `EMPTY_NBA_RISKS` fallback keeps referential equality so the
+  // effect deps don't churn on an empty register.
+  const nbaRisks = useMemo<NbaRiskInput[]>(() => {
+    if (risks.length === 0) return EMPTY_NBA_RISKS;
+    return risks.map((r) => ({
+      title: r.title,
+      severity: riskSeverityToHealth(r.severity),
+      status: r.status,
+    }));
+  }, [risks]);
+  // Overdue commitments for the engine. CRITICAL: this filters the
+  // *full* `extractCommitments` result, NOT the top-3 `commitments`
+  // memo — an overdue promise can sit below the top-3 nearest-due
+  // slice, so reusing that memo would silently drop overdue items the
+  // engine must weigh. Same repo-freshness gating as `commitments` so a
+  // stale-repo yaml never leaks; stable `EMPTY_OVERDUE_COMMITMENTS`
+  // fallback keeps referential equality. The engine slices to
+  // MAX_COMMITMENTS internally.
+  const overdueCommitments = useMemo<NbaCommitmentInput[]>(() => {
+    const yamlData = commitmentsYamlFresh
+      ? (commitmentsYamlResolved?.data ?? null)
+      : null;
+    // Same `extractCommitments(briefMd, yamlData)` call as the top-3
+    // `commitments` memo (default `now` lives in the util — keeps the
+    // render body pure); the overdue subset + `daysOverdue` quantifying
+    // is done by the helper so the impure clock read stays out of here.
+    const list = toOverdueCommitmentInputs(
+      extractCommitments(briefMd, yamlData),
+    );
+    return list.length > 0 ? list : EMPTY_OVERDUE_COMMITMENTS;
+  }, [commitmentsYamlFresh, commitmentsYamlResolved, briefMd]);
   const nbaKey = useMemo(
     () =>
-      `${repo}|${failingFindings.map((f) => `${f.severity}:${f.description}`).join("¦")}`,
-    [repo, failingFindings],
+      [
+        repo,
+        failingFindings
+          .map((f) => `${f.severity}:${f.description}`)
+          .join("¦"),
+        nbaRisks
+          .map((r) => `${r.severity}:${r.title}:${r.status ?? ""}`)
+          .join("¦"),
+        overdueCommitments
+          .map((c) => `${c.title}:${c.dueDate}:${c.daysOverdue ?? ""}`)
+          .join("¦"),
+      ].join("|"),
+    [repo, failingFindings, nbaRisks, overdueCommitments],
   );
   const [nbaResolved, setNbaResolved] =
     useState<Resolved<NextBestAction[]> | null>(null);
+  // The engine week-caches per repo with NO input signature, so a
+  // same-ISO-week call returns the prior result even when risks/overdue
+  // changed — `nbaKey` alone only re-runs this effect, it never reaches
+  // the engine cache (#460). Remember the last signature applied per
+  // repo so a signal change for a repo (even after navigating away and
+  // back) drops that repo's stale entry and forces a real recompute,
+  // while switching to a *different* repo still reuses its own valid
+  // per-repo week cache (no spurious Claude call / #389 portfolio
+  // cascade). One small entry per visited repo (~12 max). Residual
+  // cross-page-reload staleness is tracked separately as tech-debt.
+  const lastNbaSigByRepo = useRef<Map<string, string>>(new Map());
   useEffect(() => {
     const key = nbaKey;
     let cancelled = false;
+    const prevSig = lastNbaSigByRepo.current.get(repo);
+    if (prevSig !== undefined && prevSig !== key) {
+      invalidateNbaCache({ kind: "project", repo });
+    }
+    lastNbaSigByRepo.current.set(repo, key);
     void (async () => {
       try {
         const apiKey = getClaudeKey() ?? "";
         const result = await computeProjectNBA(
           repo,
-          { findings: failingFindings },
+          {
+            findings: failingFindings,
+            risks: nbaRisks,
+            overdueCommitments,
+          },
           apiKey,
         );
         if (cancelled || !mounted.current) return;
@@ -781,7 +904,7 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
     return () => {
       cancelled = true;
     };
-  }, [repo, failingFindings, nbaKey]);
+  }, [repo, failingFindings, nbaRisks, overdueCommitments, nbaKey]);
   const nbaSection = deriveSection(nbaResolved, nbaKey);
 
   // `loadingTab` mirrors per-tab loading. Health drives its own tabs;
