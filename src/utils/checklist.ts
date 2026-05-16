@@ -48,14 +48,29 @@ export async function loadChecklist(
   // than the YAML source of truth (Epic-012 Task-04: Onboarding Readiness).
   // Dedup by `id` so a future mirror-PR into makeit-knowledge can't
   // double-count the same rule — the YAML version wins if present.
+  //
+  // Build a NEW immutable document instead of mutating `parsed` in place, so
+  // the cached doc that future readers see is internally consistent rather
+  // than a half-patched copy of the parsed YAML.
   const existingIds = new Set(parsed.rules.map((r) => r.id));
-  for (const rule of ONBOARDING_READINESS_RULES) {
-    if (!existingIds.has(rule.id)) {
-      parsed.rules.push(rule);
-    }
+  const mergedRules = ONBOARDING_READINESS_RULES.filter(
+    (rule) => !existingIds.has(rule.id),
+  );
+  // Keep `check_types_supported` self-consistent: any check type introduced
+  // by a merged-in rule (e.g. `deploy_doc_present`, `audit_fresh`) must be
+  // listed so a future validator doesn't flag those rules as unsupported.
+  // Dedup against whatever the YAML already declares.
+  const supportedTypes = new Set(parsed.check_types_supported);
+  for (const rule of mergedRules) {
+    supportedTypes.add(rule.check.type);
   }
-  cached = { doc: parsed, loaded_at: Date.now() };
-  return parsed;
+  const doc: ChecklistDocument = {
+    ...parsed,
+    check_types_supported: [...supportedTypes],
+    rules: [...parsed.rules, ...mergedRules],
+  };
+  cached = { doc, loaded_at: Date.now() };
+  return doc;
 }
 
 export function clearChecklistCache(): void {
