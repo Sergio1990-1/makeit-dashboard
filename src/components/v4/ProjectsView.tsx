@@ -12,6 +12,7 @@ import { PortfolioDigestPanel } from "./portfolio/PortfolioDigestPanel";
 import { calcRiskScore } from "../../utils/riskScore";
 import { usePortfolioNbaCollection } from "../../hooks/usePortfolioNbaCollection";
 import { usePortfolioHealthCollection } from "../../hooks/usePortfolioHealthCollection";
+import { usePortfolioCommitmentsCollection } from "../../hooks/usePortfolioCommitmentsCollection";
 import { collectCachedPerProjectNba } from "../../utils/portfolioNbaCollector";
 import { useToast } from "./toastContext";
 
@@ -120,9 +121,14 @@ const SCORECARD_TIER = 2 as const;
 
 // KPIs the Scorecard shows. `open` mirrors the existing card; in-progress /
 // blocked are derived from the already-loaded `issues` list (no extra
-// fetch — pure reduce). Overdue client commitments are not in this view's
-// data model (the Promise Tracker widget above owns that cross-project
-// surface), so the per-card value is 0 here.
+// fetch — pure reduce). `overdueCommitments` stays 0 here as the baseline
+// fallback: the per-project overdue count is not in this view's data model
+// (deriving it needs each repo's BRIEF + commitments.yaml). The call site
+// overrides it with the real count for any project whose Hub was visited
+// this session — a pure render-path read of the cache `useProjectHub`
+// persists for free (`usePortfolioCommitmentsCollection`, same #456
+// pattern as `grade`), 0 only for not-yet-visited projects (strictly
+// better than the previous always-0-for-all, NOT a per-project fetch).
 function scorecardKpis(p: ProjectData): ScorecardKpis {
   let inProgress = 0;
   let blocked = 0;
@@ -450,6 +456,20 @@ export function ProjectsView({
     selectedRepo,
   );
 
+  // Portfolio overdue-commitment counts (#462). Same proven render-path
+  // cache-reader as the health grades above: a pure synchronous read of
+  // the per-repo count `useProjectHub` persists for free when a Hub is
+  // opened — no network, no N+1. Repos not visited this session are
+  // absent → the Scorecard's "⏰ просроч." KPI keeps its 0 (strictly
+  // better than the previous always-0-for-all, not a per-project fetch).
+  // `selectedRepo` is the same volatile re-collect trigger as the grades
+  // hook so a count cached during a Hub visit surfaces in-session on
+  // Hub-leave without a full reload.
+  const { overdueByRepo } = usePortfolioCommitmentsCollection(
+    projects,
+    selectedRepo,
+  );
+
   if (selectedRepo) {
     return (
       <ProjectHubPage
@@ -659,7 +679,10 @@ export function ProjectsView({
                     phase={p.phase}
                     client={p.client}
                     grade={healthGrades[p.repo] ?? null}
-                    kpis={scorecardKpis(p)}
+                    kpis={{
+                      ...scorecardKpis(p),
+                      overdueCommitments: overdueByRepo[p.repo] ?? 0,
+                    }}
                     drift={{
                       // True days-since-last-commit — DriftDots labels
                       // this literally "commit: Nд назад" and grades it

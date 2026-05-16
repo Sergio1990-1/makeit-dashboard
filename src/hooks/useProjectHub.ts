@@ -840,6 +840,39 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
     );
     return list.length > 0 ? list : EMPTY_OVERDUE_COMMITMENTS;
   }, [commitmentsYamlFresh, commitmentsYamlResolved, briefMd]);
+
+  // Persist this repo's overdue-commitment COUNT to sessionStorage so the
+  // portfolio grid's "⏰ просроч." Scorecard KPI can read a real number for
+  // any project whose Hub was opened this session — the same proven
+  // render-path cache-reader pattern #456 uses for the health grade
+  // (`useProjectHealth` persists the full report; the grid reads it). This
+  // is a point-in-time snapshot: `overdue` is `due < now` at the moment
+  // the Hub computed it, so the portfolio shows the last value cached while
+  // the Hub was open (same accepted staleness tradeoff #456 documents for
+  // the grade — not a per-project portfolio fetch). Gated on the SAME
+  // `commitmentsYamlFresh` as the memo so a stale-repo count (navigation
+  // mid-fetch) can never leak into the cache. A `sessionStorage.setItem`
+  // is a side-effect, so it lives in an effect (satisfies
+  // `react-hooks/purity`); it is not a setState, so it does not violate
+  // `react-hooks/set-state-in-effect`. Best-effort: quota / disabled
+  // storage → silently skip (the KPI just stays at its 0 fallback).
+  // Cache key: `makeit_commitments_overdue_` + repo — MUST stay byte-for-
+  // byte identical to `COMMITMENTS_OVERDUE_PREFIX` in
+  // portfolioCommitmentsCollector.ts (the read side); a single mirror-point
+  // (the hook can't export it without a cycle), underscore separator to
+  // match `useProjectHealth`'s `SESSION_PREFIX` convention — NOT a colon.
+  useEffect(() => {
+    if (!commitmentsYamlFresh) return;
+    try {
+      sessionStorage.setItem(
+        `makeit_commitments_overdue_${repo}`,
+        String(overdueCommitments.length),
+      );
+    } catch {
+      // Quota exceeded / storage disabled — non-fatal; the portfolio KPI
+      // falls back to 0 for this repo, never crashes.
+    }
+  }, [repo, commitmentsYamlFresh, overdueCommitments]);
   // Manual-regenerate nonce (#459). Bumped by `regenerateNBA` and folded
   // into `nbaKey` below. Because `nbaKey` is simultaneously the engine
   // `sig` (#476), the NBA effect's re-run key, and the `deriveSection`
