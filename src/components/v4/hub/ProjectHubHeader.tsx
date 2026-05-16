@@ -21,8 +21,11 @@ function formatLastActivity(iso: string | null): string {
 /**
  * Header for ProjectHubPage. Composes data from useProjectHub: project
  * identity on the left, health KPI on the right, NBA strip in the middle.
- * The "Регенерировать" button is wired to a no-op stub today — Epic-012
- * (Task-05 NBA engine) replaces it with a real action.
+ * The "Регенерировать" button forces a fresh NBA recompute (#459):
+ * `data.regenerateNBA` invalidates the engine week-cache (incl. the #389
+ * portfolio aggregate) and bumps the engine signature so Claude actually
+ * recomputes; it stays disabled while the Overview/NBA section is
+ * recomputing (`data.loadingTab.overview`).
  *
  * Visuals reuse existing v4 tokens via `v4-hub-*` classes defined in
  * v4.css; tier pills reuse the `ph-tag` family for parity with the Health
@@ -38,6 +41,11 @@ export function ProjectHubHeader({ data }: Props) {
   const hasGrade = data.health !== null;
   const scorePct = data.health?.score.raw ?? null;
   const nbaText = data.nba[0]?.text ?? "—";
+  // `loadingTab.overview` mirrors the NBA section's loading slice — true
+  // while a recompute (incl. one this button just triggered) is in
+  // flight, so the button shows a pending affordance and can't be
+  // double-fired into overlapping recomputes.
+  const regenerating = data.loadingTab.overview;
 
   return (
     <header className="v4-hub-header">
@@ -74,11 +82,21 @@ export function ProjectHubHeader({ data }: Props) {
         <button
           type="button"
           className="v4-btn"
-          disabled
-          title="Будет в Epic-012 (NBA engine)"
-          aria-label="Регенерировать NBA — будет доступно в Epic-012"
+          onClick={() => data.regenerateNBA()}
+          disabled={regenerating}
+          aria-busy={regenerating}
+          title={
+            regenerating
+              ? "Пересчёт Next Best Action…"
+              : "Сбросить кэш и пересчитать Next Best Action"
+          }
+          aria-label={
+            regenerating
+              ? "Идёт пересчёт Next Best Action"
+              : "Регенерировать Next Best Action — сбросить кэш и пересчитать"
+          }
         >
-          Регенерировать
+          {regenerating ? "Пересчёт…" : "Регенерировать"}
         </button>
       </div>
     </header>

@@ -49,6 +49,7 @@ import {
 import { isOnboardingRuleId } from "../utils/onboardingReadinessRules";
 import {
   computeProjectNBA,
+  invalidateNbaCache,
   type NbaAction,
   type NbaCommitmentInput,
   type NbaRiskInput,
@@ -839,6 +840,16 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
     );
     return list.length > 0 ? list : EMPTY_OVERDUE_COMMITMENTS;
   }, [commitmentsYamlFresh, commitmentsYamlResolved, briefMd]);
+  // Manual-regenerate nonce (#459). Bumped by `regenerateNBA` and folded
+  // into `nbaKey` below. Because `nbaKey` is simultaneously the engine
+  // `sig` (#476), the NBA effect's re-run key, and the `deriveSection`
+  // freshness key, a single nonce bump (a) changes the engine signature
+  // → `computeProjectNBA` cache-misses → a real fresh Claude recompute,
+  // (b) re-runs the NBA effect, and (c) makes `nbaSection` read as
+  // `loading` until the new key resolves (the header shows progress, no
+  // stale flash). Starts at 0; a normal input change still drives a
+  // recompute via the existing signature segments, untouched by this.
+  const [regenNonce, setRegenNonce] = useState(0);
   const nbaKey = useMemo(
     () =>
       [
@@ -852,8 +863,9 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
         overdueCommitments
           .map((c) => `${c.title}:${c.dueDate}:${c.daysOverdue ?? ""}`)
           .join("¦"),
+        `regen:${regenNonce}`,
       ].join("|"),
-    [repo, failingFindings, nbaRisks, overdueCommitments],
+    [repo, failingFindings, nbaRisks, overdueCommitments, regenNonce],
   );
   const [nbaResolved, setNbaResolved] =
     useState<Resolved<NextBestAction[]> | null>(null);
@@ -866,9 +878,9 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
   // its invalidate-on-change workaround (removed here): the engine now
   // owns same-week staleness end to end. Switching to a *different* repo
   // still reuses that repo's own valid week+sig cache (no spurious
-  // Claude call / #389 portfolio cascade). `invalidateNbaCache` is no
-  // longer imported here (the engine sig replaced its only use in this
-  // hook); it remains in the engine module for the Regenerate flow.
+  // Claude call / #389 portfolio cascade). `invalidateNbaCache` is used
+  // only by `regenerateNBA` below (#459) — the manual force-recompute —
+  // never on a normal input change (the engine sig handles those).
   useEffect(() => {
     const key = nbaKey;
     let cancelled = false;
@@ -936,10 +948,24 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
     // Hub-level button is a no-op placeholder by design (the real
     // affordance lives in the widget, not here).
   }, []);
+  // Force a fresh NBA recompute for this repo (#459). Two steps, each
+  // load-bearing and distinct:
+  //   1. `invalidateNbaCache({kind:"project",repo})` drops this repo's
+  //      week-cache entry AND (per #389) the portfolio aggregate, so the
+  //      sidebar/portfolio NBA refreshes too — a bare sig bump alone
+  //      would never touch the portfolio key.
+  //   2. The functional `setRegenNonce` bump changes `nbaKey`; since
+  //      `nbaKey` is the engine `sig`, the effect dep, and the section
+  //      freshness key, this drives the real Claude recompute and the
+  //      loading affordance (see the `regenNonce` doc above).
+  // Functional updater → no `regenNonce` dep → referentially stable
+  // across recomputes (only `repo` can change it). Idempotent: a second
+  // click mid-run just bumps again and the effect re-runs cleanly under
+  // the existing cancelled/mounted guards.
   const regenerateNBA = useCallback(async () => {
-    // NBA regeneration is owned by the portfolio / section controls; the
-    // Hub-level button is a no-op placeholder by design.
-  }, []);
+    invalidateNbaCache({ kind: "project", repo });
+    setRegenNonce((n) => n + 1);
+  }, [repo]);
 
   // Fall back to the stable empty array when the extractor produced no
   // decisions — keeps reference equality for downstream memo deps.
