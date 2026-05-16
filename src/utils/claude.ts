@@ -9,6 +9,7 @@ import {
   logCall,
   type ClaudeCallType,
 } from "./claudeBudget";
+import { SONNET_MODEL } from "./claudeModels";
 import {
   listRepoFiles,
   readRepoFile,
@@ -606,7 +607,7 @@ export async function generateIssuesFromFindings(
       // threshold (Epic-012 Task-01 / FR-41). The outer try/catch logs
       // and continues so a single budget refusal doesn't poison the loop.
       assertNotHardStopped();
-      const auditModel = effectiveModel("claude-sonnet-4-6");
+      const auditModel = effectiveModel(SONNET_MODEL);
       const response = await client.messages.create({
         model: auditModel,
         max_tokens: 4096,
@@ -752,7 +753,7 @@ export async function sendChatMessage(
     // iterations, and we want every one of them to honour a fresh
     // hard-stop (e.g. another tab pushed us over the cap).
     assertNotHardStopped();
-    const chatModel = effectiveModel("claude-sonnet-4-6");
+    const chatModel = effectiveModel(SONNET_MODEL);
     const response = await client.messages
       .create({
         model: chatModel,

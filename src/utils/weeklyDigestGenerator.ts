@@ -47,6 +47,7 @@ import {
   logCall,
   shouldFallbackToHaiku,
 } from "./claudeBudget";
+import { SONNET_MODEL } from "./claudeModels";
 import { readFile, writeFile } from "./github-contents";
 import { maybeDispatchAuthLostFromError } from "./external-auth-events";
 
@@ -56,7 +57,7 @@ import { maybeDispatchAuthLostFromError } from "./external-auth-events";
 const DIGEST_REPO = "makeit-dashboard";
 
 /** Sonnet is the default; downgraded to Haiku by `effectiveModel`. */
-const DIGEST_MODEL = "claude-sonnet-4-6";
+const DIGEST_MODEL = SONNET_MODEL;
 
 const CACHE_PREFIX = "makeit_digest";
 
