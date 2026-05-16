@@ -220,8 +220,12 @@ export function PortfolioDigestPanel({ week }: Props) {
     const reqId = ++reqRef.current;
     try {
       // The real Epic-012 Task-02 generator: rebuilds + re-persists
-      // `digests/{weekKey}-portfolio.md` and returns the entry. `force`
-      // bypasses the generator's own per-project cache.
+      // `digests/{weekKey}-portfolio.md` and returns the entry. NOTE: the
+      // portfolio path currently ignores `force` — it re-stitches from
+      // the per-project digest caches and always re-persists the
+      // portfolio file, but does not force-refresh the per-project
+      // inputs. `{ force: true }` is passed for intent / forward-compat;
+      // threading it to per-project loadDigest is tracked in #415.
       const entry = await generatePortfolioDigest(weekKey, { force: true });
       if (reqRef.current !== reqId) return;
       // Refresh preview in place (no page reload) and overwrite the
@@ -233,7 +237,14 @@ export function PortfolioDigestPanel({ week }: Props) {
       setState("error");
       setErrMsg(e instanceof Error ? e.message : String(e));
     } finally {
-      if (reqRef.current === reqId) setGenerating(false);
+      // `generating` is owned solely by regenerate, and the button is
+      // disabled while it runs, so at most one regenerate is ever in
+      // flight. Clear the spinner whenever this regenerate's async work
+      // ends — even if a concurrent load() bumped reqRef and superseded
+      // the result write above (the reqId guard only protects the
+      // markdown/error commit, not the spinner; guarding this too would
+      // leave the button stuck on "Генерация…" forever).
+      setGenerating(false);
     }
   }, [weekKey, applyMarkdown]);
 
