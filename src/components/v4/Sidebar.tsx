@@ -202,6 +202,8 @@ export function Sidebar({
                   {item.nba !== undefined && item.nba > 0 && (
                     <span
                       className="sidebar-badge"
+                      role="status"
+                      aria-label={`${item.nba} рекомендованных действий по портфелю`}
                       title={`${item.nba} рекомендованных действий по портфелю`}
                     >
                       {item.nba}
