@@ -1,0 +1,171 @@
+# Карта бизнес-процессов makeit-dashboard.
+# Сгенерировано скиллом makeit-bizproc из PROCESS_MAP.md (Процессы 1–3)
+# и makeit-process-map.html (сквозной поток поставки).
+# Контракт: docs/business_process.schema.json (layout-free, без пиксельных
+# координат — раскладка выводится из lane + col).
+
+version: 1
+project: makeit-dashboard
+
+processes:
+  # ── 1. Сквозная поставка: от звонка клиента до прода ──────────────
+  - id: delivery-end-to-end
+    name: Поставка проекта — от звонка до прода
+    lanes:
+      - { id: client, name: Клиент }
+      - { id: pm, name: PM (Я) }
+      - { id: dash, name: Dashboard }
+      - { id: cc, name: Claude Code }
+      - { id: pipe, name: Pipeline }
+    nodes:
+      - { id: s,       type: start,   lane: client, col: 0,  name: Обращение клиента }
+      - { id: meet,    type: task,    lane: pm,     col: 1,  name: Встреча + аудиозапись }
+      - { id: stt,     type: task,    lane: dash,   col: 2,  name: Транскрипция (STT), sub: transcription_engine }
+      - { id: brief,   type: task,    lane: dash,   col: 3,  name: BRIEF.md, sub: transcript_processor }
+      - { id: init,    type: task,    lane: cc,     col: 4,  name: /makeit-init, sub: makeit_init }
+      - { id: plan,    type: task,    lane: cc,     col: 5,  name: /makeit-plan → SPEC/PRD/Epic/Issues, sub: makeit_plan }
+      - { id: gClass,  type: gateway, lane: pm,     col: 6,  name: Issue — auto или manual? }
+      - { id: pAuto,   type: task,    lane: pipe,   col: 7,  name: Авторазработка Pipeline, sub: pipeline }
+      - { id: ccDev,   type: task,    lane: cc,     col: 7,  name: /makeit-dev, sub: makeit_dev }
+      - { id: ccRev,   type: task,    lane: cc,     col: 8,  name: /makeit-codereview, sub: makeit_codereview }
+      - { id: gRev,    type: gateway, lane: cc,     col: 9,  name: Ревью пройдено? }
+      - { id: merge,   type: task,    lane: pm,     col: 10, name: Merge PR в main }
+      - { id: aud,     type: task,    lane: dash,   col: 11, name: Запуск аудита, sub: auditor }
+      - { id: verify,  type: task,    lane: dash,   col: 12, name: Верификация findings, sub: claude }
+      - { id: issues,  type: task,    lane: dash,   col: 13, name: GitHub Issues из findings }
+      - { id: deploy,  type: task,    lane: cc,     col: 14, name: /makeit-deploy, sub: makeit_deploy }
+      - { id: gHealth, type: gateway, lane: cc,     col: 15, name: Health-check ок? }
+      - { id: rollback,type: task,    lane: cc,     col: 16, name: Автоматический rollback }
+      - { id: ePrd,    type: end,     lane: client, col: 17, name: Релиз в проде }
+      - { id: eRb,     type: end,     lane: cc,     col: 17, name: Откат выполнен }
+    flows:
+      - { from: s,       to: meet }
+      - { from: meet,    to: stt }
+      - { from: stt,     to: brief }
+      - { from: brief,   to: init }
+      - { from: init,    to: plan }
+      - { from: plan,    to: gClass }
+      - { from: gClass,  to: pAuto, label: auto }
+      - { from: gClass,  to: ccDev, label: manual }
+      - { from: ccDev,   to: ccRev }
+      - { from: ccRev,   to: gRev }
+      - { from: gRev,    to: merge, label: да }
+      - { from: gRev,    to: ccDev, label: нет · переделка }
+      - { from: pAuto,   to: aud }
+      - { from: merge,   to: aud }
+      - { from: aud,     to: verify }
+      - { from: verify,  to: issues }
+      - { from: issues,  to: deploy }
+      - { from: deploy,  to: gHealth }
+      - { from: gHealth, to: ePrd, label: ок }
+      - { from: gHealth, to: rollback, label: fail }
+      - { from: rollback,to: eRb }
+
+  # ── 2. Автоматическая разработка (Pipeline) — PROCESS_MAP Процесс 1 ─
+  - id: pipeline-auto-dev
+    name: Автоматическая разработка (Pipeline)
+    lanes:
+      - { id: human, name: Оператор }
+      - { id: orch, name: Pipeline · оркестратор }
+      - { id: agents, name: AI-агенты }
+      - { id: ext, name: GitHub / Auditor }
+    nodes:
+      - { id: s,       type: start,   lane: human,  col: 0,  name: Старт pipeline }
+      - { id: queue,   type: task,    lane: orch,   col: 1,  name: Очередь Issues + DAG, sub: queue }
+      - { id: route,   type: task,    lane: orch,   col: 2,  name: Маршрутизация issue, sub: workflow }
+      - { id: dev,     type: task,    lane: agents, col: 3,  name: Dev-агент — код, sub: dev_agent }
+      - { id: gSelf,   type: gateway, lane: orch,   col: 4,  name: Self-check ок? }
+      - { id: pr,      type: task,    lane: orch,   col: 5,  name: Создать PR, sub: git_ops }
+      - { id: review,  type: task,    lane: agents, col: 6,  name: Review-агент, sub: review_agent }
+      - { id: gRev,    type: gateway, lane: agents, col: 7,  name: Review пройдено? }
+      - { id: qa,      type: task,    lane: ext,    col: 8,  name: QA — Auditor verify, sub: qa_client }
+      - { id: gQa,     type: gateway, lane: orch,   col: 9,  name: QA пройдено? }
+      - { id: merge,   type: task,    lane: orch,   col: 10, name: Merge + cleanup, sub: git_ops }
+      - { id: triage,  type: task,    lane: agents, col: 11, name: Triage follow-up issues, sub: triage_agent }
+      - { id: e,       type: end,     lane: orch,   col: 12, name: merged }
+      - { id: nh,      type: end,     lane: human,  col: 5,  name: needs_human (эскалация) }
+    flows:
+      - { from: s,      to: queue }
+      - { from: queue,  to: route }
+      - { from: route,  to: dev }
+      - { from: dev,    to: gSelf }
+      - { from: gSelf,  to: pr, label: да }
+      - { from: gSelf,  to: dev, label: нет · self_check_fail }
+      - { from: pr,     to: review }
+      - { from: review, to: gRev }
+      - { from: gRev,   to: qa, label: да }
+      - { from: gRev,   to: dev, label: нет · review_rejected }
+      - { from: qa,     to: gQa }
+      - { from: gQa,    to: merge, label: да }
+      - { from: gQa,    to: dev, label: нет · qa_failed }
+      - { from: merge,  to: triage }
+      - { from: triage, to: e }
+      - { from: dev,    to: nh, label: 3× fail · needs_human }
+
+  # ── 3. Code Audit + верификация — PROCESS_MAP Процесс 2 ────────────
+  - id: code-audit
+    name: Code Audit + верификация
+    lanes:
+      - { id: human, name: Оператор }
+      - { id: auditor, name: Auditor backend }
+      - { id: llm, name: LLM · GPU }
+      - { id: dash, name: Dashboard }
+      - { id: gh, name: GitHub }
+    nodes:
+      - { id: s,        type: start,   lane: human,   col: 0,  name: Запуск аудита }
+      - { id: gCost,    type: gateway, lane: human,   col: 1,  name: Подтвердить стоимость? }
+      - { id: eCancel,  type: end,     lane: human,   col: 2,  name: Отменено }
+      - { id: sync,     type: task,    lane: auditor, col: 2,  name: Repo sync, sub: repo_sync }
+      - { id: l1,       type: task,    lane: auditor, col: 3,  name: "L1 — ruff/mypy/semgrep/eslint" }
+      - { id: l2,       type: task,    lane: auditor, col: 4,  name: "L2 — AST индексация", sub: indexer }
+      - { id: l3,       type: task,    lane: llm,     col: 5,  name: "L3 — LLM-аудит (GPU)", sub: vllm }
+      - { id: agg,      type: task,    lane: auditor, col: 6,  name: Агрегация + dedup findings }
+      - { id: l4,       type: task,    lane: auditor, col: 7,  name: "L4 — отчёты / Gist / Telegram", sub: report }
+      - { id: view,     type: task,    lane: human,   col: 8,  name: Просмотр findings }
+      - { id: verify,   type: task,    lane: dash,    col: 9,  name: Верификация (Claude), sub: verify_agent }
+      - { id: gVerdict, type: gateway, lane: dash,    col: 10, name: Вердикт finding }
+      - { id: issues,   type: task,    lane: dash,    col: 11, name: Создать GitHub Issues, sub: generateIssuesFromFindings }
+      - { id: e,        type: end,     lane: gh,      col: 12, name: Issues заведены }
+      - { id: eFp,      type: end,     lane: dash,    col: 12, name: False positive — отброшено }
+    flows:
+      - { from: s,        to: gCost }
+      - { from: gCost,    to: sync, label: да }
+      - { from: gCost,    to: eCancel, label: нет }
+      - { from: sync,     to: l1 }
+      - { from: l1,       to: l2 }
+      - { from: l2,       to: l3 }
+      - { from: l3,       to: agg }
+      - { from: agg,      to: l4 }
+      - { from: l4,       to: view }
+      - { from: view,     to: verify }
+      - { from: verify,   to: gVerdict }
+      - { from: gVerdict, to: issues, label: confirmed }
+      - { from: gVerdict, to: eFp, label: false_positive }
+      - { from: issues,   to: e }
+
+  # ── 4. Транскрипция → BRIEF.md — PROCESS_MAP Процесс 3 ─────────────
+  - id: transcription-to-brief
+    name: Транскрипция встречи → BRIEF.md
+    lanes:
+      - { id: human, name: Я }
+      - { id: pipe, name: Pipeline · backend }
+      - { id: llm, name: Claude / Whisper }
+    nodes:
+      - { id: s,      type: start,   lane: human, col: 0, name: Загрузка аудио/текста }
+      - { id: gDup,   type: gateway, lane: pipe,  col: 1, name: Дубликат (content hash)? }
+      - { id: eDup,   type: end,     lane: pipe,  col: 2, name: Пропуск — дубликат }
+      - { id: stt,    type: task,    lane: llm,   col: 2, name: "STT — Whisper", sub: transcription_engine }
+      - { id: enrich, type: task,    lane: pipe,  col: 3, name: Enrichment — спикеры/термины, sub: domain_dictionary }
+      - { id: struct, type: task,    lane: llm,   col: 4, name: Structuring — решения/требования, sub: claude }
+      - { id: synth,  type: task,    lane: pipe,  col: 5, name: "Synthesis — BRIEF.md", sub: transcript_processor }
+      - { id: edit,   type: task,    lane: human, col: 6, name: Редактирование (live preview) }
+      - { id: e,      type: end,     lane: human, col: 7, name: BRIEF.md готов }
+    flows:
+      - { from: s,      to: gDup }
+      - { from: gDup,   to: stt, label: нет }
+      - { from: gDup,   to: eDup, label: да }
+      - { from: stt,    to: enrich }
+      - { from: enrich, to: struct }
+      - { from: struct, to: synth }
+      - { from: synth,  to: edit }
+      - { from: edit,   to: e }
