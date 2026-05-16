@@ -10,6 +10,16 @@ import type { DoraMetricsResult } from "../utils/doraCalculator";
 export type HubTab = "overview" | "health" | "activity" | "decisions" | "delivery";
 
 /**
+ * Anchored sections inside the Decisions & Risks tab, in render order.
+ * Doubles as the `#section` deep-link hash (FR-14): an external
+ * `…#risks` URL and the in-app Overview→section navigation both target
+ * one of these. Shared here so OverviewTab (source), ProjectHubPage
+ * (URL/prop wiring) and DecisionsRisksTab (scroll target) agree on one
+ * vocabulary instead of a local copy per file.
+ */
+export type HubSection = "decisions" | "risks" | "commitments" | "renewals";
+
+/**
  * Decision Log entry — institutional memory captured from transcripts.
  * Filled in Epic-011 (Task-01: Decision Log extractor + UI).
  */

@@ -4,7 +4,7 @@ import { DecisionLog } from "../DecisionLog";
 import { RiskRegisterTable } from "../RiskRegisterTable";
 import { CommitmentsTable } from "../CommitmentsTable";
 import { RenewalsTable } from "../RenewalsTable";
-import type { Decision } from "../../../../types/hub";
+import type { Decision, HubSection } from "../../../../types/hub";
 
 /**
  * Decisions & Risks tab — final four-section assembly (Epic-011
@@ -21,16 +21,18 @@ import type { Decision } from "../../../../types/hub";
  *   4. Renewals        (#renewals)  — repo-driven CRUD over
  *                       renewals.yaml (+ package.json auto-scan).
  *
- * Deep-link: on mount this tab reads `location.hash` and, if it is one
- * of `#decisions|#risks|#commitments|#renewals`, smooth-scrolls to the
- * matching `<section id>` (containers render synchronously — the
- * self-fetching tables show their own loading state in place, so the
- * anchor exists at the correct offset immediately). This satisfies an
- * externally-supplied `…#risks` URL. NOTE: the in-app OverviewTab
- * summaries currently switch tabs via the parent's `?subtab=decisions`
- * (state, no hash), so that path lands at the top of the tab, not on
- * the originating section — wiring OverviewTab→section for the in-app
- * path is tracked separately (FR-14 follow-up, issue #413).
+ * Deep-link (FR-14): two entry paths, both honoured.
+ *  - External URL: on mount this tab reads `location.hash` and, if it
+ *    is one of `#decisions|#risks|#commitments|#renewals`,
+ *    smooth-scrolls to the matching `<section id>` (containers render
+ *    synchronously — the self-fetching tables show their own loading
+ *    state in place, so the anchor exists at the correct offset
+ *    immediately). Satisfies an externally-pasted `…#risks` URL.
+ *  - In-app: OverviewTab's Risks/Commitments summaries call
+ *    `onOpenTab("decisions", "<section>")`; ProjectHubPage threads that
+ *    down as the `scrollTo` prop (with a bump nonce). A dedicated effect
+ *    scrolls on each new request — so clicking a summary lands on the
+ *    originating section, not the top of the tab (issue #413).
  *
  * Active-section highlight in the nav is driven by a single
  * IntersectionObserver created once and disconnected on unmount — no
@@ -58,9 +60,17 @@ interface Props {
    * (risks/commitments/renewals all read & write their own yaml).
    */
   repo: string;
+  /**
+   * In-app deep-link target (FR-14, issue #413). Set by ProjectHubPage
+   * when the user clicks an Overview Risks/Commitments summary. `nonce`
+   * is bumped per request so re-selecting the same section still
+   * re-fires the scroll. `null` when arrived via a plain tab switch /
+   * external URL (the mount-time `location.hash` read handles that).
+   */
+  scrollTo?: { section: HubSection; nonce: number } | null;
 }
 
-type SectionId = "decisions" | "risks" | "commitments" | "renewals";
+type SectionId = HubSection;
 
 interface SectionDef {
   id: SectionId;
@@ -80,7 +90,7 @@ function isSectionId(value: string): value is SectionId {
   return SECTIONS.some((s) => s.id === value);
 }
 
-export function DecisionsRisksTab({ decisions, repo }: Props) {
+export function DecisionsRisksTab({ decisions, repo, scrollTo }: Props) {
   // Per-section record counts. Decision Log is known synchronously
   // (the array we render). The three tables report through onCount;
   // `null` ⇒ "not reported yet" so we suppress the badge rather than
@@ -158,13 +168,22 @@ export function DecisionsRisksTab({ decisions, repo }: Props) {
     return () => observer.disconnect();
   }, []);
 
-  // ── Hash deep-link on mount ──────────────────────────────────────────
-  // OverviewTab switches to this tab via `?subtab=decisions` (state, not
-  // hash), but FR-14 deep-links carry a `#section` so the tab can land
-  // on the right block. Scroll once, after first paint, when a matching
-  // hash is present. Section containers render synchronously (tables
-  // show their own loading state in place), so the anchor target exists
-  // at the correct offset — we don't wait on async table data.
+  // Smooth-scroll to a section's anchor. Scroll only — the active-nav
+  // highlight is owned by the IntersectionObserver, which fires as this
+  // scroll lands and sets `activeId`; calling setActiveId here would be a
+  // competing source of truth. No-op if the ref isn't attached yet.
+  const scrollToSection = useCallback((id: SectionId) => {
+    const el = sectionRefs.current[id];
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  // ── Hash deep-link on mount (external URL) ───────────────────────────
+  // An externally-pasted `…#risks` URL: read `location.hash` once after
+  // first paint and scroll. Section containers render synchronously
+  // (tables show their own loading state in place), so the anchor target
+  // exists at the correct offset — we don't wait on async table data.
+  // The in-app path is handled by the `scrollTo` effect below instead.
   const didHashScrollRef = useRef(false);
   useEffect(() => {
     if (didHashScrollRef.current) return;
@@ -172,21 +191,25 @@ export function DecisionsRisksTab({ decisions, repo }: Props) {
     if (typeof window === "undefined") return;
     const raw = window.location.hash.replace(/^#/, "");
     if (!raw || !isSectionId(raw)) return;
-    const el = sectionRefs.current[raw];
-    if (!el) return;
-    // Scroll only. The active-nav highlight is owned by the
-    // IntersectionObserver — it fires as this scroll lands and sets
-    // `activeId`, so we must NOT setState here (that would be a
-    // synchronous effect setState; the observer is the single source
-    // of truth for the active section).
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
+    scrollToSection(raw);
+  }, [scrollToSection]);
+
+  // ── In-app deep-link (Overview→section, issue #413) ──────────────────
+  // ProjectHubPage bumps `scrollTo.nonce` each time an Overview summary
+  // requests this tab+section, so this scrolls on every request — even
+  // when the same section is re-selected. Distinct from the mount-hash
+  // effect: that one fires once for external URLs; this one tracks live
+  // in-app navigation. Scrolling twice to the same anchor is a harmless
+  // no-op, so the two effects need no cross-guard.
+  useEffect(() => {
+    if (!scrollTo) return;
+    scrollToSection(scrollTo.section);
+  }, [scrollTo, scrollToSection]);
 
   const handleNavClick = useCallback(
     (id: SectionId) => () => {
-      const el = sectionRefs.current[id];
-      if (!el) return;
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (!sectionRefs.current[id]) return;
+      scrollToSection(id);
       setActiveId(id);
       // Reflect the section in the URL hash without a history entry so
       // a refresh / share lands back on the same section.
@@ -196,7 +219,7 @@ export function DecisionsRisksTab({ decisions, repo }: Props) {
         window.history.replaceState(null, "", url.toString());
       }
     },
-    [],
+    [scrollToSection],
   );
 
   return (
