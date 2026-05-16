@@ -9,10 +9,6 @@ import type {
   OnboardingReport,
   ProjectHubData,
   Risk,
-  RiskProbability,
-  RiskSeverity,
-  RiskSource,
-  RiskStatus,
 } from "../types/hub";
 import {
   listRecentCommits,
@@ -21,6 +17,12 @@ import {
   resolveRepoSlug,
   type CommitInfo,
 } from "../utils/github-contents";
+import {
+  parseRisksFile,
+  RISKS_PATH,
+  type RisksFile,
+  sortBySeverityDesc,
+} from "../utils/risksRegister";
 import { extractDecisions } from "../utils/decisionLogExtractor";
 import {
   computeDora,
@@ -87,140 +89,12 @@ async function fetchDoraPRs(repo: string): Promise<DoraPullRequest[]> {
 }
 
 // ── Risk Register read (Epic-011 Task-03 → Hub Overview wiring, #450) ──
-// The Overview "Риски — топ-3" card must show the SAME risks the
-// DecisionsRisks tab's RiskRegisterTable renders. That table's displayed
-// list is the persisted register `docs/risks.yaml`, read via `readYaml`,
-// normalised per-row, and sorted severity-desc (its `extractRisks` path
-// is a separate Claude-powered *write* flow that only feeds the approval
-// modal — it never sources the rendered list). RiskRegisterTable keeps
-// its normalise/sort helpers module-private; we mirror them here exactly
-// (same enum tables, same `coerceEnum` repair, same `isIsoCalendarDate`
-// `due` coercion, same severity rank + id tie-break) rather than widen
-// that component's API. Kept byte-for-byte aligned so the Overview top-3
-// can never diverge from the table's row order.
-const RISKS_PATH = "docs/risks.yaml";
-
-/** On-disk shape of `docs/risks.yaml`: `{ risks: Risk[] }`. */
-interface RisksFile {
-  risks: Risk[];
-}
-
-const RISK_SEVERITIES: RiskSeverity[] = ["low", "med", "high", "critical"];
-const RISK_PROBABILITIES: RiskProbability[] = ["low", "med", "high"];
-const RISK_STATUSES: RiskStatus[] = [
-  "open",
-  "mitigated",
-  "accepted",
-  "closed",
-];
-const RISK_SOURCES: RiskSource[] = [
-  "manual",
-  "transcript-extracted",
-  "audit-promoted",
-];
-
-/** Worst→best ordering so the top-3 puts critical first (mirrors
- *  RiskRegisterTable's `SEVERITY_RANK`). */
-const RISK_SEVERITY_RANK: Record<RiskSeverity, number> = {
-  critical: 3,
-  high: 2,
-  med: 1,
-  low: 0,
-};
-
-/** Coerce an arbitrary yaml value to a valid member of `allowed`. */
-function coerceRiskEnum<T extends string>(
-  value: unknown,
-  allowed: readonly T[],
-  fallback: T,
-): T {
-  return typeof value === "string" &&
-    (allowed as readonly string[]).includes(value)
-    ? (value as T)
-    : fallback;
-}
-
-/**
- * Strict `YYYY-MM-DD` calendar check for a risk `due` — mirrors
- * RiskRegisterTable's `isIsoCalendarDate`. A non-ISO value is coerced to
- * `null` at read time so the Overview card never shows a junk date.
- */
-function isIsoCalendarDate(value: string): boolean {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!m) return false;
-  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  const dt = new Date(Date.UTC(y, mo - 1, d));
-  return (
-    dt.getUTCFullYear() === y &&
-    dt.getUTCMonth() === mo - 1 &&
-    dt.getUTCDate() === d
-  );
-}
-
-/** Trim to a string, tolerating `null`/`number`/missing yaml values. */
-function riskAsString(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  return "";
-}
-
-/**
- * Normalise one raw yaml row into a valid `Risk` — mirrors
- * RiskRegisterTable's `normaliseRisk`. A hand-edited or extractor-written
- * file can carry an invalid `severity`, a missing `owner`, a numeric
- * `due`, etc.; we never trust it, we repair it so the Overview card
- * can't crash on bad input.
- */
-function normaliseRisk(raw: unknown, index: number): Risk {
-  const r = (raw ?? {}) as Record<string, unknown>;
-  const id = riskAsString(r.id).trim() || `risk-${index + 1}`;
-  const dueRaw = riskAsString(r.due).trim();
-  const due =
-    dueRaw !== "" && isIsoCalendarDate(dueRaw) ? dueRaw : null;
-  return {
-    id,
-    title: riskAsString(r.title).trim(),
-    severity: coerceRiskEnum<RiskSeverity>(
-      r.severity,
-      RISK_SEVERITIES,
-      "med",
-    ),
-    probability: coerceRiskEnum<RiskProbability>(
-      r.probability,
-      RISK_PROBABILITIES,
-      "med",
-    ),
-    mitigation: riskAsString(r.mitigation).trim(),
-    owner: riskAsString(r.owner).trim(),
-    due,
-    status: coerceRiskEnum<RiskStatus>(r.status, RISK_STATUSES, "open"),
-    source: coerceRiskEnum<RiskSource>(r.source, RISK_SOURCES, "manual"),
-  };
-}
-
-/** Pull a `Risk[]` out of whatever `readYaml` returned — mirrors
- *  RiskRegisterTable's `parseRisksFile`. */
-function parseRisksFile(data: unknown): Risk[] {
-  const list = Array.isArray(data)
-    ? data
-    : Array.isArray((data as RisksFile | null)?.risks)
-      ? (data as RisksFile).risks
-      : [];
-  return list.map(normaliseRisk);
-}
-
-/** Stable severity-desc sort (tie-break by id) — mirrors
- *  RiskRegisterTable's `sortBySeverityDesc`, so the Overview top-3 is
- *  exactly the first three rows the register table would render. */
-function sortBySeverityDesc(risks: Risk[]): Risk[] {
-  return [...risks].sort((a, b) => {
-    const d =
-      RISK_SEVERITY_RANK[b.severity] - RISK_SEVERITY_RANK[a.severity];
-    return d !== 0 ? d : a.id.localeCompare(b.id);
-  });
-}
+// The Overview "Риски — топ-3" card must show the SAME first three rows
+// the DecisionsRisks tab's RiskRegisterTable renders. Both now share the
+// single read model in `utils/risksRegister` (parse/normalise/sort), so
+// the top-3 can never drift from the register's row order (#467). The
+// `extractRisks` path is a separate Claude-powered *write* flow that
+// only feeds the approval modal — it never sources the rendered list.
 
 /** How many top risks the Overview "Риски — топ-3" card shows. */
 const RISKS_TOP_N = 3;
