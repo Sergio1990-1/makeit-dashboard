@@ -44,8 +44,8 @@ export function RateLimitPill() {
   if (!data) return null;
 
   const { rest, graphql } = data;
-  // Nearest of the two independent reset windows — that's the soonest the
-  // more-depleted pool can recover, so it's the number worth surfacing.
+  // Earliest of the two independent reset windows — the next time any
+  // quota refreshes, which is the number worth surfacing.
   const nearestReset = Math.min(rest.reset, graphql.reset);
   const title =
     `GitHub API лимит (опрос не тратит лимит)\n` +
