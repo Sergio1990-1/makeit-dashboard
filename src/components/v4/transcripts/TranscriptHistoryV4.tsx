@@ -36,7 +36,6 @@ const STATUS_CLASS: Record<string, string> = {
 
 const ACTIVE_STATUSES = new Set(["queued", "transcribing", "processing"]);
 
-
 type StatusFilter = "all" | "active" | "done" | "error";
 
 const FILTER_LABELS: Record<StatusFilter, string> = {
