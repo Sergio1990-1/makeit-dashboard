@@ -1,0 +1,34 @@
+# MakeIT Hub — risk register for makeit-dashboard. Hand-authored, source: manual.
+# Only repo-grounded risks. Enum tokens are exact:
+#   severity: low | med | high | critical   (note: "med", not "medium")
+#   probability: low | med | high
+#   status: open | mitigated | accepted | closed
+#   due: "YYYY-MM-DD" or null  (non-ISO becomes null at read time)
+risks:
+  - id: risk-1
+    title: "GitHub PAT persisted in browser localStorage (repo + read:project scope across the whole Sergio1990-1 org)"
+    severity: med
+    probability: low
+    mitigation: "Use a fine-grained / short-lived token; document a clear+rotate step; token already kept out of code (CLAUDE.md), only in localStorage"
+    owner: "TODO(human: risk owner)"
+    due: null
+    status: open
+    source: manual
+  - id: risk-2
+    title: "Single-operator control tower — no documented backup owner for portfolio monitoring if the sole operator is unavailable"
+    severity: med
+    probability: low
+    mitigation: "TODO(human: document a backup monitoring contact / hand-off runbook)"
+    owner: "TODO(human: risk owner)"
+    due: null
+    status: open
+    source: manual
+  - id: risk-3
+    title: "Self-hosted VPS instance (89.167.17.79) is single-host with no failover"
+    severity: low
+    probability: med
+    mitigation: "Mitigated by design: GitHub Pages is the primary deploy (CLAUDE.md), the VPS copy is secondary — a VPS outage does not take the dashboard down"
+    owner: "TODO(human: risk owner)"
+    due: null
+    status: mitigated
+    source: manual

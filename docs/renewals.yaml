@@ -1,0 +1,11 @@
+# MakeIT Hub — manual renewals for makeit-dashboard.
+# No SSL cert / custom domain / paid license / client contract is grounded in
+# this repo: GitHub Pages serves on *.github.io (nothing we renew); the VPS
+# copy is referenced only by IP (89.167.17.79) — any custom domain and its
+# SSL expiry live in server config (/opt/apps/nginx-proxy), not in this repo.
+# npm-dependency deprecations are auto-scanned by the dashboard from
+# package.json — do NOT hand-add `dep` rows here.
+# An empty list is valid and stops the Renewals panel erroring.
+# TODO(human: add ssl/domain/contract/license rows with real YYYY-MM-DD
+# expiries if a custom domain or paid license exists for the VPS instance)
+renewals: []
