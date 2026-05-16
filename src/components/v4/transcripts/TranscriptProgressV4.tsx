@@ -176,10 +176,10 @@ export function TranscriptProgressV4({ taskId, onDone, onRetry }: Props) {
       {/* Phase stepper */}
       <div className="v4-tpc-stepper">
         {STAGES.map((s, i) => {
-          const hasCompletedData = status && status.stages_completed.length > 0;
-          const stepDone = hasCompletedData
-            ? status.stages_completed.includes(s.key) || (s.key === "done" && isDone)
-            : i < currentIdx || (i === currentIdx && isDone);
+          // Backend exposes only a coarse status string (no per-stage
+          // completion list), so step state is derived purely from the
+          // current stage index.
+          const stepDone = i < currentIdx || (i === currentIdx && isDone);
           const isActive = i === currentIdx && !hasError && !isDone;
           const isFailed = i === currentIdx && hasError;
           const dotCls = stepDone
