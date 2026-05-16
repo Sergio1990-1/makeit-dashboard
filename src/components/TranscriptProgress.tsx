@@ -174,12 +174,10 @@ export function TranscriptProgress({ taskId, onDone, onRetry }: Props) {
       {/* Stepper timeline */}
       <div className="tpc-stepper">
         {STAGES.map((s, i) => {
-          // Use stages_completed for precise state when available (new pipeline),
-          // otherwise fall back to index-based comparison (legacy)
-          const hasCompletedData = status && status.stages_completed.length > 0;
-          const stepDone = hasCompletedData
-            ? status.stages_completed.includes(s.key) || (s.key === "done" && isDone)
-            : i < currentIdx || (i === currentIdx && isDone);
+          // Backend exposes only a coarse status string (no per-stage
+          // completion list), so step state is derived purely from the
+          // current stage index.
+          const stepDone = i < currentIdx || (i === currentIdx && isDone);
           const isActive = i === currentIdx && !hasError && !isDone;
           const isFailed = i === currentIdx && hasError;
 

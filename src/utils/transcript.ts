@@ -21,22 +21,14 @@ export interface TranscriptStatus {
   started_at: string | null;
   duration_seconds: number;
   speaker_count: number;
-  current_stage: string | null;
-  stages_completed: string[];
 }
 
-const VALID_STAGES = new Set<TranscriptStage>(["intake", "stt", "enrichment", "structuring", "synthesis", "done"]);
-
-/** Map backend status/current_stage to frontend TranscriptStage.
- *  If `currentStage` is provided (new pipeline), use it directly.
- *  Otherwise fall back to legacy status string mapping. */
-function mapStatusToStage(status: string, backendStage?: string, currentStage?: string): TranscriptStage {
-  // New pipeline: use current_stage directly if valid
-  if (currentStage && VALID_STAGES.has(currentStage as TranscriptStage)) {
-    return currentStage as TranscriptStage;
-  }
-
-  // Legacy fallback
+/** Map backend `status` (queued|transcribing|processing|done|error) to the
+ *  frontend TranscriptStage. The backend `TranscriptStatusResponse` exposes
+ *  `status` + `stage`/`stage_detail` only — there is no per-stage progress
+ *  field, so the stepper is driven entirely off the coarse status string
+ *  (`stage` is used only to refine the bucket on error). */
+function mapStatusToStage(status: string, backendStage?: string): TranscriptStage {
   switch (status) {
     case "queued":
       return "intake";
@@ -69,7 +61,7 @@ export async function fetchTranscriptStatus(taskId: string): Promise<TranscriptS
   const data = await res.json();
   return {
     task_id: data.job_id,
-    stage: mapStatusToStage(data.status, data.stage, data.current_stage),
+    stage: mapStatusToStage(data.status, data.stage),
     stage_detail: data.stage_detail || data.stage || "",
     progress: data.progress ?? 0,
     error: data.error || null,
@@ -78,8 +70,6 @@ export async function fetchTranscriptStatus(taskId: string): Promise<TranscriptS
     started_at: data.started_at || null,
     duration_seconds: data.duration_seconds ?? 0,
     speaker_count: data.speaker_count ?? 0,
-    current_stage: data.current_stage || null,
-    stages_completed: Array.isArray(data.stages_completed) ? data.stages_completed : [],
   };
 }
 
@@ -94,6 +84,21 @@ export interface QualityCheck {
 export interface QualityReport {
   checks: QualityCheck[];
   score: number;
+}
+
+const QUALITY_VERDICTS = new Set<TranscriptQuality>(["pass", "warning", "needs_review"]);
+
+/** Pull the overall quality verdict out of the backend `quality_report.json`.
+ * The result endpoint (`TranscriptResultResponse`) carries no standalone
+ * `quality` field — the verdict lives at `quality_report.status`
+ * (`pass`/`warning`/`needs_review`, see `_build_quality_report_dict` in
+ * makeit-pipeline). Returns null when absent/unknown. */
+function extractQuality(raw: unknown): TranscriptQuality | null {
+  if (!raw || typeof raw !== "object") return null;
+  const s = (raw as { status?: unknown }).status;
+  return typeof s === "string" && QUALITY_VERDICTS.has(s as TranscriptQuality)
+    ? (s as TranscriptQuality)
+    : null;
 }
 
 /** Backend `quality_report.json` ships `checks` as a dict keyed by check
@@ -147,7 +152,7 @@ export async function fetchTranscriptResult(taskId: string): Promise<TranscriptR
     task_id: data.job_id,
     brief: data.brief_content || "",
     transcript: data.transcript_text || "",
-    quality: data.quality || null,
+    quality: extractQuality(data.quality_report),
     quality_report: adaptQualityReport(data.quality_report),
   };
 }
@@ -199,16 +204,12 @@ export async function saveTranscriptBrief(
     },
   );
   if (!res.ok) {
-    if (res.status === 405) {
-      // Backend doesn't expose PUT /transcript/result/{id} yet — FastAPI
-      // returns 405 Method Not Allowed because GET on this path exists
-      // but PUT does not. Tracked in makeit-pipeline#790. Surface a humane
-      // message so users know the editor change is local-only.
-      // NOTE: 404 is deliberately NOT included here — once the PUT route
-      // ships, a real "task not found" 404 must surface as such, not as
-      // "save not supported".
+    if (res.status === 409) {
+      // Backend PUT /transcript/result/{id} rejects edits while the job is
+      // not yet `done` (api.py: status != "done" → 409). Surface a clear,
+      // actionable message instead of a raw status code.
       throw new Error(
-        "Сохранение пока не поддерживается на сервере. Изменения остались только локально (черновик в браузере).",
+        "Бриф можно сохранить только когда транскрипция завершена (статус «done»). Дождитесь окончания обработки и повторите.",
       );
     }
     const text = await res.text().catch(() => "");
