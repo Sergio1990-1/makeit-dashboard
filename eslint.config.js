@@ -6,7 +6,9 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // `src/types/generated/**` is machine-generated from backend OpenAPI
+  // (npm run gen:api-types) — lint it as the generator emits it.
+  globalIgnores(['dist', 'src/types/generated']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
