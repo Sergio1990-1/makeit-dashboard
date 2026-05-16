@@ -535,20 +535,51 @@ export async function stopPipeline(): Promise<string> {
 
 export interface ResearchStartRequest {
   project: string;
-  product_description?: string;
+  /** Backend requires a non-empty description (Field(..., min_length=1)). */
+  product_description: string;
   region?: string;
 }
 
+/** Job-type discriminator. The backend does NOT expose this on the
+ *  status endpoint — only /research/list & /discovery/list carry
+ *  `agent_type`. The dashboard threads the known type from the caller. */
+export type ResearchAgentKind = "research" | "discovery";
+
+/** Backend AgentStatusResponse status values (api.py): research emits
+ *  queued/searching/done/error, discovery emits queued/analyzing/done/error.
+ *  Kept loose so an unknown value degrades gracefully instead of crashing. */
+export type ResearchAgentStatusValue =
+  | "queued"
+  | "searching"
+  | "analyzing"
+  | "done"
+  | "error"
+  | (string & {});
+
 export interface ResearchAgentStatus {
   id: string;
-  agent: "research" | "discovery";
+  /** Set client-side from the launching call — backend status payload
+   *  has no agent discriminator. */
+  agent: ResearchAgentKind;
   project: string;
-  status: "queued" | "running" | "done" | "error";
+  status: ResearchAgentStatusValue;
   progress: number;
   stage: string;
   error?: string;
   started_at: string;
   finished_at?: string;
+}
+
+/** Raw shape returned by GET /research/status and /discovery/status. */
+interface AgentStatusResponse {
+  job_id: string;
+  status: string;
+  stage?: string;
+  progress?: number;
+  error?: string;
+  project?: string;
+  created_at?: string;
+  started_at?: string;
 }
 
 export interface ResearchHistoryItem {
@@ -591,12 +622,35 @@ export async function startDiscoveryAgent(project: string): Promise<{ id: string
   return res.json() as Promise<{ id: string }>;
 }
 
-export async function fetchResearchStatus(id: string): Promise<ResearchAgentStatus> {
-  const res = await fetch(`${PIPELINE_BASE_URL}/research/status/${encodeURIComponent(id)}`, {
+export async function fetchResearchStatus(
+  id: string,
+  /** The kind of agent that was launched. Backend status payload has no
+   *  discriminator, so the caller (hook) supplies what it already knows.
+   *  It also selects the correct endpoint: the backend keeps research and
+   *  discovery jobs in separate stores (`/research/status` only knows
+   *  research jobs, `/discovery/status` only discovery). */
+  agent: ResearchAgentKind = "research",
+): Promise<ResearchAgentStatus> {
+  const path = agent === "discovery" ? "discovery" : "research";
+  const res = await fetch(`${PIPELINE_BASE_URL}/${path}/status/${encodeURIComponent(id)}`, {
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json() as Promise<ResearchAgentStatus>;
+  const raw = (await res.json()) as AgentStatusResponse;
+  // Adapt AgentStatusResponse → ResearchAgentStatus. The backend uses
+  // `job_id` and exposes no `agent`/`finished_at`; status is preserved
+  // as-is (consumers treat anything other than done/error as in-progress).
+  return {
+    id: raw.job_id,
+    agent,
+    project: raw.project ?? "",
+    status: raw.status,
+    progress: raw.progress ?? 0,
+    stage: raw.stage ?? "",
+    error: raw.error ? raw.error : undefined,
+    started_at: raw.started_at || raw.created_at || "",
+    finished_at: undefined,
+  };
 }
 
 // ---------------------------------------------------------------------------
