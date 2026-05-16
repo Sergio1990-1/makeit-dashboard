@@ -128,11 +128,17 @@ export interface UsePortfolioNbaState {
   /** Engine flagged a Claude budget downgrade for a contributing project. */
   budgetFallback: boolean;
   /**
-   * Drop the cache and recompute from `perProjectActions`. No-ops while a
+   * Drop the cache and recompute the portfolio aggregate. No-ops while a
    * previous regenerate is still running (button is disabled in the UI too,
    * this is the belt-and-braces guard against a double-fire).
+   *
+   * `override` lets the caller hand in freshly-collected per-project
+   * results computed *just before* this call (#453): the live collector
+   * resolves asynchronously, so its result can't be in the closed-over
+   * `perProjectActions` prop yet. When omitted we fall back to the prop —
+   * preserving the original (override-less) behaviour.
    */
-  regenerate: () => void;
+  regenerate: (override?: NbaResult[]) => void;
 }
 
 /**
@@ -168,7 +174,8 @@ export function usePortfolioNba(
     };
   }, []);
 
-  const regenerate = useCallback(() => {
+  const regenerate = useCallback(
+    (override?: NbaResult[]) => {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
     setLoading(true);
@@ -182,7 +189,10 @@ export function usePortfolioNba(
       // best-effort — a disabled localStorage just means no cache to clear
     }
 
-    const input = perProjectActions ?? [];
+    // Prefer freshly-collected input handed in by the caller (#453); the
+    // live per-project collection resolves after this closure was created,
+    // so the prop alone would be stale on the first regenerate.
+    const input = override ?? perProjectActions ?? [];
 
     void (async () => {
       try {
@@ -208,7 +218,59 @@ export function usePortfolioNba(
         inFlightRef.current = false;
       }
     })();
-  }, [perProjectActions]);
+    },
+    [perProjectActions],
+  );
+
+  // Passive auto-aggregate (#453). `computePortfolioNBA` is LOCAL-ONLY
+  // (sorts the per-project top-1s, no Claude / network call) and the
+  // engine itself short-circuits on a fresh week-cache. So once the
+  // caller has collected per-project results we run it once per distinct
+  // input to (a) surface aggregated actions without requiring a manual
+  // «Регенерировать», and (b) write the `makeit_portfolio_nba` cache the
+  // sidebar badge reads — which nothing wrote before. A content signature
+  // + ref guard makes this idempotent (no render loop): re-running with
+  // the same input is skipped, and a same-signature recompute would be a
+  // no-op cache hit anyway. Not triggered while a manual regenerate is in
+  // flight, and never overrides a regenerate's fresher result.
+  const autoSig =
+    perProjectActions === undefined
+      ? null
+      : JSON.stringify(
+          perProjectActions.map((p) => ({
+            f: p.budgetFallback,
+            a: p.actions.map((x) => `${x.id}|${x.severity}|${x.title}`),
+          })),
+        );
+  const lastAutoSigRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (autoSig === null) return;
+    // Empty input → nothing to aggregate; leave the cache untouched so an
+    // earlier good portfolio cache (and its badge) survives.
+    if (perProjectActions !== undefined && perProjectActions.length === 0) {
+      return;
+    }
+    if (lastAutoSigRef.current === autoSig) return;
+    if (inFlightRef.current) return;
+    lastAutoSigRef.current = autoSig;
+    void (async () => {
+      try {
+        const result = await computePortfolioNBA(perProjectActions ?? []);
+        if (!mountedRef.current) return;
+        // A concurrent manual regenerate is the source of truth — don't
+        // clobber its (fresher) result with this passive pass.
+        if (inFlightRef.current) return;
+        setActions(result.actions);
+        setBudgetFallback(result.budgetFallback);
+        const fresh = readCachedEnvelope();
+        setWeekStartMs(fresh?.weekStartMs ?? null);
+        setHasCache(fresh !== null);
+      } catch {
+        // Local aggregation effectively never throws; on the off chance
+        // it does, keep whatever (cache-seeded) state we already have.
+      }
+    })();
+  }, [autoSig, perProjectActions]);
 
   const ageDays =
     weekStartMs === null

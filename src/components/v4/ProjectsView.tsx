@@ -10,6 +10,8 @@ import { PortfolioRenewals } from "./portfolio/PortfolioRenewals";
 import { PortfolioPromiseTracker } from "./portfolio/PortfolioPromiseTracker";
 import { PortfolioDigestPanel } from "./portfolio/PortfolioDigestPanel";
 import { calcRiskScore } from "../../utils/riskScore";
+import { usePortfolioNbaCollection } from "../../hooks/usePortfolioNbaCollection";
+import { collectCachedPerProjectNba } from "../../utils/portfolioNbaCollector";
 import { useToast } from "./toastContext";
 
 interface Props {
@@ -419,6 +421,20 @@ export function ProjectsView({
     [onSelectRepo],
   );
 
+  // Portfolio NBA collection (#453). The render path is a pure read of the
+  // per-project engine caches (populated for free as hubs are opened) — no
+  // N+1 Claude calls block this list. `refreshLive` runs the on-demand
+  // per-project recompute only when the user clicks «Регенерировать».
+  const { perProjectActions, refreshLive } =
+    usePortfolioNbaCollection(projects);
+  const handleNbaRegenerate = useCallback(async () => {
+    await refreshLive();
+    // refreshLive resolved → the per-project engine caches are now fresh;
+    // re-read them so the portfolio aggregate (and sidebar badge cache)
+    // recomputes from the just-written per-project results.
+    return collectCachedPerProjectNba(projects.map((p) => p.repo));
+  }, [refreshLive, projects]);
+
   if (selectedRepo) {
     return (
       <ProjectHubPage
@@ -470,8 +486,9 @@ export function ProjectsView({
           (no self-contained URL-navigation fallback fires). */}
       <div className="v4-portfolio-widgets">
         <PortfolioNextActions
-          perProjectActions={undefined}
+          perProjectActions={perProjectActions}
           onOpenProject={openProject}
+          onBeforeRegenerate={handleNbaRegenerate}
         />
         <PortfolioRenewals onOpenProject={openProject} />
         <PortfolioPromiseTracker onOpenProject={openProject} />

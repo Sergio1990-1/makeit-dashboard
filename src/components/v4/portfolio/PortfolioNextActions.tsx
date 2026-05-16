@@ -18,7 +18,7 @@
  * malformed engine row can't inject an arbitrary query value.
  */
 
-import { useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { HealthSeverity } from "../../../types/health";
 import { PROJECTS } from "../../../utils/config";
 import type { NbaAction, NbaResult } from "../../../utils/nextBestActionEngine";
@@ -38,6 +38,16 @@ interface Props {
    * itself (see file header).
    */
   onOpenProject?: (repo: string) => void;
+  /**
+   * Live per-project collection (#453). Awaited on «Регенерировать»
+   * BEFORE the portfolio aggregate recomputes; resolves to the freshly
+   * collected per-project `NbaResult[]`. The async result can't be in the
+   * `perProjectActions` prop yet, so it is passed straight into
+   * `regenerate(override)`. When supplied the button is enabled even with
+   * an empty/undefined `perProjectActions` (a regenerate can now actually
+   * produce input instead of only wiping the cache).
+   */
+  onBeforeRegenerate?: () => Promise<NbaResult[]>;
 }
 
 // Whole row is one visual line; the rationale clamps to 1-2 lines in CSS
@@ -89,16 +99,53 @@ function navigateToProjectOverview(repo: string): void {
 export function PortfolioNextActions({
   perProjectActions,
   onOpenProject,
+  onBeforeRegenerate,
 }: Props) {
   const { actions, loading, error, ageDays, hasCache, budgetFallback, regenerate } =
     usePortfolioNba(perProjectActions);
 
+  // Guards a double-fire of the async regenerate (the in-flight live
+  // collection has no `loading` flag of its own until usePortfolioNba's
+  // recompute starts).
+  const collectingRef = useRef(false);
+  const [collecting, setCollecting] = useState(false);
+
   // Regenerate invalidates the cache *before* recomputing, so firing it with
   // no per-project input would compute an empty result and silently wipe the
-  // actions currently on screen. Until live cross-portfolio collection lands
-  // (Epic-012 Task-09, #367) the mounting surface passes `undefined` — keep
-  // the button disabled in that state rather than letting it erase the cache.
-  const canRegenerate = !!perProjectActions?.length;
+  // actions currently on screen. Two ways to have real input now (#453):
+  // already-collected per-project results in the prop, OR a live collector
+  // (`onBeforeRegenerate`) that produces them on demand. With neither, keep
+  // the button disabled rather than letting it erase the cache.
+  const canRegenerate = !!perProjectActions?.length || !!onBeforeRegenerate;
+
+  // Run the live collection (if provided) THEN recompute the portfolio
+  // aggregate with its fresh result. `regenerate` reads its `perProjectActions`
+  // from a closure captured before the async collection resolved, so the
+  // freshly-collected list must be passed in explicitly as the override.
+  const handleRegenerate = useCallback(() => {
+    if (collectingRef.current || loading) return;
+    if (!onBeforeRegenerate) {
+      regenerate();
+      return;
+    }
+    collectingRef.current = true;
+    setCollecting(true);
+    void (async () => {
+      try {
+        const fresh = await onBeforeRegenerate();
+        regenerate(fresh);
+      } catch {
+        // Collection failed — still recompute from whatever the prop has
+        // so the button isn't a silent no-op (engine degrades internally).
+        regenerate();
+      } finally {
+        collectingRef.current = false;
+        setCollecting(false);
+      }
+    })();
+  }, [onBeforeRegenerate, regenerate, loading]);
+
+  const busy = loading || collecting;
 
   const openProject = useCallback(
     (repo: string | undefined) => {
@@ -124,9 +171,10 @@ export function PortfolioNextActions({
       : null;
 
   // Loading shows for the regenerate request only — the initial render is
-  // synchronous from cache (or empty), there is no cold fetch here.
-  const showError = !!error && actions.length === 0 && !loading;
-  const showEmpty = !loading && !error && actions.length === 0;
+  // synchronous from cache (or empty), there is no cold fetch here. `busy`
+  // also covers the in-flight live collection that precedes the recompute.
+  const showError = !!error && actions.length === 0 && !busy;
+  const showEmpty = !busy && !error && actions.length === 0;
 
   return (
     <div className="v4-panel">
@@ -144,7 +192,7 @@ export function PortfolioNextActions({
           </svg>
           Что делать дальше
           <span className="v4-tag">{actions.length}</span>
-          {loading && <span className="v4-tag">обновляется…</span>}
+          {busy && <span className="v4-tag">обновляется…</span>}
           {budgetFallback && (
             <span
               className="v4-tag v4-tag--warn"
@@ -156,21 +204,21 @@ export function PortfolioNextActions({
           )}
         </div>
         <div className="v4-panel-actions">
-          {freshnessLabel && !loading && (
+          {freshnessLabel && !busy && (
             <span className="v4-panel-meta">{freshnessLabel}</span>
           )}
           <button
             type="button"
             className="v4-btn v4-ai-btn"
-            onClick={regenerate}
-            disabled={loading || !canRegenerate}
+            onClick={handleRegenerate}
+            disabled={busy || !canRegenerate}
             title={
               canRegenerate
                 ? "Сбросить кэш и пересчитать действия по портфелю"
                 : "Нет данных по проектам для пересчёта — кэш не трогаем"
             }
           >
-            {loading ? "Генерация…" : "Регенерировать"}
+            {busy ? "Генерация…" : "Регенерировать"}
           </button>
         </div>
       </div>
