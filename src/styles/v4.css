@@ -9365,3 +9365,202 @@ ul.v4-rsh-list {
   color: var(--v4-ink-500);
   font-size: 13px;
 }
+
+/* ── Activity Tab (Epic-011 Task-07) ───────────────────────────────────
+   Four stacked sections: Inbox / Pulse (+ source chips) / Open PRs /
+   Open pipeline runs. Single-column on every breakpoint (the timeline is
+   inherently vertical). Every selector is scoped under .v4-hub-activity
+   and reuses existing semantic tokens only — no new palette. */
+.v4-hub-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.v4-hub-activity .v4-hub-activity-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Inbox sits at the top and is visually highlighted (accent-tinted card)
+   so unread events read as the priority surface. */
+.v4-hub-activity .v4-hub-activity-inbox {
+  padding: 16px 18px;
+  border: 1px solid var(--v4-accent-100);
+  border-radius: 12px;
+  background: var(--v4-accent-50);
+}
+
+.v4-hub-activity .v4-hub-activity-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.v4-hub-activity .v4-hub-activity-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 16px;
+  background: var(--v4-sky-50);
+  color: var(--v4-sky-700);
+}
+.v4-hub-activity .v4-hub-activity-inbox .v4-hub-activity-ic {
+  background: var(--v4-accent-100);
+  color: var(--v4-accent-700);
+}
+.v4-hub-activity .v4-hub-activity-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--v4-ink-900);
+}
+.v4-hub-activity .v4-hub-activity-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--v4-accent-600);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Source filter chips — toggle buttons, tab-local state. */
+.v4-hub-activity .v4-hub-activity-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.v4-hub-activity .v4-hub-activity-chip {
+  padding: 4px 12px;
+  border: 1px solid var(--v4-line);
+  border-radius: 999px;
+  background: var(--v4-paper);
+  color: var(--v4-ink-700);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.v4-hub-activity .v4-hub-activity-chip:hover {
+  border-color: var(--v4-accent-600);
+}
+.v4-hub-activity .v4-hub-activity-chip--on {
+  background: var(--v4-accent-600);
+  border-color: var(--v4-accent-600);
+  color: #fff;
+}
+.v4-hub-activity .v4-hub-activity-chip:focus-visible {
+  outline: 2px solid var(--v4-accent-500);
+  outline-offset: 2px;
+}
+
+/* Inbox / PR / run lists — compact rows, same rhythm as the hub minis. */
+.v4-hub-activity .v4-hub-activity-inbox-list,
+.v4-hub-activity .v4-hub-activity-pr-list,
+.v4-hub-activity .v4-hub-activity-run-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.v4-hub-activity .v4-hub-activity-inbox-item,
+.v4-hub-activity .v4-hub-activity-pr-item,
+.v4-hub-activity .v4-hub-activity-run-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--v4-ink-900);
+}
+.v4-hub-activity .v4-hub-activity-inbox-item {
+  padding: 8px 10px;
+  border: 1px solid var(--v4-accent-100);
+  border-radius: 8px;
+  background: var(--v4-paper);
+}
+.v4-hub-activity .v4-hub-activity-inbox-src,
+.v4-hub-activity .v4-hub-activity-pr-num,
+.v4-hub-activity .v4-hub-activity-run-num {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--v4-line-soft);
+  color: var(--v4-ink-700);
+  font-size: 11px;
+  font-weight: 600;
+}
+.v4-hub-activity .v4-hub-activity-inbox-title,
+.v4-hub-activity .v4-hub-activity-pr-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v4-hub-activity .v4-hub-activity-pr-link,
+.v4-hub-activity .v4-hub-activity-run-link,
+.v4-hub-activity .v4-hub-activity-run-plain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--v4-line);
+  border-radius: 8px;
+  background: var(--v4-paper);
+  color: inherit;
+  text-decoration: none;
+}
+.v4-hub-activity .v4-hub-activity-pr-link:hover,
+.v4-hub-activity .v4-hub-activity-run-link:hover {
+  border-color: var(--v4-accent-600);
+}
+.v4-hub-activity .v4-hub-activity-pr-badge {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--v4-warn-50);
+  color: var(--v4-warn-700);
+  font-size: 11px;
+  font-weight: 600;
+}
+.v4-hub-activity .v4-hub-activity-pr-author,
+.v4-hub-activity .v4-hub-activity-run-status {
+  flex-shrink: 0;
+  color: var(--v4-ink-500);
+  font-size: 12px;
+}
+
+/* Per-section empty state — keeps a section visible (never collapses). */
+.v4-hub-activity .v4-hub-activity-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed var(--v4-line);
+  border-radius: 10px;
+  color: var(--v4-ink-500);
+  font-size: 13px;
+}
+.v4-hub-activity .v4-hub-activity-empty-ic {
+  display: inline-flex;
+  font-size: 16px;
+  color: var(--v4-ink-400);
+}
+.v4-hub-activity .v4-hub-activity-empty-text {
+  margin: 0;
+}

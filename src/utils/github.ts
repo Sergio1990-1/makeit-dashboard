@@ -1,5 +1,5 @@
 import type { Issue, IssueStatus, Priority, Phase, ProjectData, Milestone, CommitActivity } from "../types";
-import { getProjects, GITHUB_OWNER, GITHUB_PROJECT_NUMBER, DEFAULT_PROJECTS, loadFinances } from "./config";
+import { getProjects, GITHUB_OWNER, GITHUB_PROJECT_NUMBER, DEFAULT_PROJECTS, loadFinances, getToken } from "./config";
 import { dispatchExternalAuthLost } from "./external-auth-events";
 
 function getCacheUrl(): string {
@@ -764,4 +764,95 @@ export async function fetchDashboardData(
   const now = new Date();
   writeLocalCache(result, now);
   return { projects: result, lastSync: now };
+}
+
+// ── Open Pull Requests (Epic-011 Task-07: ActivityTab) ─────────────────────
+//
+// The Activity tab lists a project's currently-open PRs. This is a focused,
+// single-repo GraphQL query (≤ 20 newest open PRs) — distinct from the bulk
+// Projects-V2 sync above and from the REST `/events` feed the Pulse
+// aggregator uses (events surface *activity*, this surfaces *open state*).
+
+const OPEN_PRS_QUERY = `
+query($owner: String!, $repo: String!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequests(first: 20, states: OPEN, orderBy: {field: UPDATED_AT, direction: DESC}) {
+      nodes {
+        number
+        title
+        url
+        isDraft
+        updatedAt
+        author { login }
+      }
+    }
+  }
+}
+`;
+
+interface OpenPrsResponse {
+  repository: {
+    pullRequests: {
+      nodes: Array<{
+        number: number;
+        title: string;
+        url: string;
+        isDraft: boolean;
+        updatedAt: string;
+        author: { login: string } | null;
+      }>;
+    };
+  } | null;
+}
+
+/** One open PR as surfaced on the Activity tab. */
+export interface OpenPullRequest {
+  number: number;
+  title: string;
+  url: string;
+  isDraft: boolean;
+  updatedAt: string; // ISO
+  /** Login of the PR author, or `null` for a deleted/ghost account. */
+  author: string | null;
+}
+
+/**
+ * Open PRs for one repo, newest-updated first (≤ 20). Accepts either a
+ * bare `repo-name` (resolved against the dashboard `GITHUB_OWNER`) or a
+ * fully-qualified `owner/name` slug, matching the convention used by the
+ * other Hub utils (github-contents, activityPulseAggregator).
+ *
+ * Best-effort: with no token, or on any GraphQL/network failure, resolves
+ * to `[]` so the caller renders an empty state rather than crashing the
+ * tab (PRD-008 §"Каскадирование ошибок").
+ */
+export async function fetchOpenPullRequests(
+  repo: string,
+): Promise<OpenPullRequest[]> {
+  const token = getToken();
+  if (!token) return [];
+
+  const [owner, name] = repo.includes("/")
+    ? (repo.split("/") as [string, string])
+    : [GITHUB_OWNER, repo];
+
+  try {
+    const data = await graphql<OpenPrsResponse>(token, OPEN_PRS_QUERY, {
+      owner,
+      repo: name,
+    });
+    const nodes = data.repository?.pullRequests.nodes ?? [];
+    return nodes.map((pr) => ({
+      number: pr.number,
+      title: pr.title,
+      url: pr.url,
+      isDraft: pr.isDraft,
+      updatedAt: pr.updatedAt,
+      author: pr.author?.login ?? null,
+    }));
+  } catch {
+    // Auth-lost is already dispatched inside `graphql()`; here we degrade
+    // to an empty list so the Activity tab shows its empty state.
+    return [];
+  }
 }
