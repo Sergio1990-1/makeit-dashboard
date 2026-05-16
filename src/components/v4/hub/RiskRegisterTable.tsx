@@ -6,6 +6,7 @@ import {
 } from "../../../utils/github-contents";
 import {
   extractRisks,
+  type ExtractFailureReason,
   type ProposedRisk,
 } from "../../../utils/extractRisksFromTranscripts";
 import type {
@@ -81,6 +82,25 @@ const SOURCE_LABEL: Record<RiskSource, string> = {
   manual: "Manual",
   "transcript-extracted": "Transcript",
   "audit-promoted": "Audit",
+};
+
+/**
+ * Russian copy for each extraction failure. `empty` is intentionally
+ * absent: a project with no usable transcripts is shown in the review
+ * modal's empty state, not as a red error banner.
+ */
+const EXTRACT_ERROR_MESSAGE: Record<
+  Exclude<ExtractFailureReason, "empty">,
+  string
+> = {
+  "no-key":
+    "Не настроен Claude API ключ. Добавьте ключ в настройках, чтобы извлекать риски из транскриптов.",
+  "fetch-failed":
+    "Не удалось получить список транскриптов (сервис недоступен). Попробуйте позже.",
+  "budget-stopped":
+    "Достигнут месячный лимит расходов Claude API — извлечение временно недоступно.",
+  "claude-failed":
+    "Не удалось обратиться к Claude API (сеть, ключ или ответ модели). Попробуйте ещё раз.",
 };
 
 /** Coerce an arbitrary yaml value to a valid member of `allowed`. */
@@ -472,13 +492,27 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
     setExtractError(null);
     setProposals([]);
     try {
-      const found = await extractRisks(repo);
-      setProposals(found);
-      setExtractPhase("done");
+      const res = await extractRisks(repo);
+      if (res.ok) {
+        // Genuine result (possibly empty → modal's "nothing found"
+        // state). The error banner stays cleared.
+        setProposals(res.risks);
+        setExtractPhase("done");
+      } else if (res.reason === "empty") {
+        // No usable transcripts: not an operator-actionable error —
+        // surface it inside the review modal's empty state.
+        setProposals([]);
+        setExtractPhase("done");
+      } else {
+        // Operational failure (no key / service down / budget / Claude
+        // error) → route to the error banner, keep the modal closed.
+        setExtractError(EXTRACT_ERROR_MESSAGE[res.reason]);
+        setExtractPhase("idle");
+      }
     } catch (e) {
       // extractRisks is contracted never to throw, but stay defensive
       // so a future regression can't wedge the button in "extracting".
-      setExtractError(errorMessage(e));
+      setExtractError(`Не удалось извлечь риски: ${errorMessage(e)}`);
       setExtractPhase("idle");
     }
   }, [repo]);
@@ -660,7 +694,7 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
             color: "var(--v4-danger, #dc2626)",
           }}
         >
-          Не удалось извлечь риски: {extractError}
+          {extractError}
         </div>
       )}
 
