@@ -20,4 +20,16 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // E2E harness runs under Node (Playwright runner); the spec/seed
+    // callbacks run in the browser, so allow both global sets and drop the
+    // Vite react-refresh rule (fixtures legitimately export non-components).
+    files: ['tests/**/*.{ts,tsx}', 'playwright.config.ts'],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+    },
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])
