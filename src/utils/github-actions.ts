@@ -702,6 +702,9 @@ export async function listCommitsForPath(
 export interface MergedPR {
   number: number;
   merged_at: string;
+  /** PR open time — already in the `pulls` list payload. Needed by DORA
+   *  Lead Time (median merged_at − created_at). #405. */
+  created_at: string;
 }
 
 // Merged PRs in the last N days (descending by updated_at). Excludes still-open.
@@ -730,7 +733,7 @@ export async function listMergedPRsInWindow(
     );
     if (!Array.isArray(data) || data.length === 0) break;
     let any = false;
-    for (const pr of data as Array<{ number: number; merged_at: string | null; updated_at: string }>) {
+    for (const pr of data as Array<{ number: number; merged_at: string | null; created_at: string; updated_at: string }>) {
       const upd = new Date(pr.updated_at).getTime();
       if (upd < cutoff) {
         // List is sorted by updated desc; once we cross the window, stop
@@ -741,7 +744,7 @@ export async function listMergedPRsInWindow(
       if (!pr.merged_at) continue;
       const merged = new Date(pr.merged_at).getTime();
       if (merged < cutoff) continue;
-      out.push({ number: pr.number, merged_at: pr.merged_at });
+      out.push({ number: pr.number, merged_at: pr.merged_at, created_at: pr.created_at });
       if (out.length >= hardLimit) return out;
     }
     if (!any) break;

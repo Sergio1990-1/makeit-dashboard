@@ -71,7 +71,7 @@ function authHeaders(): HeadersInit {
  * qualified `owner/repo` string. Centralised so call sites don't each
  * re-implement the split.
  */
-function resolveRepoSlug(repo: string): string {
+export function resolveRepoSlug(repo: string): string {
   return repo.includes("/") ? repo : `${GITHUB_OWNER}/${repo}`;
 }
 

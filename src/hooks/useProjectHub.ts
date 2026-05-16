@@ -12,10 +12,16 @@ import type {
 import {
   listRecentCommits,
   readMarkdown,
+  resolveRepoSlug,
   type CommitInfo,
 } from "../utils/github-contents";
 import { extractDecisions } from "../utils/decisionLogExtractor";
-import { computeDora, type DoraMetricsResult } from "../utils/doraCalculator";
+import {
+  computeDora,
+  type DoraMetricsResult,
+  type DoraPullRequest,
+} from "../utils/doraCalculator";
+import { listMergedPRsInWindow } from "../utils/github-actions";
 import { currentWeekKey, loadDigest } from "../utils/weeklyDigestGenerator";
 import {
   computeHealth,
@@ -26,7 +32,11 @@ import {
   computeProjectNBA,
   type NbaAction,
 } from "../utils/nextBestActionEngine";
-import { getClaudeKey, getProjectFinance } from "../utils/config";
+import {
+  getClaudeKey,
+  getProjectFinance,
+  getToken,
+} from "../utils/config";
 
 // Stable empty stubs so consumers can rely on reference equality. The Hub
 // surfaces (Overview, Activity, etc.) render empty states from these when a
@@ -42,6 +52,33 @@ const EMPTY_ONBOARDING: OnboardingReport = { completed: 0, total: 0, missing: []
 /** Sliding window (days) the Hub computes DORA over — mirrors the
  *  calculator default; kept explicit so the value is visible here. */
 const DORA_WINDOW_DAYS = 30;
+
+/**
+ * Fetch merged PRs in the DORA window and map to the calculator's shape
+ * (#405). Best-effort: no GitHub token or any API failure → `[]`, so DORA
+ * Lead Time degrades to an honest `n/a` dash rather than a fabricated 0h.
+ * `created_at` rides along in the existing `pulls` list payload — no extra
+ * per-PR request.
+ */
+async function fetchDoraPRs(repo: string): Promise<DoraPullRequest[]> {
+  const token = getToken();
+  if (!token) return [];
+  const [owner, name] = resolveRepoSlug(repo).split("/");
+  try {
+    const prs = await listMergedPRsInWindow(
+      token,
+      owner,
+      name,
+      DORA_WINDOW_DAYS,
+    );
+    return prs.map((pr) => ({
+      createdAt: pr.created_at,
+      mergedAt: pr.merged_at,
+    }));
+  } catch {
+    return [];
+  }
+}
 
 /**
  * Adapt the NBA engine's rich `NbaAction` (`title / rationale / severity /
@@ -178,19 +215,26 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
   const [briefMd, setBriefMd] = useState<string | null>(null);
   const [commitsResolved, setCommitsResolved] =
     useState<Resolved<CommitInfo[]> | null>(null);
+  // Merged PRs feed DORA Lead Time. Fetched here alongside commits (same
+  // repo-keyed effect) so both DORA inputs resolve together — no n/a flash
+  // while one input lags the other. #405.
+  const [prsResolved, setPrsResolved] =
+    useState<Resolved<DoraPullRequest[]> | null>(null);
   useEffect(() => {
     const key = repo;
     let cancelled = false;
     void (async () => {
       // Run in parallel — they're independent and the Hub has nothing
       // to do with either response while we wait.
-      const [briefRes, commitsRes] = await Promise.all([
+      const [briefRes, commitsRes, prsRes] = await Promise.all([
         readMarkdown(repo, "docs/BRIEF.md").catch(() => null),
         listRecentCommits(repo, 100).catch(() => [] as CommitInfo[]),
+        fetchDoraPRs(repo),
       ]);
       if (cancelled || !mounted.current) return;
       setBriefMd(briefRes?.content ?? null);
       setCommitsResolved({ key, data: commitsRes, error: null });
+      setPrsResolved({ key, data: prsRes, error: null });
     })();
     return () => {
       cancelled = true;
@@ -206,6 +250,12 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
     [commitsFresh, commitsResolved],
   );
 
+  const prsFresh = prsResolved !== null && prsResolved.key === repo;
+  const pullRequests = useMemo<DoraPullRequest[]>(
+    () => (prsFresh ? (prsResolved?.data ?? []) : []),
+    [prsFresh, prsResolved],
+  );
+
   const decisions = useMemo(
     () => extractDecisions(briefMd, commits),
     [briefMd, commits],
@@ -213,19 +263,20 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
 
   // ── DORA (Epic-012 Task-03) ────────────────────────────────────────
   // `computeDora` is pure-injectable and synchronous. We feed it the
-  // commits already loaded above (Deploy Frequency + Change Failure Rate
-  // come from real commit subjects). The other two inputs degrade by the
+  // commits + merged PRs loaded above (Deploy Frequency + Change Failure
+  // Rate from real commit subjects; Lead Time from median merged−created
+  // over the PR window, #405). The remaining inputs degrade by the
   // calculator's own documented contract, not silently:
-  //   - `pullRequests: []` — `listMergedPRsInWindow` returns only
-  //     `{ number, merged_at }` (no `created_at`), so Lead Time can't be
-  //     derived without an N+1 per-PR fetch. An empty list yields an
-  //     honest `n/a` dash rather than a fabricated 0h. (tech-debt #367.)
+  //   - `pullRequests` — real merged PRs in the window. Empty (no token /
+  //     API failure / no merged PRs) yields an honest `n/a` Lead Time
+  //     dash rather than a fabricated 0h.
   //   - `incidents: null` — no per-repo BetterStack monitor matching in
   //     the Hub today → MTTR `n/a`.
   //   - `auditFindings: []` — CFR falls back to the fix-only signal.
-  // Derived synchronously once the commit fetch has resolved for this
-  // repo. It carries its own loading slice (true only until that fetch
-  // lands) for tab-skeleton parity with the async producers — an
+  // Gated on `commitsFresh`: commits and PRs are fetched in the same
+  // Promise.all and set together, so when commits are fresh the PRs for
+  // this repo are too — no Lead Time n/a→value flash. It carries its own
+  // loading slice for tab-skeleton parity with the async producers — an
   // empty-history repo resolves to a real (all-low) metric set, not a
   // perpetual spinner.
   const doraSection = useMemo<Section<DoraMetricsResult>>(() => {
@@ -234,14 +285,14 @@ export function useProjectHub(repo: string, project?: ProjectData): ProjectHubDa
     }
     try {
       const metrics = computeDora(
-        { commits, pullRequests: [], incidents: null, auditFindings: [] },
+        { commits, pullRequests, incidents: null, auditFindings: [] },
         DORA_WINDOW_DAYS,
       );
       return { data: metrics, loading: false, error: null };
     } catch (e) {
       return { data: null, loading: false, error: toError(e) };
     }
-  }, [commitsFresh, commits]);
+  }, [commitsFresh, commits, pullRequests]);
 
   // ── Weekly Digest (Epic-012 Task-02) ───────────────────────────────
   // Latest digest for the current ISO week. `loadDigest` resolves from
