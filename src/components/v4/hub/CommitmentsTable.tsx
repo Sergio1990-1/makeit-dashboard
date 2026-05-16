@@ -3,6 +3,7 @@ import type { Commitment } from "../../../types/hub";
 import {
   extractCommitments,
   isOverdue,
+  persistedStatus,
   toCommitmentsYaml,
   type CommitmentsYaml,
 } from "../../../utils/commitmentsExtractor";
@@ -84,8 +85,9 @@ function toCommitments(rows: Row[]): Commitment[] {
     due,
     client,
     // Persisted status is open/done only; `overdue` is recomputed on
-    // next read. Downgrade here so the yaml stays clean.
-    status: status === "done" ? "done" : "open",
+    // next read. Single normalisation point shared with the extractor's
+    // yaml serialiser so the invariant has exactly one owner.
+    status: persistedStatus(status),
   }));
 }
 
@@ -365,6 +367,24 @@ export function CommitmentsTable({ repo, onCount }: Props) {
     setConfirmDeleteKey(null);
   }
 
+  /**
+   * Reload after a conflict re-merges from the repo, which replaces the
+   * local `rows` and silently drops any unsaved edits. Only force-reload
+   * without asking when the table is clean; if there are unsaved changes
+   * require an explicit confirm so the user can't lose work by reflex.
+   */
+  function requestConflictReload() {
+    if (
+      dirty &&
+      !window.confirm(
+        "Несохранённые правки будут потеряны при перезагрузке. Продолжить?",
+      )
+    ) {
+      return;
+    }
+    setReloadToken((t) => t + 1);
+  }
+
   async function handleSave() {
     setSaving(true);
     setSaveError(null);
@@ -490,11 +510,20 @@ export function CommitmentsTable({ repo, onCount }: Props) {
           <span>
             Файл <code>{COMMITMENTS_PATH}</code> изменён в репозитории.
             Перезагрузите, чтобы не потерять чужие правки.
+            {dirty && (
+              <>
+                {" "}
+                <strong>
+                  Внимание: ваши несохранённые правки будут потеряны при
+                  перезагрузке.
+                </strong>
+              </>
+            )}
           </span>
           <button
             type="button"
             style={btnStyle}
-            onClick={() => setReloadToken((t) => t + 1)}
+            onClick={requestConflictReload}
           >
             Перезагрузить
           </button>

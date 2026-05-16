@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useModalA11y } from "../../../hooks/useModalA11y";
 import {
   ConflictError,
   readYaml,
@@ -114,6 +115,24 @@ function coerceEnum<T extends string>(
     : fallback;
 }
 
+/**
+ * Strict `YYYY-MM-DD` calendar check for a risk `due`. `Date.parse`
+ * rolls invalid days over (`2026-02-30` → Mar 2) and accepts loose
+ * formats the `<input type="date">` can't render, so we require the
+ * exact ISO shape AND a round-tripping UTC date.
+ */
+function isIsoCalendarDate(value: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!m) return false;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  return (
+    dt.getUTCFullYear() === y &&
+    dt.getUTCMonth() === mo - 1 &&
+    dt.getUTCDate() === d
+  );
+}
+
 /** Trim to a string, tolerating `null`/`number`/missing yaml values. */
 function asString(value: unknown): string {
   if (typeof value === "string") return value;
@@ -133,6 +152,14 @@ function normaliseRisk(raw: unknown, index: number): Risk {
   const r = (raw ?? {}) as Record<string, unknown>;
   const id = asString(r.id).trim() || `risk-${index + 1}`;
   const dueRaw = asString(r.due).trim();
+  // Normalise `due` to either a real ISO `YYYY-MM-DD` or `null` at READ
+  // time. A non-ISO value (e.g. "Q3") can't render in the `type="date"`
+  // input — it would show blank and the first unrelated edit would
+  // silently overwrite it with null. Coercing it to null here makes the
+  // loss deterministic and visible (the row shows "—" immediately)
+  // instead of a hidden data-loss path on the next edit.
+  const due =
+    dueRaw !== "" && isIsoCalendarDate(dueRaw) ? dueRaw : null;
   return {
     id,
     title: asString(r.title).trim(),
@@ -144,7 +171,7 @@ function normaliseRisk(raw: unknown, index: number): Risk {
     ),
     mitigation: asString(r.mitigation).trim(),
     owner: asString(r.owner).trim(),
-    due: dueRaw === "" ? null : dueRaw,
+    due,
     status: coerceEnum<RiskStatus>(r.status, STATUSES, "open"),
     source: coerceEnum<RiskSource>(r.source, SOURCES, "manual"),
   };
@@ -262,6 +289,9 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Risk | null>(null);
   const [adding, setAdding] = useState(false);
+  // Two-step delete (mirrors CommitmentsTable): the first click arms the
+  // confirm, the second persists+commits. `null` ⇒ nothing armed.
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
   // Neutral (non-error) feedback, e.g. the post-reload merge notice.
@@ -466,6 +496,7 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
   };
 
   const deleteRisk = async (r: Risk) => {
+    setConfirmDeleteId(null);
     const next = risks.filter((x) => x.id !== r.id);
     await persist(next, `chore(hub): delete risk "${r.title}" from risks.yaml`);
   };
@@ -811,24 +842,52 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
                       <span style={pillStyle}>{SOURCE_LABEL[r.source]}</span>
                     </td>
                     <td style={cellStyle}>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button
-                          type="button"
-                          style={btn}
-                          disabled={busy || adding || editingId !== null}
-                          onClick={() => startEdit(r)}
-                        >
-                          Изм.
-                        </button>
-                        <button
-                          type="button"
-                          style={btn}
-                          disabled={busy || adding || editingId !== null}
-                          onClick={() => void deleteRisk(r)}
-                        >
-                          Удал.
-                        </button>
-                      </div>
+                      {confirmDeleteId === r.id ? (
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button
+                            type="button"
+                            style={{
+                              ...btn,
+                              borderColor: "var(--v4-danger, #dc2626)",
+                              color: "var(--v4-danger, #dc2626)",
+                            }}
+                            disabled={busy}
+                            onClick={() => void deleteRisk(r)}
+                          >
+                            Удалить
+                          </button>
+                          <button
+                            type="button"
+                            style={btn}
+                            disabled={busy}
+                            onClick={() => setConfirmDeleteId(null)}
+                          >
+                            Отмена
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button
+                            type="button"
+                            style={btn}
+                            disabled={busy || adding || editingId !== null}
+                            onClick={() => {
+                              setConfirmDeleteId(null);
+                              startEdit(r);
+                            }}
+                          >
+                            Изм.
+                          </button>
+                          <button
+                            type="button"
+                            style={btn}
+                            disabled={busy || adding || editingId !== null}
+                            onClick={() => setConfirmDeleteId(r.id)}
+                          >
+                            Удал.
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
@@ -904,6 +963,10 @@ function ExtractReviewModal({
     setEditingIdx(null);
   }
 
+  // a11y: focus-trap + Escape→close + focus-restore (the dialog promises
+  // aria-modal="true"). Escape maps to onClose (the explicit dismiss).
+  const modalRef = useModalA11y<HTMLDivElement>(onClose);
+
   return (
     <div
       role="dialog"
@@ -921,6 +984,8 @@ function ExtractReviewModal({
       }}
     >
       <div
+        ref={modalRef}
+        tabIndex={-1}
         style={{
           background: "var(--v4-surface, #fff)",
           color: "var(--v4-ink-900, inherit)",
@@ -932,6 +997,7 @@ function ExtractReviewModal({
           gap: 12,
           maxHeight: "90vh",
           overflowY: "auto",
+          outline: "none",
         }}
       >
         <div
@@ -1349,6 +1415,9 @@ function RiskFormModal({ draft, busy, onChange, onSave, onCancel }: EditProps) {
     fontSize: 12,
     color: "var(--v4-ink-500)",
   };
+  // a11y: focus-trap + Escape→cancel + focus-restore (this dialog
+  // promises aria-modal="true"). Escape maps to onCancel.
+  const modalRef = useModalA11y<HTMLDivElement>(onCancel);
   return (
     <div
       role="dialog"
@@ -1366,6 +1435,8 @@ function RiskFormModal({ draft, busy, onChange, onSave, onCancel }: EditProps) {
       }}
     >
       <div
+        ref={modalRef}
+        tabIndex={-1}
         style={{
           background: "var(--v4-surface, #fff)",
           color: "var(--v4-ink-900, inherit)",
@@ -1377,6 +1448,7 @@ function RiskFormModal({ draft, busy, onChange, onSave, onCancel }: EditProps) {
           gap: 12,
           maxHeight: "90vh",
           overflowY: "auto",
+          outline: "none",
         }}
       >
         <h3 style={{ margin: 0, fontSize: 16 }}>Новый риск</h3>
@@ -1539,6 +1611,9 @@ function ConflictDialog({
   onOverwrite,
   onDismiss,
 }: ConflictProps) {
+  // a11y: focus-trap + Escape→dismiss + focus-restore (this alertdialog
+  // promises aria-modal="true"). Escape maps to onDismiss (cancel).
+  const modalRef = useModalA11y<HTMLDivElement>(onDismiss);
   return (
     <div
       role="alertdialog"
@@ -1556,6 +1631,8 @@ function ConflictDialog({
       }}
     >
       <div
+        ref={modalRef}
+        tabIndex={-1}
         style={{
           background: "var(--v4-surface, #fff)",
           color: "var(--v4-ink-900, inherit)",
@@ -1565,6 +1642,7 @@ function ConflictDialog({
           display: "flex",
           flexDirection: "column",
           gap: 14,
+          outline: "none",
         }}
       >
         <h3 style={{ margin: 0, fontSize: 16 }}>Конфликт версий</h3>
