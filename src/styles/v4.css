@@ -99,6 +99,7 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
   display: grid;
   grid-template-columns: 240px 1fr;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--v4-bg);
   color: var(--v4-ink-800);
   font-family: var(--v4-sans);
@@ -112,6 +113,7 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -366,6 +368,14 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
   position: relative;
   width: 280px;
 }
+/* A3: mobile-only search trigger. The button carries both `.v4-ibtn`
+   (which sets display:flex) and `.v4-search-trigger`. The compound
+   `.v4-ibtn.v4-search-trigger` selector (specificity 0,2,0) is required
+   so this hide reliably beats `.v4-ibtn { display:flex }` (0,1,0) on
+   desktop regardless of source order. The ≤700px override uses the same
+   compound selector and is declared LATER in source, so it wins on phones
+   (equal specificity → source order). Keep this rule above that block. */
+.v4-ibtn.v4-search-trigger { display: none; }
 .v4-search input {
   width: 100%;
   height: 32px;
@@ -6790,6 +6800,37 @@ ul.v4-rsh-list {
     gap: 8px;
   }
   .v4-search { display: none; }
+  /* A3: search field is hidden on phones — expose a tap target that opens
+     the global Command Palette (the only mobile entry point, since ⌘K is
+     keyboard-only). Compound selector matches the base hide rule's
+     specificity (0,2,0); wins here by later source order. */
+  .v4-ibtn.v4-search-trigger { display: inline-flex; }
+  /* M2: iOS Safari zooms the viewport when a focused input has a computed
+     font-size < 16px. Force 16px on phones to kill the zoom-on-focus jump.
+     !important is required to beat per-component input font-sizes; scoped
+     to ≤700px so desktop is untouched. */
+  input,
+  textarea,
+  select { font-size: 16px !important; }
+}
+
+/* ── A1: touch ergonomics. Enlarge tap targets to the 44px Apple HIG /
+   WCAG 2.5.5 minimum on touch/pen devices only. Desktop (fine pointer)
+   is intentionally frozen — no visual change with a mouse. ── */
+@media (pointer: coarse) {
+  .v4-ibtn {
+    width: 44px;
+    height: 44px;
+  }
+  .v4-nav-item {
+    min-height: 44px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .v4-crumb-link {
+    padding: 10px 8px;
+    margin: -8px 0;
+  }
 }
 
 /* ──────────────────────────────────────────────────────────────────
@@ -7843,11 +7884,26 @@ ul.v4-rsh-list {
   /* TOPBAR — drop search + breadcrumb prefix + live pill text */
   .v4-top { padding: 0 12px; gap: 8px; }
   .v4-crumbs { font-size: 12px; gap: 4px; flex-wrap: nowrap; overflow: hidden; }
-  .v4-crumbs > .v4-sep:first-of-type,
-  .v4-crumbs > a:first-of-type { display: none; }
+  /* Drop the "Все проекты" root crumb + its leading separator on phones.
+     It wraps to two lines and wastes the cramped topbar; show only the
+     current page (and any deeper crumb). DOM order inside .v4-crumbs:
+     button.v4-burger, span(crumb0 "Все проекты"), span(crumb1 = leading
+     .v4-sep + <b>), … — so the first SPAN is crumb0, the second its peer.
+     The old `.v4-crumbs > a:first-of-type` rule was dead (crumbs are
+     <span>, never <a>). */
+  /* !important: the crumb wrapper carries an inline `display:inline-flex`
+     (set in Topbar.tsx), which a plain rule can't override. Scoped to
+     ≤720px so desktop is unaffected. */
+  .v4-crumbs > span:first-of-type { display: none !important; }
+  .v4-crumbs > span:nth-of-type(2) > .v4-sep { display: none; }
   .v4-crumbs b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .v4-live { padding: 3px 6px; font-size: 0; gap: 0; margin-left: 6px; }
   .v4-live-dot { margin: 0; }
+  /* RateLimitPill is a desktop-only API-budget affordance. On phones it is
+     ~90px wide and collides with the right-hand icon cluster (made worse by
+     the A3 search button), so drop it — matches the existing intent of this
+     block ("strip the topbar down on mobile"). */
+  .v4-ratelimit { display: none; }
   .v4-top-right { gap: 4px; }
   .v4-top-right .icon-btn { padding: 6px; }
 
@@ -8382,6 +8438,7 @@ ul.v4-rsh-list {
   width: 100%;
   max-width: 720px;
   max-height: calc(100vh - 80px);
+  max-height: calc(100dvh - 80px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -8762,6 +8819,7 @@ ul.v4-rsh-list {
   .v4-mspopup-bd { padding: 16px; align-items: flex-end; }
   .v4-mspopup {
     max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
     border-radius: 14px 14px 0 0;
   }
   .v4-mspopup-issue {
