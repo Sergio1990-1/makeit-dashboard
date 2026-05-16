@@ -24,6 +24,7 @@ import { useDashboard } from "./hooks/useDashboard";
 import { useMonitors } from "./hooks/useMonitors";
 import { usePortfolioHealth } from "./hooks/usePortfolioHealth";
 import { usePortfolioOrphans } from "./hooks/usePortfolioOrphans";
+import { usePortfolioNbaBadge } from "./hooks/usePortfolioNbaBadge";
 import { fetchPipelineStatus, fetchPipelineLimits } from "./utils/pipeline";
 import type { PipelineAbortReason, PipelineLimits } from "./utils/pipeline";
 import { getToken, clearToken, getAuth, clearAuth, clearClaudeKey, MONITOR_MATCH, PROJECTS } from "./utils/config";
@@ -475,6 +476,10 @@ function AppInner({ onFirstFetchDone }: AppInnerProps = {}) {
     orphansRefresh();
   }, [refresh, refreshMonitors, portfolioRefresh, orphansRefresh]);
 
+  // Passive portfolio-NBA count for the «Проекты» sidebar pill. Reads only
+  // the cache PortfolioNextActions wrote — never triggers a Claude compute.
+  const nbaBadge = usePortfolioNbaBadge(tab);
+
   const hasToken = !!getToken();
 
   const allMilestones = projects.flatMap((p) => p.milestones);
@@ -542,6 +547,7 @@ function AppInner({ onFirstFetchDone }: AppInnerProps = {}) {
         monitorsCount={monitors.length}
         auditAlerts={auditAlerts}
         criticalFails={criticalFails}
+        nbaBadge={nbaBadge}
         pulses={pulses}
         isOpen={sideOpen}
         onClose={() => setSideOpen(false)}

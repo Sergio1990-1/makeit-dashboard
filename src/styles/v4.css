@@ -219,6 +219,23 @@ body.v4 .v4-mono { font-family: var(--v4-mono); }
   border-radius: 4px;
   padding: 1px 6px;
 }
+/* Portfolio NBA pill on the «Проекты» nav item (Epic-010 Task-07, FR-10).
+   Warn tone, distinct from the red danger .v4-nav-badge. Sits after the
+   gray .v4-nav-count (which holds margin-left:auto) on the right edge. */
+.sidebar-badge {
+  margin-left: 6px;
+  font-family: var(--v4-mono);
+  font-size: 9px;
+  font-weight: 700;
+  background: var(--v4-warn-50);
+  color: var(--v4-warn-700);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.v4-nav-item.is-active .sidebar-badge {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
 
 .v4-side-foot {
   padding: 14px 16px;
