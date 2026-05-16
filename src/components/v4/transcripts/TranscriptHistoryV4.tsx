@@ -3,7 +3,6 @@ import {
   fetchTranscriptList,
   deleteTranscript,
   type TranscriptListItem,
-  type TranscriptQuality,
   type TranscriptionModel,
 } from "../../../utils/transcript";
 
@@ -37,25 +36,6 @@ const STATUS_CLASS: Record<string, string> = {
 
 const ACTIVE_STATUSES = new Set(["queued", "transcribing", "processing"]);
 
-const STAGE_LABELS: Record<string, string> = {
-  intake: "Приём",
-  stt: "Транскрипция",
-  enrichment: "Обогащение",
-  structuring: "Структуризация",
-  synthesis: "Синтез",
-};
-
-const QUALITY_LABEL: Record<TranscriptQuality, string> = {
-  pass: "ОК",
-  warning: "Замечания",
-  needs_review: "Проверить",
-};
-
-const QUALITY_CLASS: Record<TranscriptQuality, string> = {
-  pass: "v4-tpc-quality--pass",
-  warning: "v4-tpc-quality--warn",
-  needs_review: "v4-tpc-quality--review",
-};
 
 type StatusFilter = "all" | "active" | "done" | "error";
 
@@ -487,19 +467,10 @@ export function TranscriptHistoryV4({ onOpen, onResume, onRetry, refreshKey, onI
                   <span className={`v4-tpc-status ${STATUS_CLASS[item.status] ?? ""}`}>
                     {isActive && <span className="v4-tpc-status-pulse" />}
                     {STATUS_LABELS[item.status] ?? item.status}
-                    {item.status === "error" && item.current_stage && STAGE_LABELS[item.current_stage] && (
-                      <span className="v4-tpc-text-muted"> ({STAGE_LABELS[item.current_stage]})</span>
-                    )}
                   </span>
                 </div>
                 <div className="v4-tpc-history-cell v4-tpc-history-quality">
-                  {item.status === "done" && item.quality ? (
-                    <span className={`v4-tpc-quality-chip v4-tpc-quality-chip--static v4-tpc-quality-chip--sm ${QUALITY_CLASS[item.quality]}`}>
-                      {QUALITY_LABEL[item.quality]}
-                    </span>
-                  ) : (
-                    <span className="v4-tpc-text-muted">—</span>
-                  )}
+                  <span className="v4-tpc-text-muted">—</span>
                 </div>
                 <div className="v4-tpc-history-cell v4-tpc-history-actions">
                   {item.status === "done" && (
