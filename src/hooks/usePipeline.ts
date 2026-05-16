@@ -141,7 +141,13 @@ function startPolling(): void {
 }
 
 async function checkAvailability(): Promise<boolean> {
+  // Capture epoch before the await: if a teardown/restart (stopPolling,
+  // startPolling, start) intervenes while the probe is in flight, this
+  // result is stale — bail so we don't double-start or clobber the state
+  // a fresher probe will set. Same guard pattern as pollOnce.
+  const myEpoch = epoch;
   const ok = await isPipelineRunning();
+  if (epoch !== myEpoch) return ok;
   setState({ available: ok });
   // refCount can drop to 0 while this probe is in flight (consumer mounted
   // then unmounted). Only kick off the shared loop if a consumer is still
@@ -170,9 +176,16 @@ async function start(req: PipelineStartRequest): Promise<boolean> {
     await startPipeline(req);
     // Give background task time to set running=true before first poll.
     await new Promise((r) => setTimeout(r, 1500));
-    // Reset backoff streak so we drop back to fast (2s) cadence immediately.
-    notRunningStreak = 0;
-    startPolling();
+    // The consumer may have unmounted during the wait (refCount 0,
+    // stopPolling already ran). startPolling() clears `stopped`, so
+    // restarting here would resurrect a poll loop with no listeners.
+    // The pipeline did start server-side; a later mount re-probes and
+    // picks it up.
+    if (refCount > 0) {
+      // Reset backoff streak so we drop back to fast (2s) cadence immediately.
+      notRunningStreak = 0;
+      startPolling();
+    }
     return true;
   } catch (err) {
     setState({ error: err instanceof Error ? err.message : "Ошибка запуска" });
