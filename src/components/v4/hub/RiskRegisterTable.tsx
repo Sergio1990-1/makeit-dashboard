@@ -46,16 +46,16 @@ import {
  */
 
 const SEVERITY_LABEL: Record<RiskSeverity, string> = {
-  low: "Low",
-  med: "Medium",
-  high: "High",
-  critical: "Critical",
+  low: "Низкая",
+  med: "Средняя",
+  high: "Высокая",
+  critical: "Критическая",
 };
 
 const PROBABILITY_LABEL: Record<RiskProbability, string> = {
-  low: "Low",
-  med: "Medium",
-  high: "High",
+  low: "Низкая",
+  med: "Средняя",
+  high: "Высокая",
 };
 
 const STATUS_LABEL: Record<RiskStatus, string> = {
@@ -66,9 +66,9 @@ const STATUS_LABEL: Record<RiskStatus, string> = {
 };
 
 const SOURCE_LABEL: Record<RiskSource, string> = {
-  manual: "Manual",
-  "transcript-extracted": "Transcript",
-  "audit-promoted": "Audit",
+  manual: "Вручную",
+  "transcript-extracted": "Транскрипт",
+  "audit-promoted": "Аудит",
 };
 
 /**
@@ -596,7 +596,7 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
           >
             {extractPhase === "extracting"
               ? "Извлечение…"
-              : "Extract from transcripts"}
+              : "Извлечь из транскриптов"}
           </button>
           <button
             type="button"
@@ -677,7 +677,7 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
           >
             <thead>
               <tr style={{ textAlign: "left", color: "var(--v4-ink-500)" }}>
-                <th style={{ ...cellStyle, fontWeight: 600 }}>Severity</th>
+                <th style={{ ...cellStyle, fontWeight: 600 }}>Серьёзность</th>
                 <th style={{ ...cellStyle, fontWeight: 600 }}>Риск</th>
                 <th style={{ ...cellStyle, fontWeight: 600 }}>Вероятность</th>
                 <th style={{ ...cellStyle, fontWeight: 600 }}>Митигация</th>
@@ -1080,9 +1080,9 @@ function ProposalEditForm({ value, onChange }: ProposalEditFormProps) {
       </label>
       <div style={{ display: "flex", gap: 12 }}>
         <label style={{ ...field, flex: 1 }}>
-          Severity
+          Серьёзность
           <select
-            aria-label="Severity"
+            aria-label="Серьёзность"
             style={inputStyle}
             value={value.severity}
             onChange={(e) =>

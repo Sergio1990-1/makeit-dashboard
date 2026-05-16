@@ -208,7 +208,7 @@ export function ActivityTab({ repo, onVisited }: Props) {
             className="v4-hub-activity-title"
             id="v4-hub-activity-inbox-title"
           >
-            Inbox
+            Входящие
             {unread.length > 0 ? (
               <span className="v4-hub-activity-count">{unread.length}</span>
             ) : null}
@@ -332,7 +332,7 @@ export function ActivityTab({ repo, onVisited }: Props) {
                     {pr.title}
                   </span>
                   {pr.isDraft ? (
-                    <span className="v4-hub-activity-pr-badge">draft</span>
+                    <span className="v4-hub-activity-pr-badge">черновик</span>
                   ) : null}
                   {pr.author ? (
                     <span className="v4-hub-activity-pr-author">

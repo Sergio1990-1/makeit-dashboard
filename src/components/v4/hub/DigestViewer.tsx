@@ -187,14 +187,14 @@ export function DigestViewer({ repo, input }: Props) {
             id="v4-hub-digest-title"
             style={{ fontSize: 14, fontWeight: 600, margin: 0 }}
           >
-            Weekly Digest
+            Недельный дайджест
           </h3>
           {entry?.budgetFallback ? (
             <span
               style={badgeStyle}
               title="Дайджест сгенерирован на Haiku из-за превышения бюджета Claude"
             >
-              budget fallback
+              бюджет исчерпан
             </span>
           ) : null}
         </div>
@@ -232,7 +232,7 @@ export function DigestViewer({ repo, input }: Props) {
               disabled={busy}
               onClick={() => setConfirming(true)}
             >
-              {busy ? "Генерация…" : "Regenerate"}
+              {busy ? "Генерация…" : "Перегенерировать"}
             </button>
           ) : null}
         </div>

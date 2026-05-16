@@ -22,16 +22,16 @@ interface Props {
 function tierStyle(tier: DoraTier): { background: string; accent: string; label: string } {
   switch (tier) {
     case "elite":
-      return { background: "rgba(34, 197, 94, 0.12)", accent: "#16a34a", label: "Elite" };
+      return { background: "rgba(34, 197, 94, 0.12)", accent: "#16a34a", label: "Элитный" };
     case "high":
-      return { background: "rgba(132, 204, 22, 0.12)", accent: "#65a30d", label: "High" };
+      return { background: "rgba(132, 204, 22, 0.12)", accent: "#65a30d", label: "Высокий" };
     case "medium":
-      return { background: "rgba(234, 179, 8, 0.14)", accent: "#ca8a04", label: "Medium" };
+      return { background: "rgba(234, 179, 8, 0.14)", accent: "#ca8a04", label: "Средний" };
     case "low":
-      return { background: "rgba(239, 68, 68, 0.12)", accent: "#dc2626", label: "Low" };
+      return { background: "rgba(239, 68, 68, 0.12)", accent: "#dc2626", label: "Низкий" };
     case "na":
     default:
-      return { background: "var(--v4-border, rgba(0,0,0,0.05))", accent: "var(--v4-ink-500)", label: "n/a" };
+      return { background: "var(--v4-border, rgba(0,0,0,0.05))", accent: "var(--v4-ink-500)", label: "н/д" };
   }
 }
 
@@ -135,10 +135,10 @@ export function DoraCards({ metrics }: Props) {
           gap: 12,
         }}
       >
-        <Card title="Deploy Frequency" value="—" tier="na" tooltip="Нет данных" />
-        <Card title="Lead Time" value="—" tier="na" tooltip="Нет данных" />
-        <Card title="MTTR" value="—" tier="na" tooltip="Нет данных" />
-        <Card title="Change Failure Rate" value="—" tier="na" tooltip="Нет данных" />
+        <Card title="Частота деплоя" value="—" tier="na" tooltip="Нет данных" />
+        <Card title="Время поставки" value="—" tier="na" tooltip="Нет данных" />
+        <Card title="Время восстановления" value="—" tier="na" tooltip="Нет данных" />
+        <Card title="Доля сбойных изменений" value="—" tier="na" tooltip="Нет данных" />
       </div>
     );
   }
@@ -153,25 +153,25 @@ export function DoraCards({ metrics }: Props) {
       }}
     >
       <Card
-        title="Deploy Frequency"
-        value={formatNumber(metrics.deployFreq, "/day")}
+        title="Частота деплоя"
+        value={formatNumber(metrics.deployFreq, "/день")}
         tier={metrics.tiers.deployFreq}
         tooltip="Commits на main с префиксом feat:/fix:/release: за окно ÷ количество дней окна. Elite ≥ 1/день."
       />
       <Card
-        title="Lead Time"
+        title="Время поставки"
         value={formatHours(metrics.leadTimeHours)}
         tier={metrics.tiers.leadTime}
         tooltip="Медиана (merged_at − created_at) для merged PR в окне. Elite ≤ 1 дня."
       />
       <Card
-        title="MTTR"
+        title="Время восстановления"
         value={formatHours(metrics.mttrHours)}
         tier={metrics.tiers.mttr}
         tooltip="Медиана длительности downtime по BetterStack monitor проекта. n/a если monitor не сопоставлен."
       />
       <Card
-        title="Change Failure Rate"
+        title="Доля сбойных изменений"
         value={formatPercent(metrics.cfr)}
         tier={metrics.tiers.cfr}
         tooltip="Доля деплоев, за которыми в течение 7 дней последовал fix-коммит ИЛИ critical audit finding. Elite ≤ 5%."

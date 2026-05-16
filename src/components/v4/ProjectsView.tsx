@@ -47,23 +47,23 @@ const STORAGE_KEY = "makeit.projectsView.v1";
 
 const PHASE_LABELS: Record<PhaseFilter, string> = {
   all: "Все",
-  "pre-dev": "Pre-dev",
-  development: "Dev",
-  support: "Support",
-  stale: "Stale",
+  "pre-dev": "До разработки",
+  development: "Разработка",
+  support: "Поддержка",
+  stale: "Застой",
 };
 
 const SORT_LABELS: Record<SortKey, string> = {
   activity: "Активность",
   open: "Открытые",
-  risk: "Risk score",
+  risk: "Риск-скор",
   progress: "Прогресс",
   name: "Имя",
 };
 
 const PHASE_GROUP_TITLE: Record<Phase, string> = {
   development: "В разработке",
-  "pre-dev": "Pre-dev",
+  "pre-dev": "До разработки",
   support: "Поддержка",
 };
 
@@ -553,7 +553,7 @@ export function ProjectsView({
             <div className="v4-projects-agg-n num" style={{ color: agg.stale > 0 ? "var(--v4-warn-700)" : undefined }}>
               {agg.stale}
             </div>
-            <div className="v4-projects-agg-l">stale</div>
+            <div className="v4-projects-agg-l">застой</div>
           </div>
           <div className="v4-projects-agg-cell">
             <div className="v4-projects-agg-n num">{agg.progress}%</div>

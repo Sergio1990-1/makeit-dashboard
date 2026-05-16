@@ -80,10 +80,10 @@ interface SectionDef {
 
 /** Fixed order — Decision Log → Risk Register → Commitments → Renewals. */
 const SECTIONS: readonly SectionDef[] = [
-  { id: "decisions", title: "Decision Log", icon: "book" },
-  { id: "risks", title: "Risk Register", icon: "alert" },
-  { id: "commitments", title: "Commitments", icon: "clock" },
-  { id: "renewals", title: "Renewals", icon: "shield" },
+  { id: "decisions", title: "Журнал решений", icon: "book" },
+  { id: "risks", title: "Реестр рисков", icon: "alert" },
+  { id: "commitments", title: "Обещания", icon: "clock" },
+  { id: "renewals", title: "Продления", icon: "shield" },
 ] as const;
 
 function isSectionId(value: string): value is SectionId {
@@ -268,7 +268,7 @@ export function DecisionsRisksTab({ decisions, repo, scrollTo }: Props) {
               className="v4-hub-decisions-title"
               id="v4-hub-decisions-decisions-title"
             >
-              Decision Log
+              Журнал решений
               <span className="v4-hub-decisions-count">
                 {decisions.length}
               </span>
@@ -292,7 +292,7 @@ export function DecisionsRisksTab({ decisions, repo, scrollTo }: Props) {
               className="v4-hub-decisions-title"
               id="v4-hub-decisions-risks-title"
             >
-              Risk Register
+              Реестр рисков
               {riskCount !== null ? (
                 <span className="v4-hub-decisions-count">{riskCount}</span>
               ) : null}
@@ -317,7 +317,7 @@ export function DecisionsRisksTab({ decisions, repo, scrollTo }: Props) {
               className="v4-hub-decisions-title"
               id="v4-hub-decisions-commitments-title"
             >
-              Commitments
+              Обещания
               {commitCount !== null ? (
                 <span className="v4-hub-decisions-count">{commitCount}</span>
               ) : null}
@@ -342,7 +342,7 @@ export function DecisionsRisksTab({ decisions, repo, scrollTo }: Props) {
               className="v4-hub-decisions-title"
               id="v4-hub-decisions-renewals-title"
             >
-              Renewals
+              Продления
               {renewalCount !== null ? (
                 <span className="v4-hub-decisions-count">{renewalCount}</span>
               ) : null}

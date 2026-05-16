@@ -55,11 +55,11 @@ function formatDate(iso: string | undefined): string {
 function sourceLabel(tag: string): string {
   switch (tag) {
     case "brief":
-      return "Brief";
+      return "Бриф";
     case "commit":
-      return "Commit";
+      return "Коммит";
     case "adr":
-      return "ADR";
+      return "Арх. решение";
     default:
       return tag;
   }
