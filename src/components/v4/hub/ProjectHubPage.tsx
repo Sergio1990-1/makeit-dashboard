@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ProjectData } from "../../../types";
-import type { HubTab } from "../../../types/hub";
+import type { HubSection, HubTab } from "../../../types/hub";
 import { useProjectHub } from "../../../hooks/useProjectHub";
 import { unreadCount } from "../../../utils/lastVisitedStore";
 import { ProjectHubHeader } from "./ProjectHubHeader";
@@ -82,6 +82,18 @@ export function ProjectHubPage({ repo, project, onBackToList }: Props) {
     return isHubTab(raw) ? raw : "overview";
   });
 
+  // In-app deep-link target for the Decisions tab (FR-14, issue #413).
+  // OverviewTab's Risks/Commitments summaries call `onOpenTab("decisions",
+  // "<section>")`; this carries the originating section down to
+  // DecisionsRisksTab so it scrolls there instead of opening at the top.
+  // The `nonce` makes each request a fresh object even when the same
+  // section is re-requested, so the child's scroll effect re-fires.
+  const [pendingSection, setPendingSection] = useState<{
+    section: HubSection;
+    nonce: number;
+  } | null>(null);
+  const sectionNonceRef = useRef(0);
+
   // Mount cleanup: if the URL arrived with an invalid `subtab=foo`, strip
   // it now so subsequent pushState from the change-effect can't push a
   // history entry with the bogus value. replaceState (not pushState) — the
@@ -102,6 +114,10 @@ export function ProjectHubPage({ repo, project, onBackToList }: Props) {
   }, []);
 
   // Push URL whenever activeTab changes (skipping re-syncs from mount/popstate).
+  // Single writer of the `#section` hash too: an in-app Overview→Decisions
+  // deep-link carries `pendingSection`, so the pushed entry lands on the
+  // right section after refresh/share; every other tab switch drops any
+  // stale hash so a later non-Decisions tab can't keep `#risks` around.
   useEffect(() => {
     if (!didMountPushRef.current) {
       didMountPushRef.current = true;
@@ -111,7 +127,20 @@ export function ProjectHubPage({ repo, project, onBackToList }: Props) {
     lastSyncedSubtabRef.current = activeTab;
     const url = new URL(window.location.href);
     url.searchParams.set("subtab", activeTab);
-    window.history.pushState({ subtab: activeTab }, "", url.pathname + url.search);
+    const hash =
+      activeTab === "decisions" && pendingSection
+        ? `#${pendingSection.section}`
+        : "";
+    window.history.pushState(
+      { subtab: activeTab },
+      "",
+      url.pathname + url.search + hash,
+    );
+    // `pendingSection` is set together with `activeTab` in `openTab`, so
+    // this effect already sees the latest value on the same render; it is
+    // intentionally not a dependency (a later standalone section change
+    // must not push a second history entry on its own).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   // Popstate: re-read URL and sync activeTab. Reading `location.search`
@@ -131,6 +160,22 @@ export function ProjectHubPage({ repo, project, onBackToList }: Props) {
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // Tab switch with an optional target section (FR-14 in-app deep-link).
+  // Plain tab switches (Tabs bar, NBA/Pulse footers) pass no section and
+  // clear any stale pending one. Risks/Commitments footers pass their
+  // originating section so DecisionsRisksTab lands there. The URL hash is
+  // written by the subtab pushState effect below (single writer) so the
+  // pushed history entry already carries `#<section>` for refresh/share.
+  const openTab = useCallback((tab: HubTab, section?: HubSection) => {
+    if (tab === "decisions" && section) {
+      sectionNonceRef.current += 1;
+      setPendingSection({ section, nonce: sectionNonceRef.current });
+    } else {
+      setPendingSection(null);
+    }
+    setActiveTab(tab);
   }, []);
 
   // Back-to-list: strip `subtab` from URL with replaceState (no extra history
@@ -159,7 +204,7 @@ export function ProjectHubPage({ repo, project, onBackToList }: Props) {
       <ProjectHubHeader data={data} />
       <ProjectHubTabs
         active={activeTab}
-        onChange={setActiveTab}
+        onChange={openTab}
         inboxCount={inboxCount}
       />
       <div
@@ -178,13 +223,17 @@ export function ProjectHubPage({ repo, project, onBackToList }: Props) {
             />
           }
         >
-          {activeTab === "overview" && <OverviewTab data={data} onOpenTab={setActiveTab} />}
+          {activeTab === "overview" && <OverviewTab data={data} onOpenTab={openTab} />}
           {activeTab === "health" && <HealthTab repo={repo} project={project} />}
           {activeTab === "activity" && (
             <ActivityTab repo={repo} onVisited={handleActivityVisited} />
           )}
           {activeTab === "decisions" && (
-            <DecisionsRisksTab repo={repo} decisions={data.decisions} />
+            <DecisionsRisksTab
+              repo={repo}
+              decisions={data.decisions}
+              scrollTo={pendingSection}
+            />
           )}
           {activeTab === "delivery" && <DeliveryTab repo={repo} data={data} />}
         </Suspense>

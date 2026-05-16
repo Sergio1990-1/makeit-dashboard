@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type {
   Commitment,
+  HubSection,
   HubTab,
   NextBestAction,
   ProjectHubData,
@@ -10,9 +11,17 @@ import type {
 import { Icon } from "../../health/Icon";
 import type { IconName } from "../../health/Icon";
 
+/**
+ * Open a Hub tab, optionally landing on a specific anchored section
+ * (FR-14 in-app deep-link). The Risks/Commitments summaries pass a
+ * `section` so the Decisions tab scrolls to the originating block
+ * instead of opening at the top.
+ */
+type OpenTab = (tab: HubTab, section?: HubSection) => void;
+
 interface Props {
   data: ProjectHubData;
-  onOpenTab: (tab: HubTab) => void;
+  onOpenTab: OpenTab;
 }
 
 /**
@@ -61,7 +70,7 @@ export default OverviewTab;
 
 interface NbaBlockProps {
   nba: NextBestAction[];
-  onOpenTab: (tab: HubTab) => void;
+  onOpenTab: OpenTab;
 }
 
 function NbaBlock({ nba, onOpenTab }: NbaBlockProps) {
@@ -124,7 +133,7 @@ function NbaBlock({ nba, onOpenTab }: NbaBlockProps) {
 
 interface PulseSummaryProps {
   events: PulseEvent[];
-  onOpenTab: (tab: HubTab) => void;
+  onOpenTab: OpenTab;
 }
 
 function PulseSummary({ events, onOpenTab }: PulseSummaryProps) {
@@ -188,7 +197,7 @@ function PulseSummary({ events, onOpenTab }: PulseSummaryProps) {
 
 interface RisksSummaryProps {
   risks: Risk[];
-  onOpenTab: (tab: HubTab) => void;
+  onOpenTab: OpenTab;
 }
 
 function RisksSummary({ risks, onOpenTab }: RisksSummaryProps) {
@@ -242,7 +251,7 @@ function RisksSummary({ risks, onOpenTab }: RisksSummaryProps) {
         <EmptyState icon="check" text="Активных рисков нет" />
       )}
 
-      <FooterLink onClick={() => onOpenTab("decisions")} />
+      <FooterLink onClick={() => onOpenTab("decisions", "risks")} />
     </section>
   );
 }
@@ -253,7 +262,7 @@ function RisksSummary({ risks, onOpenTab }: RisksSummaryProps) {
 
 interface CommitmentsSummaryProps {
   commitments: Commitment[];
-  onOpenTab: (tab: HubTab) => void;
+  onOpenTab: OpenTab;
 }
 
 function CommitmentsSummary({
@@ -315,7 +324,7 @@ function CommitmentsSummary({
         <EmptyState icon="check-big" text="Все обещания в срок" />
       )}
 
-      <FooterLink onClick={() => onOpenTab("decisions")} />
+      <FooterLink onClick={() => onOpenTab("decisions", "commitments")} />
     </section>
   );
 }
