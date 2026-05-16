@@ -309,15 +309,13 @@ export async function saveTranscriptBrief(
   taskId: string,
   brief: string,
 ): Promise<void> {
-  // BEHAVIORAL DRIFT RECONCILED TOWARD THE BACKEND (#447) — runtime change.
-  // The frontend was sending `{ "brief": ... }`, but the backend
+  // Send the canonical contract key `content` (#447). The backend
   // `PUT /transcript/result/{job_id}` body is `TranscriptBriefUpdateRequest`
-  // = `{ "content": string }` (required, 1 ≤ len ≤ 1 MiB) in the generated
-  // snapshot. The old wire key (`brief`) does not match the backend
-  // contract; reconciled by sending the contract key `content`. The body
-  // is typed `TranscriptBriefUpdateRequest` (not `any`/cast) so any future
-  // backend rename/retyping fails `tsc`. This is the only runtime-affecting
-  // change in this migration — isolated here and flagged in the PR body.
+  // = `{ content: string }` (required, 1 ≤ len ≤ 1 MiB). Runtime is
+  // unchanged: the backend field declares `AliasChoices("content","brief")`,
+  // so the legacy `{ brief }` key this used to send was already accepted —
+  // this just aligns to the canonical key and types the body to the
+  // generated schema (not `any`/cast) so a future backend rename fails `tsc`.
   const body: TranscriptBriefUpdateRequest = { content: brief };
   const res = await fetch(
     `${PIPELINE_BASE_URL}/transcript/result/${encodeURIComponent(taskId)}`,
