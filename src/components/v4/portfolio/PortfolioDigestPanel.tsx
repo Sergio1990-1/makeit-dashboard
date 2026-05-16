@@ -44,6 +44,7 @@ import { renderMarkdownHtml } from "../../../utils/transcript-markdown";
 import {
   currentWeekKey,
   generatePortfolioDigest,
+  weekEndMs,
 } from "../../../utils/weeklyDigestGenerator";
 import { readFile } from "../../../utils/github-contents";
 
@@ -63,33 +64,6 @@ function portfolioDigestPath(weekKey: string): string {
 
 function cacheKey(weekKey: string): string {
   return `${CACHE_PREFIX}_${weekKey}`;
-}
-
-/**
- * Epoch ms at which a cached digest for `weekKey` stops being
- * authoritative: the end (Sunday 23:59:59.999 UTC) of that ISO week.
- *
- * Identical algorithm to the generator's internal `weekEndMs` (which is
- * not exported): ISO week 1 is the week containing Jan 4th; Monday of
- * week N is `week1Monday + (N-1)*7`; the week ends end-of-Sunday. A past
- * week's timestamp is already in the past, but the cache reader keeps a
- * cached past-week value anyway (the underlying activity is frozen).
- */
-function weekEndMs(weekKey: string): number {
-  const m = weekKey.match(/^(\d{4})-(\d{2})$/);
-  if (!m) return 0;
-  const year = Number(m[1]);
-  const week = Number(m[2]);
-  const jan4 = new Date(Date.UTC(year, 0, 4));
-  const jan4Day = jan4.getUTCDay() || 7; // Sun=7
-  const week1Monday = new Date(jan4);
-  week1Monday.setUTCDate(jan4.getUTCDate() - (jan4Day - 1));
-  const weekMonday = new Date(week1Monday);
-  weekMonday.setUTCDate(week1Monday.getUTCDate() + (week - 1) * 7);
-  const weekSundayEnd = new Date(weekMonday);
-  weekSundayEnd.setUTCDate(weekMonday.getUTCDate() + 6);
-  weekSundayEnd.setUTCHours(23, 59, 59, 999);
-  return weekSundayEnd.getTime();
 }
 
 interface CachedDigest {
@@ -220,12 +194,10 @@ export function PortfolioDigestPanel({ week }: Props) {
     const reqId = ++reqRef.current;
     try {
       // The real Epic-012 Task-02 generator: rebuilds + re-persists
-      // `digests/{weekKey}-portfolio.md` and returns the entry. NOTE: the
-      // portfolio path currently ignores `force` — it re-stitches from
-      // the per-project digest caches and always re-persists the
-      // portfolio file, but does not force-refresh the per-project
-      // inputs. `{ force: true }` is passed for intent / forward-compat;
-      // threading it to per-project loadDigest is tracked in #415.
+      // `digests/{weekKey}-portfolio.md` and returns the entry. `force`
+      // is now threaded to each per-project `loadDigest` (#415), so a
+      // Regenerate re-reads the committed per-project digests instead of
+      // stitching from possibly-stale localStorage caches.
       const entry = await generatePortfolioDigest(weekKey, { force: true });
       if (reqRef.current !== reqId) return;
       // Refresh preview in place (no page reload) and overwrite the
