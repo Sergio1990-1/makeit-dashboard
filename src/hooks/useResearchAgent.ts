@@ -9,6 +9,7 @@ import {
 import type {
   ResearchStartRequest,
   ResearchAgentStatus,
+  ResearchAgentKind,
   ResearchHistoryItem,
 } from "../utils/pipeline";
 
@@ -55,11 +56,11 @@ export function useResearchAgent(): UseResearchAgentReturn {
   // Cleanup on unmount.
   useEffect(() => () => stopPolling(), [stopPolling]);
 
-  const startPolling = useCallback((id: string) => {
+  const startPolling = useCallback((id: string, agent: ResearchAgentKind) => {
     stopPolling();
     pollRef.current = setInterval(async () => {
       try {
-        const status = await fetchResearchStatus(id);
+        const status = await fetchResearchStatus(id, agent);
         setActiveRun(status);
         if (status.status === "done" || status.status === "error") {
           stopPolling();
@@ -82,9 +83,9 @@ export function useResearchAgent(): UseResearchAgentReturn {
     setError(null);
     try {
       const { id } = await startResearchAgent(req);
-      const status = await fetchResearchStatus(id);
+      const status = await fetchResearchStatus(id, "research");
       setActiveRun(status);
-      startPolling(id);
+      startPolling(id, "research");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start Research agent");
     } finally {
@@ -98,9 +99,9 @@ export function useResearchAgent(): UseResearchAgentReturn {
     setError(null);
     try {
       const { id } = await startDiscoveryAgent(project);
-      const status = await fetchResearchStatus(id);
+      const status = await fetchResearchStatus(id, "discovery");
       setActiveRun(status);
-      startPolling(id);
+      startPolling(id, "discovery");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start Discovery agent");
     } finally {

@@ -22,10 +22,15 @@ export function StartResearchModal({ defaultRepo, onClose, onStart, starting }: 
   const [description, setDescription] = useState("");
   const [region, setRegion] = useState("");
 
-  const canSubmit = project.trim() !== "" && !starting;
+  const [touched, setTouched] = useState(false);
+  // Backend requires a non-empty product_description (Field(..., min_length=1)).
+  // Block submit instead of sending undefined → 422.
+  const descMissing = description.trim() === "";
+  const canSubmit = project.trim() !== "" && !descMissing && !starting;
 
   const handleSubmit = () => {
-    if (!canSubmit) return;
+    setTouched(true);
+    if (project.trim() === "" || descMissing || starting) return;
     onStart(project, description.trim(), region);
   };
 
@@ -53,15 +58,23 @@ export function StartResearchModal({ defaultRepo, onClose, onStart, starting }: 
           </label>
 
           <label className="srm-label">
-            Описание продукта
+            Описание продукта <span className="srm-required">*</span>
             <textarea
               className="srm-textarea"
               placeholder="Кратко опишите продукт и целевую аудиторию для более точного анализа..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              onBlur={() => setTouched(true)}
               rows={3}
+              aria-invalid={touched && descMissing}
             />
-            <span className="srm-hint">Необязательно. Помогает агенту точнее определить конкурентов.</span>
+            {touched && descMissing ? (
+              <span className="srm-hint srm-hint--error" role="alert">
+                Укажите описание продукта — без него агент не может запуститься.
+              </span>
+            ) : (
+              <span className="srm-hint">Обязательно. Помогает агенту точнее определить конкурентов.</span>
+            )}
           </label>
 
           <label className="srm-label">

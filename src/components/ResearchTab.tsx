@@ -378,7 +378,9 @@ export function ResearchTab({ repos }: Props) {
     setShowModal(false);
     await agent.launchResearch({
       project,
-      product_description: description || undefined,
+      // Modal guarantees a non-empty description before calling onStart;
+      // backend requires it (Field(..., min_length=1)).
+      product_description: description,
       region: region || undefined,
     });
   };
