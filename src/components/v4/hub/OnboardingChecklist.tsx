@@ -1,4 +1,4 @@
-import type { HealthFinding } from "../../../types/health";
+import type { FindingStatus, HealthFinding } from "../../../types/health";
 import { isOnboardingRuleId } from "../../../utils/onboardingReadinessRules";
 
 /**
@@ -34,6 +34,17 @@ const ICON_LABEL: Record<IconKind, string> = {
   fail: "Не выполнено",
   unknown: "Не удалось проверить",
   skipped: "Пропущено",
+};
+
+// Explicit, exhaustive FindingStatus → IconKind map. The two unions are
+// identical today, but keying by `FindingStatus` makes a new status member a
+// compile error here until it's deliberately mapped, rather than silently
+// passing through an implicit cross-type assignment.
+const STATUS_ICON: Record<FindingStatus, IconKind> = {
+  pass: "pass",
+  fail: "fail",
+  unknown: "unknown",
+  skipped: "skipped",
 };
 
 export function OnboardingChecklist({ findings }: Props) {
@@ -100,16 +111,18 @@ export function OnboardingChecklist({ findings }: Props) {
         }}
       >
         {onboarding.map((f) => {
-          const kind: IconKind = f.status;
+          const kind: IconKind = STATUS_ICON[f.status];
           // Compose a tooltip: detail (always) + remediation (only when
           // failing — pass / skipped don't need a fix). Falsy guard so we
           // never render the literal string «undefined» in `title`.
+          // Native `title` collapses whitespace and ignores `\n`, so join
+          // with a visible inline separator instead of blank lines.
           const tooltipParts: string[] = [];
           if (f.detail) tooltipParts.push(f.detail);
           if (f.status === "fail" && f.remediation) {
             tooltipParts.push(`Как починить: ${f.remediation}`);
           }
-          const tooltip = tooltipParts.join("\n\n");
+          const tooltip = tooltipParts.join(" — ");
 
           return (
             <li
