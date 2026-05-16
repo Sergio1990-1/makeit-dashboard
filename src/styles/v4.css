@@ -9718,3 +9718,75 @@ ul.v4-rsh-list {
   font-size: 12px;
   font-weight: 700;
 }
+
+/* Portfolio Surface — PortfolioDigestPanel (Epic-010 Task-05) */
+.v4-pdigest-body {
+  padding: 12px 16px 16px;
+}
+.v4-pdigest-md {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--v4-ink-900);
+  overflow-wrap: anywhere;
+}
+.v4-pdigest-md :first-child {
+  margin-top: 0;
+}
+.v4-pdigest-md :last-child {
+  margin-bottom: 0;
+}
+.v4-pdigest-md h1,
+.v4-pdigest-md h2,
+.v4-pdigest-md h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--v4-ink-900);
+  margin: 12px 0 6px;
+}
+.v4-pdigest-md h1 {
+  font-size: 14px;
+}
+.v4-pdigest-md p,
+.v4-pdigest-md ul,
+.v4-pdigest-md ol {
+  margin: 6px 0;
+}
+.v4-pdigest-md ul,
+.v4-pdigest-md ol {
+  padding-left: 18px;
+}
+.v4-pdigest-md li {
+  margin: 2px 0;
+}
+.v4-pdigest-md a {
+  color: var(--v4-accent-600);
+}
+.v4-pdigest-md code {
+  font-family: var(--v4-mono);
+  font-size: 12px;
+  background: var(--v4-surface-2);
+  border-radius: var(--v4-r-sm);
+  padding: 1px 5px;
+}
+.v4-pdigest-md blockquote {
+  margin: 8px 0;
+  padding: 4px 12px;
+  border-left: 3px solid var(--v4-line-strong);
+  color: var(--v4-ink-700);
+}
+.v4-pdigest-error-t {
+  font-weight: 600;
+  color: var(--v4-danger-700);
+}
+.v4-pdigest-error-m {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--v4-ink-500);
+  overflow-wrap: anywhere;
+}
+.v4-pdigest-modal {
+  max-width: 720px;
+}
+.v4-pdigest-modal .v4-modal-body .v4-pdigest-md {
+  font-size: 13px;
+}
