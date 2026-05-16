@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { RateLimitPill } from "./RateLimitPill";
 
 interface Props {
   /** Crumb segments — last is bold (current page) */
@@ -82,6 +83,7 @@ export function Topbar({
             GitHub API · live
           </span>
         )}
+        <RateLimitPill />
       </div>
       <div className="v4-top-right">
         <form
