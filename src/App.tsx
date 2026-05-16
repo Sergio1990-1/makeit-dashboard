@@ -564,6 +564,7 @@ function AppInner({ onFirstFetchDone }: AppInnerProps = {}) {
           onLogout={handleLogout}
           onSettings={() => setSettingsOpen(true)}
           onBurger={() => setSideOpen(true)}
+          onOpenSearch={() => setPaletteOpen(true)}
         />
 
         {error && <div className="v4-error">{error}</div>}

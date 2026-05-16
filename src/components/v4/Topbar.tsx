@@ -21,6 +21,10 @@ interface Props {
   onSettings?: () => void;
   /** Mobile sidebar toggle */
   onBurger?: () => void;
+  /** Opens the global Command Palette. On phones the full search field is
+   *  hidden, so a dedicated icon button (visible ≤700px) calls this — it is
+   *  the only touch entry point to search, since ⌘K is keyboard-only. */
+  onOpenSearch?: () => void;
   /** Optional search submit. The ⌘K shortcut now opens the global Command
    *  Palette instead of focusing this input — it remains a passive search
    *  field for click-and-type usage. */
@@ -37,6 +41,7 @@ export function Topbar({
   onLogout,
   onSettings,
   onBurger,
+  onOpenSearch,
   onSearch,
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -86,6 +91,18 @@ export function Topbar({
         <RateLimitPill />
       </div>
       <div className="v4-top-right">
+        <button
+          type="button"
+          className="v4-ibtn v4-search-trigger"
+          onClick={onOpenSearch}
+          aria-label="Поиск"
+          title="Поиск (Command Palette)"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>
+        </button>
         <form
           className="v4-search"
           onSubmit={(e) => {
