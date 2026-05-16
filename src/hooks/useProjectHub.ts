@@ -12,6 +12,7 @@ import type {
 import {
   listRecentCommits,
   readMarkdown,
+  resolveRepoSlug,
   type CommitInfo,
 } from "../utils/github-contents";
 import { extractDecisions } from "../utils/decisionLogExtractor";
@@ -35,7 +36,6 @@ import {
   getClaudeKey,
   getProjectFinance,
   getToken,
-  GITHUB_OWNER,
 } from "../utils/config";
 
 // Stable empty stubs so consumers can rely on reference equality. The Hub
@@ -63,8 +63,7 @@ const DORA_WINDOW_DAYS = 30;
 async function fetchDoraPRs(repo: string): Promise<DoraPullRequest[]> {
   const token = getToken();
   if (!token) return [];
-  const slug = repo.includes("/") ? repo : `${GITHUB_OWNER}/${repo}`;
-  const [owner, name] = slug.split("/");
+  const [owner, name] = resolveRepoSlug(repo).split("/");
   try {
     const prs = await listMergedPRsInWindow(
       token,
