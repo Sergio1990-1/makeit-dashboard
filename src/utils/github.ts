@@ -1,4 +1,4 @@
-import type { Issue, IssueStatus, Priority, Phase, ProjectData, Milestone, CommitActivity } from "../types";
+import type { Issue, IssueStatus, Priority, Complexity, Phase, ProjectData, Milestone, CommitActivity } from "../types";
 import { getProjects, GITHUB_OWNER, GITHUB_PROJECT_NUMBER, DEFAULT_PROJECTS, loadFinances, getToken } from "./config";
 import { dispatchExternalAuthLost } from "./external-auth-events";
 
@@ -173,6 +173,18 @@ function parsePriority(labels: string[]): Priority | null {
   return null;
 }
 
+// Mirror of parsePriority for the pipeline complexity bucket. The pipeline
+// writes one of `complexity-auto` / `complexity-assisted` / `complexity-manual`;
+// projects where classify never ran carry no such label → null (rendered as
+// "unclassified" in the Hub task matrix, which is correct, not a bug).
+function parseComplexity(labels: string[]): Complexity | null {
+  for (const label of labels) {
+    const match = label.match(/^complexity-(auto|assisted|manual)$/i);
+    if (match) return match[1].toLowerCase() as Complexity;
+  }
+  return null;
+}
+
 function parseStatus(statusField: string | null): IssueStatus {
   if (!statusField) return "Todo";
   const lower = statusField.toLowerCase();
@@ -326,6 +338,7 @@ export async function fetchAllProjectItems(token: string): Promise<Issue[]> {
         url: node.content.url ?? "",
         status,
         priority: parsePriority(labels),
+        complexity: parseComplexity(labels),
         labels,
         repo,
         milestoneTitle: node.content.milestone?.title ?? null,
