@@ -179,17 +179,40 @@ export async function verifyFindings(
   const verifiedAt0 = new Date().toISOString();
 
   // Build prior-verdict cache from an optional previous report. Key is
-  // `file|line|description_hash`. Legacy results without a description_hash
-  // are skipped — better to lose one run's cache than silently inherit a
-  // verdict for a now-different bug at the same location. Only successful
-  // results populate the cache.
+  // `file|line|description_hash`. Only successful results populate the cache.
+  //
+  // The Auditor backend does NOT persist or echo `description_hash` (it is
+  // not part of its VerificationResult model), so any prior report fetched
+  // from a server round-trip has `description_hash` absent on every result.
+  // Skipping those (the old behavior) permanently emptied the cross-run
+  // cache and re-spent the Claude budget. We instead recover the hash from
+  // the current finding at `finding_index` — but ONLY when that index can
+  // be trusted to still point at the same finding:
+  //   1. the finding set is the same size (`total_findings` unchanged), and
+  //   2. the finding now at `finding_index` has the same file:line as `r`.
+  // Both must hold. `finding_index` is an index into the PREVIOUS run's
+  // findings; if the set changed size or the slot moved, the index is
+  // stale and recovering off it would key an old verdict under an
+  // unrelated finding's hash — a silent false cache hit (a different bug
+  // inheriting a stale verdict, the exact thing `description_hash` exists
+  // to prevent). On any mismatch we skip: conservative, loses this run's
+  // cache rather than risk a wrong verdict. When `description_hash` IS
+  // present (in-memory report re-stamped by this client) the fast path is
+  // unchanged.
+  const sameFindingSet = priorReport?.total_findings === findings.length;
   const priorCache = new Map<string, VerificationResult>();
   if (priorReport?.results) {
     for (const r of priorReport.results) {
       if (r.error) continue;
       if (r.line == null) continue;
-      if (!r.description_hash) continue;
-      priorCache.set(`${r.file}|${r.line}|${r.description_hash}`, r);
+      let hash = r.description_hash;
+      if (!hash) {
+        if (!sameFindingSet) continue;
+        const f = findings[r.finding_index];
+        if (!f || f.file !== r.file || f.line !== r.line) continue;
+        hash = descriptionHash(f.description);
+      }
+      priorCache.set(`${r.file}|${r.line}|${hash}`, r);
     }
   }
 
