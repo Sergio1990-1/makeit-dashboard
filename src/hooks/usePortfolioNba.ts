@@ -142,6 +142,22 @@ export interface UsePortfolioNbaState {
 }
 
 /**
+ * Stable content signature of a per-project NBA input list. Used to
+ * dedupe the passive auto-aggregate (and to mark a manual regenerate's
+ * input as already-aggregated so it doesn't redundantly re-fire).
+ * `undefined` → `null` (no input collected yet).
+ */
+function nbaInputSignature(list: NbaResult[] | undefined): string | null {
+  if (list === undefined) return null;
+  return JSON.stringify(
+    list.map((p) => ({
+      f: p.budgetFallback,
+      a: p.actions.map((x) => `${x.id}|${x.severity}|${x.title}`),
+    })),
+  );
+}
+
+/**
  * @param perProjectActions  Per-project `NbaResult[]` the caller already
  *   computed. The engine aggregates these locally. Undefined/empty →
  *   graceful empty state (full live collection is Task-09, out of scope).
@@ -167,6 +183,10 @@ export function usePortfolioNba(
   // resolves late.
   const inFlightRef = useRef(false);
   const mountedRef = useRef(true);
+  // Signature of the input last aggregated (manually or passively) so the
+  // passive auto-aggregate skips a redundant recompute after a manual
+  // regenerate already produced the result for that same input.
+  const lastAutoSigRef = useRef<string | null>(null);
   useEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -206,6 +226,9 @@ export function usePortfolioNba(
         const fresh = readCachedEnvelope();
         setWeekStartMs(fresh?.weekStartMs ?? null);
         setHasCache(fresh !== null);
+        // This input is now aggregated — when the prop settles to the
+        // same content the passive effect must not redundantly recompute.
+        lastAutoSigRef.current = nbaInputSignature(input);
       } catch (e) {
         if (!mountedRef.current) return;
         setError(
@@ -233,16 +256,7 @@ export function usePortfolioNba(
   // the same input is skipped, and a same-signature recompute would be a
   // no-op cache hit anyway. Not triggered while a manual regenerate is in
   // flight, and never overrides a regenerate's fresher result.
-  const autoSig =
-    perProjectActions === undefined
-      ? null
-      : JSON.stringify(
-          perProjectActions.map((p) => ({
-            f: p.budgetFallback,
-            a: p.actions.map((x) => `${x.id}|${x.severity}|${x.title}`),
-          })),
-        );
-  const lastAutoSigRef = useRef<string | null>(null);
+  const autoSig = nbaInputSignature(perProjectActions);
   useEffect(() => {
     if (autoSig === null) return;
     // Empty input → nothing to aggregate; leave the cache untouched so an
