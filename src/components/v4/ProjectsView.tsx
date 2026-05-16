@@ -11,6 +11,7 @@ import { PortfolioPromiseTracker } from "./portfolio/PortfolioPromiseTracker";
 import { PortfolioDigestPanel } from "./portfolio/PortfolioDigestPanel";
 import { calcRiskScore } from "../../utils/riskScore";
 import { usePortfolioNbaCollection } from "../../hooks/usePortfolioNbaCollection";
+import { usePortfolioHealthCollection } from "../../hooks/usePortfolioHealthCollection";
 import { collectCachedPerProjectNba } from "../../utils/portfolioNbaCollector";
 import { useToast } from "./toastContext";
 
@@ -435,6 +436,20 @@ export function ProjectsView({
     return collectCachedPerProjectNba(projects.map((p) => p.repo));
   }, [refreshLive, projects]);
 
+  // Portfolio health grades (#456). Pure render-path read of the per-repo
+  // health caches `useProjectHealth` persists for free when a Hub is
+  // opened — no network, no N+1. Repos not visited this session are absent
+  // from the map → the Scorecard keeps its muted "—" (strictly better than
+  // the previous always-"—", not a per-project portfolio fetch).
+  // `selectedRepo` is the volatile re-collect trigger: this component
+  // stays mounted across Hub visits, so without it a grade cached during
+  // a visit would only surface after a full reload (project set is
+  // hardcoded → a repo-set-only key never changes in-session).
+  const { grades: healthGrades } = usePortfolioHealthCollection(
+    projects,
+    selectedRepo,
+  );
+
   if (selectedRepo) {
     return (
       <ProjectHubPage
@@ -643,7 +658,7 @@ export function ProjectsView({
                     tier={SCORECARD_TIER}
                     phase={p.phase}
                     client={p.client}
-                    grade={null}
+                    grade={healthGrades[p.repo] ?? null}
                     kpis={scorecardKpis(p)}
                     drift={{
                       // True days-since-last-commit — DriftDots labels
