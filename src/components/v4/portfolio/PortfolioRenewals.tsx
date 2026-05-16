@@ -224,7 +224,7 @@ export function PortfolioRenewals({ onOpenProject }: Props) {
             <path d="M12 8v4l3 3" />
             <circle cx="12" cy="12" r="9" />
           </svg>
-          Обновления и сроки
+          Продления (SSL / домен / контракт / лицензии)
           {top.length > 0 && <span className="v4-tag">{top.length}</span>}
           {loading && top.length > 0 && (
             <span className="v4-tag">обновляется…</span>
@@ -236,7 +236,7 @@ export function PortfolioRenewals({ onOpenProject }: Props) {
             className="v4-btn v4-ai-btn"
             onClick={refresh}
             disabled={loading}
-            title="Сбросить кэш и перечитать сроки по всем репо"
+            title="Сбросить кэш и перечитать продления по всем репо"
           >
             {loading ? "Загрузка…" : "Обновить"}
           </button>
@@ -250,7 +250,7 @@ export function PortfolioRenewals({ onOpenProject }: Props) {
             role="alert"
           >
             <div className="v4-orphan-error-t">
-              Не удалось загрузить сроки
+              Не удалось загрузить продления
             </div>
             <div className="v4-orphan-error-m">{error}</div>
           </div>
@@ -258,7 +258,7 @@ export function PortfolioRenewals({ onOpenProject }: Props) {
           <RenewalsSkeleton />
         ) : showEmpty ? (
           <div className="v4-empty v4-ai-empty v4-promise-empty">
-            Ближайших обновлений нет
+            Нет docs/renewals.yaml в проектах
           </div>
         ) : (
           top.map((r) => (
