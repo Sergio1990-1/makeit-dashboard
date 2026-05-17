@@ -5,6 +5,31 @@
    moliyakg/project/MakeIT Dashboard.html
    ══════════════════════════════════════════ */
 
+/* ══════════════════════════════════════════
+   RESPONSIVE BREAKPOINT CONTRACT  (issue #490)
+   Canonical tokens — use ONLY these widths for
+   new or migrated media queries:
+     bp-sm   480px   compact phone
+     bp-md   768px   phone ↔ tablet
+     bp-lg  1100px   tablet ↔ desktop  (freeze line)
+   Rules:
+   - CSS custom properties cannot be used inside
+     @media, so this is a documented value contract,
+     not runtime variables.
+   - max-width snaps UP to the nearest token at or
+     above it (mobile layer only widens, never
+     narrows — no viewport loses its mobile fix).
+   - min-width desktop enhancements snap to bp-lg
+     (≥1100 must stay pixel-identical).
+   - Desktop ≥1100px is FROZEN: never add or lower a
+     max-width >1100, nor a min-width that shifts the
+     ≥1100 rendering.
+   Known exceptions (intentionally outside the token
+   set — collapsing them would alter desktop ≥1100):
+     • v4.css        @media (min-width: 1280px) delivery split
+     • v4-health.css @media (max-width: 1180px) Hub page
+   ══════════════════════════════════════════ */
+
 :root {
   /* Surfaces / ink */
   --v4-bg: #F6F7F9;
@@ -6721,7 +6746,7 @@ ul.v4-rsh-list {
   color: var(--v4-accent-500);
 }
 
-@media (max-width: 700px) {
+@media (max-width: 768px) {
   .v4-spc-card-head {
     grid-template-columns: 1fr;
     gap: 10px;
@@ -6795,7 +6820,7 @@ ul.v4-rsh-list {
   .v4-tpc-submit { margin-left: 0; }
 }
 .v4-burger { display: none; }
-@media (max-width: 700px) {
+@media (max-width: 768px) {
   .v4-content { padding: 0 14px max(28px, env(safe-area-inset-bottom)); }
   .v4-top { padding: env(safe-area-inset-top) 14px 0; }
   .v4-kpi-row { grid-template-columns: 1fr; }
@@ -7736,7 +7761,7 @@ ul.v4-rsh-list {
 @media (max-width: 1100px) {
   .v4-msgrid, .v4-msgrid--compact { grid-template-columns: repeat(2, 1fr); }
 }
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .v4-msgrid, .v4-msgrid--compact { grid-template-columns: 1fr; }
   .v4-mshero { grid-template-columns: 1fr; }
   .v4-msgantt-body { grid-template-columns: 220px 1fr; }
@@ -7889,7 +7914,7 @@ ul.v4-rsh-list {
    viewports (375–720px). Goal: nothing horizontally clipped except the
    Gantt chart (which scrolls intentionally).
    ──────────────────────────────────────── */
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   /* TOPBAR — drop search + breadcrumb prefix + live pill text */
   .v4-top { padding: 0 12px; gap: 8px; }
   .v4-crumbs { font-size: 12px; gap: 4px; flex-wrap: nowrap; overflow: hidden; }
@@ -8828,7 +8853,7 @@ ul.v4-rsh-list {
   font-weight: 600;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .v4-mspopup-bd { padding: 16px; align-items: flex-end; }
   .v4-mspopup {
     max-height: calc(100vh - 32px);
@@ -8872,7 +8897,7 @@ ul.v4-rsh-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-@media (min-width: 1024px) {
+@media (min-width: 1100px) {
   .v4-portfolio-widgets {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -9076,7 +9101,7 @@ ul.v4-rsh-list {
 }
 .v4-hub-tab-stub a:hover { text-decoration: underline; }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .v4-hub-header {
     grid-template-columns: 1fr;
     grid-template-areas: "id" "health" "nba";
@@ -9102,7 +9127,7 @@ ul.v4-rsh-list {
   grid-template-columns: 1fr;
   gap: 16px;
 }
-@media (min-width: 1024px) {
+@media (min-width: 1100px) {
   .v4-hub-overview {
     grid-template-columns: 1fr 1fr;
   }
@@ -9414,7 +9439,7 @@ ul.v4-rsh-list {
   white-space: nowrap;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 768px) {
   .v4-hub-mini { min-height: 0; }
   .v4-hub-pulse-item,
   .v4-hub-risk-item,
@@ -9462,6 +9487,8 @@ ul.v4-rsh-list {
   gap: 24px;
 }
 
+/* Breakpoint contract exception (issue #490): 1280 is >1100;
+   snapping it to a token would alter desktop ≥1100 rendering. */
 @media (min-width: 1280px) {
   .delivery-tab .delivery-row--split {
     grid-template-columns: 1fr 1fr;
@@ -9704,7 +9731,7 @@ ul.v4-rsh-list {
   gap: 16px;
   align-items: start;
 }
-@media (min-width: 960px) {
+@media (min-width: 1100px) {
   .v4-hub-decisions {
     grid-template-columns: 200px minmax(0, 1fr);
     gap: 24px;
@@ -9728,7 +9755,7 @@ ul.v4-rsh-list {
   border-radius: 12px;
   background: var(--v4-paper);
 }
-@media (min-width: 960px) {
+@media (min-width: 1100px) {
   .v4-hub-decisions .v4-hub-decisions-nav {
     flex-direction: column;
     flex-wrap: nowrap;
