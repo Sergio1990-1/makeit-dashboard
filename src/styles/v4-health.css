@@ -2,6 +2,11 @@
    PROJECT HEALTH — vibrant redesign on v4
    ══════════════════════════════════════════ */
 
+/* Responsive breakpoint contract (issue #490) defined in
+   src/styles/v4.css. Canonical tokens: 480 / 768 / 1100.
+   The 1180px query below is a documented exception: it is
+   >1100, so snapping it would alter desktop ≥1100. */
+
 /* Page container */
 .ph-page {
   padding: 18px 28px 60px;
@@ -1015,12 +1020,14 @@
 .ph-state-banner span { color: rgba(255,255,255,0.55); font-weight: 400; text-transform: none; letter-spacing: 0; font-family: var(--v4-sans); }
 
 /* responsive */
+/* Breakpoint contract exception (issue #490): 1180 is >1100;
+   snapping it to a token would alter desktop ≥1100 rendering. */
 @media (max-width: 1180px) {
   .ph-page { grid-template-columns: 1fr; }
   .ph-side { position: static; }
   .ph-kpi-row { grid-template-columns: 1fr; }
 }
-@media (max-width: 760px) {
+@media (max-width: 768px) {
   .ph-fi-top { grid-template-columns: 1fr; }
   .ph-fi-actions { flex-direction: row; align-items: center; }
   .ph-fi-rem { margin-left: 0; }
@@ -1251,7 +1258,7 @@
   display: flex; gap: 8px;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 768px) {
   .ph-bulk-row-main { grid-template-columns: auto 1fr auto; }
   .ph-bulk-row-main .ph-sev { grid-column: 1 / -1; }
   .ph-bulk-row-status { grid-column: 1 / -1; }

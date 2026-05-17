@@ -1,6 +1,8 @@
 /* ──────────────────────────────────────────────────────────────────
    Pipeline · Active Tasks redesign — Variant C (dense mono CI-style)
    Tokens: --v4-* from src/styles/v4.css
+   Responsive breakpoint contract (issue #490) defined in
+   src/styles/v4.css. Canonical tokens: 480 / 768 / 1100.
    ────────────────────────────────────────────────────────────────── */
 
 @keyframes pl2-pulse {
@@ -584,11 +586,11 @@
 }
 
 /* ── Responsive ─────────────────────────────────────────────── */
-@media (max-width: 767px) {
+@media (max-width: 768px) {
   .pl2-c-phase-name { display: none; }
   .pl2-title { font-size: 12px; }
 }
-@media (max-width: 479px) {
+@media (max-width: 480px) {
   .pl2-card { padding-right: 36px; }
   .pl2-c-stat--model,
   .pl2-c-stat--attempt { display: none; }
