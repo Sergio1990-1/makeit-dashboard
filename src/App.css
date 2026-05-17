@@ -1511,6 +1511,10 @@ body::after {
 .dialog-footer--end { justify-content: flex-end; }
 
 /* Dialog: generating state */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 .dialog-spinner-wrap { text-align: center; padding: var(--sp-10) 0; }
 .dialog-spinner {
   width: 32px;
