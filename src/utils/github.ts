@@ -296,13 +296,13 @@ export async function fetchAllProjectItems(token: string): Promise<Issue[]> {
   let hasNext = true;
   let page = 0;
 
-  // Hard ceiling guards against infinite paging on a runaway tracker.
-  // GitHub Projects V2 returns items in insertion order (oldest first),
-  // so when this cap was 30 and the tracker held >3000 items, the most
-  // recently added issues — including freshly pipeline-closed ones —
-  // were silently dropped. Bumped well above the current 3441 with
-  // headroom; add a single warning if we ever truly exhaust it.
-  const MAX_PAGES = 60; // 60 × 100 = 6000 items
+  // Sanity guard against runaway pagination — trust hasNextPage as the
+  // real stop condition. Projects V2 returns items oldest-first, so any
+  // numeric cap silently drops the most recently added issues (we hit
+  // this twice: cap 30 with 3000 items, cap 60 with 6000+ items, every
+  // time freshly-created audit/QA milestones disappeared from modals
+  // while the count headers stayed correct via REPO_INFO_QUERY).
+  const MAX_PAGES = 500;
   while (hasNext && page < MAX_PAGES) {
     const data: ProjectItemsResponse = await graphql<ProjectItemsResponse>(token, PROJECT_ITEMS_QUERY, {
       owner: GITHUB_OWNER,

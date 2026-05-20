@@ -245,13 +245,13 @@ export async function fetchAllProjectItems(): Promise<Issue[]> {
   let hasNext = true;
   let page = 0;
 
-  // Hard ceiling guards against runaway tracker pagination. Project V2
-  // returns items in insertion order (oldest first). When the cap was
-  // 20, the most recently added 1400+ items (including freshly
-  // pipeline-closed ones from today) were silently dropped — the
-  // dashboard then showed empty "Закрытые pipeline за неделю". Bumped
-  // well above the current ~3444 items with headroom.
-  const MAX_PAGES = 60;
+  // Sanity guard against runaway pagination — trust hasNextPage as the
+  // real stop condition. Projects V2 returns items oldest-first, so any
+  // numeric cap silently drops the most recently added issues (we hit
+  // this twice: cap 20 with 1400+ items, cap 60 with 6000+ items, every
+  // time freshly-created issues disappeared from the dashboard while
+  // milestone count headers stayed correct via REPO_INFO_QUERY).
+  const MAX_PAGES = 500;
   while (hasNext && page < MAX_PAGES) {
     const data: ProjectItemsResponse = await graphql<ProjectItemsResponse>(PROJECT_ITEMS_QUERY, {
       owner: GITHUB_OWNER,
