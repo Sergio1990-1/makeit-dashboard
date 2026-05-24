@@ -326,7 +326,7 @@ query($owner: String!, $repo: String!) {
     description
     openIssueCount: issues(states: OPEN) { totalCount }
     closedIssueCount: issues(states: CLOSED) { totalCount }
-    openMilestones: milestones(first: 20, states: OPEN, orderBy: {field: DUE_DATE, direction: ASC}) {
+    openMilestones: milestones(first: 100, states: OPEN, orderBy: {field: DUE_DATE, direction: ASC}) {
       nodes {
         title
         description
@@ -337,7 +337,7 @@ query($owner: String!, $repo: String!) {
         openIssues: issues(states: OPEN) { totalCount }
       }
     }
-    closedMilestones: milestones(first: 10, states: CLOSED, orderBy: {field: DUE_DATE, direction: DESC}) {
+    closedMilestones: milestones(first: 50, states: CLOSED, orderBy: {field: DUE_DATE, direction: DESC}) {
       nodes {
         title
         description
