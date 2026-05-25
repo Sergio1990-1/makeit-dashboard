@@ -10,7 +10,7 @@ import "../../styles/v4-quality.css";
 
 export function QualityTab() {
   const { data, annotations, loading, error, unavailable, isStale, refresh, reloadAnnotations } = useCodexQuality();
-  const [mode, setMode] = useState<PeriodMode>("12w");
+  const [mode, setMode] = useState<PeriodMode>("30d");
   const [showAddModal, setShowAddModal] = useState(false);
 
   const handleAddAnnotation = async (p: AnnotationCreatePayload) => {
@@ -101,23 +101,45 @@ export function QualityTab() {
       <div className="pageH">
         <div>
           <h1>Качество кода</h1>
-          <div className="sub">
-            Доля PR с критическими/высокими замечаниями <b>chatgpt-codex-connector[bot]</b> от общего числа merged PR · события на временной оси
-          </div>
+          <div className="sub">Доля PR с критическими/высокими замечаниями review</div>
         </div>
         <div className="ctrls">
           <div className="seg">
-            <button className={mode === "30d" ? "active" : ""} onClick={() => setMode("30d")}>30 дней · По дням</button>
-            <button className={mode === "12w" ? "active" : ""} onClick={() => setMode("12w")}>12 недель · По неделям</button>
+            <button
+              className={mode === "30d" ? "active" : ""}
+              onClick={() => setMode("30d")}
+              title="30 дней · По дням"
+            >
+              30 дн.
+            </button>
+            <button
+              className={mode === "12w" ? "active" : ""}
+              onClick={() => setMode("12w")}
+              title="12 недель · По неделям"
+            >
+              12 нед.
+            </button>
           </div>
           <button className="btn-add-event" onClick={() => setShowAddModal(true)}>+ событие</button>
-          <div style={{ fontFamily: "var(--mk-font-mono)", fontSize: 10, color: "var(--mk-ink-500)", textAlign: "right" }}>
-            <div>Синхр. ежедневно · 03:00 Бали</div>
-            <div style={{ color: "var(--mk-ink-400)" }}>
-              последняя: {new Date(data.generated_at).toLocaleString("ru")}
-            </div>
+          <div
+            title={`Синхр. ежедневно · 03:00 Бали\nпоследняя: ${new Date(data.generated_at).toLocaleString("ru")}`}
+            style={{ fontFamily: "var(--mk-font-mono)", fontSize: 10, color: "var(--mk-ink-500)", whiteSpace: "nowrap" }}
+          >
+            ↻ {new Date(data.generated_at).toLocaleString("ru", {
+              day: "2-digit",
+              month: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
           </div>
-          <button className="btn-refresh" onClick={() => refresh()} disabled={loading}>↻ Сейчас</button>
+          <button
+            className="btn-refresh"
+            onClick={() => refresh()}
+            disabled={loading}
+            title="Обновить сейчас"
+          >
+            ↻
+          </button>
         </div>
       </div>
 
