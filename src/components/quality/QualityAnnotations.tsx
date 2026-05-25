@@ -25,6 +25,12 @@ export function QualityAnnotations({ annotations, mode, bucketCount }: Props) {
               <span style={{ opacity: 0.8, whiteSpace: "normal" }}>{a.desc}</span>
               <div className="annot-tip-date">
                 {new Date(a.occurred_at).toLocaleDateString("ru")}
+                {a.device_hint && (
+                  <span className="annot-tip-device" title="устройство, с которого добавлено">
+                    {" · "}
+                    {a.device_hint}
+                  </span>
+                )}
               </div>
             </div>
           </div>

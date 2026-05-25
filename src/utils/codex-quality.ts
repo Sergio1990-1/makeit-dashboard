@@ -19,6 +19,10 @@ declare global {
     __MAKEIT_CONFIG__?: {
       QUALITY_URL?: string;
       PIPELINE_URL?: string;
+      /** Base for the annotations mini-API (GET/POST/DELETE).
+       *  Defaults to `/api/annotations` — VPS reverse-proxy to the
+       *  annotations-api container. Same-origin keeps Basic Auth cookies
+       *  and CSRF posture identical to the rest of the dashboard. */
       ANNOT_URL?: string;
     };
   }
@@ -42,8 +46,17 @@ function qualityUrl(): string {
   return window.__MAKEIT_CONFIG__?.QUALITY_URL ?? "/data/codex-quality.json";
 }
 
+/**
+ * Base URL for the annotations mini-API. List/create/delete all hang off
+ * this — see `annotations-api/main.py` for the FastAPI contract.
+ *
+ * Historical note: list previously pointed at a static `/data/annotations.json`
+ * file, and writes went to the Pipeline Mac via `pipelineUrl()`. Both are
+ * gone — annotations now live on the VPS so events authored on one device
+ * show up on every other device.
+ */
 function annotUrl(): string {
-  return window.__MAKEIT_CONFIG__?.ANNOT_URL ?? "/data/annotations.json";
+  return window.__MAKEIT_CONFIG__?.ANNOT_URL ?? "/api/annotations";
 }
 
 function pipelineUrl(): string {
@@ -83,6 +96,9 @@ export async function fetchQualityData(): Promise<QualityPayload> {
 
 export async function fetchAnnotations(): Promise<Annotation[]> {
   const r = await fetch(annotUrl(), { cache: "no-cache" });
+  // 404 / HTML fallback both mean "mini-API not deployed yet" — treat as
+  // empty list so the rest of the UI still renders. Only escalate on
+  // genuine 5xx / parse errors so the dashboard surfaces real outages.
   if (r.status === 404) return [];
   if (!r.ok) throw new Error(`Annotations fetch failed: ${r.status}`);
   try {
@@ -112,7 +128,7 @@ export async function forceQualityRefresh(): Promise<QualityPayload> {
 export async function createAnnotation(
   p: AnnotationCreatePayload,
 ): Promise<Annotation> {
-  const r = await fetch(`${pipelineUrl()}/annotations`, {
+  const r = await fetch(annotUrl(), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(p),
@@ -120,16 +136,24 @@ export async function createAnnotation(
   if (r.status === 404) {
     throw new QualityBackendUnavailableError("Annotations endpoint not available");
   }
+  if (r.status === 413) {
+    // Mini-API caps payload at ~4KB (see annotations-api/main.py). Surface
+    // a friendly message rather than the raw "Payload too large".
+    throw new Error("Событие слишком большое (лимит ~4KB на запись)");
+  }
   if (!r.ok) {
     const err = await r.json().catch(() => ({}));
-    throw new Error(err.message || `Create failed: ${r.status}`);
+    throw new Error(err.message || err.detail || `Create failed: ${r.status}`);
   }
   return r.json();
 }
 
 export async function deleteAnnotation(id: string): Promise<void> {
-  const r = await fetch(`${pipelineUrl()}/annotations/${id}`, {
+  const r = await fetch(`${annotUrl()}/${id}`, {
     method: "DELETE",
   });
+  // 404 here is fine — idempotent delete (e.g. someone else deleted it
+  // between list refresh and your click). Only escalate on real errors.
+  if (r.status === 404) return;
   if (!r.ok) throw new Error(`Delete failed: ${r.status}`);
 }

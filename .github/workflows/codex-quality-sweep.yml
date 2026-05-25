@@ -1,0 +1,117 @@
+name: codex-quality-sweep
+
+# Nightly aggregation of Codex review findings across all MakeIT repos.
+# Output is published as a single JSON to the VPS where nginx serves it
+# under /data/codex-quality.json — the «Качество кода» tab reads it.
+#
+# Scheduling: cron is approximate on GitHub Actions (free-tier ≈10-20 min
+# drift). 19:17 UTC ≈ 03:17 Bali. The "*:17" minute is deliberate: avoids
+# the on-the-hour herd, raising the chance the run actually starts within
+# our window.
+#
+# Manual trigger: workflow_dispatch is enabled so you can publish on
+# demand after a settings change or a backfill.
+
+on:
+  schedule:
+    - cron: "17 19 * * *"
+  workflow_dispatch:
+
+# Cancel any in-flight run if a manual one is dispatched — we never want
+# two concurrent rsyncs into the same /data/codex-quality.json on the VPS.
+concurrency:
+  group: codex-quality-sweep
+  cancel-in-progress: true
+
+permissions:
+  contents: read  # Only need to check out the script itself.
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install --no-cache-dir 'httpx==0.27.2'
+
+      - name: Run sweep
+        env:
+          # Fine-grained PAT — must have PR Read + Contents Read on every
+          # repo listed in scripts/sweep_codex_quality.py REPOS. Default
+          # GITHUB_TOKEN is scoped to *this* repo only and would silently
+          # return empty results for the other 11 — we made that mistake
+          # once already.
+          GH_FINE_GRAINED_PAT: ${{ secrets.MAKEIT_FINE_GRAINED_PAT }}
+          OUT_DIR: out
+        run: python scripts/sweep_codex_quality.py
+
+      - name: Sanity-check output
+        # Belt-and-suspenders: refuse to publish a structurally broken
+        # JSON. Catches issues like the script silently writing `null` or
+        # losing the schema_version on a bad refactor.
+        run: |
+          python - <<'PY'
+          import json, sys, pathlib
+          p = pathlib.Path("out/codex-quality.json")
+          assert p.exists(), "sweep did not write the output file"
+          d = json.loads(p.read_text())
+          assert d.get("schema_version") == 1, f"bad schema_version: {d.get('schema_version')!r}"
+          assert "buckets" in d and "30d" in d["buckets"] and "12w" in d["buckets"], "missing buckets"
+          print(f"OK: {p}, {p.stat().st_size} bytes, {len(d.get('repo_status', {}))} repos")
+          PY
+
+      - name: Set up SSH for VPS publish
+        # Key + known_hosts both come from secrets so we never trust DNS
+        # mid-job. MAKEIT_VPS_HOST is just the bare hostname/IP (no user,
+        # no port — those come from VPS_USER and default port 22).
+        env:
+          DEPLOY_KEY: ${{ secrets.MAKEIT_VPS_DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ secrets.MAKEIT_VPS_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Publish to VPS (atomic via tmp + mv)
+        # rsync isn't atomic by default — it can leave a half-written
+        # JSON visible to nginx mid-transfer. We rsync to a .tmp path
+        # then `mv` on the VPS, which is atomic on a single filesystem
+        # (POSIX rename(2)). nginx serves either the old file or the new
+        # one, never a partial.
+        #
+        # The trailing `|| { rm -f .tmp; exit 1; }` cleans up the
+        # half-uploaded file if `mv` itself fails (transient FS issue,
+        # ENOSPC, permission flip after a VPS reconfig). Without this,
+        # `.tmp` would persist across runs and — depending on nginx
+        # config — could be served on its own URL.
+        env:
+          VPS_HOST: ${{ secrets.MAKEIT_VPS_HOST }}
+          VPS_USER: ${{ secrets.MAKEIT_VPS_USER }}
+          VPS_DATA_DIR: ${{ secrets.MAKEIT_VPS_DATA_DIR }}
+        run: |
+          : "${VPS_USER:=root}"
+          : "${VPS_DATA_DIR:=/opt/apps/makeit-stack/web/data}"
+          REMOTE="${VPS_USER}@${VPS_HOST}"
+          TMP="${VPS_DATA_DIR}/codex-quality.json.tmp"
+          FINAL="${VPS_DATA_DIR}/codex-quality.json"
+          rsync -az --no-perms --no-owner --no-group --chmod=F644 \
+            out/codex-quality.json \
+            "${REMOTE}:${TMP}"
+          ssh "${REMOTE}" "mv -- '${TMP}' '${FINAL}' || { rm -f -- '${TMP}'; exit 1; }"
+
+      - name: Upload artifact (debugging fallback)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-quality-${{ github.run_id }}
+          path: out/codex-quality.json
+          if-no-files-found: ignore
+          retention-days: 14

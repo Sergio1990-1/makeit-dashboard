@@ -1,5 +1,10 @@
 import { useState } from "react";
 import type { AnnotationCreatePayload, AnnotationCategory } from "../../types/quality";
+import {
+  getDeviceHint,
+  setDeviceHint,
+  DEVICE_HINT_MAX_LEN,
+} from "../../utils/device-hint";
 
 interface Props {
   onSubmit: (p: AnnotationCreatePayload) => Promise<void>;
@@ -61,6 +66,11 @@ export function AnnotationModal({ onSubmit, onClose }: Props) {
   const [category, setCategory] = useState<AnnotationCategory>("skill");
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
+  // Device hint is prefilled from localStorage so returning users never
+  // re-type it. Empty string is a valid choice — user can clear it once
+  // and we'll stop annotating their events with a device label. See
+  // `src/utils/device-hint.ts` for why this is just a UX label, not auth.
+  const [deviceHint, setDeviceHintState] = useState(() => getDeviceHint());
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -71,12 +81,18 @@ export function AnnotationModal({ onSubmit, onClose }: Props) {
     setErrorMsg(null);
     try {
       const occurredAt = new Date(date + "T00:00:00Z").toISOString();
+      const trimmedHint = deviceHint.trim().slice(0, DEVICE_HINT_MAX_LEN);
+      // Persist whatever the user typed (including empty — that's how they
+      // opt out). Done before the network call so even if the POST fails
+      // their preference sticks for the next attempt.
+      setDeviceHint(trimmedHint);
       await onSubmit({
         occurred_at: occurredAt,
         category,
         scope: "global",
         title: title.trim(),
         desc: desc.trim(),
+        ...(trimmedHint ? { device_hint: trimmedHint } : {}),
       });
       onClose();
     } catch (err) {
@@ -134,6 +150,19 @@ export function AnnotationModal({ onSubmit, onClose }: Props) {
             onChange={(e) => setDesc(e.target.value)}
             maxLength={600}
             rows={3}
+            style={inputStyle}
+          />
+        </label>
+        <label style={labelStyle}>
+          <span style={labelTextStyle}>
+            Устройство (опционально, для атрибуции)
+          </span>
+          <input
+            value={deviceHint}
+            onChange={(e) => setDeviceHintState(e.target.value)}
+            maxLength={DEVICE_HINT_MAX_LEN}
+            placeholder="Mac Sergey"
+            aria-label="Устройство"
             style={inputStyle}
           />
         </label>
