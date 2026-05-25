@@ -12,7 +12,8 @@ export function QualityKPIs({ data, mode }: Props) {
   const totalP0 = buckets.reduce((a, b) => a + b.with_p0, 0);
   const totalP1 = buckets.reduce((a, b) => a + b.with_p1_only, 0);
   const totalP2 = buckets.reduce((a, b) => a + b.with_p2_only, 0);
-  const dirty = totalP0 + totalP1 + totalP2;
+  // Новая метрика «грязный»: только P0+P1 (нит-P2 — фон, не блокирует ship).
+  const dirty = totalP0 + totalP1;
   const dirtyPct = total ? Math.round((dirty / total) * 100) : 0;
   const p1Pct = total ? Math.round((totalP1 / total) * 100) : 0;
   const p2Pct = total ? Math.round((totalP2 / total) * 100) : 0;
@@ -33,17 +34,17 @@ export function QualityKPIs({ data, mode }: Props) {
           </div>
         </div>
       )}
-      <div className="kpi" style={kpiStyle(0)}>
+      <div className="kpi" style={kpiStyle(0)} title="PR с P0 или P1 находкой codex (P2-нит не считается).">
         <div className="kpi-lbl">% грязных PR · {periodLabel}</div>
         <div className="kpi-v">{dirtyPct}%</div>
-        <div className="kpi-sub">{dirty} из {total} PR</div>
+        <div className="kpi-sub">{dirty} из {total} PR · только P0/P1</div>
       </div>
-      <div className="kpi" style={kpiStyle(1)}>
+      <div className="kpi" style={kpiStyle(1)} title="Доля PR с хотя бы одной P1 находкой codex.">
         <div className="kpi-lbl">% P1 · {periodLabel}</div>
         <div className="kpi-v" style={{ color: "var(--mk-quality-p1-text)" }}>{p1Pct}%</div>
       </div>
-      <div className="kpi" style={kpiStyle(2)}>
-        <div className="kpi-lbl">% P2 · {periodLabel}</div>
+      <div className="kpi" style={kpiStyle(2)} title="Фоновый шум — стиль, нейминг, мелкие нитпики. Не блокирует ship.">
+        <div className="kpi-lbl">% P2 · {periodLabel} <span style={{ opacity: 0.6 }}>· фон</span></div>
         <div className="kpi-v" style={{ color: "var(--mk-quality-p2-text)" }}>{p2Pct}%</div>
       </div>
       <div className="kpi" style={kpiStyle(3)}>

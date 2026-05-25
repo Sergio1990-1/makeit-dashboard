@@ -27,9 +27,35 @@ export interface QualityChartProps {
   buckets: QualityBucket[];
   labels: string[];
   compact: boolean;
+  /** Окно скользящего среднего (баров). Дефолт: 7 для main, без overlay для compact. */
+  rollingWindow?: number;
 }
 
 const LOW_SAMPLE = 8;
+
+/** «Чистый PR» по новой метрике = без P0 и без P1. P2-нит не считается грязью.
+ * Возвращает null если в бакете нет PR (чтобы не загрязнять rolling avg нулями). */
+function cleanPct(b: QualityBucket): number | null {
+  if (b.total_pr === 0) return null;
+  const dirty = b.with_p0 + b.with_p1_only;
+  return ((b.total_pr - dirty) / b.total_pr) * 100;
+}
+
+/** Скользящее среднее «% чистых PR» по последним `window` бакетам.
+ * Пустые бакеты (нет PR) пропускаем — иначе выходные/праздники дают
+ * ложные провалы в линии. Возвращаем null если в окне совсем нет данных. */
+function computeRollingAvg(
+  buckets: QualityBucket[],
+  window: number,
+): Array<number | null> {
+  return buckets.map((_, i) => {
+    const start = Math.max(0, i - window + 1);
+    const slice = buckets.slice(start, i + 1);
+    const pcts = slice.map(cleanPct).filter((p): p is number => p !== null);
+    if (pcts.length === 0) return null;
+    return pcts.reduce((a, b) => a + b, 0) / pcts.length;
+  });
+}
 
 function niceCeil(n: number): number {
   if (n <= 5) return 5;
@@ -51,7 +77,12 @@ interface TipRefs {
   dirty?: HTMLElement;
 }
 
-export function QualityChart({ buckets, labels, compact }: QualityChartProps) {
+export function QualityChart({
+  buckets,
+  labels,
+  compact,
+  rollingWindow,
+}: QualityChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
   const tipRefsObj = useRef<TipRefs>({});
@@ -60,6 +91,46 @@ export function QualityChart({ buckets, labels, compact }: QualityChartProps) {
     const max = Math.max(1, ...buckets.map((b) => b.total_pr));
     return niceCeil(max);
   }, [buckets]);
+
+  // Окно для скользящего среднего. Главный график: 7 (для 30d) / 3 (для 12w);
+  // compact-мини в карточках overlay не показывает (мелко и шумно).
+  const effectiveWindow = useMemo(() => {
+    if (compact) return 0;
+    if (rollingWindow !== undefined) return rollingWindow;
+    return buckets.length >= 20 ? 7 : 3;
+  }, [compact, rollingWindow, buckets.length]);
+
+  const rollingAvgPct = useMemo(
+    () => (effectiveWindow > 0 ? computeRollingAvg(buckets, effectiveWindow) : []),
+    [buckets, effectiveWindow],
+  );
+
+  // Точки SVG-линии overlay: Y инвертирован (100% наверху), null значения
+  // прерывают линию (выходные/пустые дни). Координаты в долях 0–1.
+  const linePoints = useMemo(() => {
+    if (effectiveWindow === 0 || buckets.length === 0) return "";
+    const segments: string[] = [];
+    let current: string[] = [];
+    rollingAvgPct.forEach((pct, i) => {
+      if (pct === null) {
+        if (current.length > 1) segments.push(current.join(" "));
+        current = [];
+        return;
+      }
+      const x = ((i + 0.5) / buckets.length) * 100;
+      const y = 100 - pct;
+      current.push(`${x.toFixed(2)},${y.toFixed(2)}`);
+    });
+    if (current.length > 1) segments.push(current.join(" "));
+    return segments.join(" M ");
+  }, [rollingAvgPct, buckets.length, effectiveWindow]);
+
+  const latestRollingPct = useMemo(() => {
+    for (let i = rollingAvgPct.length - 1; i >= 0; i--) {
+      if (rollingAvgPct[i] !== null) return rollingAvgPct[i];
+    }
+    return null;
+  }, [rollingAvgPct]);
 
   const handleEnter = (
     b: QualityBucket,
@@ -72,8 +143,9 @@ export function QualityChart({ buckets, labels, compact }: QualityChartProps) {
 
     const crit = b.with_p0 + b.with_p1_only;
     const clean = Math.max(0, b.total_pr - crit - b.with_p2_only);
+    // Новая метрика «грязный» = только P0/P1 (P2-нит — фон, не блокирует ship).
     const dirtyPct =
-      b.total_pr > 0 ? ((crit + b.with_p2_only) / b.total_pr) * 100 : 0;
+      b.total_pr > 0 ? (crit / b.total_pr) * 100 : 0;
 
     // textContent only — no innerHTML (perf rule #4)
     if (refs.label) refs.label.textContent = label;
@@ -191,6 +263,89 @@ export function QualityChart({ buckets, labels, compact }: QualityChartProps) {
           </div>
         );
       })}
+
+      {/* SVG overlay: 7-day rolling avg «% чистых PR» (без P0/P1).
+          Правая Y-ось 0–100%. Pointer-events: none — чтобы не ломать hover баров. */}
+      {effectiveWindow > 0 && linePoints && (
+        <>
+          <svg
+            className="chart-trend-overlay"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              pointerEvents: "none",
+              overflow: "visible",
+            }}
+          >
+            {/* Опорные линии 50% и 100% — eдва видны, но дают шкалу */}
+            <line
+              x1="0" y1="50" x2="100" y2="50"
+              stroke="var(--mk-line-soft, rgba(127,127,127,0.18))"
+              strokeWidth="0.15"
+              strokeDasharray="0.6 0.6"
+              vectorEffect="non-scaling-stroke"
+            />
+            <polyline
+              points={linePoints}
+              fill="none"
+              stroke="var(--mk-success-100, #16a34a)"
+              strokeWidth="2"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+              opacity="0.9"
+            />
+          </svg>
+          {/* Правая Y-ось (0–100%) + бейдж с актуальным значением */}
+          <div
+            className="chart-trend-axis"
+            style={{
+              position: "absolute",
+              right: -36,
+              top: 0,
+              bottom: 0,
+              width: 32,
+              fontFamily: "var(--mk-font-mono)",
+              fontSize: 10,
+              color: "var(--mk-success-100, #16a34a)",
+              opacity: 0.85,
+              pointerEvents: "none",
+            }}
+          >
+            <div style={{ position: "absolute", top: -2 }}>100%</div>
+            <div style={{ position: "absolute", top: "calc(50% - 6px)" }}>50%</div>
+            <div style={{ position: "absolute", bottom: -2 }}>0%</div>
+          </div>
+          {latestRollingPct !== null && (
+            <div
+              className="chart-trend-badge"
+              style={{
+                position: "absolute",
+                right: 4,
+                top: `calc(${100 - latestRollingPct}% - 10px)`,
+                padding: "2px 6px",
+                background: "var(--mk-success-100, #16a34a)",
+                color: "white",
+                fontFamily: "var(--mk-font-mono)",
+                fontSize: 10,
+                fontWeight: 700,
+                borderRadius: 4,
+                pointerEvents: "none",
+                whiteSpace: "nowrap",
+                transform: "translateY(-50%)",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
+              }}
+            >
+              {latestRollingPct.toFixed(0)}% чистых · {effectiveWindow}
+              {buckets.length >= 20 ? "д" : "нед"} avg
+            </div>
+          )}
+        </>
+      )}
 
       {/* Pre-created tooltip — refs обновляют только textContent (perf rule #4) */}
       <div

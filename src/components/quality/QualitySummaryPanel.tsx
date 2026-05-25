@@ -34,9 +34,23 @@ export function QualitySummaryPanel({ data, annotations, mode }: Props) {
           <QualityAnnotations annotations={annotations} mode={mode} bucketCount={buckets.length} />
         </div>
         <div className="chart-legend">
-          <span><i className="dot dot-p1" /> P1 (критическое)</span>
-          <span><i className="dot dot-p2" /> P2 (высокое)</span>
-          <span><i className="dot dot-clean" /> чистые PR</span>
+          <span><i className="dot dot-p1" /> P0 / P1 (грязные)</span>
+          <span><i className="dot dot-p2" /> P2 (нит)</span>
+          <span><i className="dot dot-clean" /> чистые</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <i
+              style={{
+                display: "inline-block",
+                width: 18,
+                height: 2,
+                background: "var(--mk-success-100, #16a34a)",
+                borderRadius: 2,
+              }}
+            />
+            {mode === "30d"
+              ? "7-дневное скользящее среднее «% PR без P0/P1»"
+              : "3-недельное скользящее среднее «% PR без P0/P1»"}
+          </span>
         </div>
       </div>
       <QualityKPIs data={data} mode={mode} />
