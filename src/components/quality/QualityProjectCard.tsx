@@ -57,7 +57,8 @@ export function QualityProjectCard({ repo, client, data, mode, index }: Props) {
   const totalP0 = repoData.buckets.reduce((a, b) => a + b.with_p0, 0);
   const totalP1 = repoData.buckets.reduce((a, b) => a + b.with_p1_only, 0);
   const totalP2 = repoData.buckets.reduce((a, b) => a + b.with_p2_only, 0);
-  const totalDirty = totalP0 + totalP1 + totalP2;
+  // «Грязный» по новой метрике: только P0+P1 (P2-нит — фон, ship не блокирует).
+  const totalDirty = totalP0 + totalP1;
 
   if (totalPR < 3) {
     return (
