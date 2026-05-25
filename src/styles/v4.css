@@ -59,18 +59,18 @@
   --v4-accent-700: var(--mk-brand-700);
 
   /* Semantic */
-  --v4-success-50: var(--mk-green-v4-50);
-  --v4-success-100: var(--mk-green-v4-100);
-  --v4-success-500: var(--mk-green-v4-500);
-  --v4-success-700: var(--mk-green-v4-700);
-  --v4-warn-50: var(--mk-orange-v4-50);
-  --v4-warn-100: var(--mk-orange-v4-100);
-  --v4-warn-500: var(--mk-orange-v4-500);
-  --v4-warn-700: var(--mk-orange-v4-700);
-  --v4-danger-50: var(--mk-red-v4-50);
-  --v4-danger-100: var(--mk-red-v4-100);
-  --v4-danger-500: var(--mk-red-v4-500);
-  --v4-danger-700: var(--mk-red-v4-700);
+  --v4-success-50: var(--mk-success-soft);
+  --v4-success-100: var(--mk-success-100);
+  --v4-success-500: var(--mk-success);
+  --v4-success-700: var(--mk-success-strong);
+  --v4-warn-50: var(--mk-warn-soft);
+  --v4-warn-100: var(--mk-warn-100);
+  --v4-warn-500: var(--mk-warn);
+  --v4-warn-700: var(--mk-warn-strong);
+  --v4-danger-50: var(--mk-danger-soft);
+  --v4-danger-100: var(--mk-danger-100);
+  --v4-danger-500: var(--mk-danger);
+  --v4-danger-700: var(--mk-danger-strong);
   --v4-purple-50: var(--mk-purple-50);
   --v4-purple-500: var(--mk-purple-500);
   --v4-purple-700: var(--mk-purple-700);

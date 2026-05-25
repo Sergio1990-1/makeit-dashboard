@@ -507,7 +507,7 @@
 /* ── Sample cards ─────────────────────────────────────── */
 .sg-card-legacy {
   background: var(--mk-paper);
-  border: 1px solid var(--mk-line-subtle);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 16px;
   padding: 10px 14px;
   box-shadow: var(--mk-shadow-card);
@@ -560,7 +560,7 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  border-radius: var(--mk-r-xs);
+  border-radius: 4px;
   font-size: var(--mk-text-xs);
   font-weight: 600;
   font-family: var(--mk-font-mono);

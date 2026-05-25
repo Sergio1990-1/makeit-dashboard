@@ -5,24 +5,21 @@
 
    Canonical token prefix: --mk-*
    Legacy --color-* (App.css) and --v4-* (v4.css) remain as
-   bridge aliases that delegate to these tokens, so existing
-   styles continue to render unchanged while migration runs.
+   bridge aliases that delegate to these tokens.
 
-   Editing rules:
-   - Never reintroduce dark theme overrides here.
-   - Divergent legacy values (e.g. legacy success #059669 vs
-     v4 success #12B76A) are kept as separate raw slots until
-     the styleguide pass resolves them. Marked with TODO.
-   - When consolidating a token, remove the legacy slot and
-     point both bridges at the unified --mk-* slot.
+   ─── Editing rules ──────────────────────────────────────────
+   • Never reintroduce dark theme overrides here.
+   • For transparent / tinted variants — prefer
+       color-mix(in srgb, var(--mk-*) 20%, transparent)
+     in component CSS over adding new --mk-*-tint slots.
+   • Add a new token only if it will be referenced in 2+ files
+     OR encodes a semantic that's not derivable.
+   • If you see a TODO comment — finish or remove it before
+     merging the next migration PR.
    ══════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Raw palette ─────────────────────────────────────────
-     Hue ramps. Use semantic tokens below in components,
-     not these raw slots. */
-
-  /* Brand blue (aligned across legacy + v4) */
+  /* ── Brand (blue) ────────────────────────────────────── */
   --mk-brand-50: #EEF4FF;
   --mk-brand-100: #DCE7FF;
   --mk-brand-400: #3B82F6;
@@ -30,137 +27,85 @@
   --mk-brand-600: #1D4ED8;
   --mk-brand-700: #1E40AF;
 
-  /* Success greens — TODO: consolidate (#059669 legacy vs #12B76A v4) */
-  --mk-green-legacy-400: #10B981;
-  --mk-green-legacy-500: #059669;
-  --mk-green-v4-50: #ECFDF3;
-  --mk-green-v4-100: #D1FADF;
-  --mk-green-v4-500: #12B76A;
-  --mk-green-v4-700: #067647;
+  /* ── Semantic accent ─────────────────────────────────── */
+  --mk-primary: var(--mk-brand-500);
+  --mk-primary-active: var(--mk-brand-600);
+  --mk-on-primary: #FFFFFF;
 
-  /* Danger reds — TODO: consolidate (#DC2626 legacy vs #EF4444 v4) */
-  --mk-red-legacy-500: #DC2626;
-  --mk-red-v4-50: #FEF2F2;
-  --mk-red-v4-100: #FEE4E2;
-  --mk-red-v4-500: #EF4444;
-  --mk-red-v4-700: #B91C1C;
+  /* ── Status (raw base + soft + strong tints) ─────────── */
+  --mk-success: #12B76A;
+  --mk-success-soft: #ECFDF3;
+  --mk-success-strong: #067647;
+  --mk-success-100: #D1FADF;          /* used by bridge --v4-success-100 */
 
-  /* Warning oranges — TODO: consolidate (#D97706 legacy vs #F79009 v4) */
-  --mk-orange-legacy-500: #D97706;
-  --mk-orange-v4-50: #FFFAEB;
-  --mk-orange-v4-100: #FEDF89;
-  --mk-orange-v4-500: #F79009;
-  --mk-orange-v4-700: #B54708;
-  --mk-orange-bright-500: #F97316;
-  --mk-orange-bright-700: #C2410C;
+  --mk-danger: #EF4444;
+  --mk-danger-soft: #FEF2F2;
+  --mk-danger-strong: #B91C1C;
+  --mk-danger-100: #FEE4E2;           /* used by bridge --v4-danger-100 */
 
-  /* Caution yellow */
-  --mk-yellow-500: #EAB308;
+  --mk-warn: #F79009;
+  --mk-warn-soft: #FFFAEB;
+  --mk-warn-strong: #B54708;
+  --mk-warn-100: #FEDF89;              /* used by bridge --v4-warn-100 */
 
-  /* Purple */
+  /* ── Auxiliary palettes (used by Pipeline + Bizproc) ─── */
   --mk-purple-50: #F5F0FF;
   --mk-purple-500: #7C3AED;
   --mk-purple-700: #5B21B6;
 
-  /* Sky */
   --mk-sky-50: #E0F2FE;
   --mk-sky-500: #0EA5E9;
   --mk-sky-700: #0369A1;
 
-  /* Cyan (legacy semantic) */
-  --mk-cyan-500: #06B6D4;
+  --mk-orange-bright-500: #F97316;    /* used by --v4-orange-500 + severity-high */
+  --mk-orange-bright-700: #C2410C;
 
-  /* Neutral / gray ramp (light theme) */
-  --mk-gray-0: #F6F7F9;          /* page background */
-  --mk-gray-50: #F4F5F8;         /* alt surface */
-  --mk-gray-100: #EDEFF3;        /* hover / divider strong */
-  --mk-gray-200: #E4E8EF;        /* default border */
-  --mk-gray-300: #C5CCDA;        /* disabled text / muted ink */
-  --mk-gray-400: #94A0B8;        /* placeholder ink */
-  --mk-gray-500: #6B7691;        /* secondary ink */
-  --mk-gray-600: #4A5570;        /* primary muted ink */
-  --mk-gray-700: #2F3850;        /* body ink */
-  --mk-gray-800: #1B2235;        /* strong ink */
-  --mk-gray-900: #0E1320;        /* heading ink */
+  /* ── Surfaces ────────────────────────────────────────── */
+  --mk-bg: #F6F7F9;
+  --mk-paper: #FFFFFF;
+  --mk-surface-2: #F4F5F8;
+  --mk-surface-3: #EDEFF3;
 
-  /* ── Surfaces ─────────────────────────────────────────── */
-  --mk-bg: var(--mk-gray-0);              /* page background */
-  --mk-paper: #FFFFFF;                    /* cards, panels */
-  --mk-surface-2: var(--mk-gray-50);      /* nested surface */
-  --mk-surface-3: var(--mk-gray-100);     /* sunken / hovered */
-  --mk-surface-frosty: rgba(255, 255, 255, 0.85);
+  /* ── Ink (text) ──────────────────────────────────────── */
+  --mk-ink-900: #0E1320;
+  --mk-ink-800: #1B2235;
+  --mk-ink-700: #2F3850;
+  --mk-ink-600: #4A5570;
+  --mk-ink-500: #6B7691;
+  --mk-ink-400: #94A0B8;
+  --mk-ink-300: #C5CCDA;
 
-  /* ── Ink (text) ───────────────────────────────────────── */
-  --mk-ink-900: var(--mk-gray-900);       /* headings */
-  --mk-ink-800: var(--mk-gray-800);       /* body strong */
-  --mk-ink-700: var(--mk-gray-700);       /* body */
-  --mk-ink-600: var(--mk-gray-600);       /* body muted */
-  --mk-ink-500: var(--mk-gray-500);       /* secondary */
-  --mk-ink-400: var(--mk-gray-400);       /* tertiary / labels */
-  --mk-ink-300: var(--mk-gray-300);       /* disabled */
-  --mk-ink-faint: rgba(0, 0, 0, 0.3);
-
-  /* ── Borders / lines ──────────────────────────────────── */
-  --mk-line: var(--mk-gray-200);
+  /* ── Lines (borders) ─────────────────────────────────── */
+  --mk-line: #E4E8EF;
   --mk-line-soft: #EEF1F6;
   --mk-line-strong: #D6DBE5;
-  --mk-line-subtle: rgba(0, 0, 0, 0.06);
-  --mk-line-hairline: rgba(0, 0, 0, 0.12);
 
-  /* ── Semantic accents ─────────────────────────────────── */
-  --mk-primary: var(--mk-brand-500);
-  --mk-primary-hover: var(--mk-brand-400);
-  --mk-primary-active: var(--mk-brand-600);
-  --mk-on-primary: #FFFFFF;
+  /* ── Priority palette (portfolio tasks) ──────────────── */
+  --mk-priority-p1: #EF4444;
+  --mk-priority-p2: #F79009;
+  --mk-priority-p3: #2563EB;
+  --mk-priority-p4: #94A0B8;
 
-  /* ── Status (light tints + base) ──────────────────────── */
-  --mk-success: var(--mk-green-v4-500);
-  --mk-success-soft: var(--mk-green-v4-50);
-  --mk-success-strong: var(--mk-green-v4-700);
+  /* ── Severity palette (code quality / audit) ─────────── */
+  --mk-severity-critical: #EF4444;
+  --mk-severity-high: #F97316;
+  --mk-severity-medium: #EAB308;
+  --mk-severity-low: #2563EB;
 
-  --mk-danger: var(--mk-red-v4-500);
-  --mk-danger-soft: var(--mk-red-v4-50);
-  --mk-danger-strong: var(--mk-red-v4-700);
-
-  --mk-warn: var(--mk-orange-v4-500);
-  --mk-warn-soft: var(--mk-orange-v4-50);
-  --mk-warn-strong: var(--mk-orange-v4-700);
-
-  --mk-caution: var(--mk-yellow-500);
-  --mk-review: var(--mk-purple-500);
-  --mk-info: var(--mk-sky-500);
-
-  /* ── Priority palette (portfolio tasks) ───────────────── */
-  --mk-priority-p1: var(--mk-red-v4-500);
-  --mk-priority-p2: var(--mk-orange-v4-500);
-  --mk-priority-p3: var(--mk-brand-500);
-  --mk-priority-p4: var(--mk-gray-400);
-
-  /* ── Severity palette (code quality, audit findings) ──── */
-  --mk-severity-critical: var(--mk-red-v4-500);
-  --mk-severity-high: var(--mk-orange-bright-500);
-  --mk-severity-medium: var(--mk-yellow-500);
-  --mk-severity-low: var(--mk-brand-500);
-
-  /* ── Glow tints (subtle ambient highlights) ───────────── */
+  /* ── Ambient highlights ──────────────────────────────── */
   --mk-glow-primary: rgba(37, 99, 235, 0.15);
   --mk-glow-success: rgba(18, 183, 106, 0.15);
-  --mk-glow-danger: rgba(239, 68, 68, 0.15);
-  --mk-glow-warn: rgba(247, 144, 9, 0.15);
+  --mk-glow-danger:  rgba(239, 68, 68, 0.15);
+  --mk-overlay: rgba(15, 23, 42, 0.45);
+  --mk-neutral-tint-2: rgba(15, 23, 42, 0.05);
 
-  /* ── Commit heatmap (4 buckets) ───────────────────────── */
+  /* ── Commit-heatmap intensity steps (light → dark blue) ─ */
   --mk-heat-1: #DCE7FF;
   --mk-heat-2: #92B0F5;
   --mk-heat-3: #3F73E8;
   --mk-heat-4: var(--mk-brand-700);
 
-  /* ── Neutral tints (translucent overlays) ─────────────── */
-  --mk-neutral-tint-1: rgba(15, 23, 42, 0.03);
-  --mk-neutral-tint-2: rgba(15, 23, 42, 0.05);
-  --mk-neutral-tint-3: rgba(15, 23, 42, 0.08);
-  --mk-neutral-tint-4: rgba(120, 130, 140, 0.10);
-
-  /* ── Typography ───────────────────────────────────────── */
+  /* ── Typography ──────────────────────────────────────── */
   --mk-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mk-font-mono: 'JetBrains Mono', "SF Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
@@ -172,15 +117,12 @@
   --mk-text-xl: 1.25rem;      /* 20px */
   --mk-text-data: 1.5rem;     /* 24px */
 
-  /* Line-height + tracking — TODO: consolidate after styleguide */
-  --mk-leading-tight: 1.2;
   --mk-leading-base: 1.45;
-  --mk-leading-relaxed: 1.6;
   --mk-tracking-tight: -0.025em;   /* headings */
   --mk-tracking-base: -0.015em;    /* body */
   --mk-tracking-wide: 0.06em;      /* uppercase labels */
 
-  /* ── Spacing scale ────────────────────────────────────── */
+  /* ── Spacing scale (4px base) ────────────────────────── */
   --mk-sp-1: 4px;
   --mk-sp-2: 8px;
   --mk-sp-3: 12px;
@@ -190,17 +132,14 @@
   --mk-sp-8: 32px;
   --mk-sp-10: 40px;
 
-  /* ── Radius scale — TODO: legacy uses 8/16/24, v4 uses 6/8/12/16,
-     these slots cover both so bridge aliases can map cleanly. */
-  --mk-r-xs: 4px;
+  /* ── Radius scale (5 шагов + full) ───────────────────── */
   --mk-r-sm: 6px;
   --mk-r-md: 8px;
   --mk-r-lg: 12px;
   --mk-r-xl: 16px;
-  --mk-r-2xl: 24px;
   --mk-r-full: 9999px;
 
-  /* ── Shadows (light theme) ────────────────────────────── */
+  /* ── Shadows (light theme) ───────────────────────────── */
   --mk-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.02);
   --mk-shadow-md: 0 8px 20px rgba(0, 0, 0, 0.04);
   --mk-shadow-lg: 0 16px 32px rgba(15, 23, 42, 0.08);
@@ -208,23 +147,11 @@
   --mk-shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.08);
   --mk-shadow-elevated: 0 12px 40px rgba(0, 0, 0, 0.1);
 
-  /* ── Motion ───────────────────────────────────────────── */
+  /* ── Motion ──────────────────────────────────────────── */
   --mk-dur-fast: 120ms;
   --mk-dur-base: 200ms;
   --mk-dur-slow: 300ms;
   --mk-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --mk-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --mk-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-
-  /* ── Z-index ──────────────────────────────────────────── */
-  --mk-z-base: 1;
-  --mk-z-sticky: 10;
-  --mk-z-dropdown: 100;
-  --mk-z-overlay: 1000;
-  --mk-z-modal: 1100;
-  --mk-z-toast: 1200;
-  --mk-z-tooltip: 1300;
-
-  /* ── Overlay scrim ────────────────────────────────────── */
-  --mk-overlay: rgba(15, 23, 42, 0.45);
 }

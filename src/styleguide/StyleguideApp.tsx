@@ -22,9 +22,17 @@ const SWATCH_STATUS: Swatch[] = [
   { name: "--mk-warn",           value: "#F79009" },
   { name: "--mk-warn-soft",      value: "#FFFAEB" },
   { name: "--mk-warn-strong",    value: "#B54708" },
-  { name: "--mk-caution",        value: "#EAB308" },
-  { name: "--mk-review",         value: "#7C3AED" },
-  { name: "--mk-info",           value: "#0EA5E9" },
+];
+
+const SWATCH_AUX: Swatch[] = [
+  { name: "--mk-purple-50",         value: "#F5F0FF" },
+  { name: "--mk-purple-500",        value: "#7C3AED" },
+  { name: "--mk-purple-700",        value: "#5B21B6" },
+  { name: "--mk-sky-50",            value: "#E0F2FE" },
+  { name: "--mk-sky-500",           value: "#0EA5E9" },
+  { name: "--mk-sky-700",           value: "#0369A1" },
+  { name: "--mk-orange-bright-500", value: "#F97316" },
+  { name: "--mk-orange-bright-700", value: "#C2410C" },
 ];
 
 const SWATCH_PRIORITY: Swatch[] = [
@@ -39,20 +47,6 @@ const SWATCH_SEVERITY: Swatch[] = [
   { name: "--mk-severity-high",     value: "#F97316" },
   { name: "--mk-severity-medium",   value: "#EAB308" },
   { name: "--mk-severity-low",      value: "#2563EB" },
-];
-
-const SWATCH_GRAY: Swatch[] = [
-  { name: "--mk-gray-0",   value: "#F6F7F9" },
-  { name: "--mk-gray-50",  value: "#F4F5F8" },
-  { name: "--mk-gray-100", value: "#EDEFF3" },
-  { name: "--mk-gray-200", value: "#E4E8EF" },
-  { name: "--mk-gray-300", value: "#C5CCDA" },
-  { name: "--mk-gray-400", value: "#94A0B8" },
-  { name: "--mk-gray-500", value: "#6B7691" },
-  { name: "--mk-gray-600", value: "#4A5570" },
-  { name: "--mk-gray-700", value: "#2F3850" },
-  { name: "--mk-gray-800", value: "#1B2235" },
-  { name: "--mk-gray-900", value: "#0E1320" },
 ];
 
 const SWATCH_SURFACE: Swatch[] = [
@@ -108,6 +102,9 @@ function PaletteSection() {
       <h3 className="sg-sub">Status (semantic)</h3>
       <SwatchGrid items={SWATCH_STATUS} />
 
+      <h3 className="sg-sub">Auxiliary (Pipeline, Bizproc, Quality)</h3>
+      <SwatchGrid items={SWATCH_AUX} />
+
       <h3 className="sg-sub">Priority (portfolio tasks)</h3>
       <SwatchGrid items={SWATCH_PRIORITY} />
 
@@ -123,8 +120,10 @@ function PaletteSection() {
       <h3 className="sg-sub">Lines (borders, dividers)</h3>
       <SwatchGrid items={SWATCH_LINE} />
 
-      <h3 className="sg-sub">Gray ramp (raw scale)</h3>
-      <SwatchGrid items={SWATCH_GRAY} />
+      <div className="sg-note">
+        Канон: для прозрачных вариантов цвета (rgba/tint) не плодить переменные —
+        писать <code>color-mix(in srgb, var(--mk-*) 20%, transparent)</code> прямо в стилях компонента.
+      </div>
     </section>
   );
 }
