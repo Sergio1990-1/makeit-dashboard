@@ -31,7 +31,7 @@ export interface QualityChartProps {
 
 const LOW_SAMPLE = 8;
 
-export function niceCeil(n: number): number {
+function niceCeil(n: number): number {
   if (n <= 5) return 5;
   if (n <= 10) return 10;
   if (n <= 20) return 20;
