@@ -56,15 +56,19 @@ export function QualityKPIs({ data, mode, focus = "all", onToggleFocus }: Props)
         }
       : {};
 
+  // Извлечено в const — иначе spread + style-override вызывают tileButtonProps
+  // дважды, что хрупко: добавив в props функцию с эффектом мы её задвоим.
+  const p0Props = tileButtonProps("p0");
+
   return (
     <div className="kpis">
       {totalP0 > 0 && (
         <div
           className="kpi-p0-alert"
           title="Блокирующие баги от Codex. Клик — отфильтровать чарт по P0."
-          {...tileButtonProps("p0")}
+          {...p0Props}
           style={{
-            ...(tileButtonProps("p0").style ?? {}),
+            ...p0Props.style,
             ...(focus === "p0"
               ? { outline: "2px solid white", outlineOffset: -3 }
               : null),

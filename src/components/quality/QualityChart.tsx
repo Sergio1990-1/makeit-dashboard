@@ -12,8 +12,9 @@ import type { QualityBucket } from "../../types/quality";
  *  - tooltip-структура создаётся один раз, на hover обновляются только textContent
  *    (refs → tipRefsObj), никаких `innerHTML = ...`;
  *  - dim non-hovered баров — через class toggle `is-hovering`/`is-active`, НЕ `:has()`;
- *  - height баров не анимируется (transition: height триггерит layout) —
- *    высоты выставляются в style на mount, на period switch DOM пересоздаётся;
+ *  - height баров анимируется ТОЛЬКО при смене focus-фильтра (~5 клик/сек max,
+ *    30 баров — layout-cost копеечный). На period switch (30d↔12w) DOM
+ *    пересоздаётся, transition там не запускается;
  *  - hover-эффекты — только opacity / transform.
  *
  * Метрика (worst-wins, см. spec):
@@ -143,10 +144,28 @@ export function QualityChart({
   const tipRef = useRef<HTMLDivElement>(null);
   const tipRefsObj = useRef<TipRefs>({});
 
+  // В фильтр-режиме шкала Y должна отражать максимум выбранной метрики,
+  // а не полный total_pr — иначе бары визуально крошечные на старой шкале,
+  // и подпись «N/total» в chip не бьётся с тиками на оси.
   const scale = useMemo(() => {
-    const max = Math.max(1, ...buckets.map((b) => b.total_pr));
+    const valueOf = (b: QualityBucket): number => {
+      switch (focus) {
+        case "p0":
+          return b.with_p0;
+        case "p1":
+          return b.with_p1_only;
+        case "p2":
+          return b.with_p2_only;
+        case "dirty":
+          return b.with_p0 + b.with_p1_only;
+        case "all":
+        default:
+          return b.total_pr;
+      }
+    };
+    const max = Math.max(1, ...buckets.map(valueOf));
     return niceCeil(max);
-  }, [buckets]);
+  }, [buckets, focus]);
 
   // Окно для скользящего среднего. Главный график: 7 (для 30d) / 3 (для 12w);
   // compact-мини в карточках overlay не показывает (мелко и шумно).
@@ -167,25 +186,40 @@ export function QualityChart({
   const overlayColor = useMemo(() => lineColor(focus), [focus]);
   const overlayLabel = useMemo(() => badgeLabel(focus), [focus]);
 
-  // Точки SVG-линии overlay: Y инвертирован (100% наверху), null значения
-  // прерывают линию (выходные/пустые дни). Координаты в долях 0–1.
-  const linePoints = useMemo(() => {
-    if (effectiveWindow === 0 || buckets.length === 0) return "";
-    const segments: string[] = [];
-    let current: string[] = [];
+  // Сегменты SVG-линии overlay: Y инвертирован (100% наверху), null значения
+  // прерывают линию (выходные/пустые дни). Каждый сегмент — отдельный
+  // <polyline>, чтобы корректно работать с gap'ами (атрибут `points` НЕ
+  // понимает "M" moveto — это команда для <path d>). Одиночные точки
+  // отдаются как `singlePoints` и рисуются <circle> — иначе единственный
+  // нон-нул среди gap'ов остаётся невидимым.
+  const { lineSegments, singlePoints } = useMemo(() => {
+    type Pt = { x: number; y: number };
+    const segs: Pt[][] = [];
+    const dots: Pt[] = [];
+    if (effectiveWindow === 0 || buckets.length === 0) {
+      return { lineSegments: segs, singlePoints: dots };
+    }
+    let current: Pt[] = [];
+    const flush = () => {
+      if (current.length >= 2) segs.push(current);
+      else if (current.length === 1) dots.push(current[0]);
+      current = [];
+    };
     rollingAvgPct.forEach((pct, i) => {
       if (pct === null) {
-        if (current.length > 1) segments.push(current.join(" "));
-        current = [];
+        flush();
         return;
       }
-      const x = ((i + 0.5) / buckets.length) * 100;
-      const y = 100 - pct;
-      current.push(`${x.toFixed(2)},${y.toFixed(2)}`);
+      current.push({
+        x: ((i + 0.5) / buckets.length) * 100,
+        y: 100 - pct,
+      });
     });
-    if (current.length > 1) segments.push(current.join(" "));
-    return segments.join(" M ");
+    flush();
+    return { lineSegments: segs, singlePoints: dots };
   }, [rollingAvgPct, buckets.length, effectiveWindow]);
+
+  const hasLineData = lineSegments.length > 0 || singlePoints.length > 0;
 
   const latestRollingPct = useMemo(() => {
     for (let i = rollingAvgPct.length - 1; i >= 0; i--) {
@@ -362,7 +396,7 @@ export function QualityChart({
 
       {/* SVG overlay: 7-day rolling avg «% чистых PR» (без P0/P1).
           Правая Y-ось 0–100%. Pointer-events: none — чтобы не ломать hover баров. */}
-      {effectiveWindow > 0 && linePoints && (
+      {effectiveWindow > 0 && hasLineData && (
         <>
           <svg
             className="chart-trend-overlay"
@@ -385,16 +419,30 @@ export function QualityChart({
               strokeDasharray="0.6 0.6"
               vectorEffect="non-scaling-stroke"
             />
-            <polyline
-              points={linePoints}
-              fill="none"
-              stroke={overlayColor}
-              strokeWidth="2"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              vectorEffect="non-scaling-stroke"
-              opacity="0.9"
-            />
+            {lineSegments.map((seg, idx) => (
+              <polyline
+                key={`seg-${idx}`}
+                points={seg.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ")}
+                fill="none"
+                stroke={overlayColor}
+                strokeWidth="2"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+                opacity="0.9"
+              />
+            ))}
+            {singlePoints.map((p, idx) => (
+              <circle
+                key={`dot-${idx}`}
+                cx={p.x}
+                cy={p.y}
+                r="0.6"
+                fill={overlayColor}
+                vectorEffect="non-scaling-stroke"
+                opacity="0.9"
+              />
+            ))}
           </svg>
           {/* Правая Y-ось (0–100%) + бейдж с актуальным значением */}
           <div
