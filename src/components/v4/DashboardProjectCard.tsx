@@ -92,10 +92,10 @@ export function DashboardProjectCard({ project, monitor, index = 0 }: Props) {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   const fillColor =
     pct >= 75
-      ? "var(--v4-success-500)"
+      ? "var(--mk-success)"
       : pct >= 40
-      ? "var(--v4-accent-500)"
-      : "var(--v4-warn-500)";
+      ? "var(--mk-brand-500)"
+      : "var(--mk-warn)";
 
   const hasFinances = project.budget > 0;
   const paid = project.paid;

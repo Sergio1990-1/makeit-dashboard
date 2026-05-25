@@ -137,7 +137,7 @@ export function ClosedChart30d({ projects }: Props) {
               x2={W - PAD_R}
               y1={y}
               y2={y}
-              stroke="var(--v4-line-soft)"
+              stroke="var(--mk-line-soft)"
               strokeWidth="1"
               strokeDasharray={i === grid.length - 1 ? "0" : "2 4"}
             />
@@ -150,7 +150,7 @@ export function ClosedChart30d({ projects }: Props) {
               y={PAD_T - 6}
               width={barW + 4}
               height={INNER_H + 12}
-              fill="var(--v4-accent-100)"
+              fill="var(--mk-brand-100)"
               opacity="0.45"
               rx="4"
             />
@@ -165,8 +165,8 @@ export function ClosedChart30d({ projects }: Props) {
             const isHover = hover === i;
             const fill =
               isHover || isPeak
-                ? "var(--v4-accent-700)"
-                : "var(--v4-accent-500)";
+                ? "var(--mk-brand-700)"
+                : "var(--mk-brand-500)";
             return (
               <g key={d.day}>
                 <rect
@@ -184,7 +184,7 @@ export function ClosedChart30d({ projects }: Props) {
                     cx={cxOf(i)}
                     cy={y - 7}
                     r="3"
-                    fill="var(--v4-accent-700)"
+                    fill="var(--mk-brand-700)"
                   />
                 )}
               </g>
@@ -198,7 +198,7 @@ export function ClosedChart30d({ projects }: Props) {
                 ref={pathRef}
                 d={trendD}
                 fill="none"
-                stroke="var(--v4-success-500)"
+                stroke="var(--mk-success)"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -209,7 +209,7 @@ export function ClosedChart30d({ projects }: Props) {
               <path
                 d={trendD}
                 fill="none"
-                stroke="var(--v4-paper)"
+                stroke="var(--mk-paper)"
                 strokeWidth="2.5"
                 strokeDasharray="0 7 4 0"
                 opacity={t > 0.6 ? (t - 0.6) / 0.4 : 0}
@@ -226,9 +226,9 @@ export function ClosedChart30d({ projects }: Props) {
                 x={cxOf(i)}
                 y={H - 10}
                 textAnchor="middle"
-                fontFamily="var(--v4-mono)"
+                fontFamily="var(--mk-font-mono)"
                 fontSize="10"
-                fill="var(--v4-ink-400)"
+                fill="var(--mk-ink-400)"
               >
                 {new Date(d.day).getDate()}
               </text>
@@ -248,7 +248,7 @@ export function ClosedChart30d({ projects }: Props) {
                   x2={cx}
                   y1={y - 4}
                   y2={PAD_T + INNER_H}
-                  stroke="var(--v4-accent-700)"
+                  stroke="var(--mk-brand-700)"
                   strokeWidth="1"
                   strokeDasharray="2 2"
                   opacity="0.5"
@@ -259,13 +259,13 @@ export function ClosedChart30d({ projects }: Props) {
                   width="44"
                   height="20"
                   rx="4"
-                  fill="var(--v4-ink-900)"
+                  fill="var(--mk-ink-900)"
                 />
                 <text
                   x={cx}
                   y={y - 12}
                   textAnchor="middle"
-                  fontFamily="var(--v4-mono)"
+                  fontFamily="var(--mk-font-mono)"
                   fontSize="11"
                   fontWeight="700"
                   fill="#fff"
@@ -329,7 +329,7 @@ export function ClosedChart30d({ projects }: Props) {
         <span className="v4-cc-lg">
           <span
             className="v4-cc-sw"
-            style={{ background: "var(--v4-accent-500)" }}
+            style={{ background: "var(--mk-brand-500)" }}
           />
           Закрыто (шт.)
         </span>
@@ -340,7 +340,7 @@ export function ClosedChart30d({ projects }: Props) {
               y1="3"
               x2="22"
               y2="3"
-              stroke="var(--v4-success-500)"
+              stroke="var(--mk-success)"
               strokeWidth="2.5"
               strokeLinecap="round"
             />

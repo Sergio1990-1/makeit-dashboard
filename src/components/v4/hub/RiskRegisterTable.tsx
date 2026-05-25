@@ -129,8 +129,8 @@ const inputStyle: React.CSSProperties = {
   fontSize: 13,
   border: "1px solid var(--mk-line)",
   borderRadius: 6,
-  background: "var(--v4-surface, transparent)",
-  color: "var(--v4-ink-900, inherit)",
+  background: "transparent",
+  color: "var(--mk-ink-900)",
 };
 
 const pillStyle: React.CSSProperties = {
@@ -138,7 +138,7 @@ const pillStyle: React.CSSProperties = {
   padding: "2px 8px",
   borderRadius: 999,
   background: "var(--mk-line-soft)",
-  color: "var(--v4-ink-700)",
+  color: "var(--mk-ink-700)",
   whiteSpace: "nowrap",
 };
 
@@ -147,8 +147,8 @@ const btn: React.CSSProperties = {
   padding: "6px 12px",
   borderRadius: 8,
   border: "1px solid var(--mk-line)",
-  background: "var(--v4-surface, transparent)",
-  color: "var(--v4-ink-900, inherit)",
+  background: "transparent",
+  color: "var(--mk-ink-900)",
   cursor: "pointer",
 };
 
@@ -539,7 +539,7 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
           padding: 16,
           border: "1px dashed var(--mk-line)",
           borderRadius: 10,
-          color: "var(--v4-ink-500)",
+          color: "var(--mk-ink-500)",
           fontSize: 13,
           display: "flex",
           flexDirection: "column",
@@ -578,7 +578,7 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
           gap: 8,
         }}
       >
-        <span style={{ fontSize: 12, color: "var(--v4-ink-500)" }}>
+        <span style={{ fontSize: 12, color: "var(--mk-ink-500)" }}>
           {risks.length}{" "}
           {risks.length === 1 ? "риск" : "рисков"} · сортировка по severity
         </span>
@@ -660,7 +660,7 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
             padding: 16,
             border: "1px dashed var(--mk-line)",
             borderRadius: 10,
-            color: "var(--v4-ink-500)",
+            color: "var(--mk-ink-500)",
             fontSize: 13,
           }}
         >
@@ -676,7 +676,7 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
             }}
           >
             <thead>
-              <tr style={{ textAlign: "left", color: "var(--v4-ink-500)" }}>
+              <tr style={{ textAlign: "left", color: "var(--mk-ink-500)" }}>
                 <th style={{ ...cellStyle, fontWeight: 600 }}>Серьёзность</th>
                 <th style={{ ...cellStyle, fontWeight: 600 }}>Риск</th>
                 <th style={{ ...cellStyle, fontWeight: 600 }}>Вероятность</th>
@@ -882,8 +882,8 @@ function ExtractReviewModal({
         ref={modalRef}
         tabIndex={-1}
         style={{
-          background: "var(--v4-surface, #fff)",
-          color: "var(--v4-ink-900, inherit)",
+          background: "var(--mk-paper)",
+          color: "var(--mk-ink-900)",
           borderRadius: 12,
           padding: 20,
           width: "min(640px, 100%)",
@@ -915,7 +915,7 @@ function ExtractReviewModal({
               padding: 16,
               border: "1px dashed var(--mk-line)",
               borderRadius: 10,
-              color: "var(--v4-ink-500)",
+              color: "var(--mk-ink-500)",
               fontSize: 13,
             }}
           >
@@ -928,7 +928,7 @@ function ExtractReviewModal({
               style={{
                 margin: 0,
                 fontSize: 12,
-                color: "var(--v4-ink-500)",
+                color: "var(--mk-ink-500)",
               }}
             >
               {proposals.length}{" "}
@@ -991,7 +991,7 @@ function ExtractReviewModal({
                           <div
                             style={{
                               fontSize: 13,
-                              color: "var(--v4-ink-700)",
+                              color: "var(--mk-ink-700)",
                             }}
                           >
                             Митигация: {p.mitigation}
@@ -1065,7 +1065,7 @@ function ProposalEditForm({ value, onChange }: ProposalEditFormProps) {
     flexDirection: "column",
     gap: 4,
     fontSize: 12,
-    color: "var(--v4-ink-500)",
+    color: "var(--mk-ink-500)",
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -1308,7 +1308,7 @@ function RiskFormModal({ draft, busy, onChange, onSave, onCancel }: EditProps) {
     flexDirection: "column",
     gap: 4,
     fontSize: 12,
-    color: "var(--v4-ink-500)",
+    color: "var(--mk-ink-500)",
   };
   // a11y: focus-trap + Escape→cancel + focus-restore (this dialog
   // promises aria-modal="true"). Escape maps to onCancel.
@@ -1333,8 +1333,8 @@ function RiskFormModal({ draft, busy, onChange, onSave, onCancel }: EditProps) {
         ref={modalRef}
         tabIndex={-1}
         style={{
-          background: "var(--v4-surface, #fff)",
-          color: "var(--v4-ink-900, inherit)",
+          background: "var(--mk-paper)",
+          color: "var(--mk-ink-900)",
           borderRadius: 12,
           padding: 20,
           width: "min(520px, 100%)",
@@ -1529,8 +1529,8 @@ function ConflictDialog({
         ref={modalRef}
         tabIndex={-1}
         style={{
-          background: "var(--v4-surface, #fff)",
-          color: "var(--v4-ink-900, inherit)",
+          background: "var(--mk-paper)",
+          color: "var(--mk-ink-900)",
           borderRadius: 12,
           padding: 20,
           width: "min(440px, 100%)",
@@ -1541,7 +1541,7 @@ function ConflictDialog({
         }}
       >
         <h3 style={{ margin: 0, fontSize: 16 }}>Конфликт версий</h3>
-        <p style={{ margin: 0, fontSize: 13, color: "var(--v4-ink-700)" }}>
+        <p style={{ margin: 0, fontSize: 13, color: "var(--mk-ink-700)" }}>
           Кто-то изменил <code>risks.yaml</code> после того, как вы открыли
           реестр. Перезагрузите свежую версию (ваши правки наложатся поверх) или
           перезапишите её своими данными.

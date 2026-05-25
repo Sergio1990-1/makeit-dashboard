@@ -31,7 +31,7 @@ function tierStyle(tier: DoraTier): { background: string; accent: string; label:
       return { background: "color-mix(in srgb, var(--mk-danger) 12%, transparent)", accent: "var(--mk-danger)", label: "Низкий" };
     case "na":
     default:
-      return { background: "var(--mk-line-soft)", accent: "var(--v4-ink-500)", label: "н/д" };
+      return { background: "var(--mk-line-soft)", accent: "var(--mk-ink-500)", label: "н/д" };
   }
 }
 
@@ -90,7 +90,7 @@ function Card({ title, value, tier, tooltip }: CardProps) {
           fontWeight: 600,
           textTransform: "uppercase",
           letterSpacing: 0.4,
-          color: "var(--v4-ink-500)",
+          color: "var(--mk-ink-500)",
         }}
       >
         {title}

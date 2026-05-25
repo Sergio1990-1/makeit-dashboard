@@ -112,12 +112,12 @@ export function MilestonesStrip({ milestones, lastUpdated }: Props) {
             const pct = total > 0 ? Math.round((m.closedIssues / total) * 100) : 0;
             const fillColor =
               cls === "done"
-                ? "var(--v4-success-500)"
+                ? "var(--mk-success)"
                 : cls === "over"
-                ? "var(--v4-warn-500)"
+                ? "var(--mk-warn)"
                 : cls === "warn"
-                ? "var(--v4-success-500)"
-                : "var(--v4-accent-500)";
+                ? "var(--mk-success)"
+                : "var(--mk-brand-500)";
             const priority = inferPriority(m);
             const dueLabel = !m.dueOn
               ? "—"

@@ -95,7 +95,7 @@ export function SettingsBootstrap({ onSuccess }: Props) {
           <h1 style={{ fontSize: 28, marginBottom: 8 }}>MakeIT Dashboard</h1>
           <p
             style={{
-              color: "var(--v4-ink-500)",
+              color: "var(--mk-ink-500)",
               marginBottom: 24,
               fontSize: 14,
               lineHeight: 1.5,
@@ -112,7 +112,7 @@ export function SettingsBootstrap({ onSuccess }: Props) {
                 display: "block",
                 marginBottom: 6,
                 fontSize: 12,
-                color: "var(--v4-ink-500)",
+                color: "var(--mk-ink-500)",
               }}
             >
               Bootstrap-токен
@@ -162,7 +162,7 @@ export function SettingsBootstrap({ onSuccess }: Props) {
               style={{
                 marginTop: 18,
                 fontSize: 12,
-                color: "var(--v4-ink-500)",
+                color: "var(--mk-ink-500)",
                 lineHeight: 1.5,
               }}
             >

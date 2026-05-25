@@ -27,10 +27,10 @@ export function FancySpark({ trend }: Props) {
   const area = `${path} L ${W} ${H} L 0 ${H} Z`;
   const stroke =
     trend.direction === "up"
-      ? "var(--v4-success-500)"
+      ? "var(--mk-success)"
       : trend.direction === "down"
-        ? "var(--v4-danger-500)"
-        : "var(--v4-ink-400)";
+        ? "var(--mk-danger)"
+        : "var(--mk-ink-400)";
   const fill =
     trend.direction === "up"
       ? "color-mix(in srgb, var(--mk-success) 12%, transparent)"
@@ -95,7 +95,7 @@ export function FancySpark({ trend }: Props) {
               x2={coords[hover][0]}
               y1="0"
               y2={H}
-              stroke="var(--v4-ink-300)"
+              stroke="var(--mk-ink-300)"
               strokeWidth="1"
               strokeDasharray="2 2"
             />

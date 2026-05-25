@@ -275,7 +275,7 @@ export function PendingChangesPanel({
 }
 
 function confColor(c: number): string {
-  if (c >= 0.85) return "var(--v4-success-700)";
-  if (c >= 0.7) return "var(--v4-warn-700)";
-  return "var(--v4-danger-700)";
+  if (c >= 0.85) return "var(--mk-success-strong)";
+  if (c >= 0.7) return "var(--mk-warn-strong)";
+  return "var(--mk-danger-strong)";
 }

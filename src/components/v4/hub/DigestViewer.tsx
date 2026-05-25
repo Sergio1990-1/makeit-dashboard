@@ -75,8 +75,8 @@ const btnStyle: React.CSSProperties = {
   padding: "6px 12px",
   borderRadius: 8,
   border: "1px solid var(--mk-line)",
-  background: "var(--v4-card, #fff)",
-  color: "var(--v4-ink-900)",
+  background: "var(--mk-paper)",
+  color: "var(--mk-ink-900)",
   cursor: "pointer",
 };
 
@@ -85,8 +85,8 @@ const selectStyle: React.CSSProperties = {
   padding: "6px 8px",
   borderRadius: 8,
   border: "1px solid var(--mk-line)",
-  background: "var(--v4-card, #fff)",
-  color: "var(--v4-ink-900)",
+  background: "var(--mk-paper)",
+  color: "var(--mk-ink-900)",
 };
 
 export function DigestViewer({ repo, input }: Props) {
@@ -202,7 +202,7 @@ export function DigestViewer({ repo, input }: Props) {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <label
             htmlFor="v4-hub-digest-week"
-            style={{ fontSize: 12, color: "var(--v4-ink-500)" }}
+            style={{ fontSize: 12, color: "var(--mk-ink-500)" }}
           >
             История
           </label>
@@ -252,7 +252,7 @@ export function DigestViewer({ repo, input }: Props) {
             gap: 8,
           }}
         >
-          <p style={{ margin: 0, fontSize: 13, color: "var(--v4-ink-900)" }}>
+          <p style={{ margin: 0, fontSize: 13, color: "var(--mk-ink-900)" }}>
             Регенерация запросит Claude ({costPreview.model}). Оценочная
             стоимость:{" "}
             <strong>${costPreview.usd.toFixed(4)}</strong>
@@ -288,7 +288,7 @@ export function DigestViewer({ repo, input }: Props) {
         <div
           style={{
             padding: 16,
-            color: "var(--v4-ink-500)",
+            color: "var(--mk-ink-500)",
             fontSize: 13,
           }}
         >
@@ -317,7 +317,7 @@ export function DigestViewer({ repo, input }: Props) {
           style={{
             fontSize: 13,
             lineHeight: 1.55,
-            color: "var(--v4-ink-900)",
+            color: "var(--mk-ink-900)",
           }}
         />
       ) : (
@@ -326,7 +326,7 @@ export function DigestViewer({ repo, input }: Props) {
             padding: 16,
             border: "1px dashed var(--mk-line)",
             borderRadius: 10,
-            color: "var(--v4-ink-500)",
+            color: "var(--mk-ink-500)",
             fontSize: 13,
           }}
         >

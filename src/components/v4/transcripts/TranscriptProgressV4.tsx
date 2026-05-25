@@ -165,7 +165,7 @@ export function TranscriptProgressV4({ taskId, onDone, onRetry }: Props) {
               className="v4-pfill"
               style={{
                 width: `${pct}%`,
-                background: isDone ? "var(--v4-success-500)" : "var(--v4-accent-500)",
+                background: isDone ? "var(--mk-success)" : "var(--mk-brand-500)",
               }}
             />
           </div>

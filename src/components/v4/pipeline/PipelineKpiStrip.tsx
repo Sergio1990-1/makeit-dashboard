@@ -17,10 +17,10 @@ export function PipelineKpiStrip({ stats, sessionCost, sessionRuns }: Props) {
     firstPass === null
       ? undefined
       : firstPass >= 80
-      ? "var(--v4-success-700)"
+      ? "var(--mk-success-strong)"
       : firstPass >= 60
-      ? "var(--v4-warn-700)"
-      : "var(--v4-danger-700)";
+      ? "var(--mk-warn-strong)"
+      : "var(--mk-danger-strong)";
 
   return (
     <div className="v4-projects-toolbar v4-pl-kpi-strip">
@@ -38,7 +38,7 @@ export function PipelineKpiStrip({ stats, sessionCost, sessionRuns }: Props) {
         >
           <div
             className="v4-projects-agg-n num"
-            style={{ color: sessionCost > 0 ? "var(--v4-success-700)" : undefined }}
+            style={{ color: sessionCost > 0 ? "var(--mk-success-strong)" : undefined }}
           >
             {compactUSD(sessionCost)}
           </div>

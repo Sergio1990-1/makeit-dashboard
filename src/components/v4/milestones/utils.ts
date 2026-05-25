@@ -18,7 +18,7 @@ export const REPO_GLYPH: Record<string, string> = {
 };
 
 export function repoGlyphColor(repo: string): string {
-  return REPO_GLYPH[repo] ?? "var(--v4-ink-400)";
+  return REPO_GLYPH[repo] ?? "var(--mk-ink-400)";
 }
 
 const RU_MONTHS_SHORT = [

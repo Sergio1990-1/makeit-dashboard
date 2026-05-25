@@ -167,13 +167,13 @@ export function AuditProjectCardV4({
           {isVerified && lr.verification && (
             <div className="v4-au-card-verify">
               <span className="v4-au-text-muted">Верификация</span>
-              <span className="v4-pl-mono" style={{ color: "var(--v4-danger-700)" }} title="Подтверждено">
+              <span className="v4-pl-mono" style={{ color: "var(--mk-danger-strong)" }} title="Подтверждено">
                 ✓ {lr.verification.confirmed}
               </span>
-              <span className="v4-pl-mono" style={{ color: "var(--v4-success-700)" }} title="Ложное срабатывание">
+              <span className="v4-pl-mono" style={{ color: "var(--mk-success-strong)" }} title="Ложное срабатывание">
                 ✗ {lr.verification.false_positive}
               </span>
-              <span className="v4-pl-mono" style={{ color: "var(--v4-warn-700)" }} title="Неуверенно">
+              <span className="v4-pl-mono" style={{ color: "var(--mk-warn-strong)" }} title="Неуверенно">
                 ? {lr.verification.uncertain}
               </span>
             </div>

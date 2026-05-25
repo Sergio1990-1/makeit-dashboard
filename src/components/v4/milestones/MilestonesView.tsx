@@ -167,7 +167,7 @@ export function MilestonesView({ milestones: rawMilestones, projects, lastUpdate
         .sort((a, b) => a[0].localeCompare(b[0], "ru"))
         .map(([repo, items]) => ({
           // "repo" key falls through to the default `.v4-msgroup-dot`
-          // background (var(--v4-ink-400)) — handoff: repo grouping
+          // background (var(--mk-ink-400)) — handoff: repo grouping
           // intentionally has no per-bucket colour.
           key: "repo",
           title: repo,

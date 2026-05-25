@@ -28,7 +28,7 @@ export function MonitoringKpiStrip({ monitors }: Props) {
         <div className="v4-projects-agg-cell" title="Сервисы со статусом up">
           <div
             className="v4-projects-agg-n num"
-            style={{ color: up > 0 ? "var(--v4-success-700)" : undefined }}
+            style={{ color: up > 0 ? "var(--mk-success-strong)" : undefined }}
           >
             {up}
           </div>
@@ -37,7 +37,7 @@ export function MonitoringKpiStrip({ monitors }: Props) {
         <div className="v4-projects-agg-cell" title="Сервисы со статусом down">
           <div
             className="v4-projects-agg-n num"
-            style={{ color: down > 0 ? "var(--v4-danger-700)" : undefined }}
+            style={{ color: down > 0 ? "var(--mk-danger-strong)" : undefined }}
           >
             {down}
           </div>
@@ -62,10 +62,10 @@ export function MonitoringKpiStrip({ monitors }: Props) {
               color: avgUptime === null
                 ? undefined
                 : avgUptime >= 99.9
-                  ? "var(--v4-success-700)"
+                  ? "var(--mk-success-strong)"
                   : avgUptime >= 99
                     ? undefined
-                    : "var(--v4-warn-700)",
+                    : "var(--mk-warn-strong)",
             }}
           >
             {avgUptime !== null ? `${avgUptime.toFixed(2)}%` : "—"}

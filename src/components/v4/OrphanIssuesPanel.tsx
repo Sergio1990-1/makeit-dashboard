@@ -229,7 +229,7 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated, error = null }:
       <div className="v4-panel-h">
         <div className="v4-panel-t">
           <svg
-            style={{ width: 14, height: 14, color: "var(--v4-warn-700)" }}
+            style={{ width: 14, height: 14, color: "var(--mk-warn-strong)" }}
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -287,7 +287,7 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated, error = null }:
                 x2={W - PAD_R}
                 y1={y}
                 y2={y}
-                stroke="var(--v4-line-soft)"
+                stroke="var(--mk-line-soft)"
                 strokeWidth="1"
                 strokeDasharray={i === grid.length - 1 ? "0" : "2 4"}
               />
@@ -300,7 +300,7 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated, error = null }:
                 x2={xOf(hover)}
                 y1={PAD_T - 4}
                 y2={PAD_T + INNER_H}
-                stroke="var(--v4-accent-700)"
+                stroke="var(--mk-brand-700)"
                 strokeWidth="1"
                 strokeDasharray="2 3"
                 opacity="0.55"
@@ -311,7 +311,7 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated, error = null }:
             {areaD && (
               <path
                 d={areaD}
-                fill="var(--v4-accent-100)"
+                fill="var(--mk-brand-100)"
                 opacity={t * 0.6}
               />
             )}
@@ -322,7 +322,7 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated, error = null }:
                 ref={pathRef}
                 d={lineD}
                 fill="none"
-                stroke="var(--v4-accent-500)"
+                stroke="var(--mk-brand-500)"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -337,8 +337,8 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated, error = null }:
                 cx={xOf(hover)}
                 cy={yOf(buckets[hover].count)}
                 r="4"
-                fill="var(--v4-accent-700)"
-                stroke="var(--v4-paper)"
+                fill="var(--mk-brand-700)"
+                stroke="var(--mk-paper)"
                 strokeWidth="2"
               />
             )}
@@ -351,9 +351,9 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated, error = null }:
                   x={xOf(i)}
                   y={H - 10}
                   textAnchor="middle"
-                  fontFamily="var(--v4-mono)"
+                  fontFamily="var(--mk-font-mono)"
                   fontSize="10"
-                  fill="var(--v4-ink-400)"
+                  fill="var(--mk-ink-400)"
                 >
                   {new Date(b.iso).getUTCDate()}
                 </text>
@@ -418,7 +418,7 @@ export function OrphanIssuesPanel({ items, loading, lastUpdated, error = null }:
           <span className="v4-cc-lg">
             <span
               className="v4-cc-sw"
-              style={{ background: "var(--v4-accent-500)" }}
+              style={{ background: "var(--mk-brand-500)" }}
             />
             Orphan-issues (open, без milestone)
           </span>

@@ -544,13 +544,13 @@ export function ProjectsView({
             <div className="v4-projects-agg-l">открытых</div>
           </div>
           <div className="v4-projects-agg-cell">
-            <div className="v4-projects-agg-n num" style={{ color: agg.p1 > 0 ? "var(--v4-p1)" : undefined }}>
+            <div className="v4-projects-agg-n num" style={{ color: agg.p1 > 0 ? "var(--mk-priority-p1)" : undefined }}>
               {agg.p1}
             </div>
             <div className="v4-projects-agg-l">P1</div>
           </div>
           <div className="v4-projects-agg-cell">
-            <div className="v4-projects-agg-n num" style={{ color: agg.stale > 0 ? "var(--v4-warn-700)" : undefined }}>
+            <div className="v4-projects-agg-n num" style={{ color: agg.stale > 0 ? "var(--mk-warn-strong)" : undefined }}>
               {agg.stale}
             </div>
             <div className="v4-projects-agg-l">застой</div>

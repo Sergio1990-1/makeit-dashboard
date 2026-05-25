@@ -279,7 +279,7 @@ export function TranscriptsView({ projects }: Props) {
           <div className="v4-projects-agg-cell">
             <div
               className="v4-projects-agg-n num"
-              style={{ color: agg.active > 0 ? "var(--v4-accent-700)" : undefined }}
+              style={{ color: agg.active > 0 ? "var(--mk-brand-700)" : undefined }}
             >
               {agg.active}
             </div>
@@ -288,7 +288,7 @@ export function TranscriptsView({ projects }: Props) {
           <div className="v4-projects-agg-cell">
             <div
               className="v4-projects-agg-n num"
-              style={{ color: agg.done > 0 ? "var(--v4-success-700)" : undefined }}
+              style={{ color: agg.done > 0 ? "var(--mk-success-strong)" : undefined }}
             >
               {agg.done}
             </div>
@@ -297,7 +297,7 @@ export function TranscriptsView({ projects }: Props) {
           <div className="v4-projects-agg-cell">
             <div
               className="v4-projects-agg-n num"
-              style={{ color: agg.error > 0 ? "var(--v4-danger-700)" : undefined }}
+              style={{ color: agg.error > 0 ? "var(--mk-danger-strong)" : undefined }}
             >
               {agg.error}
             </div>

@@ -69,7 +69,7 @@ export function BatchProgressV4({ files, active, onCancel, onClose }: Props) {
             className="v4-pfill"
             style={{
               width: `${pct}%`,
-              background: errors > 0 ? "var(--v4-warn-500)" : "var(--v4-accent-500)",
+              background: errors > 0 ? "var(--mk-warn)" : "var(--mk-brand-500)",
             }}
           />
         </div>

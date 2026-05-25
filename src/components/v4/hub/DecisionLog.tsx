@@ -73,7 +73,7 @@ export function DecisionLog({ decisions }: Props) {
           padding: 16,
           border: "1px dashed var(--mk-line)",
           borderRadius: 10,
-          color: "var(--v4-ink-500)",
+          color: "var(--mk-ink-500)",
           fontSize: 13,
         }}
       >
@@ -120,7 +120,7 @@ export function DecisionLog({ decisions }: Props) {
               <div
                 style={{
                   fontSize: 12,
-                  color: "var(--v4-ink-500)",
+                  color: "var(--mk-ink-500)",
                   fontVariantNumeric: "tabular-nums",
                 }}
               >
@@ -136,7 +136,7 @@ export function DecisionLog({ decisions }: Props) {
                     padding: "2px 8px",
                     borderRadius: 999,
                     background: "var(--mk-line-soft)",
-                    color: "var(--v4-ink-700)",
+                    color: "var(--mk-ink-700)",
                     textDecoration: "none",
                   }}
                   title={link}
@@ -150,7 +150,7 @@ export function DecisionLog({ decisions }: Props) {
                     padding: "2px 8px",
                     borderRadius: 999,
                     background: "var(--mk-line-soft)",
-                    color: "var(--v4-ink-700)",
+                    color: "var(--mk-ink-700)",
                   }}
                 >
                   {sourceLabel(tag)}
@@ -159,7 +159,7 @@ export function DecisionLog({ decisions }: Props) {
             </div>
             <div style={{ fontWeight: 600, fontSize: 14 }}>{d.title}</div>
             {d.description && (
-              <div style={{ fontSize: 13, color: "var(--v4-ink-700)" }}>
+              <div style={{ fontSize: 13, color: "var(--mk-ink-700)" }}>
                 {d.description}
               </div>
             )}

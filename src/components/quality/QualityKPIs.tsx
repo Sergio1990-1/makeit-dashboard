@@ -40,11 +40,11 @@ export function QualityKPIs({ data, mode }: Props) {
       </div>
       <div className="kpi" style={kpiStyle(1)}>
         <div className="kpi-lbl">% P1 · {periodLabel}</div>
-        <div className="kpi-v" style={{ color: "var(--v4-p1-text)" }}>{p1Pct}%</div>
+        <div className="kpi-v" style={{ color: "var(--mk-quality-p1-text)" }}>{p1Pct}%</div>
       </div>
       <div className="kpi" style={kpiStyle(2)}>
         <div className="kpi-lbl">% P2 · {periodLabel}</div>
-        <div className="kpi-v" style={{ color: "var(--v4-p2-text)" }}>{p2Pct}%</div>
+        <div className="kpi-v" style={{ color: "var(--mk-quality-p2-text)" }}>{p2Pct}%</div>
       </div>
       <div className="kpi" style={kpiStyle(3)}>
         <div className="kpi-lbl">PR {periodLabel}</div>

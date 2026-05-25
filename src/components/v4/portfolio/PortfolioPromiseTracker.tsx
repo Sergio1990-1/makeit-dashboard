@@ -222,7 +222,7 @@ export function PortfolioPromiseTracker({ onOpenProject }: Props) {
       <div className="v4-panel-h">
         <div className="v4-panel-t">
           <svg
-            style={{ width: 14, height: 14, color: "var(--v4-accent-600)" }}
+            style={{ width: 14, height: 14, color: "var(--mk-brand-600)" }}
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"

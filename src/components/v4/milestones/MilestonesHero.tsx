@@ -116,18 +116,18 @@ function VelocitySpark({ values }: { values: number[] }) {
               x2={hover.x}
               y1={SPARK_P}
               y2={SPARK_H}
-              stroke="var(--v4-success-500)"
+              stroke="var(--mk-success)"
               strokeWidth="1"
               strokeDasharray="2 2"
               opacity="0.5"
             />
-            <circle cx={hover.x} cy={hover.y} r="6" fill="var(--v4-success-500)" opacity="0.18" />
+            <circle cx={hover.x} cy={hover.y} r="6" fill="var(--mk-success)" opacity="0.18" />
             <circle
               cx={hover.x}
               cy={hover.y}
               r="3.5"
               fill="#fff"
-              stroke="var(--v4-success-500)"
+              stroke="var(--mk-success)"
               strokeWidth="2"
             />
           </g>

@@ -6,9 +6,9 @@ const LABEL_OPTIONS = ["P1-critical", "P2-high", "P3-medium"] as const;
 export type LabelOption = (typeof LABEL_OPTIONS)[number];
 
 const LABEL_COLOR: Record<LabelOption, string> = {
-  "P1-critical": "var(--v4-p1)",
-  "P2-high": "var(--v4-p2)",
-  "P3-medium": "var(--v4-p3)",
+  "P1-critical": "var(--mk-priority-p1)",
+  "P2-high": "var(--mk-priority-p2)",
+  "P3-medium": "var(--mk-priority-p3)",
 };
 
 const COMPLEXITY_OPTIONS: { value: ComplexityFilter; label: string; hint: string }[] = [

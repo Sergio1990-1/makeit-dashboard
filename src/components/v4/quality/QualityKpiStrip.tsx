@@ -37,7 +37,7 @@ export function QualityKpiStrip({ snapshot, pendingChanges, retros }: Props) {
         >
           <div
             className="v4-projects-agg-n num"
-            style={{ color: pendingCount > 0 ? "var(--v4-warn-700)" : undefined }}
+            style={{ color: pendingCount > 0 ? "var(--mk-warn-strong)" : undefined }}
           >
             {pendingCount}
           </div>

@@ -11,10 +11,10 @@ export const EFFORT_LABEL: Record<string, string> = {
 };
 
 export const IMPACT_COLOR: Record<string, string> = {
-  critical: "var(--v4-danger-500)",
-  high: "var(--v4-warn-500)",
-  medium: "var(--v4-accent-500)",
-  low: "var(--v4-ink-400)",
+  critical: "var(--mk-danger)",
+  high: "var(--mk-warn)",
+  medium: "var(--mk-brand-500)",
+  low: "var(--mk-ink-400)",
 };
 
 export const IMPACT_LABEL: Record<string, string> = {

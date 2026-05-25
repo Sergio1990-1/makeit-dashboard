@@ -347,28 +347,28 @@ export function MilestonesGantt({
             <span className="v4-msgantt-lg">
               <span
                 className="v4-msgantt-dot"
-                style={{ background: "var(--v4-danger-500)" }}
+                style={{ background: "var(--mk-danger)" }}
               />
               просрочено
             </span>
             <span className="v4-msgantt-lg">
               <span
                 className="v4-msgantt-dot"
-                style={{ background: "var(--v4-warn-500)" }}
+                style={{ background: "var(--mk-warn)" }}
               />
               ≤ 3 дн
             </span>
             <span className="v4-msgantt-lg">
               <span
                 className="v4-msgantt-dot"
-                style={{ background: "var(--v4-accent-500)" }}
+                style={{ background: "var(--mk-brand-500)" }}
               />
               ≤ 14 дн
             </span>
             <span className="v4-msgantt-lg">
               <span
                 className="v4-msgantt-dot"
-                style={{ background: "var(--v4-success-500)" }}
+                style={{ background: "var(--mk-success)" }}
               />
               готов
             </span>

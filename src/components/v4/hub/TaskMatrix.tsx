@@ -105,20 +105,20 @@ function cellStyle(val: number, max: number, color: string): CSSProperties {
 
 function cellLabelColor(val: number, max: number): string {
   const t = max > 0 ? val / max : 0;
-  if (val === 0) return "var(--v4-ink-300)";
-  return t > 0.55 ? "#fff" : "var(--v4-ink-800)";
+  if (val === 0) return "var(--mk-ink-300)";
+  return t > 0.55 ? "#fff" : "var(--mk-ink-800)";
 }
 
 const GRID_COLUMNS = "70px repeat(4, 1fr) 70px";
 
 const HEADER_CELL: CSSProperties = {
   padding: "8px 10px",
-  fontFamily: "var(--v4-mono)",
+  fontFamily: "var(--mk-font-mono)",
   fontSize: 10,
   fontWeight: 700,
   letterSpacing: ".08em",
   textTransform: "uppercase",
-  color: "var(--v4-ink-500)",
+  color: "var(--mk-ink-500)",
   textAlign: "right",
 };
 
@@ -139,7 +139,7 @@ export function TaskMatrix({ issues }: Props) {
         <div className="v4-panel-t">
           Открытые задачи <span className="v4-tag">приоритет × сложность</span>
         </div>
-        <div className="v4-panel-meta" style={{ color: "var(--v4-ink-500)" }}>
+        <div className="v4-panel-meta" style={{ color: "var(--mk-ink-500)" }}>
           плотность = доля от самой загруженной ячейки
         </div>
       </div>
@@ -152,7 +152,7 @@ export function TaskMatrix({ issues }: Props) {
             gridTemplateColumns: GRID_COLUMNS,
             gap: 6,
             alignItems: "center",
-            borderBottom: "1px solid var(--v4-line-soft)",
+            borderBottom: "1px solid var(--mk-line-soft)",
             paddingBottom: 4,
             marginBottom: 4,
           }}
@@ -185,10 +185,10 @@ export function TaskMatrix({ issues }: Props) {
                 alignItems: "center",
                 gap: 6,
                 padding: "0 10px",
-                fontFamily: "var(--v4-mono)",
+                fontFamily: "var(--mk-font-mono)",
                 fontSize: 13,
                 fontWeight: 600,
-                color: "var(--v4-ink-800)",
+                color: "var(--mk-ink-800)",
               }}
             >
               <i
@@ -210,7 +210,7 @@ export function TaskMatrix({ issues }: Props) {
                   <span
                     className="num"
                     style={{
-                      fontFamily: "var(--v4-mono)",
+                      fontFamily: "var(--mk-font-mono)",
                       fontSize: 12,
                       fontWeight: model.cellMax > 0 && val / model.cellMax > 0.4 ? 700 : 500,
                       color: cellLabelColor(val, model.cellMax),
@@ -225,12 +225,12 @@ export function TaskMatrix({ issues }: Props) {
             <div
               className="num"
               style={{
-                fontFamily: "var(--v4-mono)",
+                fontFamily: "var(--mk-font-mono)",
                 textAlign: "right",
                 padding: "0 10px",
                 fontSize: 12,
                 fontWeight: 700,
-                color: "var(--v4-ink-700)",
+                color: "var(--mk-ink-700)",
               }}
             >
               {model.rowTotals[r]}
@@ -245,7 +245,7 @@ export function TaskMatrix({ issues }: Props) {
             gridTemplateColumns: GRID_COLUMNS,
             gap: 6,
             alignItems: "center",
-            borderTop: "1px solid var(--v4-line-soft)",
+            borderTop: "1px solid var(--mk-line-soft)",
             paddingTop: 6,
             marginTop: 4,
           }}
@@ -263,12 +263,12 @@ export function TaskMatrix({ issues }: Props) {
               key={c}
               className="num"
               style={{
-                fontFamily: "var(--v4-mono)",
+                fontFamily: "var(--mk-font-mono)",
                 textAlign: "right",
                 paddingRight: 10,
                 fontSize: 12,
                 fontWeight: 700,
-                color: "var(--v4-ink-700)",
+                color: "var(--mk-ink-700)",
               }}
             >
               {model.colTotals[c]}
@@ -277,12 +277,12 @@ export function TaskMatrix({ issues }: Props) {
           <div
             className="num"
             style={{
-              fontFamily: "var(--v4-mono)",
+              fontFamily: "var(--mk-font-mono)",
               textAlign: "right",
               padding: "0 10px",
               fontSize: 13,
               fontWeight: 700,
-              color: "var(--v4-ink-900)",
+              color: "var(--mk-ink-900)",
             }}
           >
             {model.grandTotal}

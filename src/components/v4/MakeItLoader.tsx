@@ -6,7 +6,7 @@ export interface MakeItLoaderProps {
   size?: number;
   /** Force dark scheme. If omitted, inherits `color` from parent. */
   dark?: boolean;
-  /** Override accent color. Default `var(--v4-accent-600)` → `#2563EB`. */
+  /** Override accent color. Default `var(--mk-brand-600)` → `#2563EB`. */
   accent?: string;
   /** Center self in parent via flex. */
   center?: boolean;

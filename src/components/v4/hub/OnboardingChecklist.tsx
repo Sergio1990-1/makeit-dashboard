@@ -57,7 +57,7 @@ export function OnboardingChecklist({ findings }: Props) {
           padding: 16,
           border: "1px dashed var(--mk-line)",
           borderRadius: 10,
-          color: "var(--v4-ink-500)",
+          color: "var(--mk-ink-500)",
           fontSize: 13,
         }}
       >
@@ -91,7 +91,7 @@ export function OnboardingChecklist({ findings }: Props) {
         <span
           style={{
             fontSize: 12,
-            color: "var(--v4-ink-500)",
+            color: "var(--mk-ink-500)",
             fontVariantNumeric: "tabular-nums",
           }}
           aria-label={`${passed} из ${total} правил выполнены`}
@@ -150,7 +150,7 @@ export function OnboardingChecklist({ findings }: Props) {
                       ? "var(--mk-success)"
                       : kind === "fail"
                         ? "var(--mk-danger)"
-                        : "var(--v4-ink-500)",
+                        : "var(--mk-ink-500)",
                   fontWeight: 600,
                 }}
               >
@@ -161,8 +161,8 @@ export function OnboardingChecklist({ findings }: Props) {
                   flex: 1,
                   color:
                     kind === "fail"
-                      ? "var(--v4-ink-900)"
-                      : "var(--v4-ink-700)",
+                      ? "var(--mk-ink-900)"
+                      : "var(--mk-ink-700)",
                 }}
               >
                 {f.title}
@@ -172,7 +172,7 @@ export function OnboardingChecklist({ findings }: Props) {
                   aria-hidden="true"
                   style={{
                     fontSize: 11,
-                    color: "var(--v4-ink-500)",
+                    color: "var(--mk-ink-500)",
                     cursor: "help",
                   }}
                 >

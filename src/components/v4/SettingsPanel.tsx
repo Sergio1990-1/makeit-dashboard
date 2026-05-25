@@ -353,14 +353,14 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
                       <div style={{ fontWeight: 600, fontSize: 13 }}>{label}</div>
                       <div
                         className="v4-mono"
-                        style={{ color: "var(--v4-ink-500)", fontSize: 11 }}
+                        style={{ color: "var(--mk-ink-500)", fontSize: 11 }}
                       >
                         {key}
                       </div>
                       {hint && (
                         <div
                           style={{
-                            color: "var(--v4-ink-500)",
+                            color: "var(--mk-ink-500)",
                             fontSize: 11,
                             marginTop: 2,
                           }}
@@ -374,7 +374,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
                       style={{
                         whiteSpace: "nowrap",
                         fontSize: 12,
-                        color: row.value ? "var(--v4-ink-900)" : "var(--v4-ink-500)",
+                        color: row.value ? "var(--mk-ink-900)" : "var(--mk-ink-500)",
                       }}
                       aria-label={`Текущее значение ${label}: ${maskValue(row.value)}`}
                     >
@@ -432,7 +432,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
                         justifyContent: "flex-end",
                       }}
                     >
-                      <span style={{ fontSize: 12, color: "var(--v4-ink-700)" }}>
+                      <span style={{ fontSize: 12, color: "var(--mk-ink-700)" }}>
                         Подтвердите очистку:
                       </span>
                       <button
@@ -502,7 +502,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
             <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>
               Подключение
             </div>
-            <div style={{ color: "var(--v4-ink-500)", fontSize: 12, marginBottom: 10 }}>
+            <div style={{ color: "var(--mk-ink-500)", fontSize: 12, marginBottom: 10 }}>
               Bootstrap-токен авторизует этот браузер для чтения секретов из Pipeline.
               Сменить — если подменили токен на сервере.
             </div>
@@ -537,14 +537,14 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
             >
               Опасная зона
             </div>
-            <div style={{ color: "var(--v4-ink-500)", fontSize: 12, marginBottom: 10 }}>
+            <div style={{ color: "var(--mk-ink-500)", fontSize: 12, marginBottom: 10 }}>
               Удалить все секреты из server-side store. Действие необратимо — после этого
               dashboard перестанет видеть GitHub / Claude / BetterStack пока вы не введёте
               их заново.
             </div>
             {confirmAllDelete ? (
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                <span style={{ fontSize: 12, color: "var(--v4-ink-700)" }}>
+                <span style={{ fontSize: 12, color: "var(--mk-ink-700)" }}>
                   Точно очистить все {keys?.length ?? 0} ключей?
                 </span>
                 <button
