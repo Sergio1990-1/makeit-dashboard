@@ -5,12 +5,8 @@
  *   - "30d": daily buckets, annotations snap to bar center.
  *   - "12w": ISO-week buckets, annotations positioned proportionally
  *           within the (bucketCount * 7)-day window.
- *
- * NOTE: `PeriodMode` is intentionally defined locally here. When
- * `src/types/quality.ts` lands (separate task), this local type can be
- * replaced with `import type { PeriodMode } from "../types/quality"`.
  */
-export type PeriodMode = "30d" | "12w";
+import type { PeriodMode } from "../types/quality";
 
 /**
  * Snap any date to the Monday of its ISO week (in UTC).
