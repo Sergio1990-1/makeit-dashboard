@@ -54,7 +54,7 @@ export function UXAuditTab() {
       </div>
 
       {(error || runError) && (
-        <div className="pc-slot apc-error-slot" style={{ marginBottom: "var(--sp-3)" }}>
+        <div className="pc-slot apc-error-slot" style={{ marginBottom: "var(--mk-sp-3)" }}>
           <div className="apc-error-title">Ошибка:</div>
           <div className="apc-error-body">{runError || error}</div>
         </div>

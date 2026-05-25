@@ -35,8 +35,8 @@ function pctBar(value: number, color: string) {
         }} />
       </div>
       <span style={{
-        fontFamily: "var(--font-mono)",
-        fontSize: "var(--text-xs)",
+        fontFamily: "var(--mk-font-mono)",
+        fontSize: "var(--mk-text-xs)",
         fontWeight: 700,
         color,
         minWidth: 36,
@@ -86,13 +86,13 @@ export function QualityPanel({ project }: QualityPanelProps) {
       label: "First pass rate",
       value: pctBar(
         snapshot.first_pass_success_rate * 100,
-        snapshot.first_pass_success_rate >= 0.8 ? "var(--green-500)" : snapshot.first_pass_success_rate >= 0.6 ? "var(--orange-500)" : "var(--red-500)",
+        snapshot.first_pass_success_rate >= 0.8 ? "var(--mk-success)" : snapshot.first_pass_success_rate >= 0.6 ? "var(--mk-warn)" : "var(--mk-danger)",
       ),
     },
     {
       label: "Ср. время",
       value: (
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--mk-ink-900)" }}>
+        <span style={{ fontFamily: "var(--mk-font-mono)", fontSize: "var(--mk-text-xs)", fontWeight: 600, color: "var(--mk-ink-900)" }}>
           {formatDuration(snapshot.avg_duration_sec)}
         </span>
       ),
@@ -101,7 +101,7 @@ export function QualityPanel({ project }: QualityPanelProps) {
       label: "Retry rate",
       value: pctBar(
         snapshot.retry_rate * 100,
-        snapshot.retry_rate <= 0.15 ? "var(--green-500)" : snapshot.retry_rate <= 0.3 ? "var(--orange-500)" : "var(--red-500)",
+        snapshot.retry_rate <= 0.15 ? "var(--mk-success)" : snapshot.retry_rate <= 0.3 ? "var(--mk-warn)" : "var(--mk-danger)",
       ),
     },
   ];
@@ -111,7 +111,7 @@ export function QualityPanel({ project }: QualityPanelProps) {
       label: "QA pass rate",
       value: pctBar(
         snapshot.qa_pass_rate * 100,
-        snapshot.qa_pass_rate >= 0.9 ? "var(--green-500)" : snapshot.qa_pass_rate >= 0.7 ? "var(--orange-500)" : "var(--red-500)",
+        snapshot.qa_pass_rate >= 0.9 ? "var(--mk-success)" : snapshot.qa_pass_rate >= 0.7 ? "var(--mk-warn)" : "var(--mk-danger)",
       ),
     });
   }
@@ -120,7 +120,7 @@ export function QualityPanel({ project }: QualityPanelProps) {
     rows.push({
       label: "Top ошибки",
       value: (
-        <span style={{ fontSize: "var(--text-xs)", color: "var(--mk-ink-600)" }}>
+        <span style={{ fontSize: "var(--mk-text-xs)", color: "var(--mk-ink-600)" }}>
           {snapshot.top_error_classes.slice(0, 3).map(([cls, count]) => `${cls} (${count})`).join(", ")}
         </span>
       ),
@@ -131,7 +131,7 @@ export function QualityPanel({ project }: QualityPanelProps) {
     <div className="bento-panel span-6">
       <div className="bento-panel-title">
         Quality
-        <span style={{ textTransform: "none", fontWeight: 400, fontSize: "var(--text-xs)", color: "var(--mk-ink-500)" }}>
+        <span style={{ textTransform: "none", fontWeight: 400, fontSize: "var(--mk-text-xs)", color: "var(--mk-ink-500)" }}>
           {" "}за 7 дней
         </span>
       </div>
@@ -139,7 +139,7 @@ export function QualityPanel({ project }: QualityPanelProps) {
         {rows.map((row) => (
           <div key={row.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{
-              fontSize: "var(--text-xs)",
+              fontSize: "var(--mk-text-xs)",
               color: "var(--mk-ink-500)",
               minWidth: 90,
               flexShrink: 0,

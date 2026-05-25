@@ -131,7 +131,7 @@ export function DebateTab() {
           </p>
           <button
             className="btn btn-primary"
-            style={{ marginTop: "var(--sp-4)" }}
+            style={{ marginTop: "var(--mk-sp-4)" }}
             onClick={() => setShowModal(true)}
           >
             Запустить первый дебат

@@ -47,7 +47,7 @@ function RiskBadge({ riskLevel, executionPolicy }: { riskLevel?: string; executi
     <span
       title={tooltip}
       style={{
-        fontSize: "var(--text-xs)",
+        fontSize: "var(--mk-text-xs)",
         fontWeight: 700,
         padding: "1px 6px",
         borderRadius: 8,
@@ -70,7 +70,7 @@ function ComplexityBadge({ complexity, model }: { complexity?: ComplexityLevel; 
     <span
       title={model ? `Model: ${model}` : undefined}
       style={{
-        fontSize: "var(--text-xs)",
+        fontSize: "var(--mk-text-xs)",
         fontWeight: 700,
         padding: "1px 6px",
         borderRadius: 8,
@@ -200,7 +200,7 @@ function CategoryBadge({ category }: { category: EscalationCategory }) {
   const style = CATEGORY_STYLE[category] ?? CATEGORY_STYLE.other;
   return (
     <span style={{
-      fontSize: "var(--text-xs)",
+      fontSize: "var(--mk-text-xs)",
       fontWeight: 600,
       padding: "1px 8px",
       borderRadius: 10,
@@ -228,7 +228,7 @@ function OutcomeBadge({ outcome }: { outcome: Outcome }) {
   if (!style) return null;
   return (
     <span style={{
-      fontSize: "var(--text-xs)",
+      fontSize: "var(--mk-text-xs)",
       fontWeight: 700,
       padding: "1px 8px",
       borderRadius: 10,
@@ -498,7 +498,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
   if (available === null) {
     return (
       <div className="bento-panel span-12" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}>
-        <span style={{ color: "var(--mk-ink-500)", fontSize: "var(--text-sm)" }}>
+        <span style={{ color: "var(--mk-ink-500)", fontSize: "var(--mk-text-sm)" }}>
           Подключение к pipeline...
         </span>
       </div>
@@ -509,19 +509,19 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
   if (available === false) {
     return (
       <div className="bento-panel span-12" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: 32 }}>
-        <div style={{ fontSize: "var(--text-lg)", fontWeight: 600, color: "var(--mk-ink-900)" }}>
+        <div style={{ fontSize: "var(--mk-text-lg)", fontWeight: 600, color: "var(--mk-ink-900)" }}>
           Pipeline недоступен
         </div>
-        <p style={{ color: "var(--mk-ink-600)", fontSize: "var(--text-sm)", margin: 0, textAlign: "center", maxWidth: 480 }}>
+        <p style={{ color: "var(--mk-ink-600)", fontSize: "var(--mk-text-sm)", margin: 0, textAlign: "center", maxWidth: 480 }}>
           Pipeline API сервер не отвечает. Убедитесь, что Mac включён и API запущен.
         </p>
         <pre style={{
           background: "var(--mk-paper)",
           border: "1px solid var(--mk-line)",
-          borderRadius: "var(--radius-sm)",
+          borderRadius: "var(--mk-r-md)",
           padding: "12px 16px",
-          fontSize: "var(--text-xs)",
-          fontFamily: "var(--font-mono)",
+          fontSize: "var(--mk-text-xs)",
+          fontFamily: "var(--mk-font-mono)",
           color: "var(--mk-ink-600)",
           margin: 0,
           whiteSpace: "pre-wrap",
@@ -552,11 +552,11 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
           }}>
             <div style={{
               width: 8, height: 8, borderRadius: "50%",
-              background: isRunning ? "var(--green-500)" : "var(--gray-500)",
+              background: isRunning ? "var(--mk-success)" : "var(--mk-ink-500)",
               boxShadow: isRunning ? "0 0 8px var(--mk-glow-success)" : undefined,
             }} />
             <span style={{
-              fontSize: "var(--text-xs)", fontWeight: 700,
+              fontSize: "var(--mk-text-xs)", fontWeight: 700,
               color: "var(--mk-ink-500)", textTransform: "uppercase",
               letterSpacing: "0.06em",
             }}>
@@ -567,7 +567,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
           {/* Project selector */}
           <select
             className="input"
-            style={{ fontSize: "var(--text-sm)", padding: "4px 8px", minWidth: 160 }}
+            style={{ fontSize: "var(--mk-text-sm)", padding: "4px 8px", minWidth: 160 }}
             value={selectedProject}
             onChange={(e) => setSelectedProject(e.target.value)}
             disabled={isRunning}
@@ -586,7 +586,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
              milestones — keeps the dropdown from looking interactive but empty. */}
           <select
             className="input"
-            style={{ fontSize: "var(--text-sm)", padding: "4px 8px", minWidth: 160 }}
+            style={{ fontSize: "var(--mk-text-sm)", padding: "4px 8px", minWidth: 160 }}
             value={selectedMilestone}
             onChange={(e) => setSelectedMilestone(e.target.value)}
             disabled={isRunning || !selectedProject || milestoneOptions.length === 0}
@@ -615,9 +615,9 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
             {LABEL_OPTIONS.map((label) => {
               const active = selectedLabels.includes(label);
               const colorMap: Record<string, string> = {
-                "P1-critical": "var(--red-500)",
-                "P2-high": "var(--orange-500)",
-                "P3-medium": "var(--gray-600)",
+                "P1-critical": "var(--mk-danger)",
+                "P2-high": "var(--mk-warn)",
+                "P3-medium": "var(--mk-ink-700)",
               };
               return (
                 <button
@@ -626,7 +626,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                   disabled={isRunning}
                   style={{
                     padding: "2px 8px",
-                    fontSize: "var(--text-xs)",
+                    fontSize: "var(--mk-text-xs)",
                     fontWeight: 600,
                     borderRadius: 12,
                     border: `1px solid ${active ? colorMap[label] : "var(--mk-line)"}`,
@@ -646,7 +646,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
           {/* Complexity filter */}
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <span style={{
-              fontSize: "var(--text-xs)",
+              fontSize: "var(--mk-text-xs)",
               color: "var(--mk-ink-500)",
               borderLeft: "1px solid var(--mk-line)",
               paddingLeft: 8,
@@ -664,7 +664,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                   title={opt.hint}
                   style={{
                     padding: "2px 8px",
-                    fontSize: "var(--text-xs)",
+                    fontSize: "var(--mk-text-xs)",
                     fontWeight: 600,
                     borderRadius: 12,
                     border: `1px solid ${active ? "var(--mk-primary)" : "var(--mk-line)"}`,
@@ -683,11 +683,11 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
 
           {/* Limit */}
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontSize: "var(--text-xs)", color: "var(--mk-ink-500)" }}>Лимит</span>
+            <span style={{ fontSize: "var(--mk-text-xs)", color: "var(--mk-ink-500)" }}>Лимит</span>
             <input
               type="number"
               className="input"
-              style={{ width: 48, padding: "4px 6px", fontSize: "var(--text-sm)", textAlign: "center" }}
+              style={{ width: 48, padding: "4px 6px", fontSize: "var(--mk-text-sm)", textAlign: "center" }}
               min={1}
               max={50}
               value={limit}
@@ -718,7 +718,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
           {isRunning && !isStopping && (
             <button
               className="btn"
-              style={{ padding: "6px 16px", borderColor: "var(--red-500)", color: "var(--red-500)" }}
+              style={{ padding: "6px 16px", borderColor: "var(--mk-danger)", color: "var(--mk-danger)" }}
               onClick={() => void stop()}
               disabled={stopping}
             >
@@ -726,13 +726,13 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
             </button>
           )}
           {isStopping && (
-            <span style={{ fontSize: "var(--text-xs)", color: "var(--mk-ink-500)" }}>
+            <span style={{ fontSize: "var(--mk-text-xs)", color: "var(--mk-ink-500)" }}>
               Завершаем...
             </span>
           )}
 
           {error && (
-            <span style={{ fontSize: "var(--text-xs)", color: "var(--red-500)" }}>{error}</span>
+            <span style={{ fontSize: "var(--mk-text-xs)", color: "var(--mk-danger)" }}>{error}</span>
           )}
         </div>
       </div>
@@ -754,15 +754,15 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
             {[
               { value: stats.total_issues, label: "Всего", color: "var(--mk-ink-900)" },
-              { value: stats.agent_completed, label: "Pipeline", color: "var(--green-500)" },
+              { value: stats.agent_completed, label: "Pipeline", color: "var(--mk-success)" },
               { value: stats.manual_completed, label: "Вручную", color: "var(--mk-ink-600)" },
-              { value: stats.total_issues - stats.closed_issues, label: "Открыто", color: "var(--blue-500)" },
+              { value: stats.total_issues - stats.closed_issues, label: "Открыто", color: "var(--mk-brand-500)" },
             ].map((s) => (
               <div key={s.label} style={{ textAlign: "center" }}>
-                <div style={{ fontSize: "var(--text-data)", fontWeight: 700, color: s.color, lineHeight: 1.2 }}>
+                <div style={{ fontSize: "var(--mk-text-data)", fontWeight: 700, color: s.color, lineHeight: 1.2 }}>
                   {s.value}
                 </div>
-                <div style={{ fontSize: "var(--text-xs)", color: "var(--mk-ink-500)", marginTop: 2 }}>
+                <div style={{ fontSize: "var(--mk-text-xs)", color: "var(--mk-ink-500)", marginTop: 2 }}>
                   {s.label}
                 </div>
               </div>
@@ -780,30 +780,30 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
             }}>
               {stats.first_pass_rate != null && (
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "var(--text-data)", fontWeight: 700, color: stats.first_pass_rate >= 80 ? "var(--green-500)" : stats.first_pass_rate >= 60 ? "var(--orange-500)" : "var(--red-500)", lineHeight: 1.2 }}>
+                  <div style={{ fontSize: "var(--mk-text-data)", fontWeight: 700, color: stats.first_pass_rate >= 80 ? "var(--mk-success)" : stats.first_pass_rate >= 60 ? "var(--mk-warn)" : "var(--mk-danger)", lineHeight: 1.2 }}>
                     {Math.round(stats.first_pass_rate)}%
                   </div>
-                  <div style={{ fontSize: "var(--text-xs)", color: "var(--mk-ink-500)", marginTop: 2 }}>
+                  <div style={{ fontSize: "var(--mk-text-xs)", color: "var(--mk-ink-500)", marginTop: 2 }}>
                     First pass
                   </div>
                 </div>
               )}
               {stats.avg_duration_seconds != null && (
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "var(--text-data)", fontWeight: 700, color: "var(--mk-ink-900)", lineHeight: 1.2 }}>
+                  <div style={{ fontSize: "var(--mk-text-data)", fontWeight: 700, color: "var(--mk-ink-900)", lineHeight: 1.2 }}>
                     {formatDuration(stats.avg_duration_seconds)}
                   </div>
-                  <div style={{ fontSize: "var(--text-xs)", color: "var(--mk-ink-500)", marginTop: 2 }}>
+                  <div style={{ fontSize: "var(--mk-text-xs)", color: "var(--mk-ink-500)", marginTop: 2 }}>
                     Ср. время
                   </div>
                 </div>
               )}
               {stats.cost_per_task_usd != null && (
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "var(--text-data)", fontWeight: 700, color: "var(--green-500)", lineHeight: 1.2 }}>
+                  <div style={{ fontSize: "var(--mk-text-data)", fontWeight: 700, color: "var(--mk-success)", lineHeight: 1.2 }}>
                     ${stats.cost_per_task_usd.toFixed(2)}
                   </div>
-                  <div style={{ fontSize: "var(--text-xs)", color: "var(--mk-ink-500)", marginTop: 2 }}>
+                  <div style={{ fontSize: "var(--mk-text-xs)", color: "var(--mk-ink-500)", marginTop: 2 }}>
                     $/задачу
                   </div>
                 </div>
@@ -822,18 +822,18 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
           <div className="bento-panel-title">Сложность</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
             {([
-              { key: "auto" as const, label: "Auto", color: "var(--green-500)" },
-              { key: "assisted" as const, label: "Assisted", color: "var(--orange-500)" },
-              { key: "manual" as const, label: "Manual", color: "var(--red-500)" },
+              { key: "auto" as const, label: "Auto", color: "var(--mk-success)" },
+              { key: "assisted" as const, label: "Assisted", color: "var(--mk-warn)" },
+              { key: "manual" as const, label: "Manual", color: "var(--mk-danger)" },
             ] as const).map((item) => {
               const count = breakdown[item.key];
               const pct = total > 0 ? Math.round((count / total) * 100) : 0;
               return (
                 <div key={item.key} style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "var(--text-data)", fontWeight: 700, color: item.color, lineHeight: 1.2 }}>
+                  <div style={{ fontSize: "var(--mk-text-data)", fontWeight: 700, color: item.color, lineHeight: 1.2 }}>
                     {count}
                   </div>
-                  <div style={{ fontSize: "var(--text-xs)", color: "var(--mk-ink-500)", marginTop: 2 }}>
+                  <div style={{ fontSize: "var(--mk-text-xs)", color: "var(--mk-ink-500)", marginTop: 2 }}>
                     {item.label}
                     <span style={{ marginLeft: 4, opacity: 0.7 }}>{pct}%</span>
                   </div>
@@ -844,7 +844,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
           {/* Model usage */}
           {stats.model_usage && stats.model_usage.length > 0 && (
             <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px solid var(--mk-line)" }}>
-              <div style={{ fontSize: "var(--text-xs)", color: "var(--mk-ink-500)", marginBottom: 6 }}>
+              <div style={{ fontSize: "var(--mk-text-xs)", color: "var(--mk-ink-500)", marginBottom: 6 }}>
                 Модели
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -852,7 +852,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                   <span
                     key={m.model}
                     style={{
-                      fontSize: "var(--text-xs)",
+                      fontSize: "var(--mk-text-xs)",
                       fontWeight: 600,
                       padding: "2px 8px",
                       borderRadius: 10,
@@ -906,7 +906,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                     flexDirection: "column",
                     gap: 4,
                     padding: "8px 10px",
-                    borderRadius: "var(--radius-sm)",
+                    borderRadius: "var(--mk-r-md)",
                     background: "var(--mk-paper)",
                     border: `1px solid ${visual.border}`,
                   }}
@@ -926,8 +926,8 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                       }
                     }}
                     style={{
-                      fontFamily: "var(--font-mono)",
-                      fontSize: "var(--text-xs)",
+                      fontFamily: "var(--mk-font-mono)",
+                      fontSize: "var(--mk-text-xs)",
                       color: "var(--mk-primary)",
                       minWidth: 36,
                       cursor: "pointer",
@@ -943,7 +943,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
 
                   {/* Status badge */}
                   <span style={{
-                    fontSize: "var(--text-xs)",
+                    fontSize: "var(--mk-text-xs)",
                     fontWeight: 600,
                     padding: "1px 8px",
                     borderRadius: 10,
@@ -959,9 +959,9 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                   {/* Cost */}
                   {r.cost_usd != null && (
                     <span style={{
-                      fontFamily: "var(--font-mono)",
-                      fontSize: "var(--text-xs)",
-                      color: "var(--green-500)",
+                      fontFamily: "var(--mk-font-mono)",
+                      fontSize: "var(--mk-text-xs)",
+                      color: "var(--mk-success)",
                     }}>
                       ${r.cost_usd.toFixed(2)}
                     </span>
@@ -980,9 +980,9 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                       <span
                         title={tooltip}
                         style={{
-                          fontFamily: "var(--font-mono)",
-                          fontSize: "var(--text-xs)",
-                          color: warn ? "var(--orange-500)" : "var(--mk-ink-500)",
+                          fontFamily: "var(--mk-font-mono)",
+                          fontSize: "var(--mk-text-xs)",
+                          color: warn ? "var(--mk-warn)" : "var(--mk-ink-500)",
                           cursor: tooltip ? "help" : undefined,
                         }}
                       >
@@ -1006,7 +1006,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                   {/* Review verdict */}
                   {r.review_verdict && (
                     <span style={{
-                      fontSize: "var(--text-xs)",
+                      fontSize: "var(--mk-text-xs)",
                       fontWeight: 600,
                       padding: "1px 6px",
                       borderRadius: 8,
@@ -1020,8 +1020,8 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                   {/* Duration (from total_duration_seconds) */}
                   {r.total_duration_seconds != null && r.total_duration_seconds > 0 && (
                     <span style={{
-                      fontFamily: "var(--font-mono)",
-                      fontSize: "var(--text-xs)",
+                      fontFamily: "var(--mk-font-mono)",
+                      fontSize: "var(--mk-text-xs)",
                       color: "var(--mk-ink-500)",
                       minWidth: 42,
                       textAlign: "right",
@@ -1035,8 +1035,8 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                     <span
                       title={`QA нашёл ${r.qa_findings_count} проблем`}
                       style={{
-                        fontSize: "var(--text-xs)",
-                        color: "var(--orange-500)",
+                        fontSize: "var(--mk-text-xs)",
+                        color: "var(--mk-warn)",
                         cursor: "help",
                       }}
                     >
@@ -1049,7 +1049,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
 
                   {/* Retries */}
                   {r.retries > 0 && (
-                    <span style={{ fontSize: "var(--text-xs)", color: "var(--orange-500)" }}>
+                    <span style={{ fontSize: "var(--mk-text-xs)", color: "var(--mk-warn)" }}>
                       {r.retries} retry
                     </span>
                   )}
@@ -1061,7 +1061,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                       target="_blank"
                       rel="noreferrer"
                       style={{
-                        fontSize: "var(--text-xs)",
+                        fontSize: "var(--mk-text-xs)",
                         color: "var(--mk-primary)",
                         textDecoration: "none",
                       }}
@@ -1075,8 +1075,8 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                     <span
                       title={r.error}
                       style={{
-                        fontSize: "var(--text-xs)",
-                        color: "var(--red-500)",
+                        fontSize: "var(--mk-text-xs)",
+                        color: "var(--mk-danger)",
                         cursor: "help",
                         maxWidth: 200,
                         overflow: "hidden",

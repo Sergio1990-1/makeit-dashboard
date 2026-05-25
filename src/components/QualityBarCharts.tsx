@@ -3,21 +3,21 @@ import type { QualityFindingsDistribution, QualityErrorsDistribution } from "../
 // ── Colors ──────────────────────────────────────────────────────────
 
 const FINDING_COLORS = [
-  "var(--blue-500)",
-  "var(--purple-500)",
-  "var(--cyan-500)",
-  "var(--green-500)",
-  "var(--yellow-500)",
-  "var(--red-500)",
+  "var(--mk-brand-500)",
+  "var(--mk-purple-500)",
+  "var(--mk-sky-500)",
+  "var(--mk-success)",
+  "var(--mk-severity-medium)",
+  "var(--mk-danger)",
 ];
 
 const ERROR_COLORS = [
-  "var(--red-500)",
-  "var(--yellow-500)",
-  "var(--purple-500)",
-  "var(--blue-500)",
-  "var(--cyan-500)",
-  "var(--green-500)",
+  "var(--mk-danger)",
+  "var(--mk-severity-medium)",
+  "var(--mk-purple-500)",
+  "var(--mk-brand-500)",
+  "var(--mk-sky-500)",
+  "var(--mk-success)",
 ];
 
 // ── Helpers ─────────────────────────────────────────────────────────

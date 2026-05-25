@@ -5,11 +5,11 @@ import type { TimelineEntry } from "../utils/pipeline";
 /* ── Helpers ── */
 
 function dotColor(status: string): string {
-  if (status === "completed") return "var(--green-500)";
-  if (status === "failed") return "var(--red-500)";
-  if (status === "started" || status === "in_progress") return "var(--blue-500)";
-  if (status === "partial") return "var(--orange-500)";
-  return "var(--gray-400)";
+  if (status === "completed") return "var(--mk-success)";
+  if (status === "failed") return "var(--mk-danger)";
+  if (status === "started" || status === "in_progress") return "var(--mk-brand-500)";
+  if (status === "partial") return "var(--mk-warn)";
+  return "var(--mk-line-strong)";
 }
 
 function formatTime(ts: number): string {
@@ -123,10 +123,10 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
 
           {!loading && error && (
             <div style={{ textAlign: "center", padding: "24px 0" }}>
-              <p style={{ color: "var(--red-500)", fontSize: "var(--text-sm)", margin: 0 }}>
+              <p style={{ color: "var(--mk-danger)", fontSize: "var(--mk-text-sm)", margin: 0 }}>
                 {error}
               </p>
-              <p style={{ color: "var(--mk-ink-500)", fontSize: "var(--text-xs)", marginTop: 8 }}>
+              <p style={{ color: "var(--mk-ink-500)", fontSize: "var(--mk-text-xs)", marginTop: 8 }}>
                 Timeline API недоступен
               </p>
             </div>
@@ -134,7 +134,7 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
 
           {!loading && !error && (!entries || entries.length === 0) && (
             <div style={{ textAlign: "center", padding: "24px 0" }}>
-              <p style={{ color: "var(--mk-ink-500)", fontSize: "var(--text-sm)", margin: 0 }}>
+              <p style={{ color: "var(--mk-ink-500)", fontSize: "var(--mk-text-sm)", margin: 0 }}>
                 Нет данных таймлайна
               </p>
             </div>
@@ -202,7 +202,7 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
                       {/* Stage name */}
                       <span
                         style={{
-                          fontSize: "var(--text-sm)",
+                          fontSize: "var(--mk-text-sm)",
                           fontWeight: 600,
                           color: "var(--mk-ink-900)",
                           minWidth: 100,
@@ -214,8 +214,8 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
                       {/* Time */}
                       <span
                         style={{
-                          fontFamily: "var(--font-mono)",
-                          fontSize: "var(--text-xs)",
+                          fontFamily: "var(--mk-font-mono)",
+                          fontSize: "var(--mk-text-xs)",
                           color: "var(--mk-ink-500)",
                           minWidth: 62,
                         }}
@@ -226,9 +226,9 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
                       {/* Cost */}
                       <span
                         style={{
-                          fontFamily: "var(--font-mono)",
-                          fontSize: "var(--text-xs)",
-                          color: entry.cost_usd ? "var(--green-500)" : "var(--mk-ink-400)",
+                          fontFamily: "var(--mk-font-mono)",
+                          fontSize: "var(--mk-text-xs)",
+                          color: entry.cost_usd ? "var(--mk-success)" : "var(--mk-ink-400)",
                           minWidth: 44,
                         }}
                       >
@@ -238,8 +238,8 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
                       {/* Duration */}
                       <span
                         style={{
-                          fontFamily: "var(--font-mono)",
-                          fontSize: "var(--text-xs)",
+                          fontFamily: "var(--mk-font-mono)",
+                          fontSize: "var(--mk-text-xs)",
                           color: "var(--mk-ink-600)",
                           minWidth: 50,
                         }}
@@ -251,17 +251,17 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
                       {entry.detail && (
                         <span
                           style={{
-                            fontSize: "var(--text-xs)",
+                            fontSize: "var(--mk-text-xs)",
                             fontWeight: 600,
                             color:
                               entry.detail === "APPROVED"
-                                ? "var(--green-500)"
+                                ? "var(--mk-success)"
                                 : entry.detail === "CHANGES_REQUESTED"
-                                  ? "var(--orange-500)"
+                                  ? "var(--mk-warn)"
                                   : entry.detail === "PASS"
-                                    ? "var(--green-500)"
+                                    ? "var(--mk-success)"
                                     : entry.detail === "FAIL"
-                                      ? "var(--red-500)"
+                                      ? "var(--mk-danger)"
                                       : "var(--mk-ink-500)",
                           }}
                         >
@@ -283,15 +283,15 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
             style={{
               justifyContent: "center",
               gap: 16,
-              fontSize: "var(--text-xs)",
+              fontSize: "var(--mk-text-xs)",
               color: "var(--mk-ink-500)",
-              fontFamily: "var(--font-mono)",
+              fontFamily: "var(--mk-font-mono)",
             }}
           >
             {totalCost > 0 && (
               <span>
                 Стоимость:{" "}
-                <span style={{ color: "var(--green-500)", fontWeight: 600 }}>
+                <span style={{ color: "var(--mk-success)", fontWeight: 600 }}>
                   {formatCost(totalCost)}
                 </span>
               </span>
