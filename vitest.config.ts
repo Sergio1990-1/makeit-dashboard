@@ -6,8 +6,14 @@ import { defineConfig } from "vitest/config";
  * stay isolated from Vitest (they have their own runner / `test` import).
  */
 export default defineConfig({
+  esbuild: {
+    jsx: "automatic",
+  },
   test: {
     include: ["tests/**/*.test.{ts,tsx}"],
     exclude: ["tests/e2e/**", "node_modules/**", "dist/**"],
+    environmentMatchGlobs: [
+      ["tests/**/*.test.tsx", "jsdom"],
+    ],
   },
 });
