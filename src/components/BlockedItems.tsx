@@ -11,7 +11,7 @@ export function BlockedItems({ issues }: Props) {
     <div className="bento-panel span-4">
       <div className="bento-panel-title" style={{ color: "var(--mk-danger)" }}>
         Заблокировано 🚫
-        <span className="mono" style={{ color: "var(--mk-danger)", fontSize: "var(--text-md)", fontWeight: 800 }}>
+        <span className="mono" style={{ color: "var(--mk-danger)", fontSize: "var(--mk-text-md)", fontWeight: 800 }}>
           {issues.length}
         </span>
       </div>

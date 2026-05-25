@@ -50,7 +50,7 @@ const labelTextStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   fontSize: 14,
   padding: "6px 8px",
-  border: "1px solid #ccc",
+  border: "1px solid var(--mk-line)",
   borderRadius: 4,
 };
 
