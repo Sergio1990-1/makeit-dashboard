@@ -1,6 +1,11 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import type { QualityPayload, Annotation } from "../types/quality";
-import { fetchQualityData, fetchAnnotations, forceQualityRefresh } from "../utils/codex-quality";
+import {
+  fetchQualityData,
+  fetchAnnotations,
+  forceQualityRefresh,
+  QualityBackendUnavailableError,
+} from "../utils/codex-quality";
 
 const STALE_HOURS = 30;
 
@@ -9,10 +14,12 @@ export function useCodexQuality() {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
 
   const load = useCallback(async (force = false) => {
     setLoading(true);
     setError(null);
+    setUnavailable(false);
     try {
       const [q, a] = await Promise.all([
         force ? forceQualityRefresh() : fetchQualityData(),
@@ -21,7 +28,11 @@ export function useCodexQuality() {
       setData(q);
       setAnnotations(a);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (e instanceof QualityBackendUnavailableError) {
+        setUnavailable(true);
+      } else {
+        setError(e instanceof Error ? e.message : String(e));
+      }
     } finally {
       setLoading(false);
     }
@@ -31,7 +42,9 @@ export function useCodexQuality() {
     try {
       setAnnotations(await fetchAnnotations());
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (!(e instanceof QualityBackendUnavailableError)) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
     }
   }, []);
 
@@ -50,6 +63,7 @@ export function useCodexQuality() {
     annotations,
     loading,
     error,
+    unavailable,
     isStale,
     refresh: () => load(true),
     reloadAnnotations,

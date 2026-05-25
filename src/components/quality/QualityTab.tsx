@@ -9,11 +9,34 @@ import { createAnnotation } from "../../utils/codex-quality";
 import "../../styles/v4-quality.css";
 
 export function QualityTab() {
-  const { data, annotations, loading, error, isStale, refresh, reloadAnnotations } = useCodexQuality();
+  const { data, annotations, loading, error, unavailable, isStale, refresh, reloadAnnotations } = useCodexQuality();
   const [mode, setMode] = useState<PeriodMode>("12w");
   const [showAddModal, setShowAddModal] = useState(false);
 
   if (loading && !data) return <div className="v4-quality-tab">Загрузка…</div>;
+  if (unavailable) {
+    return (
+      <div className="v4-quality-tab page">
+        <div className="pageH">
+          <div>
+            <h1>Качество кода</h1>
+            <div className="sub">
+              Доля PR с критическими/высокими замечаниями <b>chatgpt-codex-connector[bot]</b> от общего числа merged PR · события на временной оси
+            </div>
+          </div>
+        </div>
+        <div className="quality-empty-panel">
+          <div className="quality-empty-icon">📊</div>
+          <h2>Данные ещё не собираются</h2>
+          <p>
+            Sweep-бэкенд на Pipeline Mac не задеплоен — нет источника для <code>/data/codex-quality.json</code>.
+            После настройки cron здесь появится недельная динамика P0/P1/P2 находок Codex по всем 12 проектам.
+          </p>
+          <button className="btn-refresh" onClick={() => refresh()} disabled={loading}>↻ Проверить ещё раз</button>
+        </div>
+      </div>
+    );
+  }
   if (error) {
     return (
       <div className="v4-quality-tab">
