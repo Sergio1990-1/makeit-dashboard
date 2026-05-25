@@ -29,8 +29,10 @@ export function QualitySummaryPanel({ data, annotations, mode }: Props) {
             </span>
           )}
         </div>
-        <QualityChart buckets={buckets} labels={labels} compact={false} />
-        <QualityAnnotations annotations={annotations} mode={mode} bucketCount={buckets.length} />
+        <div className="chart-area">
+          <QualityChart buckets={buckets} labels={labels} compact={false} />
+          <QualityAnnotations annotations={annotations} mode={mode} bucketCount={buckets.length} />
+        </div>
         <div className="chart-legend">
           <span><i className="dot dot-p1" /> P1 (критическое)</span>
           <span><i className="dot dot-p2" /> P2 (высокое)</span>
