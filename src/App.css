@@ -1,6 +1,11 @@
 /* ══════════════════════════════════════════
-   MakeIT Dashboard — Design System
-   Mobile-first · Dark-first
+   MakeIT Dashboard — Legacy bridge layer
+   Light theme only. All shared design tokens
+   come from src/styles/tokens.css (--mk-*).
+   Local --color-* / --gray-* names below are
+   bridge aliases preserved for legacy selectors;
+   they will be retired during the styleguide
+   migration.
    ══════════════════════════════════════════ */
 
 /* Responsive breakpoint contract (issue #490) defined in
@@ -9,46 +14,45 @@
    1024–1100 dead zone (sidebar already a drawer at v4 1100,
    legacy content stayed desktop until 1024). */
 
-/* ── Design Tokens (Dark Theme — Primary) ── */
 :root {
-  /* Gray scale */
-  --gray-0: #030508;
-  --gray-100: rgba(18, 24, 38, 0.6);
-  --gray-200: rgba(26, 35, 53, 0.8);
-  --gray-300: rgba(255, 255, 255, 0.08);
-  --gray-400: rgba(255, 255, 255, 0.15);
-  --gray-500: #556276;
-  --gray-600: #8a96a8;
-  --gray-700: #9ca3ae;
-  --gray-800: #c8cdd3;
-  --gray-900: #ffffff;
-  --gray-950: #f0f2f4;
+  /* Gray scale (light) — TODO: consolidate with --mk-gray-* */
+  --gray-0: #f7f9fc;
+  --gray-100: rgba(255, 255, 255, 0.85); /* Frosty surface */
+  --gray-200: rgba(255, 255, 255, 1);
+  --gray-300: rgba(0, 0, 0, 0.06);
+  --gray-400: rgba(0, 0, 0, 0.12);
+  --gray-500: #475569;
+  --gray-600: #334155;
+  --gray-700: #334155;
+  --gray-800: #1e293b;
+  --gray-900: #0f172a;
+  --gray-950: #020617;
 
-  /* Accent */
-  --blue-500: #4c8dff;
-  --blue-400: #6aa1ff;
-  --blue-600: #3b7aee;
+  /* Accent (aligned with --mk-brand-*) */
+  --blue-500: var(--mk-brand-500);
+  --blue-400: var(--mk-brand-400);
+  --blue-600: var(--mk-brand-600);
 
-  /* Semantic */
-  --green-500: #10b981;
-  --green-400: #34d399;
-  --red-500: #ef4444;
-  --orange-500: #f59e0b;
-  --yellow-500: #facc15;
-  --purple-500: #8b5cf6;
+  /* Semantic raw — TODO: consolidate with --mk-* status tokens */
+  --green-500: #059669;
+  --green-400: #10b981;
+  --red-500: #dc2626;
+  --orange-500: #d97706;
+  --yellow-500: #eab308;
+  --purple-500: #7c3aed;
   --cyan-500: #06b6d4;
 
-  /* Mapped tokens */
+  /* Mapped surface / text tokens */
   --color-bg: var(--gray-0);
   --color-surface: var(--gray-100);
   --color-surface-hover: var(--gray-200);
-  --color-surface-solid: #121826;
+  --color-surface-solid: #ffffff;
   --color-border: var(--gray-300);
   --color-border-subtle: var(--gray-400);
   --color-text: var(--gray-900);
   --color-text-secondary: var(--gray-600);
   --color-text-muted: var(--gray-500);
-  --color-text-faint: rgba(255, 255, 255, 0.3);
+  --color-text-faint: rgba(0, 0, 0, 0.3);
   --color-primary: var(--blue-500);
   --color-primary-hover: var(--blue-400);
   --color-primary-active: var(--blue-600);
@@ -58,11 +62,12 @@
   --color-caution: var(--yellow-500);
   --color-review: var(--purple-500);
 
-  /* New Glowing Effects */
-  --color-glow-primary: rgba(76, 141, 255, 0.3);
-  --color-glow-success: rgba(16, 185, 129, 0.3);
-  --color-glow-danger: rgba(239, 68, 68, 0.3);
-  --color-glow-warning: rgba(245, 158, 11, 0.3);
+  /* Ambient glow tints (light theme) */
+  --color-glow-primary: var(--mk-glow-primary);
+  --color-glow-success: var(--mk-glow-success);
+  --color-glow-danger: var(--mk-glow-danger);
+  --color-glow-warning: var(--mk-glow-warn);
+  --color-glow-accent: var(--mk-glow-primary);
 
   /* Priority */
   --color-p1: var(--red-500);
@@ -73,90 +78,48 @@
   --color-todo: var(--gray-600);
   --color-in-progress: var(--blue-500);
 
-  /* Typography — Modern Display (Apple-style) */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: 'JetBrains Mono', "SF Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Typography (bridge → mk-tokens) */
+  --font-sans: var(--mk-font-sans);
+  --font-mono: var(--mk-font-mono);
+  --text-xs: var(--mk-text-xs);
+  --text-sm: var(--mk-text-sm);
+  --text-base: var(--mk-text-base);
+  --text-md: var(--mk-text-md);
+  --text-lg: var(--mk-text-lg);
+  --text-xl: var(--mk-text-xl);
+  --text-data: var(--mk-text-data);
 
-  --text-xs: 0.6875rem;    /* 11px */
-  --text-sm: 0.8125rem;    /* 13px */
-  --text-base: 0.875rem;   /* 14px */
-  --text-md: 0.9375rem;    /* 15px (Apple-style) */
-  --text-lg: 1.125rem;     /* 18px */
-  --text-xl: 1.25rem;      /* 20px */
-  --text-data: 1.5rem;     /* 24px */
+  /* Spacing (bridge → mk-tokens) */
+  --sp-1: var(--mk-sp-1);
+  --sp-2: var(--mk-sp-2);
+  --sp-3: var(--mk-sp-3);
+  --sp-4: var(--mk-sp-4);
+  --sp-5: var(--mk-sp-5);
+  --sp-6: var(--mk-sp-6);
+  --sp-8: var(--mk-sp-8);
+  --sp-10: var(--mk-sp-10);
 
-  /* Spacing */
-  --sp-1: 4px;
-  --sp-2: 8px;
-  --sp-3: 12px;
-  --sp-4: 16px;
-  --sp-5: 20px;
-  --sp-6: 24px;
-  --sp-8: 32px;
-  --sp-10: 40px;
+  /* Radius (legacy 8/16/24 mapping kept until styleguide picks one scale) */
+  --radius-sm: var(--mk-r-md);   /* legacy 8px */
+  --radius-md: var(--mk-r-xl);   /* legacy 16px */
+  --radius-lg: var(--mk-r-2xl);  /* legacy 24px */
+  --radius-full: var(--mk-r-full);
 
-  /* Radius (More rounded for modern look) */
-  --radius-sm: 8px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
-  --radius-full: 9999px;
+  /* Shadows (light theme — bridge → mk-tokens) */
+  --shadow-sm: var(--mk-shadow-sm);
+  --shadow-md: var(--mk-shadow-md);
+  --shadow-lg: var(--mk-shadow-lg);
 
-  /* Shadows (Softer glows on dark) */
-  --shadow-sm: 0 4px 12px rgba(0,0,0,0.2);
-  --shadow-md: 0 12px 32px rgba(0,0,0,0.4);
-  --shadow-lg: 0 20px 48px rgba(0,0,0,0.6);
-  --bg-pattern: none;
+  /* Decorative background pattern */
+  --bg-pattern: radial-gradient(circle, rgba(0,0,0,0.05) 1px, transparent 1px);
 
   /* Semantic utility tokens */
-  --color-on-primary: #ffffff;
-  --color-overlay: rgba(0, 0, 0, 0.6);
-  --color-glow-accent: var(--color-glow-accent);
-  --color-neutral-tint-1: var(--color-neutral-tint-1);
-  --color-neutral-tint-2: var(--color-neutral-tint-2);
-  --color-neutral-tint-3: var(--color-neutral-tint-3);
-  --color-neutral-tint-4: rgba(120, 130, 140, 0.10);
-}
-
-/* ── Light Theme Override (Neo-Brutalism & Apple Clean) ── */
-@media (prefers-color-scheme: light) {
-  :root {
-    --gray-0: #f7f9fc;
-    --gray-100: rgba(255, 255, 255, 0.85); /* Frosty surface */
-    --gray-200: rgba(255, 255, 255, 1);
-    --gray-300: rgba(0, 0, 0, 0.06);
-    --gray-400: rgba(0, 0, 0, 0.12);
-    --gray-500: #475569;
-    --gray-600: #334155;
-    --gray-700: #334155;
-    --gray-800: #1e293b;
-    --gray-900: #0f172a;
-    --gray-950: #020617;
-
-    --blue-500: #2563eb;
-    --blue-400: #3b82f6;
-    --blue-600: #1d4ed8;
-
-    --green-500: #059669;
-    --green-400: #10b981;
-    --red-500: #dc2626;
-    --orange-500: #d97706;
-    --yellow-500: #eab308;
-    --purple-500: #7c3aed;
-
-    --color-surface-solid: #ffffff;
-    --color-text-faint: rgba(0, 0, 0, 0.3);
-
-    --color-glow-primary: rgba(37, 99, 235, 0.15);
-    --color-glow-success: rgba(16, 185, 129, 0.15);
-    --color-glow-danger: rgba(239, 68, 68, 0.15);
-    --color-glow-warning: rgba(245, 158, 11, 0.15);
-
-    --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
-    --shadow-md: 0 8px 20px rgba(0,0,0,0.04);
-    --shadow-lg: 0 16px 32px rgba(15, 23, 42, 0.08); /* slight blue tint shadow */
-
-    --bg-pattern: radial-gradient(circle, rgba(0,0,0,0.05) 1px, transparent 1px);
-  }
+  --color-on-primary: var(--mk-on-primary);
+  --color-overlay: var(--mk-overlay);
+  --color-neutral-tint-1: var(--mk-neutral-tint-1);
+  --color-neutral-tint-2: var(--mk-neutral-tint-2);
+  --color-neutral-tint-3: var(--mk-neutral-tint-3);
+  --color-neutral-tint-4: var(--mk-neutral-tint-4);
 }
 
 /* ── Reset ── */
@@ -504,8 +467,8 @@ body::after {
 }
 
 .pc {
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  background: var(--color-surface-solid);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: var(--radius-md);
   padding: 10px 14px;
   display: flex !important;
@@ -513,28 +476,17 @@ body::after {
   justify-content: flex-start !important;
   gap: 6px !important;
   height: 100% !important;
+  box-shadow: var(--mk-shadow-card);
   transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
   cursor: pointer;
   position: relative;
   overflow: hidden;
 }
 
-@media (prefers-color-scheme: light) {
-  .pc {
-    background: var(--color-surface-solid);
-    border-color: rgba(0, 0, 0, 0.05); /* Even subtler border */
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.05);
-  }
-  .pc:hover {
-    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-    border-color: rgba(0, 0, 0, 0.1);
-  }
-}
-
 .pc:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.12); /* Softer, deeper shadow per design critique */
-  border-color: var(--color-border-subtle);
+  box-shadow: var(--mk-shadow-card-hover);
+  border-color: rgba(0, 0, 0, 0.1);
 }
 
 /* Left accent strip — all cards */

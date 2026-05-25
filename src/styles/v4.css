@@ -30,74 +30,78 @@
      • v4-health.css @media (max-width: 1180px) Hub page
    ══════════════════════════════════════════ */
 
+/* All --v4-* names are bridge aliases over src/styles/tokens.css.
+   Visual output unchanged; values come from --mk-* tokens.
+   Migration plan: remove this block once consumers are
+   migrated to --mk-* directly. */
 :root {
   /* Surfaces / ink */
-  --v4-bg: #F6F7F9;
-  --v4-paper: #FFFFFF;
-  --v4-surface-2: #F4F5F8;
-  --v4-surface-3: #EDEFF3;
-  --v4-ink-900: #0E1320;
-  --v4-ink-800: #1B2235;
-  --v4-ink-700: #2F3850;
-  --v4-ink-600: #4A5570;
-  --v4-ink-500: #6B7691;
-  --v4-ink-400: #94A0B8;
-  --v4-ink-300: #C5CCDA;
-  --v4-line: #E4E8EF;
-  --v4-line-soft: #EEF1F6;
-  --v4-line-strong: #D6DBE5;
+  --v4-bg: var(--mk-bg);
+  --v4-paper: var(--mk-paper);
+  --v4-surface-2: var(--mk-surface-2);
+  --v4-surface-3: var(--mk-surface-3);
+  --v4-ink-900: var(--mk-ink-900);
+  --v4-ink-800: var(--mk-ink-800);
+  --v4-ink-700: var(--mk-ink-700);
+  --v4-ink-600: var(--mk-ink-600);
+  --v4-ink-500: var(--mk-ink-500);
+  --v4-ink-400: var(--mk-ink-400);
+  --v4-ink-300: var(--mk-ink-300);
+  --v4-line: var(--mk-line);
+  --v4-line-soft: var(--mk-line-soft);
+  --v4-line-strong: var(--mk-line-strong);
 
   /* Accent (brand blue) */
-  --v4-accent-50: #EEF4FF;
-  --v4-accent-100: #DCE7FF;
-  --v4-accent-500: #2563EB;
-  --v4-accent-600: #1D4ED8;
-  --v4-accent-700: #1E40AF;
+  --v4-accent-50: var(--mk-brand-50);
+  --v4-accent-100: var(--mk-brand-100);
+  --v4-accent-500: var(--mk-brand-500);
+  --v4-accent-600: var(--mk-brand-600);
+  --v4-accent-700: var(--mk-brand-700);
 
   /* Semantic */
-  --v4-success-50: #ECFDF3;
-  --v4-success-100: #D1FADF;
-  --v4-success-500: #12B76A;
-  --v4-success-700: #067647;
-  --v4-warn-50: #FFFAEB;
-  --v4-warn-100: #FEDF89;
-  --v4-warn-500: #F79009;
-  --v4-warn-700: #B54708;
-  --v4-danger-50: #FEF2F2;
-  --v4-danger-100: #FEE4E2;
-  --v4-danger-500: #EF4444;
-  --v4-danger-700: #B91C1C;
-  --v4-purple-50: #F5F0FF;
-  --v4-purple-500: #7C3AED;
-  --v4-purple-700: #5B21B6;
-  --v4-sky-50: #E0F2FE;
-  --v4-sky-500: #0EA5E9;
-  --v4-sky-700: #0369A1;
+  --v4-success-50: var(--mk-green-v4-50);
+  --v4-success-100: var(--mk-green-v4-100);
+  --v4-success-500: var(--mk-green-v4-500);
+  --v4-success-700: var(--mk-green-v4-700);
+  --v4-warn-50: var(--mk-orange-v4-50);
+  --v4-warn-100: var(--mk-orange-v4-100);
+  --v4-warn-500: var(--mk-orange-v4-500);
+  --v4-warn-700: var(--mk-orange-v4-700);
+  --v4-danger-50: var(--mk-red-v4-50);
+  --v4-danger-100: var(--mk-red-v4-100);
+  --v4-danger-500: var(--mk-red-v4-500);
+  --v4-danger-700: var(--mk-red-v4-700);
+  --v4-purple-50: var(--mk-purple-50);
+  --v4-purple-500: var(--mk-purple-500);
+  --v4-purple-700: var(--mk-purple-700);
+  --v4-sky-50: var(--mk-sky-50);
+  --v4-sky-500: var(--mk-sky-500);
+  --v4-sky-700: var(--mk-sky-700);
   --v4-orange-50: #FFF6ED;
-  --v4-orange-500: #F97316;
-  --v4-orange-700: #C2410C;
+  --v4-orange-500: var(--mk-orange-bright-500);
+  --v4-orange-700: var(--mk-orange-bright-700);
 
   /* Priority palette */
-  --v4-p1: #EF4444;
-  --v4-p2: #F79009;
-  --v4-p3: #2563EB;
-  --v4-p4: #94A0B8;
+  --v4-p1: var(--mk-priority-p1);
+  --v4-p2: var(--mk-priority-p2);
+  --v4-p3: var(--mk-priority-p3);
+  --v4-p4: var(--mk-priority-p4);
 
   /* Commit-heatmap intensity steps (4 buckets, light → dark accent) */
-  --v4-heat-1: #DCE7FF;
-  --v4-heat-2: #92B0F5;
-  --v4-heat-3: #3F73E8;
-  --v4-heat-4: var(--v4-accent-700);
+  --v4-heat-1: var(--mk-heat-1);
+  --v4-heat-2: var(--mk-heat-2);
+  --v4-heat-3: var(--mk-heat-3);
+  --v4-heat-4: var(--mk-heat-4);
 
   /* Radii */
-  --v4-r-sm: 6px;
-  --v4-r-md: 8px;
-  --v4-r-lg: 12px;
-  --v4-r-xl: 16px;
+  --v4-r-sm: var(--mk-r-sm);
+  --v4-r-md: var(--mk-r-md);
+  --v4-r-lg: var(--mk-r-lg);
+  --v4-r-xl: var(--mk-r-xl);
 
   /* Fonts */
-  --v4-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --v4-mono: 'JetBrains Mono', "SF Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --v4-sans: var(--mk-font-sans);
+  --v4-mono: var(--mk-font-mono);
 }
 
 /* ── Body / global reset for V4 ── */
