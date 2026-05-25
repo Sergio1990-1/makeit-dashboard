@@ -78,16 +78,16 @@ export function QualitySummaryPanel({ data, annotations, mode }: Props) {
 function focusLineColor(f: FocusMode): string {
   switch (f) {
     case "p0":
-      return "var(--mk-quality-p0, #dc2626)";
+      return "var(--mk-quality-p0)";
     case "p1":
-      return "var(--mk-quality-p1, #f59e0b)";
+      return "var(--mk-quality-p1)";
     case "p2":
-      return "var(--mk-quality-p2, #eab308)";
+      return "var(--mk-quality-p2)";
     case "dirty":
-      return "var(--mk-danger-100, #ef4444)";
+      return "var(--mk-danger-100)";
     case "all":
     default:
-      return "var(--mk-success-100, #16a34a)";
+      return "var(--mk-success-100)";
   }
 }
 

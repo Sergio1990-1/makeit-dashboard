@@ -65,16 +65,16 @@ function bucketPct(b: QualityBucket, mode: FocusMode): number | null {
 function lineColor(mode: FocusMode): string {
   switch (mode) {
     case "p0":
-      return "var(--mk-quality-p0, #dc2626)";
+      return "var(--mk-quality-p0)";
     case "p1":
-      return "var(--mk-quality-p1, #f59e0b)";
+      return "var(--mk-quality-p1)";
     case "p2":
-      return "var(--mk-quality-p2, #eab308)";
+      return "var(--mk-quality-p2)";
     case "dirty":
-      return "var(--mk-danger-100, #ef4444)";
+      return "var(--mk-danger-100)";
     case "all":
     default:
-      return "var(--mk-success-100, #16a34a)";
+      return "var(--mk-success-100)";
   }
 }
 
@@ -414,7 +414,7 @@ export function QualityChart({
             {/* Опорные линии 50% и 100% — eдва видны, но дают шкалу */}
             <line
               x1="0" y1="50" x2="100" y2="50"
-              stroke="var(--mk-line-soft, rgba(127,127,127,0.18))"
+              stroke="var(--mk-line-soft)"
               strokeWidth="0.15"
               strokeDasharray="0.6 0.6"
               vectorEffect="non-scaling-stroke"
@@ -481,7 +481,7 @@ export function QualityChart({
                 pointerEvents: "none",
                 whiteSpace: "nowrap",
                 transform: "translateY(-50%)",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
+                boxShadow: "0 1px 4px color-mix(in srgb, var(--mk-ink-900) 15%, transparent)",
               }}
             >
               {latestRollingPct.toFixed(0)}% {overlayLabel} · {effectiveWindow}
