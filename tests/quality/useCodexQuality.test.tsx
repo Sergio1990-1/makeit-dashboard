@@ -45,4 +45,22 @@ describe("useCodexQuality", () => {
     const { result } = renderHook(() => useCodexQuality());
     await waitFor(() => expect(result.current.error).not.toBeNull());
   });
+
+  it("rejects payload with unknown schema_version", async () => {
+    const v2 = { ...samplePayload, schema_version: 2 };
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => v2 });
+    const { result } = renderHook(() => useCodexQuality());
+    await waitFor(() => expect(result.current.error).not.toBeNull());
+    expect(result.current.error).toMatch(/schema_version/);
+    expect(result.current.data).toBeNull();
+  });
+
+  it("reloadAnnotations only fetches annotations, not the quality payload", async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => samplePayload });
+    const { result } = renderHook(() => useCodexQuality());
+    await waitFor(() => expect(result.current.data).not.toBeNull());
+    const callsAfterMount = mockFetch.mock.calls.length;
+    await result.current.reloadAnnotations();
+    expect(mockFetch.mock.calls.length - callsAfterMount).toBe(1);
+  });
 });

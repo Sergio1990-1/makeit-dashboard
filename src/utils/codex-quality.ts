@@ -36,14 +36,16 @@ function pipelineUrl(): string {
   return window.__MAKEIT_CONFIG__?.PIPELINE_URL ?? "http://localhost:8766";
 }
 
+function parseQualityPayload(data: unknown): QualityPayload {
+  const v = (data as { schema_version?: unknown })?.schema_version;
+  if (v !== 1) throw new Error(`Unknown schema_version: ${String(v)}`);
+  return data as QualityPayload;
+}
+
 export async function fetchQualityData(): Promise<QualityPayload> {
   const r = await fetch(qualityUrl(), { cache: "no-cache" });
   if (!r.ok) throw new Error(`Quality fetch failed: ${r.status}`);
-  const data = await r.json();
-  if (data.schema_version !== 1) {
-    throw new Error(`Unknown schema_version: ${data.schema_version}`);
-  }
-  return data as QualityPayload;
+  return parseQualityPayload(await r.json());
 }
 
 export async function fetchAnnotations(): Promise<Annotation[]> {
@@ -63,7 +65,7 @@ export async function forceQualityRefresh(): Promise<QualityPayload> {
     const err = await r.json().catch(() => ({}));
     throw new Error(err.message || `Refresh failed: ${r.status}`);
   }
-  return r.json();
+  return parseQualityPayload(await r.json());
 }
 
 export async function createAnnotation(
