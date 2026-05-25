@@ -1,0 +1,1457 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<title>Прототип: вкладка «Качество кода»</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+/>
+<style>
+  :root {
+    --v4-bg: #F6F7F9;
+    --v4-paper: #FFFFFF;
+    --v4-surface-2: #F4F5F8;
+    --v4-surface-3: #EDEFF3;
+    --v4-ink-900: #0E1320;
+    --v4-ink-800: #1B2235;
+    --v4-ink-700: #2F3850;
+    --v4-ink-600: #4A5570;
+    --v4-ink-500: #6B7691;
+    --v4-ink-400: #94A0B8;
+    --v4-ink-300: #C5CCDA;
+    --v4-line: #E4E8EF;
+    --v4-line-soft: #EEF1F6;
+    --v4-line-strong: #D6DBE5;
+    --v4-accent-50: #EEF4FF;
+    --v4-accent-500: #2563EB;
+    --v4-accent-600: #1D4ED8;
+    --v4-accent-700: #1E40AF;
+    --v4-success-50: #ECFDF3;
+    --v4-success-500: #12B76A;
+    --v4-success-700: #067647;
+    --v4-warn-50: #FFFAEB;
+    --v4-warn-500: #F79009;
+    --v4-warn-700: #B54708;
+    --v4-danger-50: #FEF2F2;
+    --v4-danger-500: #EF4444;
+    --v4-danger-700: #B91C1C;
+    /* Codex severity palette — align с shields.io бейджами на самих PR-коммитах */
+    --v4-p0: #EF4444;             /* красный — БЛОКЕР (Codex использует P0-red) */
+    --v4-p1: #F59E0B;             /* оранжевый — высокое (Codex использует P1-orange) */
+    --v4-p2: #EAB308;             /* жёлтый — среднее (Codex использует P2-yellow) */
+    --v4-clean: #2563EB;          /* --v4-accent-500 синий — чистые PR */
+    --v4-clean-soft: #93C5FD;     /* голубой для светлого фона */
+    --v4-p0-text: #991B1B;        /* dark red для текста на белом */
+    --v4-p1-text: #B45309;        /* dark amber */
+    --v4-p2-text: #854D0E;        /* dark yellow-amber */
+    --v4-clean-text: #1D4ED8;
+    --v4-r-sm: 6px;
+    --v4-r-md: 8px;
+    --v4-r-lg: 12px;
+    --v4-r-xl: 16px;
+    --v4-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --v4-mono: 'JetBrains Mono', "SF Mono", ui-monospace, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--v4-bg);
+    color: var(--v4-ink-800);
+    font-family: var(--v4-sans);
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono, .num { font-family: var(--v4-mono); font-variant-numeric: tabular-nums; }
+
+  /* Mock tab bar */
+  .topbar {
+    background: var(--v4-paper);
+    border-bottom: 1px solid var(--v4-line);
+    padding: 0 24px;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 14px 16px;
+    font-weight: 500;
+    color: var(--v4-ink-500);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    font-size: 13px;
+  }
+  .tab.active {
+    color: var(--v4-ink-900);
+    border-bottom-color: var(--v4-accent-500);
+    font-weight: 600;
+  }
+  .tab .badge-new {
+    margin-left: 6px;
+    font-size: 9px;
+    background: var(--v4-accent-500);
+    color: #fff;
+    padding: 1px 5px;
+    border-radius: 99px;
+    font-family: var(--v4-mono);
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    vertical-align: 1px;
+  }
+
+  /* Page */
+  .page { padding: 24px; max-width: 1480px; margin: 0 auto; }
+
+  .pageH {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 18px;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .pageH h1 {
+    font-size: 22px;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.01em;
+    color: var(--v4-ink-900);
+    font-weight: 700;
+  }
+  .pageH .sub {
+    color: var(--v4-ink-500);
+    font-size: 13px;
+  }
+  .pageH .sub b { color: var(--v4-ink-700); font-weight: 600; }
+
+  .ctrls { display: flex; gap: 10px; align-items: center; }
+  .seg {
+    display: inline-flex;
+    background: var(--v4-paper);
+    border: 1px solid var(--v4-line);
+    border-radius: var(--v4-r-md);
+    padding: 3px;
+  }
+  .seg button {
+    border: 0;
+    background: transparent;
+    padding: 6px 12px;
+    font: inherit;
+    font-size: 12px;
+    color: var(--v4-ink-500);
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .seg button.active {
+    background: var(--v4-ink-900);
+    color: #fff;
+    font-weight: 600;
+  }
+  .btn-refresh {
+    border: 1px solid var(--v4-line);
+    background: var(--v4-paper);
+    border-radius: var(--v4-r-md);
+    padding: 7px 12px;
+    font: inherit;
+    font-size: 12px;
+    color: var(--v4-ink-700);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+  }
+  .btn-refresh:hover { background: var(--v4-surface-2); }
+
+  /* Panel */
+  .panel {
+    background: var(--v4-paper);
+    border: 1px solid var(--v4-line);
+    border-radius: var(--v4-r-lg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .panel-h {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--v4-line-soft);
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .panel-t {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--v4-ink-900);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-b { padding: 18px; }
+
+  .tag {
+    font-family: var(--v4-mono);
+    font-size: 9px;
+    font-weight: 600;
+    background: var(--v4-surface-2);
+    color: var(--v4-ink-500);
+    padding: 2px 7px;
+    border-radius: 99px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .tag-warn { background: var(--v4-warn-50); color: var(--v4-warn-700); }
+  .tag-good { background: var(--v4-success-50); color: var(--v4-success-700); }
+  .tag-bad  { background: var(--v4-danger-50); color: var(--v4-danger-700); }
+
+  /* Summary panel */
+  .summary {
+    margin-bottom: 18px;
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 0;
+  }
+  .summary .chartwrap {
+    padding: 18px 18px 18px;
+    border-right: 1px solid var(--v4-line-soft);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .summary .kpis {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: var(--v4-surface-2);
+  }
+  /* P0-alert pill — большая красная плашка с пульсацией, видна сразу.
+     Скрывается если with_p0 === 0 (счастливые периоды не загромождаем). */
+  .kpi-p0-alert {
+    background: var(--v4-p0);
+    color: #fff;
+    border-radius: var(--v4-r-md);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45);
+    animation: q-p0-pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes q-p0-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); }
+    50%      { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  }
+  .kpi-p0-icon { font-size: 22px; line-height: 1; }
+  .kpi-p0-text { display: flex; flex-direction: column; }
+  .kpi-p0-text b { font-family: var(--v4-mono); font-size: 18px; line-height: 1.1; }
+  .kpi-p0-text span { font-size: 11px; opacity: 0.9; margin-top: 2px; }
+
+  .kpi {
+    background: var(--v4-paper);
+    border: 1px solid var(--v4-line);
+    border-radius: var(--v4-r-md);
+    padding: 12px 14px;
+    /* fade-up entrance со stagger 60ms · i — как wow-kpi-in в дашборде */
+    animation: q-kpi-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 60ms + 200ms);
+    transition: transform .22s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow .22s ease, border-color .2s ease;
+  }
+  .kpi:hover {
+    transform: translateY(-2px);
+    border-color: var(--v4-line-strong);
+    box-shadow: 0 10px 28px rgba(11, 16, 32, 0.07);
+  }
+  @keyframes q-kpi-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.985); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .kpi-lbl {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--v4-ink-500);
+    font-family: var(--v4-mono);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .kpi-v {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--v4-ink-900);
+    font-family: var(--v4-mono);
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .kpi-v.dirty { color: var(--v4-ink-900); }
+  .kpi-sub { font-size: 11px; color: var(--v4-ink-500); margin-top: 4px; }
+  .delta { font-size: 11px; font-family: var(--v4-mono); font-weight: 600; }
+  .delta.up { color: var(--v4-danger-600, var(--v4-danger-700)); }
+  .delta.down { color: var(--v4-success-700); }
+  .delta.flat { color: var(--v4-ink-400); }
+
+  /* Chart — vertical bars */
+  .chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    flex: 1;
+    min-height: 220px;
+    border-bottom: 1px dashed var(--v4-line);
+    position: relative;
+    /* Coordinated reveal — opacity + translateY (GPU, дёшево) вместо clip-path,
+       который заставляет репейнтить 30 детей каждый кадр */
+    animation: q-chart-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: 80ms;
+  }
+  @keyframes q-chart-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  /* Dim non-hovered bars: через class toggle (JS), не :has() — последний дорогой.
+     Селектор покрывает оба контейнера — .chart (главный) и .card-chart (мини). */
+  .is-hovering .bar:not(.is-active) .bar-stack { opacity: 0.4; }
+  .chart-axis {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .chart-axis::before,
+  .chart-axis::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top: 1px dashed var(--v4-line-soft);
+  }
+  .chart-axis::before { top: 50%; }
+  .chart-axis::after  { top: 0; }
+  .chart-axis-label {
+    position: absolute;
+    right: 4px;
+    font-family: var(--v4-mono);
+    font-size: 9px;
+    color: var(--v4-ink-400);
+    background: var(--v4-paper);
+    padding: 0 3px;
+  }
+
+  .bar {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    position: relative;
+    cursor: crosshair;
+    min-width: 4px;
+  }
+  /* Column-wide подсветка за активным баром (как в v4-ClosedChart30d) */
+  .bar::before {
+    content: '';
+    position: absolute;
+    inset: -6px -4px -4px -4px;
+    background: var(--v4-accent-100);
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity .15s ease;
+    pointer-events: none;
+  }
+  .bar:hover::before { opacity: 0.45; }
+
+  /* P0 day — ВСЕГДА видимая подсветка колонки (не только при hover).
+     Юзер должен сразу увидеть "тут был блокер" без интеракции. */
+  .bar.has-p0 {
+    background: linear-gradient(to bottom,
+      rgba(239, 68, 68, 0.18) 0%,
+      rgba(239, 68, 68, 0.08) 60%,
+      rgba(239, 68, 68, 0.02) 100%);
+  }
+  /* В mini-чарте дополнительно border-top на самом баре (визуальный акцент,
+     потому что 80px высоты — gradient слабо читается на маленьком масштабе) */
+  .card-chart .bar.has-p0 .bar-stack {
+    border-top: 2px solid var(--v4-p0);
+  }
+  /* На главном чарте — mini-pill "P0:N" сверху столбца, ВСЕГДА видна */
+  .bar-topper-p0 {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--v4-p0);
+    color: #fff;
+    font-family: var(--v4-mono);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.45);
+    /* лёгкая pulse-анимация чтобы цепляло глаз */
+    animation: q-p0-topper-pulse 2s ease-in-out infinite;
+  }
+  @keyframes q-p0-topper-pulse {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(-2px); }
+  }
+  /* В mini-чарте топпер прячем — нет места + border-top уже сигналит */
+  .card-chart .bar-topper-p0 { display: none; }
+  .bar-stack {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    border-radius: 3px 3px 0 0;
+    overflow: hidden;
+    transition: opacity .15s ease;
+    /* НЕ анимируем height — он триггерит layout каждый кадр. На period switch
+       DOM пересоздаётся (.bar-stack рождается с правильной высотой). */
+  }
+  /* Dashed guide line от верха активного бара до базы */
+  .bar:hover .bar-stack::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-image: linear-gradient(to bottom, var(--v4-accent-700) 50%, transparent 50%);
+    background-size: 1px 4px;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  /* Маленький value-chip над активным баром */
+  .bar-chip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(2px);
+    background: var(--v4-ink-900);
+    color: #fff;
+    font-family: var(--v4-mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .12s ease, transform .15s cubic-bezier(0.16, 1, 0.3, 1);
+    margin-bottom: 6px;
+    white-space: nowrap;
+  }
+  .bar:hover .bar-chip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  /* Red сегмент = P0+P1 worst-wins (выделено критическое в одну категорию для читабельности).
+     Tooltip разбивает: "P0: 1 · P1: 3". Отдельный P0-alert pulse выше в KPI если with_p0 > 0. */
+  .bar-crit {
+    background: var(--v4-p0);
+    width: 100%;
+  }
+  .bar-p2 {
+    background: var(--v4-p2);
+    width: 100%;
+  }
+  .bar-clean {
+    background: var(--v4-clean-soft);
+    width: 100%;
+    border-radius: 3px 3px 0 0;
+  }
+  .bar-empty {
+    background: var(--v4-line-soft);
+    width: 100%;
+    height: 1px;
+    margin-top: auto;
+  }
+  /* Annotation markers: вертикальные пунктирные линии на чарте + chip с иконкой сверху */
+  .annot {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-image: linear-gradient(to bottom,
+      var(--v4-purple-500, #7C3AED) 50%,
+      transparent 50%);
+    background-size: 1px 6px;
+    pointer-events: auto;
+    cursor: help;
+    z-index: 2;
+  }
+  .annot-dot {
+    position: absolute;
+    top: -3px;
+    left: -5px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--v4-purple-500, #7C3AED);
+    border: 2px solid var(--v4-paper);
+    box-shadow: 0 0 0 1px var(--v4-purple-500, #7C3AED);
+  }
+  .annot.is-skill .annot-dot { background: var(--v4-accent-600); box-shadow: 0 0 0 1px var(--v4-accent-600); }
+  .annot.is-deploy .annot-dot { background: var(--v4-success-500); box-shadow: 0 0 0 1px var(--v4-success-500); }
+  .annot.is-manual .annot-dot { background: var(--v4-purple-500, #7C3AED); }
+  .annot:hover { background-image: linear-gradient(to bottom, var(--v4-ink-900) 50%, transparent 50%); }
+  .annot:hover .annot-dot { transform: scale(1.2); transition: transform .12s; }
+
+  .annot-tip {
+    position: absolute;
+    top: 22px;
+    left: 0;
+    transform: translateX(-50%) translateY(2px);
+    background: var(--v4-ink-900);
+    color: #fff;
+    font-size: 11px;
+    line-height: 1.4;
+    padding: 8px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    max-width: 260px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s ease, transform .18s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 6;
+    box-shadow: 0 6px 16px rgba(11, 16, 32, 0.25);
+  }
+  .annot-tip-cat {
+    display: inline-block;
+    font-family: var(--v4-mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: rgba(255,255,255,0.15);
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-bottom: 4px;
+  }
+  .annot-tip-date { font-family: var(--v4-mono); font-size: 10px; color: rgba(255,255,255,0.65); margin-top: 4px; }
+  .annot:hover .annot-tip { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Add-event кнопка */
+  .btn-add-event {
+    border: 1px dashed var(--v4-line-strong);
+    background: transparent;
+    border-radius: var(--v4-r-md);
+    padding: 6px 10px;
+    font: inherit;
+    font-size: 11px;
+    color: var(--v4-ink-500);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all .15s ease;
+  }
+  .btn-add-event:hover { color: var(--v4-purple-500, #7C3AED); border-color: var(--v4-purple-500, #7C3AED); background: var(--v4-purple-50, #F5F0FF); }
+
+  /* Tooltip card — стиль v4-closed-tip из дашборда */
+  .chart-tip {
+    position: absolute;
+    top: 8px;
+    background: var(--v4-paper);
+    border: 1px solid var(--v4-line-strong);
+    box-shadow: 0 8px 24px rgba(11, 16, 32, 0.12), 0 2px 6px rgba(11, 16, 32, 0.06);
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-width: 180px;
+    pointer-events: none;
+    font-size: 12px;
+    z-index: 5;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity .18s ease, transform .22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .chart-tip.show { opacity: 1; transform: translateY(0); }
+  .chart-tip-l {
+    font-family: var(--v4-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--v4-ink-500);
+    margin-bottom: 6px;
+  }
+  .chart-tip-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .chart-tip-v {
+    font-family: var(--v4-mono);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--v4-ink-900);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .chart-tip-u { color: var(--v4-ink-500); font-size: 12px; }
+  .chart-tip-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--v4-line-soft);
+    color: var(--v4-ink-500);
+    font-size: 11px;
+  }
+  .chart-tip-foot--tight { padding-top: 4px; border-top: 0; }
+  .chart-tip-tr {
+    font-family: var(--v4-mono);
+    font-weight: 600;
+    color: var(--v4-ink-700);
+  }
+  .chart-tip-seg {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--v4-mono);
+    font-weight: 600;
+  }
+  .chart-tip-seg .sw { width: 8px; height: 8px; border-radius: 2px; }
+
+  /* Compact tooltip — для миничартов в карточках проектов. Multiline для читабельности. */
+  .chart-tip--compact {
+    min-width: 160px;
+    padding: 8px 10px;
+    font-size: 11px;
+    background: var(--v4-ink-900);
+    color: #fff;
+    border: 0;
+    box-shadow: 0 8px 20px rgba(11, 16, 32, 0.32);
+    top: auto;
+    bottom: calc(100% + 8px);
+    white-space: nowrap;
+    line-height: 1.45;
+    font-family: var(--v4-mono);
+  }
+  .chart-tip--compact .ct-line1 {
+    display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px;
+    padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.12);
+  }
+  .chart-tip--compact .ct-line2 {
+    display: flex; gap: 10px; align-items: center;
+  }
+  .chart-tip--compact .ct-d  { color: rgba(255,255,255,0.7); font-size: 10px; }
+  .chart-tip--compact .ct-v  { font-weight: 700; font-size: 13px; }
+  .chart-tip--compact .ct-u  { color: rgba(255,255,255,0.6); font-size: 10px; }
+  .chart-tip--compact .ct-pct { font-weight: 700; margin-left: auto; font-size: 12px; }
+  .chart-tip--compact .ct-seg { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; }
+  .chart-tip--compact .ct-seg .sw {
+    width: 7px; height: 7px; border-radius: 2px; display: inline-block;
+  }
+  .chart-tip--compact .ct-seg b { font-weight: 700; color: #fff; }
+  .chart-tip--compact .ct-p0-wrap { color: #fecaca; font-weight: 800; }
+  .chart-tip--compact .ct-p0-wrap b { color: #fff; }
+  .bar:hover .bar-tip { opacity: 1; }
+
+  /* Period toggle button — плавный sliding background */
+  .seg button { transition: background .18s ease, color .18s ease; }
+
+  /* Refresh button */
+  .btn-refresh { transition: background .15s ease, border-color .15s ease, transform .12s ease; }
+  .btn-refresh:active { transform: scale(0.97); }
+
+  /* ──── REDUCED MOTION GUARD ────
+     Обязательно: пользователи с prefers-reduced-motion отключают всю кинетику.
+     Так же сделано в дашборде (@media-блок в v4.css). */
+  @media (prefers-reduced-motion: reduce) {
+    .chart, .card, .kpi { animation: none !important; clip-path: none !important; }
+    .bar-stack, .chart-tip, .bar-chip { transition: none !important; }
+    .card:hover, .kpi:hover { transform: none !important; }
+  }
+  .bar-tip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: var(--v4-ink-900);
+  }
+
+  .chart-labels {
+    display: flex;
+    margin-top: 6px;
+    gap: 2px;
+  }
+  .chart-label {
+    flex: 1;
+    text-align: center;
+    font-family: var(--v4-mono);
+    font-size: 9px;
+    color: var(--v4-ink-400);
+    min-width: 4px;
+    overflow: hidden;
+  }
+  .chart-legend {
+    display: flex;
+    gap: 14px;
+    margin-top: 14px;
+    font-size: 11px;
+    color: var(--v4-ink-500);
+    font-family: var(--v4-mono);
+    font-weight: 500;
+  }
+  .chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+  .dot-p1    { background: var(--v4-p1); }
+  .dot-p2    { background: var(--v4-p2); }
+  .dot-clean { background: var(--v4-clean-soft); }
+
+  /* Grid of project cards */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: var(--v4-paper);
+    border: 1px solid var(--v4-line);
+    border-radius: var(--v4-r-lg);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    will-change: transform;
+    /* Stagger entrance — как wow-card-in в дашборде */
+    animation: q-card-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 45ms + 300ms);
+    transition:
+      transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 220ms ease,
+      border-color 200ms ease;
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    border-color: var(--v4-line-strong);
+    box-shadow: 0 14px 32px -14px rgba(11, 16, 32, 0.18),
+                0 4px 12px -4px rgba(11, 16, 32, 0.08);
+  }
+  @keyframes q-card-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .card-h {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .card-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--v4-ink-900);
+    font-family: var(--v4-mono);
+  }
+  .card-client {
+    font-size: 10px;
+    color: var(--v4-ink-500);
+    font-weight: 500;
+    margin-top: 1px;
+  }
+  .card-now {
+    font-size: 22px;
+    font-weight: 700;
+    font-family: var(--v4-mono);
+    color: var(--v4-ink-900);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    text-align: right;
+  }
+  .card-now-sub {
+    font-size: 10px;
+    color: var(--v4-ink-400);
+    margin-top: 2px;
+    font-family: var(--v4-mono);
+    text-align: right;
+  }
+
+  .card-chart {
+    height: 80px;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    border-bottom: 1px dashed var(--v4-line-soft);
+    position: relative;     /* для абсолютного позиционирования .chart-tip и .bar-chip */
+  }
+
+  .card-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--v4-line-soft);
+    padding-top: 8px;
+    font-size: 11px;
+    font-family: var(--v4-mono);
+    color: var(--v4-ink-500);
+  }
+  .card-foot .nums { display: flex; gap: 12px; }
+  .card-foot .nums b { color: var(--v4-ink-800); font-weight: 600; }
+  .card-foot .num-p1 b { color: var(--v4-p1-text); }
+  .card-foot .num-p2 b { color: var(--v4-p2-text); }
+
+  .card-empty {
+    color: var(--v4-ink-400);
+    text-align: center;
+    padding: 24px 8px;
+    font-size: 11px;
+    font-family: var(--v4-mono);
+  }
+  .card-empty b { display: block; font-size: 14px; color: var(--v4-ink-500); margin-bottom: 4px; }
+
+  .note {
+    margin-top: 18px;
+    padding: 14px 18px;
+    background: var(--v4-accent-50);
+    border: 1px solid #c5d6f7;
+    border-radius: var(--v4-r-md);
+    font-size: 12px;
+    color: var(--v4-ink-700);
+  }
+  .note b { color: var(--v4-ink-900); }
+  .note ul { margin: 6px 0 0 0; padding-left: 18px; }
+  .note li { margin: 3px 0; }
+
+  /* Section heading */
+  .sect {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 8px 0 12px;
+  }
+  .sect h2 {
+    margin: 0;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--v4-ink-500);
+    font-family: var(--v4-mono);
+    font-weight: 600;
+  }
+  .sect .meta { font-size: 11px; color: var(--v4-ink-400); font-family: var(--v4-mono); }
+
+  /* Sort */
+  .sort {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    background: var(--v4-paper);
+    border: 1px solid var(--v4-line);
+    border-radius: var(--v4-r-md);
+    padding: 3px;
+  }
+  .sort button {
+    border: 0;
+    background: transparent;
+    padding: 5px 10px;
+    font: inherit;
+    font-size: 11px;
+    color: var(--v4-ink-500);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .sort button.active {
+    background: var(--v4-surface-2);
+    color: var(--v4-ink-900);
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tab">Дашборд</div>
+  <div class="tab">Проекты</div>
+  <div class="tab">Milestones</div>
+  <div class="tab">Завершённые</div>
+  <div class="tab">Мониторинг</div>
+  <div class="tab">Pipeline</div>
+  <div class="tab">Транскрипты</div>
+  <div class="tab">Аудит</div>
+  <div class="tab active">Качество <span class="badge-new">NEW</span></div>
+</div>
+
+<div class="page">
+
+  <div class="pageH">
+    <div>
+      <h1>Качество кода и изменения</h1>
+      <div class="sub">Доля PR с критическими/высокими замечаниями <b>chatgpt-codex-connector[bot]</b> от общего числа merged PR · события на временной оси</div>
+    </div>
+    <div class="ctrls">
+      <div class="seg" id="seg-period">
+        <button data-mode="30d">30 дней · По дням</button>
+        <button class="active" data-mode="12w">12 недель · По неделям</button>
+      </div>
+      <button class="btn-add-event" title="Добавить событие на ось времени (Фаза 1 — ручные аннотации)">
+        + событие
+      </button>
+      <div style="font-family: var(--v4-mono); font-size: 10px; color: var(--v4-ink-500); text-align: right; line-height: 1.35;">
+        <div>Синхр. ежедневно · 03:00 Бали</div>
+        <div style="color: var(--v4-ink-400)">последняя: сегодня, 03:02 (24.05)</div>
+      </div>
+      <button class="btn-refresh" title="Принудительно обновить сейчас">
+        ↻ Сейчас
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary panel -->
+  <div class="panel summary">
+    <div class="chartwrap">
+      <div class="panel-t" style="margin-bottom: 14px;">
+        Сводно по всем 12 проектам
+        <span class="tag">All repos</span>
+      </div>
+      <div class="chart" id="summary-chart">
+        <div class="chart-axis">
+          <span class="chart-axis-label" style="top:-2px">40%</span>
+          <span class="chart-axis-label" style="top:calc(50% - 6px)">20%</span>
+        </div>
+      </div>
+      <div class="chart-labels" id="summary-labels"></div>
+      <div class="chart-legend">
+        <span><i class="dot" style="background:var(--v4-p0)"></i> P0+P1 (критическое)</span>
+        <span><i class="dot" style="background:var(--v4-p2)"></i> P2 (высокое)</span>
+        <span><i class="dot" style="background:var(--v4-clean-soft)"></i> чистые PR</span>
+        <span style="margin-left:auto; color: var(--v4-ink-400)">P0 (блокеры) объединены с P1 в красный — детально в tooltip и pulse-плашке.</span>
+      </div>
+    </div>
+    <div class="kpis">
+      <!-- P0 alert pill — рендерится JS-ом если есть P0 в сводном периоде -->
+      <div id="kpi-p0-alert-slot"></div>
+      <div class="kpi" style="--i: 0">
+        <div class="kpi-lbl">% грязных PR · текущая неделя</div>
+        <div class="kpi-v dirty">17%</div>
+        <div class="kpi-sub">
+          <span class="delta down">▼ -4 пп</span> vs прошлая неделя · 24 из 138 PR
+        </div>
+      </div>
+      <div class="kpi" style="--i: 1">
+        <div class="kpi-lbl">% P1 · средн. за 12 нед.</div>
+        <div class="kpi-v" style="color: var(--v4-p1-text)">8%</div>
+        <div class="kpi-sub"><span class="delta down">▼ -2 пп</span> vs первая неделя периода</div>
+      </div>
+      <div class="kpi" style="--i: 2">
+        <div class="kpi-lbl">% P2 · средн. за 12 нед.</div>
+        <div class="kpi-v" style="color: var(--v4-p2-text)">13%</div>
+        <div class="kpi-sub"><span class="delta flat">— без изменений</span></div>
+      </div>
+      <div class="kpi" style="--i: 3">
+        <div class="kpi-lbl">PR за 12 нед.</div>
+        <div class="kpi-v">1487</div>
+        <div class="kpi-sub">123 в среднем за неделю</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <h2>По проектам</h2>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <span class="meta">Сортировка:</span>
+      <div class="sort">
+        <button class="active">по «грязи»</button>
+        <button>по алфавиту</button>
+        <button>по P1</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid" id="project-grid"></div>
+
+  <div class="note">
+    <b>📝 Заметки к прототипу</b>
+    <ul>
+      <li><b>Высота бара = всего merged PR в бакете</b> (абсолютная шкала, ось слева). Это даёт сразу две информации в одном виде: <i>объём работы</i> + <i>доля проблемных</i>.</li>
+      <li><b>Стек снизу вверх:</b> P1 (красный) → P2-only (жёлтый) → чистые PR (голубой). Глаз цепляется за красное внизу — там самое важное; чистый объём наверху как "фон/итог".</li>
+      <li><b>Worst-wins для overlapping PR:</b> PR с одновременно P1+P2 учитывается в P1 (чтобы сумма сегментов точно равнялась total PR без двойного счёта).</li>
+      <li><b>% грязных PR</b> = (P1 + P2-only) / total — заголовочная цифра в правом блоке KPI и в карточке проекта.</li>
+      <li><b>Tooltip</b>: дата периода, всего PR, чистых, P1, P2-only, % грязных.</li>
+      <li><b>Пустые проекты:</b> если за период &lt; 3 merged PR — карточка серая (см. Beer_bot).</li>
+      <li><b>Цвета</b>: <code>--v4-p1</code> #EF4444, <code>--v4-p2</code> #F79009, <code>--v4-clean-soft</code> #93C5FD (lighter <code>--v4-accent-500</code>).</li>
+      <li><b>Синхронизация</b>: раз в сутки в 03:00 по Бали (UTC+8 → 19:00 UTC). Открываешь дашборд утром — видишь уже агрегированные данные за вчера. Архитектура обсуждается отдельно (см. ответ ниже).</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────
+// Mock data — реалистичный спред
+// ─────────────────────────────────────────
+const seed = (s) => () => (s = (s * 9301 + 49297) % 233280) / 233280;
+
+// Mock annotations — будут жить в JSON на VPS (Фаза 1: ручные через UI; Фаза 2: + auto из pipeline)
+const ANNOTATIONS = [
+  { date: '2026-03-23', category: 'skill',  title: 'Обновлён /makeit-codereview', desc: 'Усилена detection security-issues' },
+  { date: '2026-04-16', category: 'skill',  title: 'Refactor /makeit-dev',         desc: 'Уменьшен retry-rate на phase QA (чт)' },
+  { date: '2026-04-30', category: 'deploy', title: 'Pipeline v3.4 → prod',         desc: 'AutoTuner Tier-2 включён по всем репо (чт)' },
+  { date: '2026-05-22', category: 'manual', title: 'Pair-сессия с Codex',          desc: 'Прошли весь legacy auth (пт)' },
+];
+
+// Snap к понедельнику текущей ISO-недели (пн=1...вс=7 в ISO; JS getDay() возвращает вс=0, пн=1...сб=6)
+function isoMonday(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();              // 0=вс, 1=пн, ... 6=сб
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+// Округление вверх до "красивого" числа для шкалы оси
+function niceCeil(n) {
+  if (n <= 5)   return 5;
+  if (n <= 10)  return 10;
+  if (n <= 20)  return 20;
+  if (n <= 50)  return 50;
+  if (n <= 100) return 100;
+  if (n <= 200) return 200;
+  return Math.ceil(n / 100) * 100;
+}
+
+function makeSeries(weeks, baseP0, baseP1, baseP2, prMean, trend = 0, rngSeed = 1) {
+  const r = seed(rngSeed);
+  return Array.from({ length: weeks }, (_, i) => {
+    const t = i / (weeks - 1);
+    const totalPR = Math.max(1, Math.round(prMean * (0.6 + r() * 0.8)));
+    // P0 редкий — Poisson-like с малым средним
+    const p0Count = baseP0 > 0 && r() < baseP0 / 100 * totalPR ? Math.max(1, Math.round(baseP0 / 100 * totalPR + (r() - 0.5))) : 0;
+    const p1pct = Math.max(0, Math.min(35, baseP1 + (r() - 0.5) * 8 + trend * t));
+    const p2pct = Math.max(0, Math.min(35, baseP2 + (r() - 0.5) * 7 + trend * t * 0.5));
+    let p1Count = Math.round((p1pct / 100) * totalPR);
+    let p2Count = Math.round((p2pct / 100) * totalPR);
+    // Worst-wins: PR с P0 не учитываются в P1/P2; P1 не учитывается в P2.
+    // Гарантируем что сумма (p0 + p1_only + p2_only) <= totalPR
+    p1Count = Math.max(0, Math.min(p1Count, totalPR - p0Count));
+    const onlyP2 = Math.max(0, Math.min(p2Count - Math.round(p1Count * 0.4), totalPR - p0Count - p1Count));
+    return {
+      label: `н${i + 1}`,
+      totalPR,
+      withP0: p0Count,
+      withP1only: p1Count,
+      withP2only: onlyP2,
+      dirty: p0Count + p1Count + onlyP2,
+    };
+  });
+}
+
+const projects = [
+  // [repo, client, baseP0, baseP1, baseP2, prMean, trend, seed]
+  // baseP0 — редкое (0-2), реальные P0 за вчера были в moliyakg
+  ["mankassa-app",     "Сергей",       0, 14, 22, 18, -10, 7],
+  ["quiet-walls",      "Тихие Стены",  0, 11, 19, 9,   -6, 13],
+  ["makeit-pipeline",  "Свой проект",  0,  9, 12, 14,   3, 21],
+  ["Business-News",    "Свой проект",  0,  3, 18, 11,   0, 5],
+  ["makeit-auditor",   "Свой проект",  0, 10,  5, 8,   -4, 3],
+  ["moliyakg",         "Свой проект",  2,  6, 14, 5,    1, 17],  // ← реальные P0 здесь
+  ["makeit-dashboard", "Свой проект",  0,  4, 12, 19,   2, 29],
+  ["MyMoney",          "Свой проект",  0,  4, 11, 6,   -2, 11],
+  ["solotax-kg",       "Свой проект",  0,  3,  9, 16,  -1, 23],
+  ["Uchet_bot",        "Кристина",     0,  2, 11, 4,    0, 31],
+  ["Sewing-ERP",       "Свой проект",  0,  2,  6, 22,  -3, 19],
+  ["Beer_bot",         "Тенгри Бир",   0,  0,  0, 0.4,  0, 41],
+];
+
+// ─────────────────────────────────────────
+// Render
+// ─────────────────────────────────────────
+const PERIOD = { mode: "12w", buckets: 12 };
+
+function renderChart(container, labelsContainer, series, opts = {}) {
+  const { maxScale: explicitScale, showLabels = true, compact = false } = opts;
+  container.innerHTML = '';
+  // Y-axis шкалируем по реальному max total PR в серии (с округлением вверх до удобного числа)
+  const maxTotal = Math.max(1, ...series.map(d => d.totalPR));
+  const scale = explicitScale ?? niceCeil(maxTotal);
+  if (!compact) {
+    const axis = document.createElement('div');
+    axis.className = 'chart-axis';
+    axis.innerHTML = `
+      <span class="chart-axis-label" style="top:-2px">${scale}</span>
+      <span class="chart-axis-label" style="top:calc(50% - 6px)">${Math.round(scale/2)}</span>
+    `;
+    container.appendChild(axis);
+  }
+
+  // Один tooltip на весь чарт. Структура создаётся РАЗ, на hover обновляются
+  // только текстовые ноды — не пересоздаём innerHTML каждый раз (дорого).
+  // Compact: маленький tooltip в одну строку (большая карточка не влезет в 80px чарт).
+  let tip = document.createElement('div');
+  let tipRefs;
+  if (compact) {
+    tip.className = 'chart-tip chart-tip--compact';
+    tip.innerHTML = `
+      <div class="ct-line1">
+        <span class="ct-d"></span>
+        <span class="ct-v"></span>
+        <span class="ct-u">PR</span>
+        <span class="ct-pct"></span>
+      </div>
+      <div class="ct-line2">
+        <span class="ct-p0-wrap" style="display:none">🔴<b class="ct-p0"></b></span>
+        <span class="ct-seg" style="color:#fcd34d"><i class="sw" style="background:var(--v4-p1)"></i>P1:<b class="ct-p1"></b></span>
+        <span class="ct-seg" style="color:#fde68a"><i class="sw" style="background:var(--v4-p2)"></i>P2:<b class="ct-p2"></b></span>
+        <span class="ct-seg" style="color:#93C5FD"><i class="sw" style="background:var(--v4-clean-soft)"></i><b class="ct-c"></b></span>
+      </div>`;
+    tipRefs = {
+      label: tip.querySelector('.ct-d'),
+      total: tip.querySelector('.ct-v'),
+      clean: tip.querySelector('.ct-c'),
+      p2:    tip.querySelector('.ct-p2'),
+      p1:    tip.querySelector('.ct-p1'),
+      p0:    tip.querySelector('.ct-p0'),
+      p0Wrap: tip.querySelector('.ct-p0-wrap'),
+      dirty: tip.querySelector('.ct-pct'),
+    };
+  } else {
+    tip.className = 'chart-tip';
+    tip.innerHTML = `
+      <div class="chart-tip-l"></div>
+      <div class="chart-tip-row">
+        <span class="chart-tip-v"></span>
+        <span class="chart-tip-u">PR в периоде</span>
+      </div>
+      <div class="chart-tip-foot">
+        <span class="chart-tip-seg"><i class="sw" style="background:var(--v4-clean-soft)"></i> чистые</span>
+        <span class="chart-tip-tr js-clean"></span>
+      </div>
+      <div class="chart-tip-foot chart-tip-foot--tight">
+        <span class="chart-tip-seg"><i class="sw" style="background:var(--v4-p2)"></i> P2 only</span>
+        <span class="chart-tip-tr js-p2" style="color: var(--v4-p2-text)"></span>
+      </div>
+      <div class="chart-tip-foot chart-tip-foot--tight">
+        <span class="chart-tip-seg"><i class="sw" style="background:var(--v4-p1)"></i> P1</span>
+        <span class="chart-tip-tr js-p1" style="color: var(--v4-p1-text)"></span>
+      </div>
+      <div class="chart-tip-foot chart-tip-foot--tight js-p0-row" style="display:none">
+        <span class="chart-tip-seg"><i class="sw" style="background:var(--v4-p0)"></i> <b>P0 BLOCKER</b></span>
+        <span class="chart-tip-tr js-p0" style="color: var(--v4-p0-text); font-weight: 800"></span>
+      </div>
+      <div class="chart-tip-foot" style="border-top: 1px solid var(--v4-line-soft); padding-top: 8px; margin-top: 4px">
+        <span>Δ грязных</span>
+        <span class="chart-tip-tr js-dirty" style="font-size: 13px"></span>
+      </div>`;
+    tipRefs = {
+      label: tip.querySelector('.chart-tip-l'),
+      total: tip.querySelector('.chart-tip-v'),
+      clean: tip.querySelector('.js-clean'),
+      p2:    tip.querySelector('.js-p2'),
+      p1:    tip.querySelector('.js-p1'),
+      p0:    tip.querySelector('.js-p0'),
+      p0Row: tip.querySelector('.js-p0-row'),
+      dirty: tip.querySelector('.js-dirty'),
+    };
+  }
+  container.appendChild(tip);
+
+  series.forEach((d, idx) => {
+    const total = d.totalPR;
+    const heightPct = (total / scale) * 100;
+    // Worst-wins: P0+P1 объединены в crit-сегмент. P2-only отдельно. Clean = остальное.
+    const critCount = d.withP0 + d.withP1only;
+    const cleanCount = Math.max(0, total - critCount - d.withP2only);
+    const critShareOfBar = total > 0 ? (critCount / total) * heightPct : 0;
+    const p2ShareOfBar = total > 0 ? (d.withP2only / total) * heightPct : 0;
+    const cleanShareOfBar = heightPct - critShareOfBar - p2ShareOfBar;
+    const dirtyPct = total > 0 ? ((critCount + d.withP2only) / total) * 100 : 0;
+
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    // Mark bar with P0 для возможной кастомизации (например border-top accent)
+    if (d.withP0 > 0) bar.classList.add('has-p0');
+    bar.innerHTML = `
+      ${d.withP0 > 0 ? `<div class="bar-topper-p0">P0:${d.withP0}</div>` : ''}
+      <div class="bar-stack" style="height:${heightPct}%">
+        ${cleanShareOfBar > 0 ? `<div class="bar-clean" style="height:${(cleanShareOfBar / heightPct) * 100}%"></div>` : ''}
+        ${p2ShareOfBar > 0 ? `<div class="bar-p2" style="height:${(p2ShareOfBar / heightPct) * 100}%"></div>` : ''}
+        ${critShareOfBar > 0 ? `<div class="bar-crit" style="height:${(critShareOfBar / heightPct) * 100}%"></div>` : ''}
+      </div>
+      ${heightPct === 0 ? '<div class="bar-empty"></div>' : ''}
+      <div class="bar-chip">${total} PR${d.withP0 > 0 ? ` · <b style="color:#fca5a5">P0:${d.withP0}</b>` : ''}</div>
+    `;
+
+    // Hover handler. Дёшево: меняем только textContent + 2 класса, без innerHTML.
+    bar.addEventListener('mouseenter', () => {
+      tipRefs.label.textContent = d.label;
+      tipRefs.total.textContent = total;
+      tipRefs.clean.textContent = cleanCount;
+      tipRefs.p2.textContent    = d.withP2only;
+      tipRefs.p1.textContent    = d.withP1only;
+      tipRefs.p0.textContent    = d.withP0;
+      tipRefs.dirty.textContent = dirtyPct.toFixed(0) + '%';
+      // P0-row показываем только если есть
+      if (compact) {
+        tipRefs.p0Wrap.style.display = d.withP0 > 0 ? '' : 'none';
+      } else {
+        tipRefs.p0Row.style.display = d.withP0 > 0 ? '' : 'none';
+      }
+      const cRect = container.getBoundingClientRect();
+      const bRect = bar.getBoundingClientRect();
+      const pctX = ((bRect.left + bRect.width / 2) - cRect.left) / cRect.width * 100;
+      if (compact) {
+        // Compact: позиционируем строго над баром, центрируем + flip если у края
+        tip.style.left = `${pctX}%`;
+        tip.style.transform = `translateX(-50%) translateY(0)`;
+        // Защита от overflow по горизонтали — после render проверяем bbox
+        requestAnimationFrame(() => {
+          const tRect = tip.getBoundingClientRect();
+          if (tRect.left < cRect.left + 4) {
+            tip.style.transform = `translateX(0) translateY(0)`;
+            tip.style.left = '0%';
+          } else if (tRect.right > cRect.right - 4) {
+            tip.style.transform = `translateX(-100%) translateY(0)`;
+            tip.style.left = '100%';
+          }
+        });
+      } else {
+        // Main: tooltip-card сбоку от бара, flip если близко к правому краю
+        const flipLeft = pctX > 70;
+        tip.style.left = `calc(${pctX}% + 12px - ${flipLeft ? '208px' : '0px'})`;
+      }
+      tip.classList.add('show');
+      container.classList.add('is-hovering');
+      bar.classList.add('is-active');
+    });
+    bar.addEventListener('mouseleave', () => {
+      tip.classList.remove('show');
+      container.classList.remove('is-hovering');
+      bar.classList.remove('is-active');
+    });
+
+    container.appendChild(bar);
+  });
+  if (labelsContainer && showLabels) {
+    labelsContainer.innerHTML = '';
+    series.forEach((d, i) => {
+      const lab = document.createElement('div');
+      lab.className = 'chart-label';
+      // show every 2nd label for compactness
+      lab.textContent = (i === 0 || i === series.length - 1 || i % 2 === 0) ? d.label : '';
+      labelsContainer.appendChild(lab);
+    });
+  }
+}
+
+function severityBadge(dirtyPct) {
+  if (dirtyPct === 0 || isNaN(dirtyPct)) return '';
+  if (dirtyPct >= 25) return '<span class="tag tag-bad">высокий риск</span>';
+  if (dirtyPct >= 12) return '<span class="tag tag-warn">средний</span>';
+  return '<span class="tag tag-good">чисто</span>';
+}
+
+// Перезаписать лейблы серии реальными датами (Понедельники для weekly, дни для daily)
+function applyDateLabels(series) {
+  const today = new Date();
+  const todayMonday = isoMonday(today);
+  series.forEach((d, i) => {
+    let date;
+    if (PERIOD.mode === '12w') {
+      date = new Date(todayMonday);
+      date.setDate(date.getDate() - (series.length - 1 - i) * 7);
+    } else {
+      date = new Date(today);
+      date.setDate(date.getDate() - (series.length - 1 - i));
+    }
+    d.label = `${date.getDate()}.${String(date.getMonth() + 1).padStart(2, '0')}`;
+  });
+  return series;
+}
+
+function renderProjectCard(p) {
+  const [repo, client, baseP0, baseP1, baseP2, prMean, trend, seedV] = p;
+  const series = applyDateLabels(makeSeries(PERIOD.buckets, baseP0, baseP1, baseP2, prMean, trend, seedV));
+  const totalPR = series.reduce((a, x) => a + x.totalPR, 0);
+  const totalDirty = series.reduce((a, x) => a + x.dirty, 0);
+  const totalP1 = series.reduce((a, x) => a + x.withP1only, 0);
+  const totalP2only = series.reduce((a, x) => a + x.withP2only, 0);
+  // totalDirty считается ниже из P0+P1+P2-only
+
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  if (totalPR < 3) {
+    card.innerHTML = `
+      <div class="card-h">
+        <div>
+          <div class="card-name">${repo}</div>
+          <div class="card-client">${client}</div>
+        </div>
+        <span class="tag">мало данных</span>
+      </div>
+      <div class="card-empty">
+        <b>${totalPR} PR за период</b>
+        Нужно ≥3 PR чтобы считать %
+      </div>
+    `;
+    return card;
+  }
+
+  const totalP0 = series.reduce((a, x) => a + x.withP0, 0);
+  const dirtyPct = (totalDirty / totalPR) * 100;
+  const p1Pct = (totalP1 / totalPR) * 100;
+  const p2Pct = (totalP2only / totalPR) * 100;
+
+  card.innerHTML = `
+    <div class="card-h">
+      <div>
+        <div class="card-name">${repo}</div>
+        <div class="card-client">${client}</div>
+      </div>
+      <div>
+        <div class="card-now">${dirtyPct.toFixed(0)}%</div>
+        <div class="card-now-sub">${totalDirty}/${totalPR} PR</div>
+      </div>
+    </div>
+    <div class="card-chart"></div>
+    <div class="card-foot">
+      <div class="nums">
+        ${totalP0 > 0 ? `<span class="num-p0" title="БЛОКЕР"><b style="color:var(--v4-p0-text);background:rgba(239,68,68,0.12);padding:1px 6px;border-radius:3px;font-weight:700">🔴 P0: ${totalP0}</b></span>` : ''}
+        <span class="num-p1">P1 <b>${p1Pct.toFixed(0)}%</b></span>
+        <span class="num-p2">P2 <b>${p2Pct.toFixed(0)}%</b></span>
+      </div>
+      ${severityBadge(dirtyPct)}
+    </div>
+  `;
+  const chart = card.querySelector('.card-chart');
+  // Auto-scale per card: проекты с мало PR не должны быть прижаты к земле общей шкалой
+  renderChart(chart, null, series, { compact: true, showLabels: false });
+  card.dataset.dirty = dirtyPct;
+  card.dataset.p1 = p1Pct;
+  card.dataset.name = repo;
+  return card;
+}
+
+// Раскладка событий-аннотаций на чарте.
+// Daily mode (30d): маркер снапится к ЦЕНТРУ бара того дня (1 бар = 1 день).
+// Weekly mode (12w): маркер позиционируется ПРОПОРЦИОНАЛЬНО внутри ISO-недели (пн-вс).
+//   Каждый бар покрывает 7 дней. Полный охват чарта = buckets × 7 = 84 дня.
+function renderAnnotations(container, series) {
+  container.querySelectorAll('.annot').forEach(n => n.remove());
+  if (!series.length) return;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let startDate, totalDays;
+  if (PERIOD.mode === '12w') {
+    // Start = понедельник самой ранней недели в чарте
+    const todayMonday = isoMonday(today);
+    startDate = new Date(todayMonday);
+    startDate.setDate(startDate.getDate() - (series.length - 1) * 7);
+    totalDays = series.length * 7;          // полный охват 12 недель × 7 дней = 84
+  } else {
+    // Start = bar 0 = today - 29 дней
+    startDate = new Date(today);
+    startDate.setDate(today.getDate() - (series.length - 1));
+    totalDays = series.length;              // полный охват 30 дней
+  }
+
+  ANNOTATIONS.forEach(a => {
+    const date = new Date(a.date);
+    date.setHours(0, 0, 0, 0);
+    const daysFromStart = (date - startDate) / 86400000;
+    if (daysFromStart < 0 || daysFromStart >= totalDays) return;
+
+    let pct;
+    if (PERIOD.mode === '30d') {
+      // Snap к центру бара того дня
+      const dayIdx = Math.round(daysFromStart);
+      pct = ((dayIdx + 0.5) / series.length) * 100;
+    } else {
+      // Внутри ISO-недели: позиция пропорциональна дню (пн=0/7, вт=1/7, ..., вс=6/7 внутри своей недели)
+      pct = (daysFromStart / totalDays) * 100;
+    }
+
+    const el = document.createElement('div');
+    el.className = `annot is-${a.category}`;
+    el.style.left = `${pct}%`;
+    el.innerHTML = `
+      <div class="annot-dot"></div>
+      <div class="annot-tip">
+        <span class="annot-tip-cat">${a.category}</span><br>
+        <b>${a.title}</b><br>
+        <span style="opacity: 0.8; white-space: normal;">${a.desc}</span>
+        <div class="annot-tip-date">${date.toLocaleDateString('ru')}</div>
+      </div>`;
+    container.appendChild(el);
+  });
+}
+
+// Initial render
+function render() {
+  // Summary — aggregate of all. Лейблы: weekly = ISO-понедельники, daily = дни.
+  const allSeries = applyDateLabels(makeSeries(PERIOD.buckets, 0.3, 8, 13, 123, -2, 99));
+  renderChart(
+    document.getElementById('summary-chart'),
+    document.getElementById('summary-labels'),
+    allSeries,
+    {}   // auto-scale по реальному max total_pr
+  );
+  renderAnnotations(document.getElementById('summary-chart'), allSeries);
+  // P0-alert pill — сумма P0 за весь период всех проектов в сводке
+  // В реальной импл: сумма with_p0 за текущую неделю (а не за весь period)
+  const totalP0Summary = projects.reduce((acc, p) => {
+    const s = makeSeries(PERIOD.buckets, p[2], p[3], p[4], p[5], p[6], p[7]);
+    return acc + s.reduce((a, x) => a + x.withP0, 0);
+  }, 0);
+  const slot = document.getElementById('kpi-p0-alert-slot');
+  if (totalP0Summary > 0) {
+    slot.innerHTML = `
+      <div class="kpi-p0-alert" title="Блокирующие баги от Codex за период. Требуют немедленного внимания.">
+        <span class="kpi-p0-icon">🔴</span>
+        <div class="kpi-p0-text">
+          <b>P0: ${totalP0Summary}</b>
+          <span>БЛОКЕРЫ за ${PERIOD.mode === '12w' ? '12 недель' : '30 дней'}</span>
+        </div>
+      </div>`;
+  } else {
+    slot.innerHTML = '';
+  }
+
+  // Grid
+  const grid = document.getElementById('project-grid');
+  grid.innerHTML = '';
+  const sorted = [...projects].sort((a, b) => {
+    const aSeries = makeSeries(PERIOD.buckets, a[2], a[3], a[4], a[5], a[6]);
+    const bSeries = makeSeries(PERIOD.buckets, b[2], b[3], b[4], b[5], b[6]);
+    const aDirty = aSeries.reduce((s, x) => s + x.dirty, 0) / Math.max(1, aSeries.reduce((s, x) => s + x.totalPR, 0));
+    const bDirty = bSeries.reduce((s, x) => s + x.dirty, 0) / Math.max(1, bSeries.reduce((s, x) => s + x.totalPR, 0));
+    return bDirty - aDirty;
+  });
+  sorted.forEach((p, idx) => {
+    const card = renderProjectCard(p);
+    card.style.setProperty('--i', idx);   // stagger для q-card-in
+    grid.appendChild(card);
+  });
+}
+
+// Period toggle
+document.getElementById('seg-period').addEventListener('click', (e) => {
+  if (e.target.tagName !== 'BUTTON') return;
+  document.querySelectorAll('#seg-period button').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  PERIOD.mode = e.target.dataset.mode;
+  PERIOD.buckets = PERIOD.mode === '12w' ? 12 : 30;
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
