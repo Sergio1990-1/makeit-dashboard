@@ -77,15 +77,17 @@ docker compose logs -f annotations-api  # confirm it's listening on 8080
 ### 2. nginx snippet
 
 Add inside the dashboard `server { }` block in
-`/opt/apps/nginx-proxy/conf.d/makeit.conf`:
+`/opt/apps/nginx-proxy/conf.d/makeit.conf`. Two location blocks — one
+for the exact `/api/annotations` (list + create), one for
+`/api/annotations/<id>` (delete). The trailing `/` on `proxy_pass` is
+the bit that tells nginx to strip the matched location prefix and
+forward the rest as the upstream path — without it, FastAPI sees
+`/api/annotations` instead of `/`.
 
 ```nginx
-location /api/annotations {
-    # Strip /api so FastAPI sees the bare path (/, /<id>).
-    rewrite ^/api/annotations(/.*)?$ $1 break;
-    if ($uri = "") { set $uri "/"; }
-
-    proxy_pass http://makeit-annotations-api:8080;
+# Exact path: GET (list) and POST (create) — both hit FastAPI's "/" route.
+location = /api/annotations {
+    proxy_pass http://makeit-annotations-api:8080/;
     proxy_http_version 1.1;
     proxy_set_header Host              $host;
     proxy_set_header X-Real-IP         $remote_addr;
@@ -100,7 +102,28 @@ location /api/annotations {
     # block — DO NOT add `auth_basic off;` here or the mini-API becomes
     # write-open to the internet.
 }
+
+# Sub-paths: DELETE /api/annotations/<id> → FastAPI's "/<id>" route.
+# Note both location AND proxy_pass have trailing slashes — that pair
+# is what strips the prefix correctly.
+location /api/annotations/ {
+    proxy_pass http://makeit-annotations-api:8080/;
+    proxy_http_version 1.1;
+    proxy_set_header Host              $host;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    client_max_body_size 4k;
+}
 ```
+
+> **Why not the simpler `rewrite ^/api/annotations(/.*)?$ $1 break;`?**
+> When the path is exactly `/api/annotations` (no trailing slash), the
+> optional `(/.*)?` captures nothing, so `$1` becomes empty and the
+> upstream receives an empty path — invalid HTTP/1.1, returns
+> 400/500. The `if ($uri = "")` trick doesn't help because `$uri` is
+> read-only at proxy time. Two explicit location blocks are clearer
+> and don't have this edge case.
 
 Reload nginx after editing:
 

@@ -12,6 +12,8 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+
 # Allow running with `python scripts/test_sweep_codex_quality.py` too.
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -20,9 +22,9 @@ import sweep_codex_quality as sweep  # noqa: E402
 
 def test_detect_severity_p0_beats_p1_beats_p2() -> None:
     assert sweep.detect_severity("**Severity:** P0 — fix asap") == "P0"
-    assert sweep.detect_severity("priority HIGH — refactor needed") == "P1"
-    assert sweep.detect_severity("just a nit, MEDIUM") == "P2"
-    assert sweep.detect_severity("LOW: indentation off") == "P2"
+    assert sweep.detect_severity("**Severity:** P1 — refactor needed") == "P1"
+    assert sweep.detect_severity("just a nit") == "P2"
+    assert sweep.detect_severity("P2: indentation off") == "P2"
 
 
 def test_detect_severity_worst_wins_within_one_body() -> None:
@@ -44,6 +46,16 @@ def test_detect_severity_word_boundaries_only() -> None:
     # "shop1" should NOT match "P1"; "JP0" should NOT match "P0".
     assert sweep.detect_severity("shop1 layout broken") is None
     assert sweep.detect_severity("JP0 jurisdiction") is None
+
+
+def test_detect_severity_ignores_generic_english_adjectives() -> None:
+    # Earlier versions matched bare HIGH / MEDIUM / LOW as severity tags.
+    # These are way too common in normal PR text to be reliable signals,
+    # so the regex now requires P0/P1/P2 (or BLOCKER/CRITICAL/NIT) markers.
+    assert sweep.detect_severity("HIGH availability deploy") is None
+    assert sweep.detect_severity("MEDIUM priority bugfix") is None
+    assert sweep.detect_severity("LOW hanging fruit, easy ship") is None
+    assert sweep.detect_severity("reachability is HIGH for the new endpoint") is None
 
 
 def test_classify_pr_with_bot_review_no_marker_defaults_to_p2() -> None:
@@ -213,3 +225,145 @@ def test_atomic_write_json_round_trip(tmp_path: Path) -> None:
     assert _json.loads(out.read_text(encoding="utf-8")) == {"hello": "мир"}
     # No leftover tmp.
     assert not (tmp_path / "x.json.tmp").exists()
+
+
+# ── sweep_repo (paginate-and-filter) ──────────────────────────────────
+
+
+def _pr_node(number: int, merged_at: str) -> dict:
+    """Minimal PR node that classify_pr() accepts without choking."""
+    return {
+        "number": number,
+        "mergedAt": merged_at,
+        "reviewThreads": {"nodes": []},
+        "reviews": {"nodes": []},
+        "comments": {"nodes": []},
+    }
+
+
+def _page(nodes: list[dict], has_next: bool = False, end_cursor: str = "X") -> dict:
+    return {
+        "repository": {
+            "pullRequests": {
+                "nodes": nodes,
+                "pageInfo": {"hasNextPage": has_next, "endCursor": end_cursor},
+            }
+        }
+    }
+
+
+def test_sweep_repo_keeps_in_window_drops_out_of_window(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Pre-window PRs must NEVER end up in summaries (was Critical bug 1)."""
+    pages = [
+        _page(
+            [
+                _pr_node(101, "2026-05-20T00:00:00Z"),  # in window
+                _pr_node(100, "2026-04-01T00:00:00Z"),  # pre-window
+            ],
+            has_next=False,
+        )
+    ]
+    calls = iter(pages)
+    monkeypatch.setattr(sweep, "gh_graphql", lambda *a, **kw: next(calls))
+    result = sweep.sweep_repo(
+        client=None,  # ignored by the stub
+        token="x",
+        repo="any",
+        window_start=datetime(2026, 5, 1, tzinfo=timezone.utc),
+    )
+    assert result.status == "ok"
+    assert [s.number for s in result.prs] == [101]
+    # repo_coverage's denominator was the regression vector — must be 1, not 2.
+    pct, _first = sweep.repo_coverage(result.prs)
+    assert pct == 0.0  # no codex review on the single in-window PR
+
+
+def test_sweep_repo_continues_past_stale_chatter_to_find_recent_merges(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """UPDATED_AT-ordered: page 1 may be all stale, in-window on page 2.
+
+    Was Critical bug 2 — old code would have returned after the first
+    pre-window PR on page 1, never fetching page 2.
+    """
+    pages = [
+        _page(
+            [
+                # Floated to page 1 by a recent comment, merged long ago.
+                _pr_node(50, "2024-01-15T00:00:00Z"),
+                _pr_node(49, "2024-01-14T00:00:00Z"),
+            ],
+            has_next=True,
+            end_cursor="cur1",
+        ),
+        _page(
+            [
+                _pr_node(120, "2026-05-19T00:00:00Z"),  # in window
+                _pr_node(119, "2026-05-15T00:00:00Z"),  # in window
+            ],
+            has_next=False,
+        ),
+    ]
+    calls = iter(pages)
+    monkeypatch.setattr(sweep, "gh_graphql", lambda *a, **kw: next(calls))
+    result = sweep.sweep_repo(
+        client=None,
+        token="x",
+        repo="any",
+        window_start=datetime(2026, 5, 1, tzinfo=timezone.utc),
+    )
+    assert [s.number for s in result.prs] == [120, 119]
+
+
+def test_sweep_repo_stops_after_full_empty_page_with_results_collected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Don't burn 8 pages for nothing once we've passed the window."""
+    call_count = 0
+
+    def fake_gh_graphql(*_args, **_kw):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return _page(
+                [_pr_node(200, "2026-05-19T00:00:00Z")],  # in window
+                has_next=True,
+            )
+        if call_count == 2:
+            return _page(
+                [_pr_node(199, "2024-01-01T00:00:00Z")],  # all pre-window
+                has_next=True,
+            )
+        raise AssertionError("should have stopped after empty page 2")
+
+    monkeypatch.setattr(sweep, "gh_graphql", fake_gh_graphql)
+    result = sweep.sweep_repo(
+        client=None,
+        token="x",
+        repo="any",
+        window_start=datetime(2026, 5, 1, tzinfo=timezone.utc),
+    )
+    assert call_count == 2
+    assert [s.number for s in result.prs] == [200]
+
+
+def test_sweep_repo_null_repository_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    """PAT-without-access returns `{"repository": null}` — must raise.
+
+    Pre-fix behaviour was silent status=ok with 0 PRs, masking PAT scope
+    errors that should fail the run loudly.
+    """
+    monkeypatch.setattr(
+        sweep,
+        "gh_graphql",
+        lambda *a, **kw: {"repository": None},
+    )
+    with pytest.raises(RuntimeError, match="PAT may lack access"):
+        sweep.sweep_repo(
+            client=None,
+            token="x",
+            repo="private-repo",
+            window_start=datetime(2026, 5, 1, tzinfo=timezone.utc),
+        )

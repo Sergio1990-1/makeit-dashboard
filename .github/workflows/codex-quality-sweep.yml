@@ -86,6 +86,12 @@ jobs:
         # then `mv` on the VPS, which is atomic on a single filesystem
         # (POSIX rename(2)). nginx serves either the old file or the new
         # one, never a partial.
+        #
+        # The trailing `|| { rm -f .tmp; exit 1; }` cleans up the
+        # half-uploaded file if `mv` itself fails (transient FS issue,
+        # ENOSPC, permission flip after a VPS reconfig). Without this,
+        # `.tmp` would persist across runs and — depending on nginx
+        # config — could be served on its own URL.
         env:
           VPS_HOST: ${{ secrets.MAKEIT_VPS_HOST }}
           VPS_USER: ${{ secrets.MAKEIT_VPS_USER }}
@@ -99,7 +105,7 @@ jobs:
           rsync -az --no-perms --no-owner --no-group --chmod=F644 \
             out/codex-quality.json \
             "${REMOTE}:${TMP}"
-          ssh "${REMOTE}" "mv -- '${TMP}' '${FINAL}'"
+          ssh "${REMOTE}" "mv -- '${TMP}' '${FINAL}' || { rm -f -- '${TMP}'; exit 1; }"
 
       - name: Upload artifact (debugging fallback)
         if: always()

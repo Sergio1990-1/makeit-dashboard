@@ -81,19 +81,30 @@ GRAPHQL_URL = "https://api.github.com/graphql"
 WINDOW_WEEKS = 12
 WINDOW_SLACK_DAYS = 9
 
-# Pagination caps. 5 × 50 = 250 PRs per repo is comfortably above what
+# Pagination caps. 8 × 50 = 400 PRs per repo is comfortably above what
 # any of our repos pushes through in 12 weeks; raise if Sewing-ERP /
-# mankassa grow.
+# mankassa grow. With GraphQL's ~150-points-per-page cost (nested
+# reviewThreads/reviews/comments) and 12 repos, the worst-case budget is
+# ~14k points — well within the 5k/hour PAT limit because we typically
+# stop early (see sweep_repo's empty-page break condition).
 PAGE_SIZE = 50
 MAX_PAGES = 8
 
 # Severity regex — case-insensitive, word-boundaried. We look at the
 # whole comment body, not just leading words: bot output sometimes wraps
 # the marker in markdown headers, brackets, or backticks.
+#
+# Deliberately NARROW: we only match explicit markers (P0/P1/P2 + a few
+# named synonyms specific to bot output). Earlier versions matched bare
+# English adjectives HIGH / MEDIUM / LOW — false positives were rampant
+# ("HIGH availability", "MEDIUM priority feature", "LOW hanging fruit"
+# in PR descriptions all triggered findings). The codex bot's own output
+# uses P0/P1/P2 structurally, so we lose nothing real by dropping the
+# adjectives.
 SEVERITY_PATTERNS: dict[str, re.Pattern[str]] = {
     "P0": re.compile(r"\b(P0|BLOCKER|CRITICAL)\b", re.IGNORECASE),
-    "P1": re.compile(r"\b(P1|HIGH)\b", re.IGNORECASE),
-    "P2": re.compile(r"\b(P2|MEDIUM|LOW|NIT)\b", re.IGNORECASE),
+    "P1": re.compile(r"\bP1\b", re.IGNORECASE),
+    "P2": re.compile(r"\b(P2|NIT)\b", re.IGNORECASE),
 }
 SEVERITY_RANK = {"P0": 0, "P1": 1, "P2": 2}  # lower = worse
 
@@ -259,7 +270,32 @@ def sweep_repo(
     repo: str,
     window_start: datetime,
 ) -> RepoResult:
-    """Paginate merged PRs for one repo, return summaries within window."""
+    """Paginate merged PRs for one repo, return summaries within window.
+
+    Pagination notes
+    ----------------
+    PRs are ordered by UPDATED_AT DESC, but UPDATED_AT can lag mergedAt
+    (a PR merged inside our window might receive a comment that bumps
+    its UPDATED_AT to the head of the list) or get ahead of it (a stale
+    PR merged years ago might get a new comment today and float to page
+    1 above newly-merged PRs).
+
+    Two consequences:
+
+    1. We must NOT stop on the first pre-window PR — that PR might be
+       a stale-and-recently-commented one, with in-window PRs still
+       behind it.
+    2. We DO stop after a full page with zero in-window PRs, AND after
+       we've already collected at least one in-window PR. Without the
+       "already collected" guard, a hot repo with lots of stale chatter
+       but no recent merges would stop at page 1 with 0 PRs and report
+       falsely 0 even when in-window PRs exist 2-3 pages back.
+
+    A PAT-without-access case shows up as `data["repository"] is None`
+    with NO top-level GraphQL `errors` field — we must explicitly raise
+    so the outer per-repo try/except marks status=error rather than
+    silently producing an empty bucket.
+    """
     cursor: str | None = None
     summaries: list[PRSummary] = []
     for _page in range(MAX_PAGES):
@@ -269,23 +305,37 @@ def sweep_repo(
             PR_QUERY,
             {"owner": GITHUB_OWNER, "name": repo, "cursor": cursor},
         )
-        repo_node = data.get("repository") or {}
-        prs = repo_node.get("pullRequests", {})
-        nodes = prs.get("nodes", []) or []
+        repo_node = data.get("repository")
+        if repo_node is None:
+            # GitHub returns `{"data": {"repository": null}}` (no errors
+            # field) when the token can see the repo's existence but not
+            # its PRs — or when the repo simply isn't visible to this
+            # PAT at all. Bubble up so the caller logs status=error
+            # instead of silently writing zeros.
+            raise RuntimeError(
+                f"repository null — PAT may lack access to {GITHUB_OWNER}/{repo}"
+            )
+        prs = repo_node.get("pullRequests") or {}
+        nodes = prs.get("nodes") or []
+        in_window_this_page = 0
         for node in nodes:
             if not node.get("mergedAt"):
                 continue
             summary = classify_pr(node)
-            if summary.merged_at < window_start:
-                # All subsequent PRs are even older (sorted by UPDATED_AT
-                # which can lag mergedAt, but in practice UPDATED_AT ≥
-                # mergedAt — once we see something pre-window the rest
-                # of the page is too).
+            if summary.merged_at >= window_start:
                 summaries.append(summary)
-                return RepoResult(status="ok", prs=summaries)
-            summaries.append(summary)
-        page_info = prs.get("pageInfo", {}) or {}
+                in_window_this_page += 1
+            # else: silently skip out-of-window PR — do NOT append it.
+            # Earlier versions appended pre-window PRs before returning,
+            # which inflated repo_coverage's denominator and skewed the
+            # coverage_pct number in the published JSON.
+        page_info = prs.get("pageInfo") or {}
         if not page_info.get("hasNextPage"):
+            break
+        # Stop once we've collected at least one in-window PR AND just
+        # saw a full page with none. Both conditions matter — see
+        # docstring for the "stale chatter on page 1" case.
+        if in_window_this_page == 0 and summaries:
             break
         cursor = page_info.get("endCursor")
     return RepoResult(status="ok", prs=summaries)

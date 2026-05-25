@@ -13,6 +13,13 @@ const mockFetch = vi.fn();
 beforeEach(() => {
   globalThis.fetch = mockFetch as unknown as typeof fetch;
   mockFetch.mockReset();
+  // Hermetic URL assertions depend on `__MAKEIT_CONFIG__` being absent.
+  // No current test sets it, but the moment somebody adds a custom-URL
+  // case (e.g. probing the staging override) the default-URL tests in
+  // this file would silently start asserting against the override and
+  // breaking only on order-of-execution changes. Reset defensively.
+  delete (window as unknown as { __MAKEIT_CONFIG__?: unknown })
+    .__MAKEIT_CONFIG__;
 });
 
 function jsonResp(body: unknown, init: ResponseInit = {}) {

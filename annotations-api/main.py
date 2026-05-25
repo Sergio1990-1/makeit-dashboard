@@ -40,12 +40,14 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from filelock import FileLock
 from pydantic import BaseModel, Field, field_validator
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 
 # ── Config (env-driven) ───────────────────────────────────────────────
 
@@ -191,6 +193,50 @@ app = FastAPI(
     redoc_url=None,
 )
 
+
+class BodySizeLimitMiddleware(BaseHTTPMiddleware):
+    """
+    Enforce MAX_BODY_BYTES on the actual body, not just Content-Length.
+
+    The earlier Content-Length-only check left a hole: a chunked-transfer
+    POST omits `Content-Length`, so a malicious client could stream an
+    arbitrarily large body that this app would buffer through Pydantic
+    before rejecting on per-field maxes. Nginx caps at 4KB in production
+    too, but this is defence-in-depth (and protects the dev/test setup
+    where there's no nginx in front).
+
+    We read the full body, count bytes, then re-inject it into the
+    receive channel so downstream handlers see it normally. Only POST
+    bodies matter — GET and DELETE here have no body.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        # Cheap path: header-based pre-check still wins when it's present
+        # — saves a full body read on accidentally-huge requests.
+        cl = request.headers.get("content-length")
+        if cl and int(cl) > MAX_BODY_BYTES:
+            return JSONResponse(
+                {"detail": f"body exceeds {MAX_BODY_BYTES} bytes"},
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            )
+        # Real check: read once, measure, then put it back. ASGI receive
+        # channels are single-use, so we buffer and replay.
+        body = await request.body()
+        if len(body) > MAX_BODY_BYTES:
+            return JSONResponse(
+                {"detail": f"body exceeds {MAX_BODY_BYTES} bytes"},
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            )
+
+        async def _replay() -> dict:
+            return {"type": "http.request", "body": body, "more_body": False}
+
+        request._receive = _replay  # type: ignore[attr-defined]
+        return await call_next(request)
+
+
+app.add_middleware(BodySizeLimitMiddleware)
+
 # In production the dashboard hits us same-origin via nginx, so CORS is
 # a no-op. Allow localhost during dev so you can run `npm run dev`
 # against a locally-running container without proxying.
@@ -222,15 +268,9 @@ def list_annotations() -> list[dict]:
     status_code=status.HTTP_201_CREATED,
     response_model=Annotation,
 )
-def create_annotation(payload: AnnotationCreate, request: Request) -> Annotation:
-    # Body-size pre-check. Pydantic catches per-field overflows but a
-    # 1MB request still has to be parsed first — cheaper to reject early.
-    cl = request.headers.get("content-length")
-    if cl and int(cl) > MAX_BODY_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"body exceeds {MAX_BODY_BYTES} bytes",
-        )
+def create_annotation(payload: AnnotationCreate) -> Annotation:
+    # Body-size cap is enforced by BodySizeLimitMiddleware — by the time
+    # this handler runs, the body is guaranteed ≤ MAX_BODY_BYTES.
     item = Annotation(
         **payload.model_dump(),
         id=str(uuid.uuid4()),

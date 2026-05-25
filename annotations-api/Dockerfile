@@ -29,6 +29,17 @@ ENV ANNOT_FILE=/data/annotations.json \
 
 EXPOSE 8080
 
+# Healthcheck via stdlib urllib (no curl in slim image, and adding
+# curl would bloat the layer). 30s interval matches typical
+# docker-compose / orchestrator expectations; 5s timeout is generous
+# for a /healthz that does not touch disk. After 3 consecutive failures
+# the container is marked unhealthy and `restart: unless-stopped`
+# (compose) will recycle it.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD python -c "import urllib.request, sys; \
+sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3).status == 200 else 1)" \
+  || exit 1
+
 # `--proxy-headers` so X-Forwarded-* from nginx are honoured (we log the
 # real client IP, not the nginx loopback). One worker is enough for this
 # write-light service — the FileLock would serialise extra workers anyway.

@@ -177,6 +177,43 @@ def test_atomic_write_leaves_no_tmp_artifact(client, app_module) -> None:
     assert leftovers == []
 
 
+def test_body_size_middleware_rejects_oversize_content_length(
+    client, monkeypatch: pytest.MonkeyPatch, app_module
+) -> None:
+    """Header-based cap: rejects pre-parse on legitimate Content-Length."""
+    # Squeeze the cap so we don't have to ship a 4KB payload.
+    monkeypatch.setattr(app_module, "MAX_BODY_BYTES", 100)
+    huge_desc = "x" * 200  # 200-byte body easily, well over the 100 cap
+    r = client.post("/", json=_sample_payload(desc=huge_desc))
+    assert r.status_code == 413
+    assert "exceeds" in r.json()["detail"]
+
+
+def test_body_size_middleware_rejects_oversize_chunked_body(
+    client, monkeypatch: pytest.MonkeyPatch, app_module
+) -> None:
+    """Chunked / no-Content-Length: real body bytes still get measured.
+
+    Was a defence-in-depth gap before: the old code only checked the
+    Content-Length header, so a chunked transfer bypassed the limit and
+    the full body was parsed by Pydantic. Now the middleware reads the
+    actual bytes and rejects on size regardless of transfer encoding.
+    """
+    monkeypatch.setattr(app_module, "MAX_BODY_BYTES", 100)
+    big_payload = _sample_payload(desc="y" * 200)
+    body_bytes = json.dumps(big_payload).encode("utf-8")
+    # TestClient doesn't expose a chunked-transfer toggle directly, but
+    # passing `content=` as bytes with NO `headers={"content-length": ...}`
+    # exercises the same code path: the cheap header check is skipped,
+    # so the middleware's real-body-read branch is what fires.
+    r = client.post(
+        "/",
+        content=body_bytes,
+        headers={"content-type": "application/json"},
+    )
+    assert r.status_code == 413
+
+
 def test_reads_legacy_dict_shape(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

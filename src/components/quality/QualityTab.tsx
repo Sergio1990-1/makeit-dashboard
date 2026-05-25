@@ -51,6 +51,19 @@ export function QualityTab() {
           <p style={{ fontSize: 12, opacity: 0.8 }}>
             События ниже работают независимо — добавляйте deploy/skill вехи, они появятся на таймлайне сразу как только аггрегация заработает.
           </p>
+          {annotations.length > 0 && (
+            // Empty-state shows no timeline, so a fresh POST has nowhere
+            // visible to land. Surfacing the count here is the cheapest
+            // confirmation that the mini-API actually accepted the event
+            // (mini-API + sweep are independent, so this can be non-zero
+            // even with no chart data).
+            <p
+              style={{ fontSize: 11, opacity: 0.7, fontFamily: "var(--v4-mono)" }}
+              aria-live="polite"
+            >
+              сохранено событий: {annotations.length} — появятся на таймлайне после первой агрегации
+            </p>
+          )}
         </div>
         {showAddModal && (
           <AnnotationModal
