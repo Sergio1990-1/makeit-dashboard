@@ -66,9 +66,11 @@ interface BannerProps {
 function Banner({ kind, title, detail }: BannerProps) {
   // Inline styles avoid coupling to v4 stylesheet quirks; banner is rare so
   // the cost of re-parsing per render is negligible.
-  const bg = kind === "warn" ? "rgba(247, 144, 9, 0.10)" : "rgba(96, 165, 250, 0.10)";
-  const border = kind === "warn" ? "rgba(247, 144, 9, 0.45)" : "rgba(96, 165, 250, 0.45)";
-  const accent = kind === "warn" ? "var(--v4-warn-500, #f79009)" : "var(--v4-accent-500, #60a5fa)";
+  const bg = kind === "warn" ? "var(--mk-warn-soft)" : "var(--mk-brand-50)";
+  const border = kind === "warn"
+    ? "color-mix(in srgb, var(--mk-warn) 45%, transparent)"
+    : "color-mix(in srgb, var(--mk-primary) 45%, transparent)";
+  const accent = kind === "warn" ? "var(--mk-warn)" : "var(--mk-primary)";
   return (
     <div
       role="status"
@@ -99,7 +101,7 @@ function Banner({ kind, title, detail }: BannerProps) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 600 }}>{title}</div>
         {detail && (
-          <div style={{ marginTop: 2, color: "var(--v4-ink-500, #94a3b8)" }}>{detail}</div>
+          <div style={{ marginTop: 2, color: "var(--mk-ink-500)" }}>{detail}</div>
         )}
       </div>
     </div>

@@ -22,15 +22,15 @@ const COMPLEXITY_OPTIONS: { value: ComplexityFilter; label: string; hint: string
 ];
 
 const COMPLEXITY_STYLE: Record<string, { label: string; color: string; bg: string }> = {
-  auto: { label: "AUTO", color: "var(--green-500)", bg: "rgba(16, 185, 129, 0.12)" },
-  assisted: { label: "ASSISTED", color: "var(--orange-500)", bg: "rgba(245, 158, 11, 0.12)" },
-  manual: { label: "MANUAL", color: "var(--red-500)", bg: "rgba(239, 68, 68, 0.12)" },
+  auto:     { label: "AUTO",     color: "var(--mk-success-strong)", bg: "var(--mk-success-soft)" },
+  assisted: { label: "ASSISTED", color: "var(--mk-warn-strong)",    bg: "var(--mk-warn-soft)" },
+  manual:   { label: "MANUAL",   color: "var(--mk-danger-strong)",  bg: "var(--mk-danger-soft)" },
 };
 
 const RISK_STYLE: Record<string, { label: string; color: string; bg: string }> = {
-  low: { label: "auto", color: "var(--green-500)", bg: "rgba(16, 185, 129, 0.12)" },
-  medium: { label: "guarded", color: "var(--orange-500)", bg: "rgba(245, 158, 11, 0.12)" },
-  high: { label: "gated", color: "var(--red-500)", bg: "rgba(239, 68, 68, 0.12)" },
+  low:    { label: "auto",    color: "var(--mk-success-strong)", bg: "var(--mk-success-soft)" },
+  medium: { label: "guarded", color: "var(--mk-warn-strong)",    bg: "var(--mk-warn-soft)" },
+  high:   { label: "gated",   color: "var(--mk-danger-strong)",  bg: "var(--mk-danger-soft)" },
 };
 
 const POLICY_TOOLTIP: Record<string, string> = {
@@ -134,24 +134,24 @@ function isTerminalFailure(status: string): boolean {
 type StatusVisual = { border: string; badgeBg: string; badgeColor: string };
 
 const STATUS_VISUAL_DONE: StatusVisual = {
-  border: "rgba(16,185,129,0.2)",
-  badgeBg: "rgba(16, 185, 129, 0.12)",
-  badgeColor: "var(--green-500)",
+  border: "color-mix(in srgb, var(--mk-success) 30%, transparent)",
+  badgeBg: "var(--mk-success-soft)",
+  badgeColor: "var(--mk-success-strong)",
 };
 const STATUS_VISUAL_FAILED: StatusVisual = {
-  border: "rgba(239,68,68,0.2)",
-  badgeBg: "rgba(239, 68, 68, 0.12)",
-  badgeColor: "var(--red-500)",
+  border: "color-mix(in srgb, var(--mk-danger) 30%, transparent)",
+  badgeBg: "var(--mk-danger-soft)",
+  badgeColor: "var(--mk-danger-strong)",
 };
 const STATUS_VISUAL_NEEDS_HUMAN: StatusVisual = {
-  border: "rgba(245,158,11,0.25)",
-  badgeBg: "rgba(245, 158, 11, 0.12)",
-  badgeColor: "var(--orange-500)",
+  border: "color-mix(in srgb, var(--mk-warn) 35%, transparent)",
+  badgeBg: "var(--mk-warn-soft)",
+  badgeColor: "var(--mk-warn-strong)",
 };
 const STATUS_VISUAL_DEFAULT: StatusVisual = {
-  border: "var(--color-border)",
-  badgeBg: "rgba(76, 141, 255, 0.12)",
-  badgeColor: "var(--blue-500)",
+  border: "var(--mk-line)",
+  badgeBg: "var(--mk-brand-50)",
+  badgeColor: "var(--mk-brand-700)",
 };
 
 function statusVisual(status: string): StatusVisual {
@@ -162,9 +162,9 @@ function statusVisual(status: string): StatusVisual {
 }
 
 const VERDICT_STYLE: Record<string, { color: string; bg: string }> = {
-  APPROVED: { color: "var(--green-500)", bg: "rgba(16, 185, 129, 0.12)" },
-  CHANGES_REQUESTED: { color: "var(--orange-500)", bg: "rgba(245, 158, 11, 0.12)" },
-  PARTIAL: { color: "var(--blue-500)", bg: "rgba(76, 141, 255, 0.12)" },
+  APPROVED:          { color: "var(--mk-success-strong)", bg: "var(--mk-success-soft)" },
+  CHANGES_REQUESTED: { color: "var(--mk-warn-strong)",    bg: "var(--mk-warn-soft)" },
+  PARTIAL:           { color: "var(--mk-brand-700)",      bg: "var(--mk-brand-50)" },
 };
 
 /* ── Duration helpers ── */
@@ -182,15 +182,18 @@ function formatDuration(seconds: number): string {
    "Активные задачи" panel inline. Active-task rendering now lives in
    ./PipelineActiveTasksBlock; the result-row UI below uses its own logic. */
 
-/* ── Escalation reason badge (Task 2) ── */
+/* ── Escalation reason badge (Task 2) ──
+   Цвета мапятся на семантические --mk-* токены из tokens.css,
+   а не дублируют их собственными переменными — статусы Pipeline
+   ровно ложатся на danger/warn/purple/neutral шкалы. */
 
 const CATEGORY_STYLE: Record<EscalationCategory, { bg: string; color: string; label: string }> = {
-  ci_failed:         { bg: "#3a1f1f", color: "#f85149", label: "CI упал" },
-  ci_infra_blocked:  { bg: "#3a3128", color: "#f0883e", label: "CI заблокирован (billing)" },
-  review_unfixable:  { bg: "#3a1f1f", color: "#f85149", label: "Review: блокирующие замечания" },
-  timeout:           { bg: "#2d2628", color: "#a371f7", label: "Таймаут" },
-  parse_failure:     { bg: "#2d2628", color: "#a371f7", label: "Ошибка парсинга" },
-  other:             { bg: "#21262d", color: "#7d8590", label: "Другое" },
+  ci_failed:         { bg: "var(--mk-danger-soft)", color: "var(--mk-danger-strong)", label: "CI упал" },
+  ci_infra_blocked:  { bg: "var(--mk-warn-soft)",   color: "var(--mk-warn-strong)",   label: "CI заблокирован (billing)" },
+  review_unfixable:  { bg: "var(--mk-danger-soft)", color: "var(--mk-danger-strong)", label: "Review: блокирующие замечания" },
+  timeout:           { bg: "var(--mk-purple-50)",   color: "var(--mk-purple-700)",    label: "Таймаут" },
+  parse_failure:     { bg: "var(--mk-purple-50)",   color: "var(--mk-purple-700)",    label: "Ошибка парсинга" },
+  other:             { bg: "var(--mk-surface-3)",   color: "var(--mk-ink-600)",       label: "Другое" },
 };
 
 function CategoryBadge({ category }: { category: EscalationCategory }) {
@@ -210,12 +213,14 @@ function CategoryBadge({ category }: { category: EscalationCategory }) {
   );
 }
 
-/* ── Outcome badge: did the change actually reach main? ── */
+/* ── Outcome badge: did the change actually reach main? ──
+   Те же семантические --mk-* токены — outcome совпадает по смыслу
+   с категориями: clean=success, with_followup=warn, not_merged=danger. */
 
 const OUTCOME_STYLE: Record<Outcome, { bg: string; color: string; label: string }> = {
-  merged_clean:         { bg: "rgba(63, 185, 80, 0.15)", color: "#3fb950", label: "✓ Сделано" },
-  merged_with_followup: { bg: "rgba(240, 136, 62, 0.15)", color: "#f0883e", label: "⚙ Код на main, нужен ops" },
-  not_merged:           { bg: "rgba(248, 81, 73, 0.15)", color: "#f85149", label: "✗ Не доехало до main" },
+  merged_clean:         { bg: "var(--mk-success-soft)", color: "var(--mk-success-strong)", label: "✓ Сделано" },
+  merged_with_followup: { bg: "var(--mk-warn-soft)",    color: "var(--mk-warn-strong)",    label: "⚙ Код на main, нужен ops" },
+  not_merged:           { bg: "var(--mk-danger-soft)",  color: "var(--mk-danger-strong)",  label: "✗ Не доехало до main" },
 };
 
 function OutcomeBadge({ outcome }: { outcome: Outcome }) {
@@ -663,7 +668,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                     fontWeight: 600,
                     borderRadius: 12,
                     border: `1px solid ${active ? "var(--color-primary)" : "var(--color-border)"}`,
-                    background: active ? "rgba(76, 141, 255, 0.12)" : "transparent",
+                    background: active ? "var(--mk-brand-50)" : "transparent",
                     color: active ? "var(--color-primary)" : "var(--color-text-muted)",
                     cursor: isRunning ? "not-allowed" : "pointer",
                     opacity: isRunning ? 0.5 : 1,
@@ -1088,7 +1093,7 @@ export function PipelineControlPanel({ projects }: PipelineControlPanelProps) {
                   {r.human_summary && (
                     <div style={{
                       fontSize: 12,
-                      color: "#7d8590",
+                      color: "var(--mk-ink-500)",
                       lineHeight: 1.4,
                       paddingLeft: 2,
                     }}>

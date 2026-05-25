@@ -1072,7 +1072,52 @@ function DataVizSection() {
       <h3 className="sg-sub">Repo colors</h3>
       <div className="sg-policy">
         <strong>Gap:</strong> сейчас в проекте <strong>нет</strong> единой схемы цвета per репозиторий. Все репо в heatmap и графиках используют общий brand-blue. Если хочешь, чтобы один и тот же репо был узнаваем во всех представлениях (sewing-ERP всегда красный, mankassa всегда фиолетовый и т.д.) — это <strong>отдельный architectural decision</strong>: вводим mapping <code>repo → mk-token</code> в <code>config.ts</code>.<br /><br />
-        <strong>Альтернатива:</strong> оставить как есть — цвет несёт семантику (success/danger/priority), а не identity. Это проще, и для дашборда уровня «портфель из 12 проектов» избыточная identity-палитра скорее шумит.
+        <strong>Решение (Claude+Codex):</strong> mood-only. Исключение — маленькие glyph/dot в milestones, где идентификация репо важна (zafiksovano как exception, не общее правило).
+      </div>
+
+      <h3 className="sg-sub">Status mapping — образец на примере Pipeline (сессия F)</h3>
+      <p style={{ fontSize: "var(--mk-text-sm)", color: "var(--mk-ink-500)", marginBottom: 12 }}>
+        Подсистемы (Pipeline, Audit, Quality) часто имеют собственные статусы (CI failed, merged clean, review approved и т.д.). Канон: <strong>не создавать новые --mk-* токены</strong>, а мапить статусы на существующие семантические пары (success/warn/danger/brand/purple) через soft-fg и strong-bg. Ниже — реальные бейджи из PipelineControlPanel после миграции в сессии F.
+      </p>
+      <div className="sg-variants">
+        <div className="sg-variant">
+          <div className="sg-variant-label">ESCALATION CATEGORIES</div>
+          <div className="sg-variant-name">CATEGORY_STYLE из PipelineControlPanel</div>
+          <div className="sg-variant-stage" style={{ flexDirection: "column", gap: 6, alignItems: "stretch", padding: 14 }}>
+            {[
+              { label: "CI упал", bg: "var(--mk-danger-soft)", fg: "var(--mk-danger-strong)", token: "danger" },
+              { label: "CI заблокирован (billing)", bg: "var(--mk-warn-soft)", fg: "var(--mk-warn-strong)", token: "warn" },
+              { label: "Review: блокирующие замечания", bg: "var(--mk-danger-soft)", fg: "var(--mk-danger-strong)", token: "danger" },
+              { label: "Таймаут", bg: "var(--mk-purple-50)", fg: "var(--mk-purple-700)", token: "purple" },
+              { label: "Ошибка парсинга", bg: "var(--mk-purple-50)", fg: "var(--mk-purple-700)", token: "purple" },
+              { label: "Другое", bg: "var(--mk-surface-3)", fg: "var(--mk-ink-600)", token: "neutral" },
+            ].map((s) => (
+              <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11 }}>
+                <span style={{ background: s.bg, color: s.fg, padding: "2px 8px", borderRadius: 10, fontWeight: 600, fontSize: 11, whiteSpace: "nowrap" }}>{s.label}</span>
+                <code style={{ fontFamily: "var(--mk-font-mono)", fontSize: 10, color: "var(--mk-ink-400)" }}>→ mk-{s.token}-soft / -strong</code>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="sg-variant">
+          <div className="sg-variant-label">MERGE OUTCOMES</div>
+          <div className="sg-variant-name">OUTCOME_STYLE</div>
+          <div className="sg-variant-stage" style={{ flexDirection: "column", gap: 6, alignItems: "stretch", padding: 14 }}>
+            {[
+              { label: "✓ Сделано", bg: "var(--mk-success-soft)", fg: "var(--mk-success-strong)", token: "success" },
+              { label: "⚙ Код на main, нужен ops", bg: "var(--mk-warn-soft)", fg: "var(--mk-warn-strong)", token: "warn" },
+              { label: "✗ Не доехало до main", bg: "var(--mk-danger-soft)", fg: "var(--mk-danger-strong)", token: "danger" },
+            ].map((s) => (
+              <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11 }}>
+                <span style={{ background: s.bg, color: s.fg, padding: "2px 8px", borderRadius: 10, fontWeight: 700, fontSize: 11, whiteSpace: "nowrap" }}>{s.label}</span>
+                <code style={{ fontFamily: "var(--mk-font-mono)", fontSize: 10, color: "var(--mk-ink-400)" }}>→ mk-{s.token}-soft / -strong</code>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="sg-note">
+        <strong>Canon:</strong> когда подсистема добавляет новые статусы — не плодим <code>--mk-*-soft/-strong</code> переменные, а используем существующие 4 семантические пары. Если статус не ложится ни на одну пару — это сигнал к новому design-decision, не к новому токену.
       </div>
     </section>
   );
