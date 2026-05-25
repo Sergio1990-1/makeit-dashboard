@@ -62,11 +62,13 @@ export function AnnotationModal({ onSubmit, onClose }: Props) {
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     setSubmitting(true);
+    setErrorMsg(null);
     try {
       const occurredAt = new Date(date + "T00:00:00Z").toISOString();
       await onSubmit({
@@ -77,6 +79,8 @@ export function AnnotationModal({ onSubmit, onClose }: Props) {
         desc: desc.trim(),
       });
       onClose();
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : String(err));
     } finally {
       setSubmitting(false);
     }
@@ -133,6 +137,21 @@ export function AnnotationModal({ onSubmit, onClose }: Props) {
             style={inputStyle}
           />
         </label>
+        {errorMsg && (
+          <div
+            role="alert"
+            style={{
+              padding: "8px 10px",
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: 4,
+              color: "#991b1b",
+              fontSize: 12,
+            }}
+          >
+            Не удалось сохранить: {errorMsg}
+          </div>
+        )}
         <div className="modal-actions" style={actionsStyle}>
           <button type="button" onClick={onClose}>
             Отмена

@@ -1,6 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { AnnotationModal } from "../../src/components/quality/AnnotationModal";
+
+afterEach(cleanup);
 
 describe("AnnotationModal", () => {
   it("submits annotation with form values converted to UTC", async () => {
@@ -20,5 +22,18 @@ describe("AnnotationModal", () => {
         desc: "",
       })
     );
+  });
+
+  it("surfaces submit failure inline and keeps modal open", async () => {
+    const onSubmit = vi.fn().mockRejectedValue(new Error("HTTP 500"));
+    const onClose = vi.fn();
+    const { getByLabelText, getByText, findByRole } = render(
+      <AnnotationModal onSubmit={onSubmit} onClose={onClose} />
+    );
+    fireEvent.change(getByLabelText(/title/i), { target: { value: "test" } });
+    fireEvent.click(getByText(/сохранить/i));
+    const alert = await findByRole("alert");
+    expect(alert.textContent).toMatch(/HTTP 500/);
+    await waitFor(() => expect(onClose).not.toHaveBeenCalled());
   });
 });
