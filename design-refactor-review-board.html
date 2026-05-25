@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MakeIT Dashboard - review sessions A-E</title>
+    <style>
+      :root {
+        --bg: #f6f7f9;
+        --paper: #fff;
+        --surface: #f4f5f8;
+        --surface-2: #edeff3;
+        --ink: #0e1320;
+        --ink-2: #2f3850;
+        --muted: #6b7691;
+        --line: #e4e8ef;
+        --line-strong: #d6dbe5;
+        --blue: #2563eb;
+        --blue-soft: #eef4ff;
+        --green: #12b76a;
+        --green-soft: #ecfdf3;
+        --orange: #f79009;
+        --orange-soft: #fffaeb;
+        --red: #ef4444;
+        --red-soft: #fef2f2;
+        --purple: #7c3aed;
+        --purple-soft: #f5f0ff;
+        --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .page {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 32px 22px 56px;
+      }
+
+      .hero {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 22px;
+      }
+
+      .eyebrow {
+        width: fit-content;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 5px 10px;
+        background: var(--paper);
+        color: var(--muted);
+        font: 800 11px/1 var(--mono);
+        letter-spacing: .06em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        max-width: 840px;
+        font-size: 34px;
+        line-height: 1.1;
+        letter-spacing: 0;
+      }
+
+      .lead {
+        max-width: 900px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--paper);
+        padding: 16px;
+        box-shadow: var(--shadow);
+      }
+
+      .card h2,
+      .card h3 {
+        margin: 0 0 8px;
+        letter-spacing: 0;
+      }
+
+      .card h2 { font-size: 18px; }
+      .card h3 { font-size: 15px; }
+      .card p { margin: 0; color: var(--muted); }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 22px;
+        border-radius: 999px;
+        padding: 0 8px;
+        font: 800 10px/1 var(--mono);
+        text-transform: uppercase;
+      }
+
+      .tag.p1 { background: var(--red-soft); color: #b91c1c; }
+      .tag.p2 { background: var(--orange-soft); color: #b54708; }
+      .tag.ok { background: var(--green-soft); color: #067647; }
+      .tag.info { background: var(--blue-soft); color: #1e40af; }
+
+      .finding {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr) 280px;
+        gap: 14px;
+        align-items: start;
+        border: 1px solid var(--line);
+        border-left-width: 4px;
+        border-radius: 12px;
+        background: var(--paper);
+        padding: 14px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+      }
+
+      .finding.p1 { border-left-color: var(--red); }
+      .finding.p2 { border-left-color: var(--orange); }
+
+      .finding-title {
+        margin: 0 0 6px;
+        font-size: 15px;
+        font-weight: 800;
+      }
+
+      .finding-path {
+        color: var(--muted);
+        font: 700 11px/1.4 var(--mono);
+      }
+
+      .mini-terminal {
+        border-radius: 8px;
+        background: #0e1320;
+        color: #dce7ff;
+        padding: 12px;
+        font: 700 11px/1.45 var(--mono);
+        overflow: hidden;
+      }
+
+      .mini-terminal .err { color: #fca5a5; }
+      .mini-terminal .ok { color: #86efac; }
+
+      .decision {
+        display: grid;
+        gap: 10px;
+      }
+
+      .visual {
+        border: 1px dashed var(--line-strong);
+        border-radius: 10px;
+        background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+        padding: 14px;
+      }
+
+      .motion-row {
+        display: grid;
+        grid-template-columns: 68px 1fr 52px;
+        gap: 10px;
+        align-items: center;
+        margin: 8px 0;
+        color: var(--muted);
+        font: 700 11px/1 var(--mono);
+      }
+
+      .track {
+        height: 8px;
+        border-radius: 999px;
+        background: var(--surface-2);
+        overflow: hidden;
+      }
+
+      .track span {
+        display: block;
+        width: var(--w);
+        height: 100%;
+        border-radius: inherit;
+        background: var(--blue);
+      }
+
+      .heat {
+        display: grid;
+        grid-template-columns: repeat(14, 1fr);
+        gap: 3px;
+      }
+
+      .heat i {
+        aspect-ratio: 1;
+        border-radius: 2px;
+        background: var(--c);
+      }
+
+      .repo-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .repo-row:last-child { border-bottom: 0; }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--c);
+      }
+
+      .path {
+        display: inline;
+        padding: 1px 5px;
+        border-radius: 5px;
+        background: var(--surface);
+        color: var(--ink-2);
+        font-family: var(--mono);
+        font-size: 11px;
+      }
+
+      .steps {
+        display: grid;
+        gap: 8px;
+      }
+
+      .step {
+        display: grid;
+        grid-template-columns: 36px minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
+      }
+
+      .step b {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: var(--blue-soft);
+        color: var(--blue);
+        font-family: var(--mono);
+      }
+
+      @media (max-width: 900px) {
+        .three,
+        .two,
+        .finding {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <div class="eyebrow">Review · sessions A-E · ebe5f03</div>
+        <h1>Дизайн-рефакторинг: что принять, что починить перед миграцией</h1>
+        <p class="lead">
+          Итог ревью net diff <span class="path">a625b91..HEAD</span>. Направление правильное,
+          но есть один build-blocker и один рассинхрон living styleguide с реально оставшимися токенами.
+        </p>
+      </header>
+
+      <section class="grid three" style="margin-bottom: 18px">
+        <div class="card">
+          <h3>components.css</h3>
+          <p>Структура хорошая для day-1. BEM-модификаторы норм. Селекторы tabs приемлемы, позже можно добавить role/data-state.</p>
+        </div>
+        <div class="card">
+          <h3>tokens.css</h3>
+          <p>98 переменных приемлемо. Дальше резать не надо, пока живёт bridge. Важнее убрать несинхрон styleguide.</p>
+        </div>
+        <div class="card">
+          <h3>Миграция</h3>
+          <p>Сначала закрыть blocker, потом Pipeline как pilot. После него переносить Audit/Monitoring/Transcripts.</p>
+        </div>
+      </section>
+
+      <section class="grid" style="margin-bottom: 22px">
+        <article class="finding p1">
+          <div><span class="tag p1">P1</span></div>
+          <div>
+            <div class="finding-title">Сборка main сейчас падает</div>
+            <p>
+              В <span class="path">src/styleguide/StyleguideApp.tsx:957</span> объявлен
+              <span class="path">intensities</span>, но он не используется. TypeScript с
+              <span class="path">noUnusedLocals</span> останавливает production build.
+            </p>
+          </div>
+          <div class="mini-terminal">
+            npm run build<br />
+            <span class="err">TS6133: 'intensities' is declared but its value is never read</span>
+          </div>
+        </article>
+
+        <article class="finding p2">
+          <div><span class="tag p2">P2</span></div>
+          <div>
+            <div class="finding-title">Styleguide показывает токены, которых уже нет</div>
+            <p>
+              После сокращения палитры <span class="path">tokens.css</span> больше не содержит
+              <span class="path">--mk-leading-tight</span>, <span class="path">--mk-leading-relaxed</span>,
+              <span class="path">--mk-r-xs</span>, <span class="path">--mk-r-2xl</span>,
+              но styleguide всё ещё их демонстрирует.
+            </p>
+          </div>
+          <div class="mini-terminal">
+            undefined refs<br />
+            <span class="err">--mk-leading-tight</span><br />
+            <span class="err">--mk-leading-relaxed</span><br />
+            <span class="err">--mk-r-xs</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="grid three" style="margin-bottom: 22px">
+        <div class="card decision">
+          <h2>D10 Motion</h2>
+          <span class="tag ok">согласен</span>
+          <p>120 / 200 / 300ms оставить. Это хорошая шкала для дашборда: быстрый hover, нормальный state change, спокойные раскрытия.</p>
+          <div class="visual">
+            <div class="motion-row"><span>fast</span><div class="track"><span style="--w: 40%"></span></div><span>120</span></div>
+            <div class="motion-row"><span>base</span><div class="track"><span style="--w: 67%"></span></div><span>200</span></div>
+            <div class="motion-row"><span>slow</span><div class="track"><span style="--w: 100%"></span></div><span>300</span></div>
+          </div>
+        </div>
+
+        <div class="card decision">
+          <h2>D17 Heatmap</h2>
+          <span class="tag ok">brand-blue</span>
+          <p>Оставить blue scale. Green лучше узнаётся как GitHub, но в этом продукте heatmap не должна спорить с success/status зелёным.</p>
+          <div class="visual">
+            <div class="heat">
+              <i style="--c:#edeff3"></i><i style="--c:#dce7ff"></i><i style="--c:#92b0f5"></i><i style="--c:#3f73e8"></i><i style="--c:#1e40af"></i>
+              <i style="--c:#edeff3"></i><i style="--c:#92b0f5"></i><i style="--c:#dce7ff"></i><i style="--c:#3f73e8"></i><i style="--c:#edeff3"></i>
+              <i style="--c:#1e40af"></i><i style="--c:#92b0f5"></i><i style="--c:#dce7ff"></i><i style="--c:#3f73e8"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="card decision">
+          <h2>D18 Repo identity</h2>
+          <span class="tag info">mood-only</span>
+          <p>Согласен без постоянной repo-палитры. Цвет должен кодировать состояние/тип, а repo узнаётся по имени. Исключение: маленькие glyph/dot в milestones.</p>
+          <div class="visual">
+            <div class="repo-row"><span class="dot" style="--c:var(--blue)"></span><span>Sewing-ERP · dev</span></div>
+            <div class="repo-row"><span class="dot" style="--c:var(--green)"></span><span>mankassa-app · healthy</span></div>
+            <div class="repo-row"><span class="dot" style="--c:var(--orange)"></span><span>moliyakg · attention</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid two">
+        <div class="card">
+          <h2>Ответы по компонентам</h2>
+          <div class="steps">
+            <div class="step"><b>1</b><p><strong>Tabs:</strong> текущий селектор <span class="path">.mk-tabs--underline button</span> норм для старта. Следующий уровень зрелости: <span class="path">[role="tab"]</span> / <span class="path">[data-state]</span>.</p></div>
+            <div class="step"><b>2</b><p><strong>Focus:</strong> box-shadow ring оставить. Добавить high-contrast outline через <span class="path">@media (prefers-contrast: more)</span>.</p></div>
+            <div class="step"><b>3</b><p><strong>BEM modifiers:</strong> норм. Для React-компонентов потом можно сделать тонкий wrapper, но CSS API сейчас понятен.</p></div>
+            <div class="step"><b>4</b><p><strong>Day-1 gap:</strong> не хватает shared classes для modal, toolbar, table/list, empty/error/loading.</p></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Порядок работ после фикса</h2>
+          <div class="steps">
+            <div class="step"><b>0</b><p>Починить build: удалить <span class="path">intensities</span> и синхронизировать styleguide с tokens.</p></div>
+            <div class="step"><b>F</b><p>Pipeline pilot: вынести status/severity цвета и заменить старые dark-hash значения.</p></div>
+            <div class="step"><b>G</b><p>Audit → Monitoring → Transcripts → Quality/Dashboard. Каждый блок отдельно, с визуальной проверкой.</p></div>
+            <div class="step"><b>H</b><p>Финал: удалить bridge и включить правило против новых hex/inline color в JSX.</p></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
