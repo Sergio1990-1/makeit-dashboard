@@ -19,8 +19,10 @@
 .v4-quality-tab {
   /* Codex severity palette — align с shields.io бейджами в PR-коммитах.
    * Scoped к `.v4-quality-tab` намеренно: в Quality «P0/P1/P2» — это
-   * severity (БЛОКЕР/высокое/среднее), а не project priority
-   * (см. --mk-priority-p* в tokens.css). */
+   * severity (БЛОКЕР/высокое/среднее), а не project priority (см.
+   * --mk-priority-p* в tokens.css). --mk-quality-* — новые имена для
+   * TSX (Session J); --v4-* остаются для совместимости с селекторами
+   * v4-quality.css до Session K. */
   --mk-quality-p0: #EF4444;
   --mk-quality-p1: #F59E0B;
   --mk-quality-p2: #EAB308;
@@ -30,13 +32,22 @@
   --mk-quality-p1-text: #B45309;
   --mk-quality-p2-text: #854D0E;
   --mk-quality-clean-text: #1D4ED8;
+  --v4-p0: var(--mk-quality-p0);
+  --v4-p1: var(--mk-quality-p1);
+  --v4-p2: var(--mk-quality-p2);
+  --v4-clean: var(--mk-quality-clean);
+  --v4-clean-soft: var(--mk-quality-clean-soft);
+  --v4-p0-text: var(--mk-quality-p0-text);
+  --v4-p1-text: var(--mk-quality-p1-text);
+  --v4-p2-text: var(--mk-quality-p2-text);
+  --v4-clean-text: var(--mk-quality-clean-text);
 }
 
 /* ──── KPI · P0 alert pill ──── */
 .v4-quality-tab .kpi-p0-alert {
-  background: var(--mk-quality-p0);
+  background: var(--v4-p0);
   color: #fff;
-  border-radius: var(--mk-r-md);
+  border-radius: var(--v4-r-md);
   padding: 14px 16px;
   display: flex;
   align-items: center;
@@ -50,14 +61,14 @@
 }
 .v4-quality-tab .kpi-p0-icon { font-size: 22px; line-height: 1; }
 .v4-quality-tab .kpi-p0-text { display: flex; flex-direction: column; }
-.v4-quality-tab .kpi-p0-text b { font-family: var(--mk-font-mono); font-size: 18px; line-height: 1.1; }
+.v4-quality-tab .kpi-p0-text b { font-family: var(--v4-mono); font-size: 18px; line-height: 1.1; }
 .v4-quality-tab .kpi-p0-text span { font-size: 11px; opacity: 0.9; margin-top: 2px; }
 
 /* ──── KPI cards ──── */
 .v4-quality-tab .kpi {
-  background: var(--mk-paper);
-  border: 1px solid var(--mk-line);
-  border-radius: var(--mk-r-md);
+  background: var(--v4-paper);
+  border: 1px solid var(--v4-line);
+  border-radius: var(--v4-r-md);
   padding: 12px 14px;
   animation: q-kpi-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: calc(var(--i, 0) * 60ms + 200ms);
@@ -67,7 +78,7 @@
 }
 .v4-quality-tab .kpi:hover {
   transform: translateY(-2px);
-  border-color: var(--mk-line-strong);
+  border-color: var(--v4-line-strong);
   box-shadow: 0 10px 28px rgba(11, 16, 32, 0.07);
 }
 @keyframes q-kpi-in {
@@ -78,21 +89,21 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--mk-ink-500);
-  font-family: var(--mk-font-mono);
+  color: var(--v4-ink-500);
+  font-family: var(--v4-mono);
   font-weight: 600;
   margin-bottom: 6px;
 }
 .v4-quality-tab .kpi-v {
   font-size: 26px;
   font-weight: 700;
-  color: var(--mk-ink-900);
-  font-family: var(--mk-font-mono);
+  color: var(--v4-ink-900);
+  font-family: var(--v4-mono);
   line-height: 1;
   letter-spacing: -0.02em;
 }
-.v4-quality-tab .kpi-v.dirty { color: var(--mk-ink-900); }
-.v4-quality-tab .kpi-sub { font-size: 11px; color: var(--mk-ink-500); margin-top: 4px; }
+.v4-quality-tab .kpi-v.dirty { color: var(--v4-ink-900); }
+.v4-quality-tab .kpi-sub { font-size: 11px; color: var(--v4-ink-500); margin-top: 4px; }
 
 /* ──── Chart — vertical bars (main) ──── */
 .v4-quality-tab .chart {
@@ -101,7 +112,7 @@
   gap: 2px;
   flex: 1;
   min-height: 220px;
-  border-bottom: 1px dashed var(--mk-line);
+  border-bottom: 1px dashed var(--v4-line);
   position: relative;
   /* Coordinated reveal — opacity + translateY (GPU). НЕ clip-path
      (репейнтит N детей каждый кадр). */
@@ -128,17 +139,17 @@
   position: absolute;
   left: 0;
   right: 0;
-  border-top: 1px dashed var(--mk-line-soft);
+  border-top: 1px dashed var(--v4-line-soft);
 }
 .v4-quality-tab .chart-axis::before { top: 50%; }
 .v4-quality-tab .chart-axis::after  { top: 0; }
 .v4-quality-tab .chart-axis-label {
   position: absolute;
   right: 4px;
-  font-family: var(--mk-font-mono);
+  font-family: var(--v4-mono);
   font-size: 9px;
-  color: var(--mk-ink-400);
-  background: var(--mk-paper);
+  color: var(--v4-ink-400);
+  background: var(--v4-paper);
   padding: 0 3px;
 }
 
@@ -158,7 +169,7 @@
   content: '';
   position: absolute;
   inset: -6px -4px -4px -4px;
-  background: var(--mk-brand-100);
+  background: var(--v4-accent-100);
   border-radius: 4px;
   opacity: 0;
   transition: opacity .15s ease;
@@ -177,7 +188,7 @@
 }
 /* В mini-чарте дополнительно border-top — gradient слабо читается на 80px. */
 .v4-quality-tab .card-chart .bar.has-p0 .bar-stack {
-  border-top: 2px solid var(--mk-quality-p0);
+  border-top: 2px solid var(--v4-p0);
 }
 
 /* Mini-pill "P0:N" сверху столбца, ВСЕГДА видна (только main chart). */
@@ -186,9 +197,9 @@
   top: -22px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--mk-quality-p0);
+  background: var(--v4-p0);
   color: #fff;
-  font-family: var(--mk-font-mono);
+  font-family: var(--v4-mono);
   font-size: 9px;
   font-weight: 700;
   padding: 2px 6px;
@@ -225,7 +236,7 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  background-image: linear-gradient(to bottom, var(--mk-brand-700) 50%, transparent 50%);
+  background-image: linear-gradient(to bottom, var(--v4-accent-700) 50%, transparent 50%);
   background-size: 1px 4px;
   opacity: 0.5;
   pointer-events: none;
@@ -237,9 +248,9 @@
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%) translateY(2px);
-  background: var(--mk-ink-900);
+  background: var(--v4-ink-900);
   color: #fff;
-  font-family: var(--mk-font-mono);
+  font-family: var(--v4-mono);
   font-size: 11px;
   font-weight: 700;
   padding: 3px 8px;
@@ -259,20 +270,20 @@
 /* Red сегмент = P0+P1 worst-wins (одна красная категория для читабельности).
    Tooltip разбивает их отдельно. P0-alert pulse — в KPI выше. */
 .v4-quality-tab .bar-crit {
-  background: var(--mk-quality-p0);
+  background: var(--v4-p0);
   width: 100%;
 }
 .v4-quality-tab .bar-p2 {
-  background: var(--mk-quality-p2);
+  background: var(--v4-p2);
   width: 100%;
 }
 .v4-quality-tab .bar-clean {
-  background: var(--mk-quality-clean-soft);
+  background: var(--v4-clean-soft);
   width: 100%;
   border-radius: 3px 3px 0 0;
 }
 .v4-quality-tab .bar-empty {
-  background: var(--mk-line-soft);
+  background: var(--v4-line-soft);
   width: 100%;
   height: 1px;
   margin-top: auto;
@@ -287,7 +298,7 @@
   display: flex;
   align-items: flex-end;
   gap: 2px;
-  border-bottom: 1px dashed var(--mk-line-soft);
+  border-bottom: 1px dashed var(--v4-line-soft);
   position: relative;
 }
 
@@ -295,8 +306,8 @@
 .v4-quality-tab .chart-tip {
   position: absolute;
   top: 8px;
-  background: var(--mk-paper);
-  border: 1px solid var(--mk-line-strong);
+  background: var(--v4-paper);
+  border: 1px solid var(--v4-line-strong);
   box-shadow: 0 8px 24px rgba(11, 16, 32, 0.12), 0 2px 6px rgba(11, 16, 32, 0.06);
   border-radius: 8px;
   padding: 10px 12px;
@@ -310,11 +321,11 @@
 }
 .v4-quality-tab .chart-tip.show { opacity: 1; transform: translateY(0); }
 .v4-quality-tab .chart-tip-l {
-  font-family: var(--mk-font-mono);
+  font-family: var(--v4-mono);
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--mk-ink-500);
+  color: var(--v4-ink-500);
   margin-bottom: 6px;
 }
 .v4-quality-tab .chart-tip-row {
@@ -324,35 +335,35 @@
   margin-bottom: 8px;
 }
 .v4-quality-tab .chart-tip-v {
-  font-family: var(--mk-font-mono);
+  font-family: var(--v4-mono);
   font-size: 24px;
   font-weight: 700;
-  color: var(--mk-ink-900);
+  color: var(--v4-ink-900);
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
-.v4-quality-tab .chart-tip-u { color: var(--mk-ink-500); font-size: 12px; }
+.v4-quality-tab .chart-tip-u { color: var(--v4-ink-500); font-size: 12px; }
 .v4-quality-tab .chart-tip-foot {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 10px;
   padding-top: 8px;
-  border-top: 1px solid var(--mk-line-soft);
-  color: var(--mk-ink-500);
+  border-top: 1px solid var(--v4-line-soft);
+  color: var(--v4-ink-500);
   font-size: 11px;
 }
 .v4-quality-tab .chart-tip-foot--tight { padding-top: 4px; border-top: 0; }
 .v4-quality-tab .chart-tip-tr {
-  font-family: var(--mk-font-mono);
+  font-family: var(--v4-mono);
   font-weight: 600;
-  color: var(--mk-ink-700);
+  color: var(--v4-ink-700);
 }
 .v4-quality-tab .chart-tip-seg {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-family: var(--mk-font-mono);
+  font-family: var(--v4-mono);
   font-weight: 600;
 }
 .v4-quality-tab .chart-tip-seg .sw { width: 8px; height: 8px; border-radius: 2px; }
@@ -362,7 +373,7 @@
   min-width: 160px;
   padding: 8px 10px;
   font-size: 11px;
-  background: var(--mk-ink-900);
+  background: var(--v4-ink-900);
   color: #fff;
   border: 0;
   box-shadow: 0 8px 20px rgba(11, 16, 32, 0.32);
@@ -370,7 +381,7 @@
   bottom: calc(100% + 8px);
   white-space: nowrap;
   line-height: 1.45;
-  font-family: var(--mk-font-mono);
+  font-family: var(--v4-mono);
 }
 .v4-quality-tab .chart-tip--compact .ct-line1 {
   display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px;
@@ -400,9 +411,9 @@
 .v4-quality-tab .chart-label {
   flex: 1;
   text-align: center;
-  font-family: var(--mk-font-mono);
+  font-family: var(--v4-mono);
   font-size: 9px;
-  color: var(--mk-ink-400);
+  color: var(--v4-ink-400);
   min-width: 4px;
   overflow: hidden;
 }
@@ -411,8 +422,8 @@
   gap: 14px;
   margin-top: 14px;
   font-size: 11px;
-  color: var(--mk-ink-500);
-  font-family: var(--mk-font-mono);
+  color: var(--v4-ink-500);
+  font-family: var(--v4-mono);
   font-weight: 500;
 }
 .v4-quality-tab .chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
@@ -430,7 +441,7 @@
   bottom: 0;
   width: 1px;
   background-image: linear-gradient(to bottom,
-    var(--mk-purple-500) 50%,
+    var(--v4-purple-500, #7C3AED) 50%,
     transparent 50%);
   background-size: 1px 6px;
   pointer-events: auto;
@@ -444,14 +455,14 @@
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: var(--mk-purple-500);
-  border: 2px solid var(--mk-paper);
-  box-shadow: 0 0 0 1px var(--mk-purple-500);
+  background: var(--v4-purple-500, #7C3AED);
+  border: 2px solid var(--v4-paper);
+  box-shadow: 0 0 0 1px var(--v4-purple-500, #7C3AED);
 }
-.v4-quality-tab .annot.is-skill  .annot-dot { background: var(--mk-brand-600);  box-shadow: 0 0 0 1px var(--mk-brand-600); }
-.v4-quality-tab .annot.is-deploy .annot-dot { background: var(--mk-success); box-shadow: 0 0 0 1px var(--mk-success); }
-.v4-quality-tab .annot.is-manual .annot-dot { background: var(--mk-purple-500); }
-.v4-quality-tab .annot:hover { background-image: linear-gradient(to bottom, var(--mk-ink-900) 50%, transparent 50%); }
+.v4-quality-tab .annot.is-skill  .annot-dot { background: var(--v4-accent-600);  box-shadow: 0 0 0 1px var(--v4-accent-600); }
+.v4-quality-tab .annot.is-deploy .annot-dot { background: var(--v4-success-500); box-shadow: 0 0 0 1px var(--v4-success-500); }
+.v4-quality-tab .annot.is-manual .annot-dot { background: var(--v4-purple-500, #7C3AED); }
+.v4-quality-tab .annot:hover { background-image: linear-gradient(to bottom, var(--v4-ink-900) 50%, transparent 50%); }
 .v4-quality-tab .annot:hover .annot-dot { transform: scale(1.2); transition: transform .12s; }
 
 .v4-quality-tab .annot-tip {
@@ -459,7 +470,7 @@
   top: 22px;
   left: 0;
   transform: translateX(-50%) translateY(2px);
-  background: var(--mk-ink-900);
+  background: var(--v4-ink-900);
   color: #fff;
   font-size: 11px;
   line-height: 1.4;
@@ -475,7 +486,7 @@
 }
 .v4-quality-tab .annot-tip-cat {
   display: inline-block;
-  font-family: var(--mk-font-mono);
+  font-family: var(--v4-mono);
   font-size: 9px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -484,19 +495,19 @@
   border-radius: 3px;
   margin-bottom: 4px;
 }
-.v4-quality-tab .annot-tip-date { font-family: var(--mk-font-mono); font-size: 10px; color: rgba(255,255,255,0.65); margin-top: 4px; }
+.v4-quality-tab .annot-tip-date { font-family: var(--v4-mono); font-size: 10px; color: rgba(255,255,255,0.65); margin-top: 4px; }
 .v4-quality-tab .annot-tip-device { color: rgba(255,255,255,0.55); font-style: italic; }
 .v4-quality-tab .annot:hover .annot-tip { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ──── Add-event button ──── */
 .v4-quality-tab .btn-add-event {
-  border: 1px dashed var(--mk-line-strong);
+  border: 1px dashed var(--v4-line-strong);
   background: transparent;
-  border-radius: var(--mk-r-md);
+  border-radius: var(--v4-r-md);
   padding: 6px 10px;
   font: inherit;
   font-size: 11px;
-  color: var(--mk-ink-500);
+  color: var(--v4-ink-500);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -504,16 +515,16 @@
   transition: all .15s ease;
 }
 .v4-quality-tab .btn-add-event:hover {
-  color: var(--mk-purple-500);
-  border-color: var(--mk-purple-500);
-  background: var(--mk-purple-50);
+  color: var(--v4-purple-500, #7C3AED);
+  border-color: var(--v4-purple-500, #7C3AED);
+  background: var(--v4-purple-50, #F5F0FF);
 }
 
 /* ──── Project card (grid) ──── */
 .v4-quality-tab .card {
-  background: var(--mk-paper);
-  border: 1px solid var(--mk-line);
-  border-radius: var(--mk-r-lg);
+  background: var(--v4-paper);
+  border: 1px solid var(--v4-line);
+  border-radius: var(--v4-r-lg);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
@@ -528,7 +539,7 @@
 }
 .v4-quality-tab .card:hover {
   transform: translateY(-3px);
-  border-color: var(--mk-line-strong);
+  border-color: var(--v4-line-strong);
   box-shadow: 0 14px 32px -14px rgba(11, 16, 32, 0.18),
               0 4px 12px -4px rgba(11, 16, 32, 0.08);
 }
@@ -566,17 +577,17 @@
   font-size: 24px;
   margin: 0 0 4px 0;
   letter-spacing: -0.02em;
-  color: var(--mk-ink-900);
+  color: var(--v4-ink-900);
   font-weight: 700;
 }
-.v4-quality-tab .pageH .sub { color: var(--mk-ink-500); font-size: 13px; }
-.v4-quality-tab .pageH .sub b { color: var(--mk-ink-700); font-weight: 600; }
+.v4-quality-tab .pageH .sub { color: var(--v4-ink-500); font-size: 13px; }
+.v4-quality-tab .pageH .sub b { color: var(--v4-ink-700); font-weight: 600; }
 .v4-quality-tab .ctrls { display: flex; gap: 10px; align-items: center; }
 .v4-quality-tab .seg {
   display: inline-flex;
-  background: var(--mk-paper);
-  border: 1px solid var(--mk-line);
-  border-radius: var(--mk-r-md);
+  background: var(--v4-paper);
+  border: 1px solid var(--v4-line);
+  border-radius: var(--v4-r-md);
   padding: 3px;
 }
 .v4-quality-tab .seg button {
@@ -585,39 +596,39 @@
   padding: 6px 12px;
   font: inherit;
   font-size: 12px;
-  color: var(--mk-ink-500);
+  color: var(--v4-ink-500);
   border-radius: 5px;
   cursor: pointer;
   font-weight: 500;
   transition: background .18s ease, color .18s ease;
 }
 .v4-quality-tab .seg button.active {
-  background: var(--mk-ink-900);
+  background: var(--v4-ink-900);
   color: #fff;
   font-weight: 600;
 }
 .v4-quality-tab .btn-refresh {
-  border: 1px solid var(--mk-line);
-  background: var(--mk-paper);
-  border-radius: var(--mk-r-md);
+  border: 1px solid var(--v4-line);
+  background: var(--v4-paper);
+  border-radius: var(--v4-r-md);
   padding: 7px 12px;
   font: inherit;
   font-size: 12px;
-  color: var(--mk-ink-700);
+  color: var(--v4-ink-700);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-weight: 500;
 }
-.v4-quality-tab .btn-refresh:hover { background: var(--mk-surface-2); }
+.v4-quality-tab .btn-refresh:hover { background: var(--v4-surface-2); }
 .v4-quality-tab .btn-refresh:disabled { opacity: 0.55; cursor: progress; }
 
 /* ──── PANEL containers ──── */
 .v4-quality-tab .panel {
-  background: var(--mk-paper);
-  border: 1px solid var(--mk-line);
-  border-radius: var(--mk-r-lg);
+  background: var(--v4-paper);
+  border: 1px solid var(--v4-line);
+  border-radius: var(--v4-r-lg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -625,7 +636,7 @@
 .v4-quality-tab .panel-t {
   font-size: 13px;
   font-weight: 600;
-  color: var(--mk-ink-900);
+  color: var(--v4-ink-900);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -641,7 +652,7 @@
 }
 .v4-quality-tab .summary .chartwrap {
   padding: 18px;
-  border-right: 1px solid var(--mk-line-soft);
+  border-right: 1px solid var(--v4-line-soft);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -663,30 +674,30 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  background: var(--mk-surface-2);
+  background: var(--v4-surface-2);
 }
 
 /* На узких экранах summary сваливается в один столбец, чтобы карты не сжимались */
 @media (max-width: 900px) {
   .v4-quality-tab .summary { grid-template-columns: 1fr; }
-  .v4-quality-tab .summary .chartwrap { border-right: 0; border-bottom: 1px solid var(--mk-line-soft); }
+  .v4-quality-tab .summary .chartwrap { border-right: 0; border-bottom: 1px solid var(--v4-line-soft); }
 }
 
 /* ──── TAGS ──── */
 .v4-quality-tab .tag {
-  font-family: var(--mk-font-mono);
+  font-family: var(--v4-mono);
   font-size: 9px;
   font-weight: 600;
-  background: var(--mk-surface-2);
-  color: var(--mk-ink-500);
+  background: var(--v4-surface-2);
+  color: var(--v4-ink-500);
   padding: 2px 7px;
   border-radius: 99px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.v4-quality-tab .tag-warn { background: var(--mk-warn-soft); color: var(--mk-warn-strong); }
-.v4-quality-tab .tag-good { background: var(--mk-success-soft); color: var(--mk-success-strong); }
-.v4-quality-tab .tag-bad  { background: var(--mk-danger-soft); color: var(--mk-danger-strong); }
+.v4-quality-tab .tag-warn { background: var(--v4-warn-50); color: var(--v4-warn-700); }
+.v4-quality-tab .tag-good { background: var(--v4-success-50); color: var(--v4-success-700); }
+.v4-quality-tab .tag-bad  { background: var(--v4-danger-50); color: var(--v4-danger-700); }
 
 /* ──── SECTION heading + sort toggle (project grid header) ──── */
 .v4-quality-tab .sect {
@@ -702,18 +713,18 @@
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--mk-ink-500);
-  font-family: var(--mk-font-mono);
+  color: var(--v4-ink-500);
+  font-family: var(--v4-mono);
   font-weight: 600;
 }
-.v4-quality-tab .sect .meta { font-size: 11px; color: var(--mk-ink-400); font-family: var(--mk-font-mono); }
+.v4-quality-tab .sect .meta { font-size: 11px; color: var(--v4-ink-400); font-family: var(--v4-mono); }
 .v4-quality-tab .sort {
   display: inline-flex;
   gap: 4px;
   align-items: center;
-  background: var(--mk-paper);
-  border: 1px solid var(--mk-line);
-  border-radius: var(--mk-r-md);
+  background: var(--v4-paper);
+  border: 1px solid var(--v4-line);
+  border-radius: var(--v4-r-md);
   padding: 3px;
 }
 .v4-quality-tab .sort button {
@@ -722,13 +733,13 @@
   padding: 5px 10px;
   font: inherit;
   font-size: 11px;
-  color: var(--mk-ink-500);
+  color: var(--v4-ink-500);
   border-radius: 4px;
   cursor: pointer;
 }
 .v4-quality-tab .sort button.active {
-  background: var(--mk-surface-2);
-  color: var(--mk-ink-900);
+  background: var(--v4-surface-2);
+  color: var(--v4-ink-900);
   font-weight: 600;
 }
 
@@ -749,64 +760,64 @@
 .v4-quality-tab .card-name {
   font-size: 13px;
   font-weight: 600;
-  color: var(--mk-ink-900);
-  font-family: var(--mk-font-mono);
+  color: var(--v4-ink-900);
+  font-family: var(--v4-mono);
 }
 .v4-quality-tab .card-client {
   font-size: 10px;
-  color: var(--mk-ink-500);
+  color: var(--v4-ink-500);
   font-weight: 500;
   margin-top: 1px;
 }
 .v4-quality-tab .card-now {
   font-size: 22px;
   font-weight: 700;
-  font-family: var(--mk-font-mono);
-  color: var(--mk-ink-900);
+  font-family: var(--v4-mono);
+  color: var(--v4-ink-900);
   letter-spacing: -0.02em;
   line-height: 1;
   text-align: right;
 }
 .v4-quality-tab .card-now-sub {
   font-size: 10px;
-  color: var(--mk-ink-400);
+  color: var(--v4-ink-400);
   margin-top: 2px;
-  font-family: var(--mk-font-mono);
+  font-family: var(--v4-mono);
   text-align: right;
 }
 .v4-quality-tab .card-foot {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid var(--mk-line-soft);
+  border-top: 1px solid var(--v4-line-soft);
   padding-top: 8px;
   font-size: 11px;
-  font-family: var(--mk-font-mono);
-  color: var(--mk-ink-500);
+  font-family: var(--v4-mono);
+  color: var(--v4-ink-500);
   gap: 8px;
   flex-wrap: wrap;
 }
 .v4-quality-tab .card-foot .nums { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.v4-quality-tab .card-foot .nums b { color: var(--mk-ink-800); font-weight: 600; }
-.v4-quality-tab .card-foot .num-p1 b { color: var(--mk-quality-p1-text); }
-.v4-quality-tab .card-foot .num-p2 b { color: var(--mk-quality-p2-text); }
+.v4-quality-tab .card-foot .nums b { color: var(--v4-ink-800); font-weight: 600; }
+.v4-quality-tab .card-foot .num-p1 b { color: var(--v4-p1-text); }
+.v4-quality-tab .card-foot .num-p2 b { color: var(--v4-p2-text); }
 .v4-quality-tab .card-empty {
-  color: var(--mk-ink-400);
+  color: var(--v4-ink-400);
   text-align: center;
   padding: 24px 8px;
   font-size: 11px;
-  font-family: var(--mk-font-mono);
+  font-family: var(--v4-mono);
 }
-.v4-quality-tab .card-empty b { display: block; font-size: 14px; color: var(--mk-ink-500); margin-bottom: 4px; }
+.v4-quality-tab .card-empty b { display: block; font-size: 14px; color: var(--v4-ink-500); margin-bottom: 4px; }
 
 /* ──── BANNERS (stale data / fetch error) ──── */
 .v4-quality-tab .quality-stale-banner {
   margin-bottom: 14px;
   padding: 10px 14px;
-  background: var(--mk-warn-soft);
-  border: 1px solid var(--mk-warn-100);
-  border-radius: var(--mk-r-md);
-  color: var(--mk-warn-strong);
+  background: var(--v4-warn-50);
+  border: 1px solid var(--v4-warn-200, #fde68a);
+  border-radius: var(--v4-r-md);
+  color: var(--v4-warn-700);
   font-size: 12px;
   display: flex;
   justify-content: space-between;
@@ -816,28 +827,28 @@
 }
 .v4-quality-tab .quality-error-panel {
   padding: 24px;
-  background: var(--mk-paper);
-  border: 1px solid var(--mk-line);
-  border-radius: var(--mk-r-lg);
+  background: var(--v4-paper);
+  border: 1px solid var(--v4-line);
+  border-radius: var(--v4-r-lg);
   display: flex;
   flex-direction: column;
   gap: 12px;
   align-items: flex-start;
-  color: var(--mk-ink-700);
+  color: var(--v4-ink-700);
   font-size: 14px;
 }
 .v4-quality-tab .quality-error-panel button {
-  border: 1px solid var(--mk-line);
-  background: var(--mk-paper);
-  border-radius: var(--mk-r-md);
+  border: 1px solid var(--v4-line);
+  background: var(--v4-paper);
+  border-radius: var(--v4-r-md);
   padding: 7px 14px;
   font: inherit;
   font-size: 12px;
-  color: var(--mk-ink-700);
+  color: var(--v4-ink-700);
   cursor: pointer;
   font-weight: 500;
 }
-.v4-quality-tab .quality-error-panel button:hover { background: var(--mk-surface-2); }
+.v4-quality-tab .quality-error-panel button:hover { background: var(--v4-surface-2); }
 
 /* Soft empty state when backend (sweep cron / JSON publisher) isn't deployed yet.
    Distinct from .quality-error-panel — this is not an error, just an awaiting state. */
@@ -845,11 +856,11 @@
   margin: 40px auto 0;
   max-width: 520px;
   padding: 40px 32px;
-  background: var(--mk-paper);
-  border: 1px solid var(--mk-line);
-  border-radius: var(--mk-r-lg);
+  background: var(--v4-paper);
+  border: 1px solid var(--v4-line);
+  border-radius: var(--v4-r-lg);
   text-align: center;
-  color: var(--mk-ink-700);
+  color: var(--v4-ink-700);
 }
 .v4-quality-tab .quality-empty-icon {
   font-size: 40px;
@@ -860,21 +871,21 @@
   margin: 0 0 10px;
   font-size: 18px;
   font-weight: 600;
-  color: var(--mk-ink-900);
+  color: var(--v4-ink-900);
 }
 .v4-quality-tab .quality-empty-panel p {
   margin: 0 0 20px;
   font-size: 13px;
   line-height: 1.5;
-  color: var(--mk-ink-500);
+  color: var(--v4-ink-500);
 }
 .v4-quality-tab .quality-empty-panel code {
-  font-family: var(--mk-font-mono);
+  font-family: var(--v4-mono);
   font-size: 12px;
-  background: var(--mk-surface-2);
+  background: var(--v4-surface-2);
   padding: 1px 5px;
   border-radius: 3px;
-  color: var(--mk-ink-700);
+  color: var(--v4-ink-700);
 }
 .v4-quality-tab .quality-empty-panel .btn-refresh {
   margin: 0 auto;
