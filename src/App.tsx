@@ -58,7 +58,7 @@ const TAB_CRUMBS: Record<TabId, string> = {
   research: "Research",
   specs: "Specs",
   quality: "Quality",
-  "codex-quality": "Качество кода и изменения",
+  "codex-quality": "Качество кода",
   debate: "Debate",
 };
 
@@ -685,7 +685,7 @@ function AppInner({ onFirstFetchDone }: AppInnerProps = {}) {
         </div>
         <div style={{ display: tab === "codex-quality" ? undefined : "none" }}>
           {visitedTabs.has("codex-quality") && (
-            <ErrorBoundary fallback="Ошибка вкладки «Качество кода и изменения»">
+            <ErrorBoundary fallback="Ошибка вкладки «Качество кода»">
               <QualityTab />
             </ErrorBoundary>
           )}

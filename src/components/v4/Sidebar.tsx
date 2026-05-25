@@ -158,7 +158,7 @@ export function Sidebar({
       items: [
         { id: "audit", label: "Аудит", badge: auditAlerts, icon: ICON_AUDIT, pulse: p.audit },
         { id: "quality", label: "Quality", icon: ICON_QUALITY, pulse: p.quality },
-        { id: "codex-quality", label: "Качество кода и изменения", icon: ICON_CODEX_QUALITY, pulse: p["codex-quality"] },
+        { id: "codex-quality", label: "Качество кода", icon: ICON_CODEX_QUALITY, pulse: p["codex-quality"] },
         { id: "debate", label: "Debate", icon: ICON_DEBATE, pulse: p.debate },
       ],
     },

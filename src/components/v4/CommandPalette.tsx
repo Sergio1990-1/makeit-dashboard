@@ -38,7 +38,7 @@ const TAB_LABEL: Record<TabId, string> = {
   research: "Research",
   specs: "Specs",
   quality: "Quality",
-  "codex-quality": "Качество кода и изменения",
+  "codex-quality": "Качество кода",
   debate: "Debate",
 };
 

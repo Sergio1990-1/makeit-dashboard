@@ -1,5 +1,5 @@
 /**
- * API client for the «Качество кода и изменения» tab (Codex Quality).
+ * API client for the «Качество кода» tab (Codex Quality).
  *
  * Separate from `quality.ts` (legacy AutoTuner/KPI client) to keep
  * the two conceptually-different APIs in their own modules. Types live
