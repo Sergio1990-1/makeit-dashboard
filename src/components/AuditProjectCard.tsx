@@ -72,25 +72,25 @@ export function AuditProjectCard({ project, status, auditIssueProgress, onRun, o
               <div className="pc-pri-group">
                 {project.last_run!.severity_counts.critical > 0 && (
                   <span className="pc-pri">
-                    <span className="pc-pri-dot" style={{ background: "var(--color-danger)" }} />
+                    <span className="pc-pri-dot" style={{ background: "var(--mk-danger)" }} />
                     {project.last_run!.severity_counts.critical}
                   </span>
                 )}
                 {project.last_run!.severity_counts.high > 0 && (
                   <span className="pc-pri">
-                    <span className="pc-pri-dot" style={{ background: "var(--color-warning)" }} />
+                    <span className="pc-pri-dot" style={{ background: "var(--mk-warn)" }} />
                     {project.last_run!.severity_counts.high}
                   </span>
                 )}
                 {project.last_run!.severity_counts.medium > 0 && (
                   <span className="pc-pri">
-                    <span className="pc-pri-dot" style={{ background: "var(--color-primary)" }} />
+                    <span className="pc-pri-dot" style={{ background: "var(--mk-primary)" }} />
                     {project.last_run!.severity_counts.medium}
                   </span>
                 )}
                 {project.last_run!.severity_counts.low > 0 && (
                   <span className="pc-pri">
-                    <span className="pc-pri-dot" style={{ background: "var(--color-text-muted)" }} />
+                    <span className="pc-pri-dot" style={{ background: "var(--mk-ink-500)" }} />
                     {project.last_run!.severity_counts.low}
                   </span>
                 )}
@@ -99,16 +99,16 @@ export function AuditProjectCard({ project, status, auditIssueProgress, onRun, o
             <div className="pc-progress">
               <div className="pc-bar apc-severity-bar">
                 {project.last_run!.severity_counts.critical > 0 && (
-                  <div className="pc-bar-fill apc-severity-seg" style={{ flex: project.last_run!.severity_counts.critical, background: "var(--color-danger)" }} />
+                  <div className="pc-bar-fill apc-severity-seg" style={{ flex: project.last_run!.severity_counts.critical, background: "var(--mk-danger)" }} />
                 )}
                 {project.last_run!.severity_counts.high > 0 && (
-                  <div className="pc-bar-fill apc-severity-seg" style={{ flex: project.last_run!.severity_counts.high, background: "var(--color-warning)" }} />
+                  <div className="pc-bar-fill apc-severity-seg" style={{ flex: project.last_run!.severity_counts.high, background: "var(--mk-warn)" }} />
                 )}
                 {project.last_run!.severity_counts.medium > 0 && (
-                  <div className="pc-bar-fill apc-severity-seg" style={{ flex: project.last_run!.severity_counts.medium, background: "var(--color-primary)" }} />
+                  <div className="pc-bar-fill apc-severity-seg" style={{ flex: project.last_run!.severity_counts.medium, background: "var(--mk-primary)" }} />
                 )}
                 {project.last_run!.severity_counts.low > 0 && (
-                  <div className="pc-bar-fill apc-severity-seg" style={{ flex: project.last_run!.severity_counts.low, background: "var(--color-text-muted)" }} />
+                  <div className="pc-bar-fill apc-severity-seg" style={{ flex: project.last_run!.severity_counts.low, background: "var(--mk-ink-500)" }} />
                 )}
               </div>
             </div>
@@ -157,13 +157,13 @@ export function AuditProjectCard({ project, status, auditIssueProgress, onRun, o
       {!isRunning && hasRun && isVerified && verification && (
         <div className="pc-slot apc-verify-summary">
           <span className="apc-verify-label">Верифицировано:</span>
-          <span className="apc-verify-stat" style={{ color: "var(--color-danger)" }}>
+          <span className="apc-verify-stat" style={{ color: "var(--mk-danger)" }}>
             ✓ {verification.confirmed}
           </span>
-          <span className="apc-verify-stat" style={{ color: "var(--color-success)" }}>
+          <span className="apc-verify-stat" style={{ color: "var(--mk-success)" }}>
             ✗ {verification.false_positive}
           </span>
-          <span className="apc-verify-stat" style={{ color: "var(--color-warning)" }}>
+          <span className="apc-verify-stat" style={{ color: "var(--mk-warn)" }}>
             ? {verification.uncertain}
           </span>
         </div>

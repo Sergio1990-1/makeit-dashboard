@@ -13,7 +13,7 @@ export function StaleAlert({ projects }: Props) {
 
   return (
     <div className="bento-panel span-4 panel-stale">
-      <div className="bento-panel-title" style={{ color: "var(--color-caution)" }}>Нет движения ({stale.length})</div>
+      <div className="bento-panel-title" style={{ color: "var(--mk-severity-medium)" }}>Нет движения ({stale.length})</div>
       <div className="stale-feed">
         {stale.map((p) => (
           <div key={p.repo} className={`stale-row ${p.daysSinceActivity && p.daysSinceActivity >= 5 ? "stale-row--urgent" : ""}`}>

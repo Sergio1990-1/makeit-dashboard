@@ -14,10 +14,10 @@ interface Props {
 type DialogState = "generating" | "preview" | "creating" | "error";
 
 const SEVERITY_COLOR: Record<string, string> = {
-  critical: "var(--color-danger)",
-  high: "var(--color-warning)",
-  medium: "var(--color-primary)",
-  low: "var(--color-text-muted)",
+  critical: "var(--mk-danger)",
+  high: "var(--mk-warn)",
+  medium: "var(--mk-primary)",
+  low: "var(--mk-ink-500)",
 };
 
 const SEVERITY_LABEL: Record<string, string> = {
@@ -251,7 +251,7 @@ export function AuditIssuesDialog({ project, onClose, onComplete }: Props) {
                     />
                     <span
                       className="issue-severity"
-                      style={{ color: SEVERITY_COLOR[issue.severity] || "var(--color-text-muted)" }}
+                      style={{ color: SEVERITY_COLOR[issue.severity] || "var(--mk-ink-500)" }}
                     >
                       {SEVERITY_LABEL[issue.severity] || issue.severity.toUpperCase()}
                     </span>

@@ -37,16 +37,21 @@ function showUpdateBanner(onAccept: () => void) {
   banner.id = 'sw-update-banner';
   banner.setAttribute('role', 'status');
   banner.setAttribute('aria-live', 'polite');
+  // SW update banner живёт вне React/styleguide, поэтому стили задаются
+  // через .style.cssText. Раньше использовался несуществующий
+  // --color-bg-elevated (fallback на dark hex — артефакт dark-темы);
+  // теперь все цвета идут из tokens.css через --mk-*.
   banner.style.cssText =
     'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);' +
-    'background:var(--color-bg-elevated,#1c1f26);color:var(--color-text,#e6e6e6);' +
-    'padding:12px 16px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.3);' +
+    'background:var(--mk-paper);color:var(--mk-ink-900);' +
+    'padding:12px 16px;border-radius:8px;box-shadow:var(--mk-shadow-lg);' +
+    'border:1px solid var(--mk-line);' +
     'display:flex;gap:12px;align-items:center;z-index:9999;font-size:14px;';
   const text = document.createElement('span');
   text.textContent = 'Доступна новая версия дашборда.';
   const updateBtn = document.createElement('button');
   updateBtn.textContent = 'Обновить';
-  updateBtn.style.cssText = 'background:var(--color-primary,#2563eb);color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:14px;';
+  updateBtn.style.cssText = 'background:var(--mk-primary);color:var(--mk-on-primary);border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:14px;';
   updateBtn.addEventListener('click', () => {
     banner.remove();
     onAccept();

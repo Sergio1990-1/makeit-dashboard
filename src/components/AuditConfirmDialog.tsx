@@ -40,7 +40,7 @@ export function AuditConfirmDialog({ projectName, maxPrice, timeoutHours, lastRu
         <div className="modal-info-block">
           <div className="modal-info-row">
             <span className="modal-info-label">Ожидаемая стоимость</span>
-            <span style={{ fontWeight: 600, color: 'var(--color-caution)' }}>~${estimatedMin} – ${estimatedMax}</span>
+            <span style={{ fontWeight: 600, color: 'var(--mk-severity-medium)' }}>~${estimatedMin} – ${estimatedMax}</span>
           </div>
           <div className="modal-info-row">
             <span className="modal-info-label">Ожидаемое время</span>
@@ -48,7 +48,7 @@ export function AuditConfirmDialog({ projectName, maxPrice, timeoutHours, lastRu
           </div>
           <div className="modal-info-row">
             <span className="modal-info-label">Уведомления</span>
-            <span style={{ fontWeight: 500, color: 'var(--color-primary)' }}>Telegram</span>
+            <span style={{ fontWeight: 500, color: 'var(--mk-primary)' }}>Telegram</span>
           </div>
         </div>
 

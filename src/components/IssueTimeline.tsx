@@ -126,7 +126,7 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
               <p style={{ color: "var(--red-500)", fontSize: "var(--text-sm)", margin: 0 }}>
                 {error}
               </p>
-              <p style={{ color: "var(--color-text-muted)", fontSize: "var(--text-xs)", marginTop: 8 }}>
+              <p style={{ color: "var(--mk-ink-500)", fontSize: "var(--text-xs)", marginTop: 8 }}>
                 Timeline API недоступен
               </p>
             </div>
@@ -134,7 +134,7 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
 
           {!loading && !error && (!entries || entries.length === 0) && (
             <div style={{ textAlign: "center", padding: "24px 0" }}>
-              <p style={{ color: "var(--color-text-muted)", fontSize: "var(--text-sm)", margin: 0 }}>
+              <p style={{ color: "var(--mk-ink-500)", fontSize: "var(--text-sm)", margin: 0 }}>
                 Нет данных таймлайна
               </p>
             </div>
@@ -182,7 +182,7 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
                           style={{
                             width: 2,
                             flex: 1,
-                            background: "var(--color-border)",
+                            background: "var(--mk-line)",
                             minHeight: 12,
                           }}
                         />
@@ -204,7 +204,7 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
                         style={{
                           fontSize: "var(--text-sm)",
                           fontWeight: 600,
-                          color: "var(--color-text)",
+                          color: "var(--mk-ink-900)",
                           minWidth: 100,
                         }}
                       >
@@ -216,7 +216,7 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
                         style={{
                           fontFamily: "var(--font-mono)",
                           fontSize: "var(--text-xs)",
-                          color: "var(--color-text-muted)",
+                          color: "var(--mk-ink-500)",
                           minWidth: 62,
                         }}
                       >
@@ -228,7 +228,7 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
                         style={{
                           fontFamily: "var(--font-mono)",
                           fontSize: "var(--text-xs)",
-                          color: entry.cost_usd ? "var(--green-500)" : "var(--color-text-faint)",
+                          color: entry.cost_usd ? "var(--green-500)" : "var(--mk-ink-400)",
                           minWidth: 44,
                         }}
                       >
@@ -240,7 +240,7 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
                         style={{
                           fontFamily: "var(--font-mono)",
                           fontSize: "var(--text-xs)",
-                          color: "var(--color-text-secondary)",
+                          color: "var(--mk-ink-600)",
                           minWidth: 50,
                         }}
                       >
@@ -262,7 +262,7 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
                                     ? "var(--green-500)"
                                     : entry.detail === "FAIL"
                                       ? "var(--red-500)"
-                                      : "var(--color-text-muted)",
+                                      : "var(--mk-ink-500)",
                           }}
                         >
                           {entry.detail}
@@ -284,7 +284,7 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
               justifyContent: "center",
               gap: 16,
               fontSize: "var(--text-xs)",
-              color: "var(--color-text-muted)",
+              color: "var(--mk-ink-500)",
               fontFamily: "var(--font-mono)",
             }}
           >
@@ -299,7 +299,7 @@ export function IssueTimeline({ repo, issueNumber, onClose }: IssueTimelineProps
             {totalDuration > 0 && (
               <span>
                 Время:{" "}
-                <span style={{ color: "var(--color-text)", fontWeight: 600 }}>
+                <span style={{ color: "var(--mk-ink-900)", fontWeight: 600 }}>
                   {formatDuration(totalDuration)}
                 </span>
               </span>

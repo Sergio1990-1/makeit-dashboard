@@ -21,6 +21,51 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Design system guard: запрет hex/rgba/legacy --color-* в исходниках.
+      // Whitelist для intentional cases — см. отдельный override ниже.
+      // Для прозрачных вариантов писать color-mix(in srgb, var(--mk-*) N%, transparent).
+      'no-restricted-syntax': [
+        'warn',
+        {
+          // Запрет hex с исключением для #fff / #000 (и вариаций) —
+          // они используются как «контраст-утилиты» для текста на
+          // цветном bg (white-on-primary, black-on-warn) и не несут
+          // семантики палитры.
+          selector:
+            "Literal[value=/^#(?!fff$|FFF$|Fff$|ffffff$|FFFFFF$|000$|000000$)[0-9a-fA-F]{3,8}$/]",
+          message:
+            'Hex-цвета не допускаются в новом коде. Используй var(--mk-*) из src/styles/tokens.css. Если нужен intentional literal (brand identity / runtime canvas / overlay-on-color) — добавь файл в whitelist в eslint.config.js.',
+        },
+        {
+          selector: "Literal[value=/^rgba?\\(/]",
+          message:
+            'rgba()/rgb() inline не допускаются. Для тинтов используй color-mix(in srgb, var(--mk-*) N%, transparent).',
+        },
+        {
+          selector: "Literal[value=/var\\(--color-/]",
+          message:
+            'Legacy --color-* токен (App.css bridge). Используй var(--mk-*) из tokens.css напрямую.',
+        },
+      ],
+    },
+  },
+  {
+    // Whitelist: файлы с намеренными hex-литералами (D18 brand identity,
+    // overlay-on-color, runtime canvas). См. design-decisions.html.
+    files: [
+      'src/components/v4/milestones/utils.ts',           // repo identity (D18 exception)
+      'src/components/v4/milestones/MilestonesHero.tsx', // white overlay на color hero bg
+      'src/components/v4/health/KpiRow.tsx',             // white overlay
+      'src/components/DebateChat.tsx',                   // AI provider brand colors
+      'src/components/v4/BrandedLoader.tsx',             // runtime canvas g.fillStyle, var() не работает
+      'src/components/v4/MakeItLoader.tsx',              // dark mode white text
+      'src/styleguide/**/*.{ts,tsx}',                    // styleguide показывает hex для swatch labels
+      'vite.config.ts',                                  // PWA manifest theme_color/background_color — spec requires hex
+    ],
+    rules: {
+      'no-restricted-syntax': 'off',
+    },
   },
   {
     // E2E harness runs under Node (Playwright runner); the spec/seed

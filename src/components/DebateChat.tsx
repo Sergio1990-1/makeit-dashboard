@@ -48,14 +48,14 @@ function senderName(sender: DebateMessage["sender"]): string {
 }
 
 function senderColor(sender: DebateMessage["sender"]): string {
-  if (sender === "user") return "var(--color-text-secondary)";
-  if (sender === "system") return "var(--color-text-muted)";
-  return PROVIDER_META[_resolveProvider(sender)]?.color ?? "var(--color-text)";
+  if (sender === "user") return "var(--mk-ink-600)";
+  if (sender === "system") return "var(--mk-ink-500)";
+  return PROVIDER_META[_resolveProvider(sender)]?.color ?? "var(--mk-ink-900)";
 }
 
 function senderAvatar(sender: DebateMessage["sender"]): { letter: string; bg: string } {
-  if (sender === "user") return { letter: "U", bg: "var(--color-primary)" };
-  if (sender === "system") return { letter: "S", bg: "var(--color-text-muted)" };
+  if (sender === "user") return { letter: "U", bg: "var(--mk-primary)" };
+  if (sender === "system") return { letter: "S", bg: "var(--mk-ink-500)" };
   const meta = PROVIDER_META[_resolveProvider(sender)];
   return { letter: meta?.icon ?? "?", bg: meta?.color ?? "#666" };
 }

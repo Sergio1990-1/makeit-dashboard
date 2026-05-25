@@ -26,7 +26,7 @@ export function UrgentDeadlines({ milestones }: Props) {
 
   return (
     <div className="bento-panel span-4 panel-deadlines">
-      <div className="bento-panel-title" style={{ color: "var(--color-danger)" }}>
+      <div className="bento-panel-title" style={{ color: "var(--mk-danger)" }}>
         Горящие дедлайны
       </div>
       <div className="dl-list">
@@ -34,7 +34,7 @@ export function UrgentDeadlines({ milestones }: Props) {
           const m = item.milestone;
           const isOverdue = item.days < 0;
           const isToday = item.days === 0;
-          const borderColor = isOverdue ? "var(--color-danger)" : isToday ? "var(--color-warning)" : "var(--color-primary)";
+          const borderColor = isOverdue ? "var(--mk-danger)" : isToday ? "var(--mk-warn)" : "var(--mk-primary)";
           const badgeClass = isOverdue ? "danger" : isToday ? "warning" : "primary";
 
           return (

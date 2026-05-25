@@ -196,7 +196,7 @@ export function QualityTrendsChart({ trends }: Props) {
             >
               <span
                 className="qt-metric-dot"
-                style={{ background: activeMetrics.has(m.key) ? m.color : "var(--color-border)" }}
+                style={{ background: activeMetrics.has(m.key) ? m.color : "var(--mk-line)" }}
               />
               {m.label}
             </button>

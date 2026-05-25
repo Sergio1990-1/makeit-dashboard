@@ -23,7 +23,7 @@ function pctBar(value: number, color: string) {
         flex: 1,
         height: 6,
         borderRadius: 3,
-        background: "var(--color-surface)",
+        background: "var(--mk-paper)",
         overflow: "hidden",
       }}>
         <div style={{
@@ -92,7 +92,7 @@ export function QualityPanel({ project }: QualityPanelProps) {
     {
       label: "Ср. время",
       value: (
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--color-text)" }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--mk-ink-900)" }}>
           {formatDuration(snapshot.avg_duration_sec)}
         </span>
       ),
@@ -120,7 +120,7 @@ export function QualityPanel({ project }: QualityPanelProps) {
     rows.push({
       label: "Top ошибки",
       value: (
-        <span style={{ fontSize: "var(--text-xs)", color: "var(--color-text-secondary)" }}>
+        <span style={{ fontSize: "var(--text-xs)", color: "var(--mk-ink-600)" }}>
           {snapshot.top_error_classes.slice(0, 3).map(([cls, count]) => `${cls} (${count})`).join(", ")}
         </span>
       ),
@@ -131,7 +131,7 @@ export function QualityPanel({ project }: QualityPanelProps) {
     <div className="bento-panel span-6">
       <div className="bento-panel-title">
         Quality
-        <span style={{ textTransform: "none", fontWeight: 400, fontSize: "var(--text-xs)", color: "var(--color-text-muted)" }}>
+        <span style={{ textTransform: "none", fontWeight: 400, fontSize: "var(--text-xs)", color: "var(--mk-ink-500)" }}>
           {" "}за 7 дней
         </span>
       </div>
@@ -140,7 +140,7 @@ export function QualityPanel({ project }: QualityPanelProps) {
           <div key={row.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{
               fontSize: "var(--text-xs)",
-              color: "var(--color-text-muted)",
+              color: "var(--mk-ink-500)",
               minWidth: 90,
               flexShrink: 0,
             }}>

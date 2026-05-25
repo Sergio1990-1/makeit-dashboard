@@ -3,10 +3,10 @@ import { useUXAudit } from "../hooks/useUXAudit";
 import type { AuditProjectStatus, UXAuditResults, UXFinding, UXScreenshot } from "../types";
 
 const SEVERITY_COLOR: Record<string, string> = {
-  critical: "var(--color-danger)",
-  high: "var(--color-warning)",
-  medium: "var(--color-primary)",
-  low: "var(--color-text-muted)",
+  critical: "var(--mk-danger)",
+  high: "var(--mk-warn)",
+  medium: "var(--mk-primary)",
+  low: "var(--mk-ink-500)",
 };
 
 export function UXAuditTab() {
@@ -161,25 +161,25 @@ function UXProjectCard({ project, status, result, isExpanded, findingFilter, pag
               <span className="pc-total">{result.total_findings} <span className="pc-total-label">находок</span></span>
               <div className="pc-pri-group">
                 {result.severity_counts.critical > 0 && (
-                  <span className="pc-pri"><span className="pc-pri-dot" style={{ background: "var(--color-danger)" }} />{result.severity_counts.critical}</span>
+                  <span className="pc-pri"><span className="pc-pri-dot" style={{ background: "var(--mk-danger)" }} />{result.severity_counts.critical}</span>
                 )}
                 {result.severity_counts.high > 0 && (
-                  <span className="pc-pri"><span className="pc-pri-dot" style={{ background: "var(--color-warning)" }} />{result.severity_counts.high}</span>
+                  <span className="pc-pri"><span className="pc-pri-dot" style={{ background: "var(--mk-warn)" }} />{result.severity_counts.high}</span>
                 )}
                 {result.severity_counts.medium > 0 && (
-                  <span className="pc-pri"><span className="pc-pri-dot" style={{ background: "var(--color-primary)" }} />{result.severity_counts.medium}</span>
+                  <span className="pc-pri"><span className="pc-pri-dot" style={{ background: "var(--mk-primary)" }} />{result.severity_counts.medium}</span>
                 )}
                 {result.severity_counts.low > 0 && (
-                  <span className="pc-pri"><span className="pc-pri-dot" style={{ background: "var(--color-text-muted)" }} />{result.severity_counts.low}</span>
+                  <span className="pc-pri"><span className="pc-pri-dot" style={{ background: "var(--mk-ink-500)" }} />{result.severity_counts.low}</span>
                 )}
               </div>
             </div>
             <div className="pc-progress">
               <div className="pc-bar apc-severity-bar">
-                {result.severity_counts.critical > 0 && <div className="pc-bar-fill apc-severity-seg" style={{ flex: result.severity_counts.critical, background: "var(--color-danger)" }} />}
-                {result.severity_counts.high > 0 && <div className="pc-bar-fill apc-severity-seg" style={{ flex: result.severity_counts.high, background: "var(--color-warning)" }} />}
-                {result.severity_counts.medium > 0 && <div className="pc-bar-fill apc-severity-seg" style={{ flex: result.severity_counts.medium, background: "var(--color-primary)" }} />}
-                {result.severity_counts.low > 0 && <div className="pc-bar-fill apc-severity-seg" style={{ flex: result.severity_counts.low, background: "var(--color-text-muted)" }} />}
+                {result.severity_counts.critical > 0 && <div className="pc-bar-fill apc-severity-seg" style={{ flex: result.severity_counts.critical, background: "var(--mk-danger)" }} />}
+                {result.severity_counts.high > 0 && <div className="pc-bar-fill apc-severity-seg" style={{ flex: result.severity_counts.high, background: "var(--mk-warn)" }} />}
+                {result.severity_counts.medium > 0 && <div className="pc-bar-fill apc-severity-seg" style={{ flex: result.severity_counts.medium, background: "var(--mk-primary)" }} />}
+                {result.severity_counts.low > 0 && <div className="pc-bar-fill apc-severity-seg" style={{ flex: result.severity_counts.low, background: "var(--mk-ink-500)" }} />}
               </div>
             </div>
           </div>

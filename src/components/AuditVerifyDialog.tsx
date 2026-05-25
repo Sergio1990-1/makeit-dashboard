@@ -21,10 +21,10 @@ type DialogState =
 type VerdictTab = "CONFIRMED" | "UNCERTAIN" | "FALSE_POSITIVE" | "NOT_A_BUG";
 
 const VERDICT_COLOR: Record<string, string> = {
-  CONFIRMED: "var(--color-danger)",
-  FALSE_POSITIVE: "var(--color-success)",
-  UNCERTAIN: "var(--color-warning)",
-  NOT_A_BUG: "var(--color-text-muted)",
+  CONFIRMED: "var(--mk-danger)",
+  FALSE_POSITIVE: "var(--mk-success)",
+  UNCERTAIN: "var(--mk-warn)",
+  NOT_A_BUG: "var(--mk-ink-500)",
 };
 
 const VERDICT_LABEL: Record<string, string> = {
@@ -260,14 +260,14 @@ export function AuditVerifyDialog({ project, onClose, onComplete }: Props) {
                     />
                   </div>
                   <p className="dialog-hint" style={{ marginTop: 12, fontSize: 13 }}>
-                    <span style={{ color: "var(--color-danger)" }}>✓ {progress.confirmed} confirmed</span>
+                    <span style={{ color: "var(--mk-danger)" }}>✓ {progress.confirmed} confirmed</span>
                     {" · "}
-                    <span style={{ color: "var(--color-success)" }}>✗ {progress.falsePositive} FP</span>
+                    <span style={{ color: "var(--mk-success)" }}>✗ {progress.falsePositive} FP</span>
                     {" · "}
-                    <span style={{ color: "var(--color-warning)" }}>? {progress.uncertain} uncertain</span>
+                    <span style={{ color: "var(--mk-warn)" }}>? {progress.uncertain} uncertain</span>
                     {" · "}
-                    <span style={{ color: "var(--color-text-muted)" }}>◦ {progress.notABug} not-a-bug</span>
-                    {progress.errors > 0 && <> · <span style={{ color: "var(--color-text-muted)" }}>⚠ {progress.errors} errors</span></>}
+                    <span style={{ color: "var(--mk-ink-500)" }}>◦ {progress.notABug} not-a-bug</span>
+                    {progress.errors > 0 && <> · <span style={{ color: "var(--mk-ink-500)" }}>⚠ {progress.errors} errors</span></>}
                   </p>
                   {(progress.skippedAsNoise > 0 || progress.cacheHits > 0 || progress.inferredFromGroup > 0) && (
                     <p className="dialog-hint" style={{ marginTop: 4, fontSize: 12, opacity: 0.7 }}>
@@ -303,7 +303,7 @@ export function AuditVerifyDialog({ project, onClose, onComplete }: Props) {
                   <div className="verify-summary-label">Not a bug</div>
                 </div>
                 {report.error_count > 0 && (
-                  <div className="verify-summary-item" style={{ color: "var(--color-text-muted)" }}>
+                  <div className="verify-summary-item" style={{ color: "var(--mk-ink-500)" }}>
                     <div className="verify-summary-count">{report.error_count}</div>
                     <div className="verify-summary-label">Errors</div>
                   </div>

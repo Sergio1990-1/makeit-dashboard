@@ -16,10 +16,10 @@ const STATUS_LABEL: Record<MonitorStatus, string> = {
 };
 
 const PRIORITY_COLORS: Record<Priority, string> = {
-  P1: "var(--color-p1)",
-  P2: "var(--color-p2)",
-  P3: "var(--color-p3)",
-  P4: "var(--color-p4)",
+  P1: "var(--mk-priority-p1)",
+  P2: "var(--mk-priority-p2)",
+  P3: "var(--mk-priority-p3)",
+  P4: "var(--mk-priority-p4)",
 };
 
 const PHASE_LABELS: Record<string, string> = {
@@ -115,7 +115,7 @@ export function ProjectCard({ project, monitor }: Props) {
                 className="pc-finance-fill"
                 style={{
                   width: `${paymentProgress}%`,
-                  background: paymentProgress >= 100 ? "var(--color-success)" : "var(--color-primary)",
+                  background: paymentProgress >= 100 ? "var(--mk-success)" : "var(--mk-primary)",
                 }}
               />
             </div>
