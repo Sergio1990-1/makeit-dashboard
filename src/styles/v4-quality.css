@@ -142,7 +142,7 @@
 /* ──── Bar ──── */
 .v4-quality-tab .bar {
   flex: 1;
-  height: 100%;
+  align-self: stretch;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
