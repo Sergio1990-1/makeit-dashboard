@@ -815,6 +815,47 @@
 }
 .v4-quality-tab .quality-error-panel button:hover { background: var(--v4-surface-2); }
 
+/* Soft empty state when backend (sweep cron / JSON publisher) isn't deployed yet.
+   Distinct from .quality-error-panel — this is not an error, just an awaiting state. */
+.v4-quality-tab .quality-empty-panel {
+  margin: 40px auto 0;
+  max-width: 520px;
+  padding: 40px 32px;
+  background: var(--v4-paper);
+  border: 1px solid var(--v4-line);
+  border-radius: var(--v4-r-lg);
+  text-align: center;
+  color: var(--v4-ink-700);
+}
+.v4-quality-tab .quality-empty-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: 0.85;
+}
+.v4-quality-tab .quality-empty-panel h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--v4-ink-900);
+}
+.v4-quality-tab .quality-empty-panel p {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--v4-ink-500);
+}
+.v4-quality-tab .quality-empty-panel code {
+  font-family: var(--v4-mono);
+  font-size: 12px;
+  background: var(--v4-surface-2);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--v4-ink-700);
+}
+.v4-quality-tab .quality-empty-panel .btn-refresh {
+  margin: 0 auto;
+}
+
 /* ──── REDUCED MOTION GUARD ────
  * Пользователи с prefers-reduced-motion отключают всю кинетику.
  * (Аналог @media-блока в v4.css.) */

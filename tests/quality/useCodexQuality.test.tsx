@@ -23,32 +23,69 @@ const samplePayload = {
   },
 };
 
+function jsonResp(body: unknown, init: ResponseInit = {}) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+    ...init,
+  });
+}
+
+function mockAlways(body: unknown, init: ResponseInit = {}) {
+  // Fresh Response per call — Response bodies are single-use; reusing one
+  // throws "Body has already been read" on the second fetch.
+  mockFetch.mockImplementation(() => Promise.resolve(jsonResp(body, init)));
+}
+
 describe("useCodexQuality", () => {
   it("loads data on mount", async () => {
-    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => samplePayload });
+    mockAlways(samplePayload);
     const { result } = renderHook(() => useCodexQuality());
     await waitFor(() => expect(result.current.data).not.toBeNull());
     expect(result.current.loading).toBe(false);
     expect(result.current.isStale).toBe(false);
+    expect(result.current.unavailable).toBe(false);
   });
 
   it("marks stale when generated_at > 30h old", async () => {
     const old = { ...samplePayload, generated_at: new Date(Date.now() - (STALE_HOURS + 1) * 3.6e6).toISOString() };
-    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => old });
+    mockAlways(old);
     const { result } = renderHook(() => useCodexQuality());
     await waitFor(() => expect(result.current.data).not.toBeNull());
     expect(result.current.isStale).toBe(true);
   });
 
-  it("surfaces error on 404", async () => {
-    mockFetch.mockResolvedValue({ ok: false, status: 404, json: async () => ({}) });
+  it("marks unavailable on 404 (backend not deployed)", async () => {
+    mockAlways({}, { status: 404 });
+    const { result } = renderHook(() => useCodexQuality());
+    await waitFor(() => expect(result.current.unavailable).toBe(true));
+    expect(result.current.error).toBeNull();
+    expect(result.current.data).toBeNull();
+  });
+
+  it("marks unavailable when nginx SPA-fallback serves HTML for missing JSON", async () => {
+    mockFetch.mockImplementation(() =>
+      Promise.resolve(
+        new Response("<!doctype html><html><body>404</body></html>", {
+          status: 200,
+          headers: { "content-type": "text/html" },
+        }),
+      ),
+    );
+    const { result } = renderHook(() => useCodexQuality());
+    await waitFor(() => expect(result.current.unavailable).toBe(true));
+    expect(result.current.error).toBeNull();
+  });
+
+  it("surfaces non-unavailable error (e.g. 500)", async () => {
+    mockAlways({ detail: "broken" }, { status: 500 });
     const { result } = renderHook(() => useCodexQuality());
     await waitFor(() => expect(result.current.error).not.toBeNull());
+    expect(result.current.unavailable).toBe(false);
   });
 
   it("rejects payload with unknown schema_version", async () => {
-    const v2 = { ...samplePayload, schema_version: 2 };
-    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => v2 });
+    mockAlways({ ...samplePayload, schema_version: 2 });
     const { result } = renderHook(() => useCodexQuality());
     await waitFor(() => expect(result.current.error).not.toBeNull());
     expect(result.current.error).toMatch(/schema_version/);
@@ -56,7 +93,7 @@ describe("useCodexQuality", () => {
   });
 
   it("reloadAnnotations only fetches annotations, not the quality payload", async () => {
-    mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => samplePayload });
+    mockAlways(samplePayload);
     const { result } = renderHook(() => useCodexQuality());
     await waitFor(() => expect(result.current.data).not.toBeNull());
     const callsAfterMount = mockFetch.mock.calls.length;

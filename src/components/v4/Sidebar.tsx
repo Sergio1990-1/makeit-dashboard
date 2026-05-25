@@ -141,6 +141,7 @@ export function Sidebar({
         },
         { id: "projects", label: "Проекты", count: projectsCount, nba: nbaBadge, icon: ICON_LIST, pulse: p.projects },
         { id: "milestones", label: "Milestones", count: milestonesCount, icon: ICON_CLOCK, pulse: p.milestones },
+        { id: "codex-quality", label: "Качество кода", icon: ICON_CODEX_QUALITY, pulse: p["codex-quality"] },
         { id: "uptime", label: "Мониторинг", count: monitorsCount || undefined, icon: ICON_MONITOR, pulse: p.uptime },
       ],
     },
@@ -158,7 +159,6 @@ export function Sidebar({
       items: [
         { id: "audit", label: "Аудит", badge: auditAlerts, icon: ICON_AUDIT, pulse: p.audit },
         { id: "quality", label: "Quality", icon: ICON_QUALITY, pulse: p.quality },
-        { id: "codex-quality", label: "Качество кода", icon: ICON_CODEX_QUALITY, pulse: p["codex-quality"] },
         { id: "debate", label: "Debate", icon: ICON_DEBATE, pulse: p.debate },
       ],
     },
