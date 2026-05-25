@@ -18,7 +18,7 @@ export function QualitySummaryPanel({ data, annotations, mode }: Props) {
     <div className="panel summary">
       <div className="chartwrap">
         <div className="panel-t" style={{ marginBottom: 14 }}>
-          Сводно по всем {Object.keys(data.repo_status).length} проектам
+          Сводная по всем {Object.keys(data.repo_status).length} проектам
           <span className="tag">All repos</span>
           {errored.length > 0 && (
             <span

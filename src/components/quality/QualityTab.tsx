@@ -18,7 +18,11 @@ export function QualityTab() {
     await reloadAnnotations();
   };
 
-  if (loading && !data) return <div className="v4-quality-tab">Загрузка…</div>;
+  // All branches use `v4-quality-tab page` so they inherit the same
+  // padding/max-width as the populated state — otherwise a quick error
+  // or loading flash shows content flush against the top-left edge of
+  // the content area, off-grid relative to every other tab.
+  if (loading && !data) return <div className="v4-quality-tab page">Загрузка…</div>;
   if (unavailable) {
     // Sweep aggregate (/data/codex-quality.json) hasn't been published yet —
     // either the GitHub Actions workflow hasn't run for the first time, or
@@ -76,7 +80,13 @@ export function QualityTab() {
   }
   if (error) {
     return (
-      <div className="v4-quality-tab">
+      <div className="v4-quality-tab page">
+        <div className="pageH">
+          <div>
+            <h1>Качество кода</h1>
+            <div className="sub">Не удалось загрузить данные — попробуйте обновить.</div>
+          </div>
+        </div>
         <div className="quality-error-panel">
           <b>Ошибка загрузки данных:</b> {error}
           <button onClick={() => refresh()}>Попробовать снова</button>
@@ -84,7 +94,7 @@ export function QualityTab() {
       </div>
     );
   }
-  if (!data) return <div className="v4-quality-tab">Нет данных</div>;
+  if (!data) return <div className="v4-quality-tab page">Нет данных</div>;
 
   return (
     <div className="v4-quality-tab page">

@@ -534,8 +534,20 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ──── PAGE / HEADER / CONTROLS ──── */
-.v4-quality-tab.page { max-width: 1480px; margin: 0 auto; }
+/* ──── PAGE / HEADER / CONTROLS ────
+ *
+ * Padding mirrors `.v4-content` in v4.css (28px horizontal, 14px top,
+ * 40px bottom) so this tab sits on the same visual grid as Pipeline /
+ * Milestones / Monitoring / etc. Previously this rule only set
+ * max-width + auto margins, leaving the heading flush against the top
+ * edge — every nested `.pageH` / `.sect` then inherited that flush
+ * because their own flex `space-between` aligns to the parent's box.
+ */
+.v4-quality-tab.page {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 14px 28px 40px;
+}
 .v4-quality-tab .pageH {
   display: flex;
   justify-content: space-between;
@@ -545,9 +557,12 @@
   flex-wrap: wrap;
 }
 .v4-quality-tab .pageH h1 {
-  font-size: 22px;
+  /* Match `.v4-ph h1` (24px) so tab titles look identical across the
+   * sidebar regardless of which view you're on. 22 was a leftover from
+   * the HTML prototype. */
+  font-size: 24px;
   margin: 0 0 4px 0;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   color: var(--v4-ink-900);
   font-weight: 700;
 }
@@ -634,6 +649,11 @@
   display: flex;
   flex-direction: column;
   min-height: 220px;
+  /* `.bar-topper-p0` floats at top: -22px from each bar; for tall bars
+   * the topper would bleed into the panel title above. Reserving 28px
+   * inside chart-area keeps the topper visually "inside" the chart
+   * rather than overlapping «Сводная по всем N проектам». */
+  padding-top: 28px;
 }
 .v4-quality-tab .summary .kpis {
   padding: 18px;
