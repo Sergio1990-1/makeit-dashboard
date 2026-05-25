@@ -27,6 +27,14 @@ export function useCodexQuality() {
     }
   }, []);
 
+  const reloadAnnotations = useCallback(async () => {
+    try {
+      setAnnotations(await fetchAnnotations());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, []);
+
   useEffect(() => {
     load(false);
   }, [load]);
@@ -44,6 +52,6 @@ export function useCodexQuality() {
     error,
     isStale,
     refresh: () => load(true),
-    reloadAnnotations: () => load(false),
+    reloadAnnotations,
   };
 }
