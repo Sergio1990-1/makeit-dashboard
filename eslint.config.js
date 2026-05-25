@@ -22,30 +22,45 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
-      // Design system guard: запрет hex/rgba/legacy --color-* в исходниках.
+      // Design system guard: запрет hex/rgba/legacy токенов в исходниках.
       // Whitelist для intentional cases — см. отдельный override ниже.
       // Для прозрачных вариантов писать color-mix(in srgb, var(--mk-*) N%, transparent).
+      //
+      // Регексы детектят hex/rgba/legacy-токен ВНУТРИ строки, не только
+      // когда literal целиком совпадает (раньше anchored ^...$ пропускал
+      // `"1px solid #ccc"` — Codex review P2 поймал AnnotationModal:53).
+      // Whitelist для #fff/#FFF/#000 (включая 6-значные) — они используются
+      // как «контраст-утилиты» для текста на цветном bg и не несут семантики
+      // палитры.
       'no-restricted-syntax': [
-        'warn',
+        'error',
         {
-          // Запрет hex с исключением для #fff / #000 (и вариаций) —
-          // они используются как «контраст-утилиты» для текста на
-          // цветном bg (white-on-primary, black-on-warn) и не несут
-          // семантики палитры.
           selector:
-            "Literal[value=/^#(?!fff$|FFF$|Fff$|ffffff$|FFFFFF$|000$|000000$)[0-9a-fA-F]{3,8}$/]",
+            "Literal[value=/(^|[^a-fA-F0-9])#(?!(fff|FFF|Fff|ffffff|FFFFFF|000|000000)([^a-fA-F0-9]|$))[0-9a-fA-F]{3,8}([^a-fA-F0-9]|$)/]",
           message:
-            'Hex-цвета не допускаются в новом коде. Используй var(--mk-*) из src/styles/tokens.css. Если нужен intentional literal (brand identity / runtime canvas / overlay-on-color) — добавь файл в whitelist в eslint.config.js.',
+            'Hex-цвета не допускаются (включая внутри строк типа "1px solid #ccc"). Используй var(--mk-*) из src/styles/tokens.css. Если нужен intentional literal (brand identity / runtime canvas / overlay-on-color) — добавь файл в whitelist в eslint.config.js.',
         },
         {
-          selector: "Literal[value=/^rgba?\\(/]",
+          selector: "Literal[value=/rgba?\\(/]",
           message:
             'rgba()/rgb() inline не допускаются. Для тинтов используй color-mix(in srgb, var(--mk-*) N%, transparent).',
         },
         {
           selector: "Literal[value=/var\\(--color-/]",
           message:
-            'Legacy --color-* токен (App.css bridge). Используй var(--mk-*) из tokens.css напрямую.',
+            'Legacy --color-* токен (bridge удалён в Session K). Используй var(--mk-*) из tokens.css напрямую.',
+        },
+        {
+          selector:
+            "Literal[value=/var\\(--(v4|gray|blue|green|red|orange|yellow|purple|cyan)-/]",
+          message:
+            'Legacy --v4-*/--gray-*/--blue-*/etc. токен (bridge удалён в Session K). Используй var(--mk-*) из tokens.css напрямую.',
+        },
+        {
+          selector:
+            "Literal[value=/var\\(--(font-(sans|mono)|text-(xs|sm|base|md|lg|xl|data)|sp-[0-9]|radius-(sm|md|lg|full)|shadow-(sm|md|lg))/]",
+          message:
+            'Legacy typography/spacing/radius/shadow токен (bridge удалён в Session K). Используй var(--mk-{font,text,sp,r,shadow}-*) из tokens.css напрямую.',
         },
       ],
     },

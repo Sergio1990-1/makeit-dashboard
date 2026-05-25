@@ -14,7 +14,7 @@ export function AuditCombinedTab({ dashboardProjects = [] }: Props) {
 
   return (
     <>
-      <div className="bento-panel span-12" style={{ padding: "var(--sp-2) var(--sp-4)" }}>
+      <div className="bento-panel span-12" style={{ padding: "var(--mk-sp-2) var(--mk-sp-4)" }}>
         <div className="audit-sub-tabs">
           <button
             className={`audit-sub-tab ${subTab === "code" ? "audit-sub-tab-active" : ""}`}

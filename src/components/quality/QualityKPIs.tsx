@@ -34,7 +34,7 @@ export function QualityKPIs({ data, mode, focus = "all", onToggleFocus }: Props)
         ? {
             outline: "2px solid currentColor",
             outlineOffset: -2,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+            boxShadow: "0 4px 12px color-mix(in srgb, var(--mk-ink-900) 8%, transparent)",
           }
         : null),
     }) as CSSProperties;

@@ -52,7 +52,7 @@ export function ClosedChart({ projects }: Props) {
     <div className="bento-panel span-8 panel-chart">
       <div className="bento-panel-title">
         <span>Закрытые ISSUES</span>
-        <div style={{ display: "flex", gap: "var(--sp-4)" }}>
+        <div style={{ display: "flex", gap: "var(--mk-sp-4)" }}>
           <span className="closed-chart-total-badge">Всего за неделю: {total}</span>
           {totalPipeline > 0 && (
             <span className="closed-chart-total-badge closed-chart-badge-pipeline">

@@ -35,7 +35,7 @@ export function PipelineClosedChart({ projects }: Props) {
     <div className="bento-panel pipeline-closed-chart-panel">
       <div className="bento-panel-title">
         <span>Закрытые Pipeline за неделю</span>
-        <div style={{ display: "flex", gap: "var(--sp-4)" }}>
+        <div style={{ display: "flex", gap: "var(--mk-sp-4)" }}>
           <span className="closed-chart-total-badge closed-chart-badge-pipeline">
             Всего: {total}
           </span>

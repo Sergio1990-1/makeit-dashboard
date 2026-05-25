@@ -48,7 +48,7 @@ export function StackedChart({ projects }: Props) {
           </div>
         ))}
       </div>
-      <div className="chart-legend" style={{ marginTop: 'auto', paddingTop: 'var(--sp-4)', borderTop: '1px solid var(--mk-line)' }}>
+      <div className="chart-legend" style={{ marginTop: 'auto', paddingTop: 'var(--mk-sp-4)', borderTop: '1px solid var(--mk-line)' }}>
         <span className="legend-item"><span className="legend-color p1" /> P1</span>
         <span className="legend-item"><span className="legend-color p2" /> P2</span>
         <span className="legend-item"><span className="legend-color p3" /> P3</span>

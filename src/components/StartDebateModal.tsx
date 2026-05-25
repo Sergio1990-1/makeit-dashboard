@@ -129,7 +129,7 @@ export function StartDebateModal({ onClose, onStarted }: Props) {
           <button className="btn btn-sm" onClick={onClose} aria-label="Close dialog">✕</button>
         </div>
 
-        {error && <div className="error-banner" style={{ marginBottom: "var(--sp-4)" }}>{error}</div>}
+        {error && <div className="error-banner" style={{ marginBottom: "var(--mk-sp-4)" }}>{error}</div>}
 
         <div className="sdm-form">
           {/* Project */}

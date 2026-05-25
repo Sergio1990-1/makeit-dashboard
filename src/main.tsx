@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { StrictMode, Suspense, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
 import { registerSW } from 'virtual:pwa-register'
 import './styles/tokens.css'
@@ -6,7 +6,6 @@ import './styles/components.css'
 import './index.css'
 import App from './App.tsx'
 import { PipelineActiveTasksDemoPage } from './components/PipelineActiveTasksBlock/DemoPage'
-import { StyleguideApp } from './styleguide/StyleguideApp'
 
 // Sanity check: when served from a non-localhost origin, the runtime
 // config.js should override the default localhost API URLs. Warn loudly
@@ -87,8 +86,25 @@ const isStyleguide =
   typeof window !== 'undefined' &&
   window.location.search.includes('styleguide=1')
 
+// Lazy-load styleguide so styleguide.css (32KB) и его 118 sg-* классов
+// не попадают в production main bundle. В prod `import.meta.env.DEV`
+// заменяется на `false`, `isStyleguide` всегда false, dynamic import()
+// никогда не выполняется — Vite кладёт код в отдельный chunk, который
+// production-пользователи никогда не запрашивают.
+const StyleguideApp = isStyleguide
+  ? lazy(() =>
+      import('./styleguide/StyleguideApp').then((m) => ({ default: m.StyleguideApp })),
+    )
+  : null
+
 function pickRoot() {
-  if (isStyleguide) return <StyleguideApp />
+  if (StyleguideApp) {
+    return (
+      <Suspense fallback={null}>
+        <StyleguideApp />
+      </Suspense>
+    )
+  }
   if (isPipelineDemo) return <PipelineActiveTasksDemoPage />
   return <App />
 }

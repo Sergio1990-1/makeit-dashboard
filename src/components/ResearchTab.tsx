@@ -337,7 +337,7 @@ function ResearchEmptyState({ pipelineAvailable, onLaunchResearch }: {
       )}
       <button
         className="btn btn-primary"
-        style={{ marginTop: "var(--sp-4)" }}
+        style={{ marginTop: "var(--mk-sp-4)" }}
         onClick={onLaunchResearch}
         disabled={pipelineAvailable === false}
       >
@@ -415,7 +415,7 @@ export function ResearchTab({ repos }: Props) {
 
       {/* Agent error */}
       {agent.error && (
-        <div className="error-banner" role="alert" style={{ marginBottom: "var(--sp-3)" }}>
+        <div className="error-banner" role="alert" style={{ marginBottom: "var(--mk-sp-3)" }}>
           {agent.error}
         </div>
       )}

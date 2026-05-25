@@ -238,7 +238,7 @@ export function SpecsTab() {
           <div className="spc-empty-hint">
             <code>makeit-plan "описание фичи"</code>
           </div>
-          <button className="btn btn-primary" style={{ marginTop: "var(--sp-4)" }} onClick={refresh}>
+          <button className="btn btn-primary" style={{ marginTop: "var(--mk-sp-4)" }} onClick={refresh}>
             Загрузить спецификации
           </button>
         </div>
