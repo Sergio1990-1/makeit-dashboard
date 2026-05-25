@@ -1,0 +1,992 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>MakeIT — Design Decisions Comparison</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --mk-bg: #F6F7F9;
+    --mk-paper: #FFFFFF;
+    --mk-surface-2: #F4F5F8;
+    --mk-surface-3: #EDEFF3;
+    --mk-ink-900: #0E1320;
+    --mk-ink-800: #1B2235;
+    --mk-ink-700: #2F3850;
+    --mk-ink-600: #4A5570;
+    --mk-ink-500: #6B7691;
+    --mk-ink-400: #94A0B8;
+    --mk-line: #E4E8EF;
+    --mk-line-soft: #EEF1F6;
+    --mk-brand-50: #EEF4FF;
+    --mk-brand-100: #DCE7FF;
+    --mk-brand-500: #2563EB;
+    --mk-brand-700: #1E40AF;
+    --mk-success: #12B76A;
+    --mk-success-soft: #ECFDF3;
+    --mk-success-strong: #067647;
+    --mk-warn: #F79009;
+    --mk-warn-soft: #FFFAEB;
+    --mk-warn-strong: #B54708;
+    --mk-danger: #EF4444;
+    --mk-danger-soft: #FEF2F2;
+    --mk-danger-strong: #B91C1C;
+    --mk-r-sm: 6px;
+    --mk-r-md: 8px;
+    --mk-r-lg: 12px;
+    --mk-r-full: 9999px;
+    --mk-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --mk-font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--mk-font-sans);
+    background: var(--mk-bg);
+    color: var(--mk-ink-800);
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: -0.015em;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+  }
+
+  .hero {
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--mk-line);
+  }
+  .hero h1 {
+    margin: 0 0 8px;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--mk-ink-900);
+  }
+  .hero p {
+    margin: 0;
+    color: var(--mk-ink-500);
+    max-width: 720px;
+  }
+  .hero-meta {
+    margin-top: 16px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-family: var(--mk-font-mono);
+    font-size: 11px;
+    color: var(--mk-ink-400);
+  }
+  .hero-meta strong { color: var(--mk-ink-700); }
+
+  .banner {
+    margin: 24px 0 40px;
+    padding: 14px 18px;
+    background: var(--mk-warn-soft);
+    border-left: 3px solid var(--mk-warn);
+    border-radius: var(--mk-r-md);
+    color: var(--mk-warn-strong);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .banner strong { color: var(--mk-ink-900); }
+  .banner code {
+    font-family: var(--mk-font-mono);
+    font-size: 11px;
+    background: rgba(0, 0, 0, 0.06);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  h2.section-title {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--mk-ink-900);
+    margin: 48px 0 16px;
+  }
+
+  /* TOC */
+  .toc {
+    background: var(--mk-paper);
+    border: 1px solid var(--mk-line);
+    border-radius: var(--mk-r-md);
+    padding: 16px 20px;
+    margin-bottom: 32px;
+  }
+  .toc h3 {
+    margin: 0 0 8px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mk-ink-400);
+    font-weight: 600;
+  }
+  .toc ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    columns: 2;
+    column-gap: 24px;
+  }
+  .toc li {
+    padding: 4px 0;
+    font-size: 13px;
+  }
+  .toc a {
+    color: var(--mk-ink-700);
+    text-decoration: none;
+  }
+  .toc a:hover { color: var(--mk-brand-500); text-decoration: underline; }
+  .toc .verdict-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .toc .match { background: var(--mk-success); }
+  .toc .diff  { background: var(--mk-warn); }
+
+  /* Decision card */
+  .decision {
+    background: var(--mk-paper);
+    border: 1px solid var(--mk-line);
+    border-radius: var(--mk-r-lg);
+    padding: 24px;
+    margin-bottom: 24px;
+    scroll-margin-top: 16px;
+  }
+  .decision > header {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--mk-line-soft);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 12px;
+    justify-content: space-between;
+  }
+  .decision h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--mk-ink-900);
+    letter-spacing: -0.02em;
+  }
+  .decision h3 .num {
+    font-family: var(--mk-font-mono);
+    color: var(--mk-ink-400);
+    font-weight: 500;
+    margin-right: 6px;
+  }
+  .decision .desc {
+    color: var(--mk-ink-500);
+    font-size: 13px;
+    margin: 0 0 16px;
+  }
+
+  .verdict {
+    font-family: var(--mk-font-mono);
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: var(--mk-r-full);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .verdict--match {
+    background: var(--mk-success-soft);
+    color: var(--mk-success-strong);
+  }
+  .verdict--diff {
+    background: var(--mk-warn-soft);
+    color: var(--mk-warn-strong);
+  }
+
+  /* Columns */
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 980px) {
+    .cols { grid-template-columns: 1fr; }
+  }
+
+  .col {
+    background: var(--mk-surface-2);
+    border: 1px solid var(--mk-line);
+    border-radius: var(--mk-r-md);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+  .col header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .col h4 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mk-ink-900);
+  }
+  .col .tag {
+    font-family: var(--mk-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+  .tag--current { background: var(--mk-surface-3); color: var(--mk-ink-600); }
+  .tag--claude  { background: #F3EFFE; color: #6B21A8; }
+  .tag--codex   { background: #DCFCE7; color: #15803D; }
+
+  .col .demo {
+    padding: 16px;
+    background: var(--mk-paper);
+    border-radius: var(--mk-r-sm);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    min-height: 84px;
+  }
+  .col .specs {
+    font-family: var(--mk-font-mono);
+    font-size: 11px;
+    color: var(--mk-ink-500);
+    line-height: 1.6;
+  }
+  .col .reason {
+    font-size: 12.5px;
+    color: var(--mk-ink-700);
+    line-height: 1.55;
+  }
+
+  /* --- demo elements --- */
+  .btn-legacy {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 8px 12px;
+    border-radius: 16px;
+    border: 1px solid var(--mk-line);
+    background: var(--mk-paper);
+    color: var(--mk-ink-800);
+    font: 500 13px var(--mk-font-sans);
+    min-height: 44px; min-width: 96px;
+    cursor: pointer;
+  }
+  .btn-legacy.primary { background: #4c8dff; border-color: #4c8dff; color: #fff; }
+
+  .btn-v4 {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0 14px;
+    height: 34px;
+    border-radius: 6px;
+    border: 1px solid var(--mk-line);
+    background: var(--mk-paper);
+    color: var(--mk-ink-800);
+    font: 500 13px var(--mk-font-sans);
+    cursor: pointer;
+  }
+  .btn-v4.primary { background: var(--mk-ink-900); border-color: var(--mk-ink-900); color: #fff; }
+
+  .btn-new {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0 14px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--mk-line);
+    background: var(--mk-paper);
+    color: var(--mk-ink-800);
+    font: 600 13px var(--mk-font-sans);
+    cursor: pointer;
+  }
+  .btn-new.primary { background: var(--mk-brand-500); border-color: var(--mk-brand-500); color: #fff; }
+
+  /* Tabs demos */
+  .tab-underline { display: inline-flex; gap: 4px; border-bottom: 1px solid var(--mk-line); }
+  .tab-underline button {
+    padding: 8px 12px; border: none; background: transparent;
+    border-bottom: 2px solid transparent; font: 500 13px var(--mk-font-sans);
+    color: var(--mk-ink-500); cursor: pointer;
+  }
+  .tab-underline button.active {
+    color: var(--mk-ink-900); border-bottom-color: var(--mk-brand-500);
+    font-weight: 600;
+  }
+
+  .tab-pill {
+    display: inline-flex; gap: 4px; padding: 3px;
+    background: var(--mk-surface-3); border-radius: 8px;
+  }
+  .tab-pill button {
+    padding: 5px 12px; border: none; background: transparent;
+    border-radius: 5px; font: 500 12.5px var(--mk-font-sans);
+    color: var(--mk-ink-600); cursor: pointer;
+  }
+  .tab-pill button.active {
+    background: var(--mk-paper); color: var(--mk-ink-900);
+    box-shadow: 0 1px 2px rgba(11,16,32,.08);
+  }
+
+  .tab-seg {
+    display: inline-flex; border: 1px solid var(--mk-line);
+    border-radius: 8px; overflow: hidden; background: var(--mk-paper);
+  }
+  .tab-seg button {
+    padding: 6px 14px; border: none; background: transparent;
+    font: 500 13px var(--mk-font-sans); color: var(--mk-ink-600);
+    cursor: pointer; border-right: 1px solid var(--mk-line);
+  }
+  .tab-seg button:last-child { border-right: none; }
+  .tab-seg button.active {
+    background: var(--mk-brand-500); color: #fff; font-weight: 600;
+  }
+
+  /* Card demos */
+  .card-legacy {
+    background: var(--mk-paper); border: 1px solid rgba(0,0,0,.05);
+    border-radius: 16px; padding: 10px 14px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.05);
+    min-width: 180px;
+  }
+  .card-v4 {
+    background: var(--mk-paper); border: 1px solid var(--mk-line);
+    border-radius: 8px; padding: 14px 14px 14px 17px;
+    min-width: 180px;
+  }
+  .card-new {
+    background: var(--mk-paper); border: 1px solid var(--mk-line);
+    border-radius: 12px; padding: 16px;
+    box-shadow: 0 2px 4px rgba(0,0,0,.02);
+    min-width: 180px;
+  }
+  .card-title { font-weight: 700; font-size: 15px; color: var(--mk-ink-900); margin: 0 0 4px; letter-spacing: -0.02em; }
+  .card-meta  { font-size: 11px; color: var(--mk-ink-500); }
+
+  /* Badges */
+  .bd-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; font: 600 11px var(--mk-font-mono); }
+  .bd-sq   { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px;    font: 600 11px var(--mk-font-mono); }
+  .bd-success { background: var(--mk-success-soft); color: var(--mk-success-strong); }
+  .bd-warn    { background: var(--mk-warn-soft);    color: var(--mk-warn-strong); }
+  .bd-danger  { background: var(--mk-danger-soft);  color: var(--mk-danger-strong); }
+  .bd-info    { background: var(--mk-brand-50);     color: var(--mk-brand-700); }
+
+  /* Focus ring demo */
+  .focus-target {
+    width: 56px; height: 56px; border-radius: 8px;
+    border: 1px solid var(--mk-line); background: var(--mk-paper);
+    font-family: var(--mk-font-mono); font-size: 10px; color: var(--mk-ink-500);
+    cursor: pointer; display: grid; place-items: center;
+  }
+  .focus-soft:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--mk-brand-500) 30%, transparent); }
+  .focus-solid:focus { outline: 2px solid var(--mk-brand-500); outline-offset: 2px; }
+  .focus-inset:focus { outline: none; box-shadow: inset 0 0 0 2px var(--mk-brand-500); }
+
+  /* Color swatch */
+  .swatch-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sw {
+    width: 56px; height: 40px;
+    border-radius: 6px;
+    border: 1px solid rgba(0,0,0,.06);
+    position: relative;
+  }
+  .sw::after {
+    content: attr(data-hex);
+    position: absolute; left: 0; right: 0; bottom: -16px;
+    font: 600 9px var(--mk-font-mono);
+    color: var(--mk-ink-500);
+    text-align: center;
+  }
+
+  /* Radius scale */
+  .radius-grid { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .rbox {
+    width: 48px; height: 48px;
+    background: var(--mk-brand-100); border: 1px solid var(--mk-brand-500);
+    position: relative;
+  }
+  .rbox::after {
+    content: attr(data-label);
+    position: absolute; left: 0; right: 0; bottom: -14px;
+    font: 600 9px var(--mk-font-mono); color: var(--mk-ink-500);
+    text-align: center;
+  }
+
+  /* Codex additions section */
+  .codex-additions {
+    margin-top: 48px;
+    padding: 24px 28px;
+    background: var(--mk-paper);
+    border: 1px solid var(--mk-line);
+    border-radius: var(--mk-r-lg);
+  }
+  .codex-additions h2 {
+    margin: 0 0 4px;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--mk-ink-900);
+    letter-spacing: -0.02em;
+  }
+  .codex-additions > p { margin: 0 0 20px; color: var(--mk-ink-500); }
+  .add-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .add-grid { grid-template-columns: 1fr; } }
+  .add-block {
+    background: var(--mk-surface-2);
+    border: 1px solid var(--mk-line);
+    border-radius: var(--mk-r-md);
+    padding: 16px 18px;
+  }
+  .add-block h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--mk-ink-900);
+    letter-spacing: -0.01em;
+  }
+  .add-block ul {
+    margin: 0 0 10px;
+    padding-left: 18px;
+    color: var(--mk-ink-700);
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+  .add-block .note {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--mk-ink-500);
+    font-style: italic;
+  }
+
+  .claude-take {
+    margin-top: 20px;
+    padding: 14px 18px;
+    background: #F3EFFE;
+    border-left: 3px solid #7C3AED;
+    border-radius: var(--mk-r-md);
+    color: var(--mk-ink-800);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .claude-take strong { color: #6B21A8; }
+
+  /* Verdict summary */
+  .summary {
+    margin: 48px 0 24px;
+    padding: 24px 28px;
+    background: var(--mk-success-soft);
+    border: 1px solid color-mix(in srgb, var(--mk-success) 25%, transparent);
+    border-radius: var(--mk-r-lg);
+  }
+  .summary h2 { margin: 0 0 8px; font-size: 18px; color: var(--mk-ink-900); }
+  .summary p { margin: 0 0 8px; color: var(--mk-ink-700); }
+
+  footer {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid var(--mk-line);
+    font-family: var(--mk-font-mono);
+    font-size: 10px;
+    color: var(--mk-ink-400);
+    text-align: center;
+  }
+
+  code.inline {
+    font-family: var(--mk-font-mono);
+    font-size: 11.5px;
+    background: var(--mk-surface-3);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--mk-ink-800);
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header class="hero">
+    <h1>MakeIT Dashboard — Design Decisions</h1>
+    <p>Сводка по 10 решениям для дизайн-системы. В каждом блоке три колонки: <strong>«Сейчас»</strong> (текущее состояние в проекте), <strong>«Claude»</strong> (моя рекомендация), <strong>«Codex»</strong> (рекомендация Codex). Зелёная плашка = согласие, оранжевая = расхождение.</p>
+    <div class="hero-meta">
+      <span><strong>Состояние:</strong> main · коммиты e404223 + 0e3d9a2</span>
+      <span><strong>Базис:</strong> v4-light · single tokens.css · bridge для legacy</span>
+      <span><strong>Просмотр:</strong> file:// или Pages</span>
+    </div>
+  </header>
+
+  <div class="banner">
+    <strong>⚠ Расхождение состояний:</strong> Codex отметил, что в его рабочей папке нет коммитов <code>e404223</code> и <code>0e3d9a2</code> — он смотрит main до сессий A/B. Это значит его review базируется на старой кодовой базе (App.css dark-first, без tokens.css, без /styleguide). Все его decision-рекомендации остаются валидны (они о направлении, не о ревью кода), но перед началом миграции Codex-у нужен <code>git pull origin main</code> чтобы синхронизироваться.
+  </div>
+
+  <div class="toc">
+    <h3>Содержание</h3>
+    <ol>
+      <li><span class="verdict-dot match"></span><a href="#d1">1. Кнопки</a></li>
+      <li><span class="verdict-dot match"></span><a href="#d2">2. Tabs</a></li>
+      <li><span class="verdict-dot match"></span><a href="#d3">3. Карточки</a></li>
+      <li><span class="verdict-dot match"></span><a href="#d4">4. Бейджи</a></li>
+      <li><span class="verdict-dot match"></span><a href="#d5">5. Focus ring</a></li>
+      <li><span class="verdict-dot match"></span><a href="#d6">6. Status colors (green/red/orange)</a></li>
+      <li><span class="verdict-dot match"></span><a href="#d7">7. Radius scale</a></li>
+      <li><span class="verdict-dot match"></span><a href="#d8">8. Spacing scale</a></li>
+      <li><span class="verdict-dot match"></span><a href="#d9">9. Base font size</a></li>
+      <li><span class="verdict-dot diff"></span><a href="#d10">10. Motion durations</a></li>
+      <li><span class="verdict-dot diff"></span><a href="#scope">Scope styleguide (Codex: расширить)</a></li>
+    </ol>
+  </div>
+
+  <!-- 1. КНОПКИ -->
+  <article class="decision" id="d1">
+    <header>
+      <h3><span class="num">01</span> Кнопки</h3>
+      <span class="verdict verdict--match">CLAUDE ≡ CODEX → C</span>
+    </header>
+    <p class="desc">Какой стиль primary/secondary кнопки делать дефолтным во всём дашборде.</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>Две системы параллельно</h4></header>
+        <div class="demo">
+          <button class="btn-legacy primary">Сохранить</button>
+          <button class="btn-v4 primary">Сохранить</button>
+        </div>
+        <div class="specs">.btn (legacy): 44h · radius 16 · #4c8dff<br>.v4-btn: 34h · radius 6 · #0E1320</div>
+        <p class="reason">В Audit/Pipeline/Monitoring живёт <code class="inline">.btn</code>, в Project Hub — <code class="inline">.v4-btn</code>. Разная высота, разный radius, разный primary color.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>Вариант C — proposed</h4></header>
+        <div class="demo">
+          <button class="btn-new primary">Сохранить</button>
+          <button class="btn-new">Отмена</button>
+        </div>
+        <div class="specs">36h · radius 8 · weight 600 · brand-blue</div>
+        <p class="reason">36px — компромисс между плотным v4 (34) и крупным legacy (44). 8px-radius согласован с radius-md и cards. Brand-blue primary единообразен с навигацией.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>Тоже C</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
+        </div>
+        <p class="reason">«Кнопки C» — прямая цитата из ответа Codex. Решение фиксируется.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- 2. TABS -->
+  <article class="decision" id="d2">
+    <header>
+      <h3><span class="num">02</span> Tabs</h3>
+      <span class="verdict verdict--match">CLAUDE ≡ CODEX → семантические роли</span>
+    </header>
+    <p class="desc">Какой стиль табов где использовать. Сейчас в проекте три параллельных стиля, и они применяются вразнобой.</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>3 стиля без правил</h4></header>
+        <div class="demo" style="flex-direction: column; gap: 12px;">
+          <div class="tab-underline"><button class="active">Обзор</button><button>Метрики</button><button>Логи</button></div>
+          <div class="tab-pill"><button class="active">Обзор</button><button>Метрики</button><button>Логи</button></div>
+          <div class="tab-seg"><button class="active">Day</button><button>Week</button><button>Month</button></div>
+        </div>
+        <p class="reason">.verify-tab используется в Audit как underline, .v4-pillgrp используется и в фильтрах, и в навигации, segmented почти не встречается. Нет правила «что где».</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>Все три, семантически</h4></header>
+        <div class="demo" style="flex-direction: column; gap: 10px; font-size: 11.5px;">
+          <div><strong>Underline</strong> → основная навигация раздела</div>
+          <div><strong>Pill</strong> → inline-фильтры (toggle group)</div>
+          <div><strong>Segmented</strong> → выбор режима/представления</div>
+        </div>
+        <p class="reason">Каждый стиль имеет свою роль. Вместо выбора одного победителя — фиксируем где какой применять.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>Те же роли</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
+        </div>
+        <p class="reason">Цитата: «underline для разделов, pill для фильтров, segmented для режима отображения». Идеальное совпадение.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- 3. КАРТОЧКИ -->
+  <article class="decision" id="d3">
+    <header>
+      <h3><span class="num">03</span> Карточки</h3>
+      <span class="verdict verdict--match">CLAUDE ≡ CODEX → C</span>
+    </header>
+    <p class="desc">Унифицированный стиль карточки проекта/KPI/панели.</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>Три рецепта</h4></header>
+        <div class="demo" style="gap: 6px;">
+          <div class="card-legacy"><div class="card-title">Alpha</div><div class="card-meta">88%</div></div>
+          <div class="card-v4"><div class="card-title">Alpha</div><div class="card-meta">88%</div></div>
+        </div>
+        <div class="specs">legacy: r16 · p10/14<br>v4-pcard: r8 · p14/17<br>v4-kpi: r12 · p14/16</div>
+        <p class="reason">Visual hierarchy у пользователя ломается: одинаковые по семантике карточки выглядят разной формы.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>Вариант C</h4></header>
+        <div class="demo">
+          <div class="card-new"><div class="card-title">Project Alpha</div><div class="card-meta">12 открытых · 88% готово</div></div>
+        </div>
+        <div class="specs">r12 · p16 · shadow-sm + border</div>
+        <p class="reason">12px — золотая середина (legacy 16 слишком «пухло», v4 8 слишком «строго»). Padding 16 ровный. shadow-sm даёт premium без перегруза.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>Тоже C</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
+        </div>
+        <p class="reason">«Карточки C» — цитата Codex. Решение фиксируется.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- 4. БЕЙДЖИ -->
+  <article class="decision" id="d4">
+    <header>
+      <h3><span class="num">04</span> Бейджи</h3>
+      <span class="verdict verdict--match">CLAUDE ≡ CODEX → семантически</span>
+    </header>
+    <p class="desc">Pill (radius-full) vs Square (radius-xs) — где какой использовать.</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>Mix вразнобой</h4></header>
+        <div class="demo" style="flex-direction: column; gap: 10px;">
+          <div style="display: flex; gap: 6px;">
+            <span class="bd-pill bd-success">Done</span>
+            <span class="bd-pill bd-warn">Warn</span>
+            <span class="bd-pill bd-danger">Crit</span>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <span class="bd-sq bd-success">P0</span>
+            <span class="bd-sq bd-warn">P1</span>
+            <span class="bd-sq bd-danger">P2</span>
+          </div>
+        </div>
+        <p class="reason">Сейчас встречаются и pill и square в одних и тех же контекстах без логики.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>Pill ≠ Square по смыслу</h4></header>
+        <div class="demo" style="flex-direction: column; gap: 8px; font-size: 12px;">
+          <div><span class="bd-pill bd-success">Status</span> → состояние, count, tag</div>
+          <div><span class="bd-sq bd-danger">Severity</span> → priority/severity, технические метки</div>
+        </div>
+        <p class="reason">Pill читается «мягче» (статус, флажок). Square — «строже» (формальная категория).</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>Те же роли</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
+        </div>
+        <p class="reason">Цитата: «pill badges для статусов, square badges для priority/severity». Полное совпадение.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- 5. FOCUS RING -->
+  <article class="decision" id="d5">
+    <header>
+      <h3><span class="num">05</span> Focus ring</h3>
+      <span class="verdict verdict--match">CLAUDE ≡ CODEX → A (soft)</span>
+    </header>
+    <p class="desc">Как выглядит focus state для интерактивных элементов (a11y).</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>Нет правила</h4></header>
+        <div class="demo">
+          <button class="focus-target" tabindex="0">tab</button>
+          <button class="focus-target" tabindex="0">tab</button>
+        </div>
+        <p class="reason">Часть компонентов имеет focus ring, часть нет. У тех что есть — три разных стиля. Tab-нав поломана.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>A — soft box-shadow ring</h4></header>
+        <div class="demo">
+          <button class="focus-target focus-soft" tabindex="0">A</button>
+        </div>
+        <div class="specs">box-shadow: 0 0 0 3px<br>color-mix(primary 30%)</div>
+        <p class="reason">Не выпадает за overflow:hidden, мягко, современно. Не ломает layout.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>Тоже A</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
+        </div>
+        <p class="reason">«Focus A» — цитата Codex.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- 6. STATUS COLORS -->
+  <article class="decision" id="d6">
+    <header>
+      <h3><span class="num">06</span> Status colors (green / red / orange)</h3>
+      <span class="verdict verdict--match">CLAUDE ≡ CODEX → v4 палитра</span>
+    </header>
+    <p class="desc">В tokens.css сейчас два набора status-цветов (legacy и v4). Нужно выбрать один.</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>Two greens, two reds</h4></header>
+        <div class="demo" style="flex-direction: column; gap: 20px; padding-top: 24px;">
+          <div class="swatch-row">
+            <div class="sw" data-hex="#059669" style="background:#059669"></div>
+            <div class="sw" data-hex="#12B76A" style="background:#12B76A"></div>
+          </div>
+          <div class="swatch-row">
+            <div class="sw" data-hex="#DC2626" style="background:#DC2626"></div>
+            <div class="sw" data-hex="#EF4444" style="background:#EF4444"></div>
+          </div>
+        </div>
+        <p class="reason">Слева — legacy (App.css), справа — v4. Видны бок-о-бок в одном UI.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>v4: 12B76A / EF4444 / F79009</h4></header>
+        <div class="demo" style="padding-top: 24px;">
+          <div class="swatch-row">
+            <div class="sw" data-hex="#12B76A" style="background:#12B76A"></div>
+            <div class="sw" data-hex="#EF4444" style="background:#EF4444"></div>
+            <div class="sw" data-hex="#F79009" style="background:#F79009"></div>
+          </div>
+        </div>
+        <p class="reason">v4 ярче и теплее, лучше виден на больших статусных бейджах, менее «кровавый» в случае red.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>Тоже v4</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
+        </div>
+        <p class="reason">«v4 status colors» — цитата. Удалить *-legacy-* слоты из tokens.css.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- 7. RADIUS SCALE -->
+  <article class="decision" id="d7">
+    <header>
+      <h3><span class="num">07</span> Radius scale</h3>
+      <span class="verdict verdict--match">CLAUDE ≡ CODEX → 5 шагов</span>
+    </header>
+    <p class="desc">Сколько ступеней оставить. Сейчас в tokens.css 7 (xs/sm/md/lg/xl/2xl/full = 4/6/8/12/16/24/9999).</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>Хаос — 2/3/4/5/6/8/12/16/24</h4></header>
+        <div class="demo" style="padding-top: 24px;">
+          <div class="radius-grid">
+            <div class="rbox" data-label="2" style="border-radius:2px"></div>
+            <div class="rbox" data-label="3" style="border-radius:3px"></div>
+            <div class="rbox" data-label="4" style="border-radius:4px"></div>
+            <div class="rbox" data-label="5" style="border-radius:5px"></div>
+            <div class="rbox" data-label="6" style="border-radius:6px"></div>
+            <div class="rbox" data-label="8" style="border-radius:8px"></div>
+            <div class="rbox" data-label="12" style="border-radius:12px"></div>
+            <div class="rbox" data-label="16" style="border-radius:16px"></div>
+            <div class="rbox" data-label="24" style="border-radius:24px"></div>
+          </div>
+        </div>
+        <p class="reason">В коде встречается 9+ разных значений радиуса. Иерархия размылена.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>5 шагов: 4/8/12/16/full</h4></header>
+        <div class="demo" style="padding-top: 24px;">
+          <div class="radius-grid">
+            <div class="rbox" data-label="xs/4" style="border-radius:4px"></div>
+            <div class="rbox" data-label="sm/8" style="border-radius:8px"></div>
+            <div class="rbox" data-label="md/12" style="border-radius:12px"></div>
+            <div class="rbox" data-label="lg/16" style="border-radius:16px"></div>
+            <div class="rbox" data-label="full" style="border-radius:9999px"></div>
+          </div>
+        </div>
+        <p class="reason">Выкинуть 6px (v4-кнопка → 8px) и 24px (legacy огромный). 5 шагов покрывают 95% случаев.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>«radius 5 шагов»</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
+        </div>
+        <p class="reason">Codex не уточнил какие 5, но согласен с количеством. Уточним: 4/8/12/16/full.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- 8. SPACING SCALE -->
+  <article class="decision" id="d8">
+    <header>
+      <h3><span class="num">08</span> Spacing scale</h3>
+      <span class="verdict verdict--match">CLAUDE ≡ CODEX → оставить</span>
+    </header>
+    <p class="desc">Текущая шкала: sp-1..sp-10 = 4/8/12/16/20/24/32/40px. Резать или нет.</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>4/8/12/16/20/24/32/40</h4></header>
+        <div class="demo" style="flex-direction: column; align-items: flex-start; padding: 12px;">
+          <div style="height:6px;width:4px;background:var(--mk-brand-500)"></div>
+          <div style="height:6px;width:8px;background:var(--mk-brand-500);margin-top:6px"></div>
+          <div style="height:6px;width:12px;background:var(--mk-brand-500);margin-top:6px"></div>
+          <div style="height:6px;width:16px;background:var(--mk-brand-500);margin-top:6px"></div>
+          <div style="height:6px;width:20px;background:var(--mk-brand-500);margin-top:6px"></div>
+          <div style="height:6px;width:24px;background:var(--mk-brand-500);margin-top:6px"></div>
+          <div style="height:6px;width:32px;background:var(--mk-brand-500);margin-top:6px"></div>
+          <div style="height:6px;width:40px;background:var(--mk-brand-500);margin-top:6px"></div>
+        </div>
+        <p class="reason">База 4px, 8 шагов. Стандартная Tailwind-подобная шкала.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>Оставить как есть</h4></header>
+        <div class="demo" style="font-size:12px;color:var(--mk-ink-600);text-align:center;">8 шагов — стандарт для дашборда. Экономии от резки нет.</div>
+        <p class="reason">Все размеры реально используются: 4 (gap), 8 (mini-padding), 12 (compact), 16 (default), 24/32 (sections), 40 (page padding).</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>«spacing оставить»</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
+        </div>
+        <p class="reason">Цитата Codex. Решение зафиксировано.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- 9. BASE FONT -->
+  <article class="decision" id="d9">
+    <header>
+      <h3><span class="num">09</span> Base font size</h3>
+      <span class="verdict verdict--match">CLAUDE ≡ CODEX → 14px</span>
+    </header>
+    <p class="desc">Базовый размер тела текста. Сейчас 14px (--mk-text-base).</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>14px</h4></header>
+        <div class="demo">
+          <p style="margin:0;font-size:14px">Базовый текст 14px — пример</p>
+        </div>
+        <p class="reason">14px — admin-density. Legacy и v4 оба сходятся на этом.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>Оставить 14px</h4></header>
+        <div class="demo">
+          <p style="margin:0;font-size:14px">14px подходит дашбордам.</p>
+        </div>
+        <p class="reason">GitHub, Linear, Stripe — все в 13-14. 15+ выглядел бы «потребительски» (consumer app).</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>«base font 14px оставить»</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
+        </div>
+        <p class="reason">Цитата. Решение зафиксировано.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- 10. MOTION -->
+  <article class="decision" id="d10">
+    <header>
+      <h3><span class="num">10</span> Motion durations</h3>
+      <span class="verdict verdict--diff">CODEX не комментировал</span>
+    </header>
+    <p class="desc">Длительности transitions. Сейчас в tokens.css: fast=120ms, base=200ms, slow=300ms.</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>0.1s..0.3s вперемешку</h4></header>
+        <div class="demo" style="font-size:11.5px;color:var(--mk-ink-600);text-align:left;line-height:1.6;">
+          В коде: 0.1s, 0.15s, 0.2s, 0.3s — каждый компонент выбирает свою длительность интуитивно.
+        </div>
+        <p class="reason">Несогласованность на hover-эффектах. Hover карточки 0.2s, hover кнопки 0.15s, hover навигации 0.1s.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>120 / 200 / 300 (fast / base / slow)</h4></header>
+        <div class="demo" style="font-size:12px;color:var(--mk-ink-700);text-align:left;line-height:1.6;">
+          <strong>fast 120ms</strong> — hover-tint, color shifts<br>
+          <strong>base 200ms</strong> — layout (translate, scale)<br>
+          <strong>slow 300ms</strong> — modals, overlays
+        </div>
+        <p class="reason">Стандартный диапазон Material/Apple. Easings: ease-out (вход), ease-in-out (трансформы), ease-spring (intra-card).</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>Не комментировал</h4></header>
+        <div class="demo" style="background: var(--mk-warn-soft);">
+          <span style="font: 600 16px var(--mk-font-mono); color: var(--mk-warn-strong);">? нет ответа</span>
+        </div>
+        <p class="reason">В brief Codex эту тему не затронул. Можно отдельно спросить, или принять Claude-дефолт молчанием.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- SCOPE EXPANSION -->
+  <article class="codex-additions" id="scope">
+    <h2>Дополнительный пункт от Codex — расширить scope styleguide</h2>
+    <p>Codex считает, что нынешний styleguide <strong>слишком сфокусирован на токенах и отдельных компонентах</strong>, и предлагает добавить ещё 3 слоя <em>до</em> начала миграции:</p>
+    <div class="add-grid">
+      <div class="add-block">
+        <h3>Layout patterns</h3>
+        <ul>
+          <li>App shell</li>
+          <li>Sidebar</li>
+          <li>Topbar</li>
+          <li>Page header</li>
+          <li>Toolbar</li>
+          <li>Grid (bento, projects)</li>
+          <li>Table / list</li>
+        </ul>
+        <p class="note">Стандартизация структурных контейнеров — чтобы все вкладки имели одинаковый каркас.</p>
+      </div>
+      <div class="add-block">
+        <h3>State patterns</h3>
+        <ul>
+          <li>Loading (skeleton, spinner)</li>
+          <li>Empty state</li>
+          <li>Partial data</li>
+          <li>API error</li>
+          <li>No token (PasswordGate)</li>
+          <li>Stale data</li>
+        </ul>
+        <p class="note">Унификация UX-состояний — сейчас они стилизованы вразнобой по вкладкам.</p>
+      </div>
+      <div class="add-block">
+        <h3>Data visualization</h3>
+        <ul>
+          <li>Charts (line, bar)</li>
+          <li>Heatmap (commit calendar)</li>
+          <li>Progress bars</li>
+          <li>Severity scales</li>
+          <li>Repo colors</li>
+        </ul>
+        <p class="note">Семантика цвета в данных — что значит «красный» в графике vs в бейдже.</p>
+      </div>
+    </div>
+    <div class="claude-take">
+      <strong>Claude по этому пункту:</strong> Codex прав по сути — без этих слоёв миграция оставит «дырки». Но я бы не запихивал их в сессию B (она уже большая). Предлагаю выделить как <strong>сессию C — Extended styleguide</strong>, и параллельно стартовать <strong>сессию D — token unification</strong> (резать legacy-слоты из tokens.css, добавить <code>.mk-btn</code>/<code>.mk-tab</code>/<code>.mk-card</code> по утверждённым вариантам). Эти две сессии не конфликтуют друг с другом по файлам.
+    </div>
+  </article>
+
+  <!-- SUMMARY -->
+  <section class="summary">
+    <h2>Итого согласовано</h2>
+    <p>Из 10 решений — <strong>9 совпадают</strong> между Claude и Codex (включая «семантические» варианты для tabs и badges). По одному пункту (Motion durations) Codex явно не высказался — принимаем Claude-дефолт по умолчанию.</p>
+    <p><strong>Дополнительно:</strong> Codex предлагает расширить scope styleguide на 3 слоя (Layout / State / Data viz). Claude рекомендует вынести это в отдельную сессию C, параллельно с сессией D (token unification).</p>
+    <p><strong>Что дальше:</strong> подтвердить расхождение по Motion + scope expansion → начать сессии C и D параллельно.</p>
+  </section>
+
+  <footer>
+    docs/design-decisions.html · MakeIT Dashboard · 2026-05-25
+  </footer>
+
+</div>
+
+</body>
+</html>
