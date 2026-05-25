@@ -103,6 +103,12 @@ const ICON_DEBATE = (
     <path d="M21 11.5a8.38 8.38 0 01-9 8.5 8.5 8.5 0 01-7.6-4.7L3 21l1.7-2.4A8.5 8.5 0 0121 11.5z" />
   </svg>
 );
+const ICON_CODEX_QUALITY = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 3v18h18" />
+    <path d="M7 15l4-4 3 3 5-6" />
+  </svg>
+);
 
 export function Sidebar({
   activeTab,
@@ -152,6 +158,7 @@ export function Sidebar({
       items: [
         { id: "audit", label: "Аудит", badge: auditAlerts, icon: ICON_AUDIT, pulse: p.audit },
         { id: "quality", label: "Quality", icon: ICON_QUALITY, pulse: p.quality },
+        { id: "codex-quality", label: "Качество кода и изменения", icon: ICON_CODEX_QUALITY, pulse: p["codex-quality"] },
         { id: "debate", label: "Debate", icon: ICON_DEBATE, pulse: p.debate },
       ],
     },

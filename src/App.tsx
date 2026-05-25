@@ -11,6 +11,7 @@ import { TranscriptsView } from "./components/v4/transcripts/TranscriptsView";
 import { ResearchView } from "./components/v4/research/ResearchView";
 import { SpecsView } from "./components/v4/specs/SpecsView";
 import { QualityView } from "./components/v4/quality/QualityView";
+import { QualityTab } from "./components/quality/QualityTab";
 import { DebateView } from "./components/v4/debate/DebateView";
 import { Sidebar } from "./components/v4/Sidebar";
 import { Topbar } from "./components/v4/Topbar";
@@ -57,6 +58,7 @@ const TAB_CRUMBS: Record<TabId, string> = {
   research: "Research",
   specs: "Specs",
   quality: "Quality",
+  "codex-quality": "Качество кода и изменения",
   debate: "Debate",
 };
 
@@ -140,7 +142,7 @@ function AppInner({ onFirstFetchDone }: AppInnerProps = {}) {
 
   const VALID_TABS: TabId[] = [
     "dashboard", "projects", "milestones", "uptime", "audit",
-    "pipeline", "transcripts", "research", "specs", "quality", "debate",
+    "pipeline", "transcripts", "research", "specs", "quality", "codex-quality", "debate",
   ];
   const ACTIVE_TAB_KEY = "makeit.activeTab";
   const [tab, setTabRaw] = useState<TabId>(() => {
@@ -678,6 +680,13 @@ function AppInner({ onFirstFetchDone }: AppInnerProps = {}) {
           {visitedTabs.has("quality") && (
             <ErrorBoundary fallback="Ошибка вкладки Quality">
               <QualityView />
+            </ErrorBoundary>
+          )}
+        </div>
+        <div style={{ display: tab === "codex-quality" ? undefined : "none" }}>
+          {visitedTabs.has("codex-quality") && (
+            <ErrorBoundary fallback="Ошибка вкладки «Качество кода и изменения»">
+              <QualityTab />
             </ErrorBoundary>
           )}
         </div>
