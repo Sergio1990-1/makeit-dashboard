@@ -5,6 +5,7 @@ import './styles/tokens.css'
 import './index.css'
 import App from './App.tsx'
 import { PipelineActiveTasksDemoPage } from './components/PipelineActiveTasksBlock/DemoPage'
+import { StyleguideApp } from './styleguide/StyleguideApp'
 
 // Sanity check: when served from a non-localhost origin, the runtime
 // config.js should override the default localhost API URLs. Warn loudly
@@ -73,6 +74,19 @@ registerSW({
 const isPipelineDemo =
   typeof window !== 'undefined' && window.location.search.includes('pipeline-demo=1')
 
+// `?styleguide=1` (dev only) mounts the design-system styleguide.
+// No auth, no API calls — pure CSS reference for design review.
+const isStyleguide =
+  import.meta.env.DEV &&
+  typeof window !== 'undefined' &&
+  window.location.search.includes('styleguide=1')
+
+function pickRoot() {
+  if (isStyleguide) return <StyleguideApp />
+  if (isPipelineDemo) return <PipelineActiveTasksDemoPage />
+  return <App />
+}
+
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>{isPipelineDemo ? <PipelineActiveTasksDemoPage /> : <App />}</StrictMode>,
+  <StrictMode>{pickRoot()}</StrictMode>,
 )

@@ -1,0 +1,636 @@
+/* ══════════════════════════════════════════════════════════
+   MakeIT Dashboard — Styleguide (dev-only)
+   Renders at ?styleguide=1.
+   Uses --mk-* tokens directly. No legacy --color-* or --v4-*.
+   ══════════════════════════════════════════════════════════ */
+
+.sg-root {
+  font-family: var(--mk-font-sans);
+  color: var(--mk-ink-800);
+  background: var(--mk-bg);
+  min-height: 100vh;
+  font-size: var(--mk-text-base);
+  line-height: var(--mk-leading-base);
+  letter-spacing: var(--mk-tracking-base);
+  display: grid;
+  grid-template-columns: 240px 1fr;
+}
+
+.sg-side {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  border-right: 1px solid var(--mk-line);
+  background: var(--mk-paper);
+  padding: 24px 16px;
+  overflow-y: auto;
+}
+
+.sg-side-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--mk-line-soft);
+}
+.sg-side-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--mk-r-md);
+  background: var(--mk-ink-900);
+  color: #fff;
+  font-family: var(--mk-font-mono);
+  font-weight: 800;
+  font-size: 14px;
+  display: grid;
+  place-items: center;
+}
+.sg-side-title {
+  font-weight: 700;
+  font-size: var(--mk-text-base);
+  color: var(--mk-ink-900);
+}
+.sg-side-tag {
+  font-family: var(--mk-font-mono);
+  font-size: 10px;
+  letter-spacing: var(--mk-tracking-wide);
+  text-transform: uppercase;
+  color: var(--mk-ink-400);
+  margin-top: 2px;
+}
+
+.sg-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sg-nav a {
+  display: block;
+  padding: 8px 12px;
+  font-size: var(--mk-text-sm);
+  color: var(--mk-ink-700);
+  text-decoration: none;
+  border-radius: var(--mk-r-sm);
+  transition: background var(--mk-dur-fast) var(--mk-ease-out),
+              color var(--mk-dur-fast) var(--mk-ease-out);
+}
+.sg-nav a:hover {
+  background: var(--mk-surface-2);
+  color: var(--mk-ink-900);
+}
+
+.sg-main {
+  padding: 32px 40px 80px;
+  max-width: 1200px;
+  min-width: 0;
+}
+
+.sg-hero {
+  margin-bottom: 40px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--mk-line);
+}
+.sg-hero h1 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: var(--mk-tracking-tight);
+  margin: 0 0 8px;
+  color: var(--mk-ink-900);
+}
+.sg-hero p {
+  margin: 0;
+  color: var(--mk-ink-500);
+  font-size: var(--mk-text-base);
+  max-width: 620px;
+}
+
+.sg-section {
+  margin-bottom: 64px;
+  scroll-margin-top: 24px;
+}
+.sg-section-head {
+  margin-bottom: 20px;
+}
+.sg-section-head h2 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: var(--mk-tracking-tight);
+  margin: 0 0 6px;
+  color: var(--mk-ink-900);
+}
+.sg-section-head p {
+  margin: 0;
+  color: var(--mk-ink-500);
+  font-size: var(--mk-text-sm);
+}
+
+.sg-sub {
+  margin: 24px 0 12px;
+  font-size: var(--mk-text-sm);
+  font-weight: 600;
+  color: var(--mk-ink-700);
+  text-transform: uppercase;
+  letter-spacing: var(--mk-tracking-wide);
+}
+
+/* ── Color swatches ───────────────────────────────────── */
+.sg-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.sg-swatch {
+  border: 1px solid var(--mk-line);
+  border-radius: var(--mk-r-md);
+  overflow: hidden;
+  background: var(--mk-paper);
+}
+.sg-swatch-color {
+  height: 72px;
+  border-bottom: 1px solid var(--mk-line-soft);
+}
+.sg-swatch-meta {
+  padding: 8px 10px;
+}
+.sg-swatch-name {
+  font-family: var(--mk-font-mono);
+  font-size: 11px;
+  color: var(--mk-ink-800);
+  word-break: break-all;
+}
+.sg-swatch-hex {
+  font-family: var(--mk-font-mono);
+  font-size: 10px;
+  color: var(--mk-ink-500);
+  margin-top: 2px;
+}
+
+/* ── Typography demo ──────────────────────────────────── */
+.sg-type-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 120px;
+  align-items: baseline;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--mk-line-soft);
+}
+.sg-type-row:last-child { border-bottom: none; }
+.sg-type-name {
+  font-family: var(--mk-font-mono);
+  font-size: 11px;
+  color: var(--mk-ink-500);
+}
+.sg-type-sample {
+  color: var(--mk-ink-900);
+}
+.sg-type-meta {
+  font-family: var(--mk-font-mono);
+  font-size: 10px;
+  color: var(--mk-ink-400);
+  text-align: right;
+}
+
+/* ── Spacing demo ─────────────────────────────────────── */
+.sg-spacing-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 80px;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+}
+.sg-spacing-name {
+  font-family: var(--mk-font-mono);
+  font-size: 11px;
+  color: var(--mk-ink-700);
+}
+.sg-spacing-bar {
+  height: 12px;
+  background: var(--mk-brand-500);
+  border-radius: 2px;
+}
+.sg-spacing-val {
+  font-family: var(--mk-font-mono);
+  font-size: 11px;
+  color: var(--mk-ink-500);
+  text-align: right;
+}
+
+/* ── Radius demo ──────────────────────────────────────── */
+.sg-radius-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+}
+.sg-radius-card {
+  border: 1px solid var(--mk-line);
+  padding: 16px;
+  text-align: center;
+  background: var(--mk-paper);
+  border-radius: var(--mk-r-md);
+}
+.sg-radius-box {
+  width: 64px;
+  height: 64px;
+  background: var(--mk-brand-100);
+  border: 1px solid var(--mk-brand-500);
+  margin: 0 auto 8px;
+}
+.sg-radius-name {
+  font-family: var(--mk-font-mono);
+  font-size: 11px;
+  color: var(--mk-ink-700);
+}
+.sg-radius-val {
+  font-family: var(--mk-font-mono);
+  font-size: 10px;
+  color: var(--mk-ink-500);
+}
+
+/* ── Shadow demo ──────────────────────────────────────── */
+.sg-shadow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 24px;
+  padding: 24px 8px;
+}
+.sg-shadow-card {
+  background: var(--mk-paper);
+  border-radius: var(--mk-r-md);
+  padding: 24px 16px;
+  text-align: center;
+  border: 1px solid var(--mk-line-soft);
+}
+.sg-shadow-card.sm  { box-shadow: var(--mk-shadow-sm); }
+.sg-shadow-card.md  { box-shadow: var(--mk-shadow-md); }
+.sg-shadow-card.lg  { box-shadow: var(--mk-shadow-lg); }
+.sg-shadow-card.card { box-shadow: var(--mk-shadow-card); }
+.sg-shadow-card.card-hover { box-shadow: var(--mk-shadow-card-hover); }
+.sg-shadow-card.elevated { box-shadow: var(--mk-shadow-elevated); }
+.sg-shadow-name {
+  font-family: var(--mk-font-mono);
+  font-size: 11px;
+  color: var(--mk-ink-700);
+}
+
+/* ── Motion demo ──────────────────────────────────────── */
+.sg-motion-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+.sg-motion-card {
+  border: 1px solid var(--mk-line);
+  border-radius: var(--mk-r-md);
+  padding: 16px;
+  background: var(--mk-paper);
+}
+.sg-motion-name {
+  font-family: var(--mk-font-mono);
+  font-size: 11px;
+  color: var(--mk-ink-700);
+  margin-bottom: 12px;
+}
+.sg-motion-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--mk-r-full);
+  background: var(--mk-brand-500);
+  margin: 0;
+}
+.sg-motion-track {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+.sg-motion-card:hover .sg-motion-dot {
+  transform: translateX(calc(100% * 4));
+}
+.sg-motion-card .sg-motion-dot { transition-property: transform; }
+.sg-motion-card.fast .sg-motion-dot { transition-duration: var(--mk-dur-fast); }
+.sg-motion-card.base .sg-motion-dot { transition-duration: var(--mk-dur-base); }
+.sg-motion-card.slow .sg-motion-dot { transition-duration: var(--mk-dur-slow); }
+.sg-motion-card.ease-out .sg-motion-dot { transition-timing-function: var(--mk-ease-out); transition-duration: var(--mk-dur-slow); }
+.sg-motion-card.ease-in-out .sg-motion-dot { transition-timing-function: var(--mk-ease-in-out); transition-duration: var(--mk-dur-slow); }
+.sg-motion-card.ease-spring .sg-motion-dot { transition-timing-function: var(--mk-ease-spring); transition-duration: var(--mk-dur-slow); }
+.sg-motion-hint {
+  font-size: var(--mk-text-xs);
+  color: var(--mk-ink-400);
+  margin-top: 8px;
+}
+
+/* ── Component variants ───────────────────────────────── */
+.sg-variants {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+.sg-variant {
+  border: 1px solid var(--mk-line);
+  border-radius: var(--mk-r-md);
+  padding: 20px;
+  background: var(--mk-paper);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sg-variant-label {
+  font-family: var(--mk-font-mono);
+  font-size: 10px;
+  color: var(--mk-ink-400);
+  letter-spacing: var(--mk-tracking-wide);
+  text-transform: uppercase;
+}
+.sg-variant-name {
+  font-size: var(--mk-text-md);
+  font-weight: 600;
+  color: var(--mk-ink-900);
+}
+.sg-variant-desc {
+  font-size: var(--mk-text-xs);
+  color: var(--mk-ink-500);
+  line-height: 1.5;
+}
+.sg-variant-stage {
+  background: var(--mk-surface-2);
+  border-radius: var(--mk-r-sm);
+  padding: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+}
+
+/* ── Sample buttons (variant A: legacy .btn-ish) ──────── */
+.sg-btn-legacy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--mk-line);
+  background: var(--mk-paper);
+  color: var(--mk-ink-800);
+  font-family: inherit;
+  font-size: var(--mk-text-sm);
+  font-weight: 500;
+  min-height: 44px;
+  cursor: pointer;
+}
+.sg-btn-legacy.primary {
+  background: var(--mk-brand-500);
+  border-color: var(--mk-brand-500);
+  color: #fff;
+}
+
+/* Variant B: v4-style — compact, square-ish */
+.sg-btn-v4 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid var(--mk-line);
+  background: var(--mk-paper);
+  color: var(--mk-ink-800);
+  font-family: inherit;
+  font-size: var(--mk-text-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+.sg-btn-v4.primary {
+  background: var(--mk-ink-900);
+  border-color: var(--mk-ink-900);
+  color: #fff;
+}
+
+/* Variant C: proposed unified */
+.sg-btn-new {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--mk-line);
+  background: var(--mk-paper);
+  color: var(--mk-ink-800);
+  font-family: inherit;
+  font-size: var(--mk-text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--mk-dur-fast) var(--mk-ease-out),
+              border-color var(--mk-dur-fast) var(--mk-ease-out);
+}
+.sg-btn-new:hover { background: var(--mk-surface-3); }
+.sg-btn-new.primary {
+  background: var(--mk-primary);
+  border-color: var(--mk-primary);
+  color: var(--mk-on-primary);
+}
+.sg-btn-new.primary:hover { background: var(--mk-primary-active); }
+
+/* ── Sample tabs ──────────────────────────────────────── */
+.sg-tabs-underline {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--mk-line);
+}
+.sg-tabs-underline button {
+  padding: 8px 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--mk-text-sm);
+  color: var(--mk-ink-500);
+  cursor: pointer;
+}
+.sg-tabs-underline button.is-active {
+  color: var(--mk-ink-900);
+  border-bottom-color: var(--mk-primary);
+  font-weight: 600;
+}
+
+.sg-tabs-pill {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--mk-surface-3);
+  border-radius: 8px;
+}
+.sg-tabs-pill button {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--mk-text-sm);
+  color: var(--mk-ink-600);
+  cursor: pointer;
+}
+.sg-tabs-pill button.is-active {
+  background: var(--mk-paper);
+  color: var(--mk-ink-900);
+  box-shadow: 0 1px 2px rgba(11, 16, 32, 0.08);
+}
+
+.sg-tabs-segmented {
+  display: inline-flex;
+  border: 1px solid var(--mk-line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--mk-paper);
+}
+.sg-tabs-segmented button {
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--mk-text-sm);
+  color: var(--mk-ink-600);
+  cursor: pointer;
+  border-right: 1px solid var(--mk-line);
+}
+.sg-tabs-segmented button:last-child { border-right: none; }
+.sg-tabs-segmented button.is-active {
+  background: var(--mk-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ── Sample cards ─────────────────────────────────────── */
+.sg-card-legacy {
+  background: var(--mk-paper);
+  border: 1px solid var(--mk-line-subtle);
+  border-radius: 16px;
+  padding: 10px 14px;
+  box-shadow: var(--mk-shadow-card);
+  min-height: 96px;
+}
+.sg-card-v4 {
+  background: var(--mk-paper);
+  border: 1px solid var(--mk-line);
+  border-radius: 8px;
+  padding: 14px 14px 14px 17px;
+  min-height: 96px;
+}
+.sg-card-new {
+  background: var(--mk-paper);
+  border: 1px solid var(--mk-line);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--mk-shadow-sm);
+  min-height: 96px;
+}
+.sg-card-title {
+  font-size: var(--mk-text-md);
+  font-weight: 700;
+  color: var(--mk-ink-900);
+  margin: 0 0 4px;
+  letter-spacing: var(--mk-tracking-tight);
+}
+.sg-card-meta {
+  font-size: var(--mk-text-xs);
+  color: var(--mk-ink-500);
+}
+
+/* ── Badges ──────────────────────────────────────────── */
+.sg-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--mk-r-full);
+  font-size: var(--mk-text-xs);
+  font-weight: 600;
+  font-family: var(--mk-font-mono);
+}
+.sg-badge.success { background: var(--mk-success-soft); color: var(--mk-success-strong); }
+.sg-badge.danger  { background: var(--mk-danger-soft);  color: var(--mk-danger-strong); }
+.sg-badge.warn    { background: var(--mk-warn-soft);    color: var(--mk-warn-strong); }
+.sg-badge.info    { background: var(--mk-brand-50);     color: var(--mk-brand-700); }
+.sg-badge.neutral { background: var(--mk-surface-3);    color: var(--mk-ink-600); }
+
+.sg-badge-sq {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--mk-r-xs);
+  font-size: var(--mk-text-xs);
+  font-weight: 600;
+  font-family: var(--mk-font-mono);
+}
+.sg-badge-sq.success { background: var(--mk-success-soft); color: var(--mk-success-strong); }
+.sg-badge-sq.danger  { background: var(--mk-danger-soft);  color: var(--mk-danger-strong); }
+.sg-badge-sq.warn    { background: var(--mk-warn-soft);    color: var(--mk-warn-strong); }
+.sg-badge-sq.info    { background: var(--mk-brand-50);     color: var(--mk-brand-700); }
+.sg-badge-sq.neutral { background: var(--mk-surface-3);    color: var(--mk-ink-600); }
+
+/* ── Input ───────────────────────────────────────────── */
+.sg-input {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--mk-line);
+  background: var(--mk-paper);
+  font-family: inherit;
+  font-size: var(--mk-text-sm);
+  color: var(--mk-ink-900);
+  outline: none;
+  transition: border-color var(--mk-dur-fast) var(--mk-ease-out),
+              box-shadow var(--mk-dur-fast) var(--mk-ease-out);
+}
+.sg-input:focus {
+  border-color: var(--mk-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mk-primary) 20%, transparent);
+}
+
+/* ── Note / callout ──────────────────────────────────── */
+.sg-note {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--mk-brand-50);
+  border-left: 3px solid var(--mk-brand-500);
+  border-radius: var(--mk-r-sm);
+  font-size: var(--mk-text-xs);
+  color: var(--mk-ink-700);
+  line-height: 1.5;
+}
+
+/* ── Focus ring demo ─────────────────────────────────── */
+.sg-focus-grid {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.sg-focus-target {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--mk-r-md);
+  border: 1px solid var(--mk-line);
+  background: var(--mk-paper);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-family: var(--mk-font-mono);
+  font-size: 10px;
+  color: var(--mk-ink-500);
+}
+.sg-focus-target.ring-blue:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mk-primary) 30%, transparent);
+}
+.sg-focus-target.ring-solid:focus {
+  outline: 2px solid var(--mk-primary);
+  outline-offset: 2px;
+}
+.sg-focus-target.ring-inset:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--mk-primary);
+}
