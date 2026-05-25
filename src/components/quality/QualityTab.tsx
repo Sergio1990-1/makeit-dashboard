@@ -10,7 +10,7 @@ import "../../styles/v4-quality.css";
 
 export function QualityTab() {
   const { data, annotations, loading, error, unavailable, isStale, refresh, reloadAnnotations } = useCodexQuality();
-  const [mode, setMode] = useState<PeriodMode>("12w");
+  const [mode, setMode] = useState<PeriodMode>("30d");
   const [showAddModal, setShowAddModal] = useState(false);
 
   const handleAddAnnotation = async (p: AnnotationCreatePayload) => {

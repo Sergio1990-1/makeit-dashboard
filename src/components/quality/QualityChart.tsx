@@ -261,16 +261,15 @@ export function QualityChart({
 
       {buckets.map((b, i) => {
         const total = b.total_pr;
-        const heightPct = (total / scale) * 100;
         // worst-wins: P0+P1 объединены в crit (один красный сегмент)
         const critCount = b.with_p0 + b.with_p1_only;
         const cleanCount = Math.max(0, total - critCount - b.with_p2_only);
         const lowSample = total > 0 && total < LOW_SAMPLE;
         const hasP0 = b.with_p0 > 0;
 
-        // Под фильтром оставляем ТОЛЬКО релевантный сегмент (вместо стека).
-        // Высоту фильтрованного бара берём пропорционально соответствующего
-        // count'а — так на чарте сразу виден объём метрики, без шума соседей.
+        // Под фильтром оставляем ТОЛЬКО релевантный сегмент. Высота бара
+        // в фильтр-моде = высоте этого сегмента (а не всего стека), чтобы
+        // визуально бар «съезжал вниз» к baseline вместо парения в воздухе.
         type Seg = { kind: "clean" | "p2" | "crit"; count: number };
         const segments: Seg[] =
           focus === "all"
@@ -286,6 +285,12 @@ export function QualityChart({
                 : focus === "p1"
                   ? [{ kind: "crit", count: b.with_p1_only }]
                   : /* dirty */ [{ kind: "crit", count: critCount }];
+
+        // Effective height: в "all" — весь стек; под фильтром — сумма видимых
+        // сегментов / scale. Так столбик растягивается ровно до значения
+        // метрики и опускается к baseline, а не висит на верхней позиции.
+        const effectiveCount = segments.reduce((a, s) => a + s.count, 0);
+        const heightPct = (effectiveCount / scale) * 100;
 
         const classNames = [
           "bar",
@@ -315,20 +320,35 @@ export function QualityChart({
             {showP0Topper && (
               <div className="bar-topper-p0">P0:{b.with_p0}</div>
             )}
-            <div className="bar-stack" style={{ height: `${heightPct}%` }}>
+            <div
+              className="bar-stack"
+              style={{
+                height: `${heightPct}%`,
+                // Анимация роста/спадания бара при смене фильтра. cubic-bezier
+                // и длительность подобраны к фейду сегментов и линии overlay,
+                // чтобы переход воспринимался цельно. Изменение height
+                // триггерит layout, но 30 баров — это копеечно.
+                transition: "height 0.45s cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+            >
               {segments.map((seg) =>
                 seg.count > 0 ? (
                   <div
                     key={seg.kind}
                     className={`bar-${seg.kind}`}
-                    style={{ height: `${(seg.count / total) * 100}%` }}
+                    style={{
+                      // Нормируем к effectiveCount, а не к total: в фильтр-моде
+                      // в стеке только один сегмент, и он должен занимать 100%
+                      // нового parent'а (а не свою долю от исходного total).
+                      height: `${(seg.count / effectiveCount) * 100}%`,
+                    }}
                   />
                 ) : null,
               )}
             </div>
             {heightPct === 0 && <div className="bar-empty" />}
             <div className="bar-chip">
-              {total} PR
+              {focus === "all" ? `${total} PR` : `${effectiveCount}/${total}`}
               {showP0Topper && (
                 <>
                   {" · "}
