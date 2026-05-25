@@ -58,6 +58,216 @@ def test_detect_severity_ignores_generic_english_adjectives() -> None:
     assert sweep.detect_severity("reachability is HIGH for the new endpoint") is None
 
 
+# ── Badge URL detection (regression cover for pre-2026-05 mis-classification) ──
+
+def test_detect_badge_severity_extracts_p1_from_codex_badge() -> None:
+    # Real codex bot output — image markdown wraps every inline finding.
+    body = (
+        "**<sub><sub>![P1 Badge]"
+        "(https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>"
+        "  Continue paging after pre-window merged PRs**\n\n"
+        "This early return assumes..."
+    )
+    assert sweep.detect_badge_severity(body) == "P1"
+
+
+def test_detect_badge_severity_worst_wins_across_multiple_badges() -> None:
+    body = (
+        "![P2 Badge](https://img.shields.io/badge/P2-yellow)\n"
+        "![P0 Badge](https://img.shields.io/badge/P0-red)\n"
+        "![P1 Badge](https://img.shields.io/badge/P1-orange)"
+    )
+    assert sweep.detect_badge_severity(body) == "P0"
+
+
+def test_detect_badge_severity_returns_none_for_no_badges() -> None:
+    assert sweep.detect_badge_severity("Just plain prose, no images.") is None
+    assert sweep.detect_badge_severity("") is None
+
+
+def test_detect_badge_severity_ignores_unrelated_shields_io_badges() -> None:
+    # Other shields.io badges (build status, version, license) must not
+    # false-positive — pattern requires /badge/PN- specifically.
+    body = (
+        "![build](https://img.shields.io/badge/build-passing-green)\n"
+        "![version](https://img.shields.io/badge/v-1.2.3-blue)"
+    )
+    assert sweep.detect_badge_severity(body) is None
+
+
+def test_classify_pr_recovers_p1_from_badge_when_bodytext_strips_it() -> None:
+    """The pre-fix bug: bodyText strips images → P1 marker vanished → fallback to P2.
+
+    This test pins the fix in place: when only the badge image carries the
+    severity (bodyText stripped it), classify_pr MUST return P1, not P2.
+    """
+    pr = {
+        "number": 504,
+        "mergedAt": "2026-05-25T07:17:35Z",
+        "reviewThreads": {
+            "nodes": [
+                {
+                    "comments": {
+                        "nodes": [
+                            {
+                                "author": {"login": "chatgpt-codex-connector"},
+                                # `body` has the badge…
+                                "body": (
+                                    "**<sub><sub>![P1 Badge]"
+                                    "(https://img.shields.io/badge/P1-orange?style=flat)"
+                                    "</sub></sub>  Continue paging after pre-window**"
+                                ),
+                                # …but bodyText strips it — only the prose remains.
+                                "bodyText": "Continue paging after pre-window",
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        "reviews": {"nodes": []},
+        "comments": {"nodes": []},
+    }
+    s = sweep.classify_pr(pr)
+    assert s.has_codex_review is True
+    assert s.severity == "P1", (
+        "Badge URL in `body` must promote severity even when `bodyText` "
+        "strips the image — historical bug fell through to P2 here."
+    )
+
+
+def test_classify_pr_worst_wins_across_badge_and_text_marker() -> None:
+    """Mixed: one comment carries P1 in a badge, another carries P0 in text."""
+    pr = {
+        "number": 1,
+        "mergedAt": "2026-05-22T10:00:00Z",
+        "reviewThreads": {
+            "nodes": [
+                {
+                    "comments": {
+                        "nodes": [
+                            {
+                                "author": {"login": "chatgpt-codex-connector"},
+                                "body": "![P1 Badge](https://img.shields.io/badge/P1-orange)",
+                                "bodyText": "minor refactor suggestion",
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        "reviews": {
+            "nodes": [
+                {
+                    "author": {"login": "chatgpt-codex-connector"},
+                    "body": "Summary: found a P0 blocker in auth.",
+                    "bodyText": "Summary: found a P0 blocker in auth.",
+                }
+            ]
+        },
+        "comments": {"nodes": []},
+    }
+    assert sweep.classify_pr(pr).severity == "P0"
+
+
+def test_classify_pr_handles_missing_body_field_gracefully() -> None:
+    """Defensive: if GraphQL returns no `body` (only `bodyText`), no crash."""
+    pr = {
+        "number": 2,
+        "mergedAt": "2026-05-22T10:00:00Z",
+        "reviewThreads": {"nodes": []},
+        "reviews": {
+            "nodes": [
+                {
+                    "author": {"login": "chatgpt-codex-connector"},
+                    # No `body` key at all — only bodyText.
+                    "bodyText": "P0 blocker",
+                }
+            ]
+        },
+        "comments": {"nodes": []},
+    }
+    assert sweep.classify_pr(pr).severity == "P0"
+
+
+def test_classify_pr_missing_body_and_no_marker_falls_back_to_p2() -> None:
+    """Dedicated regression: a bot entry with NO `body` key AND no severity
+    marker in `bodyText` must still trigger the P2 fallback rather than
+    raising or returning None. Coverage gap previously combined into the
+    «no marker defaults to P2» test which happened to include `body` by
+    construction — this pins the missing-body code path explicitly.
+    """
+    pr = {
+        "number": 3,
+        "mergedAt": "2026-05-22T10:00:00Z",
+        "reviewThreads": {"nodes": []},
+        "reviews": {
+            "nodes": [
+                {
+                    "author": {"login": "chatgpt-codex-connector"},
+                    # No `body` key, and bodyText has nothing parseable.
+                    "bodyText": "looks fine to me, nothing to flag",
+                }
+            ]
+        },
+        "comments": {"nodes": []},
+    }
+    s = sweep.classify_pr(pr)
+    assert s.has_codex_review is True
+    assert s.severity == "P2", "fallback must fire when both detectors return None"
+
+
+def test_classify_pr_text_marker_in_body_only_does_not_promote_severity() -> None:
+    """Pins the routing guarantee from the module docstring: text-marker
+    regexes are applied ONLY to `bodyText` (plain text), never to `body`
+    (markdown). A naked «P0» inside a code span or URL in markdown must
+    NOT be treated as a severity marker — otherwise the docstring's
+    claim that `body` is safe from URL/code false-positives is broken.
+
+    Regression vector: if a future refactor accidentally swaps the args
+    to `_best_severity(badge_from_body, text_from_text)` so text-detect
+    is fed `body`, this test catches it.
+    """
+    pr = {
+        "number": 4,
+        "mergedAt": "2026-05-22T10:00:00Z",
+        "reviewThreads": {"nodes": []},
+        "reviews": {
+            "nodes": [
+                {
+                    "author": {"login": "chatgpt-codex-connector"},
+                    # `body` contains the literal "P0" inside a URL and a code
+                    # span — both common in markdown but NOT real severity.
+                    "body": (
+                        "See https://example.com/issues/P0-tracking and "
+                        "`P0_DEFAULT_TIMEOUT` constant for context."
+                    ),
+                    # `bodyText` is the safe plain text — and has no marker.
+                    "bodyText": (
+                        "See https://example.com/issues/P0-tracking and "
+                        "P0_DEFAULT_TIMEOUT constant for context."
+                    ),
+                }
+            ]
+        },
+        "comments": {"nodes": []},
+    }
+    s = sweep.classify_pr(pr)
+    assert s.has_codex_review is True
+    # Note: bodyText also contains "P0" as part of the URL and identifier,
+    # so `\bP0\b` will match it from bodyText too. That's a known limitation
+    # of the text-marker regex and is unrelated to the body/bodyText routing.
+    # This test pins ONLY that we don't double-count from `body`.
+    # To verify routing isolation we additionally clear bodyText:
+    pr["reviews"]["nodes"][0]["bodyText"] = "no severity markers here"
+    s2 = sweep.classify_pr(pr)
+    assert s2.severity == "P2", (
+        "bodyText has nothing to flag; body has P0 only in URL/code — "
+        "text detector must NOT be applied to body, so we should fall "
+        "through to the P2 fallback, not be promoted to P0."
+    )
+
+
 def test_classify_pr_with_bot_review_no_marker_defaults_to_p2() -> None:
     pr = {
         "number": 42,

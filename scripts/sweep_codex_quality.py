@@ -19,13 +19,28 @@ needs only `Pull requests: Read` + `Contents: Read`.
 
 Severity classification
 -----------------------
-chatgpt-codex-connector[bot] leaves review comments with an explicit
-severity marker in the body. We grep for `P0` / `P1` / `P2` (and the
-synonyms BLOCKER / CRITICAL / HIGH / MEDIUM / LOW). If multiple comments
-on a single PR have different severities, worst wins. PRs with at least
-one bot comment but no recognisable severity marker default to P2 — that
-way new bot output formats degrade to "low signal" rather than dropping
-off the chart entirely.
+chatgpt-codex-connector[bot] marks severity in **two** places, and we
+must look at **both** to avoid silently mis-classifying findings:
+
+1. **Badge image** in inline review comments. The bot wraps each
+   finding with `![P1 Badge](https://img.shields.io/badge/P1-orange...)`.
+   In GitHub's GraphQL `bodyText` field, image markdown is stripped
+   entirely — alt text is NOT preserved — so the severity marker
+   disappears. Reading `body` (markdown) instead, and matching the
+   badge URL pattern `img.shields.io/badge/P0-...`, recovers it.
+
+2. **Text marker** in older / non-inline comments: `P0` / `P1` / `P2`
+   (or synonyms BLOCKER / CRITICAL). Cheap and safe against `bodyText`,
+   which is plain text and won't false-positive on URL fragments.
+
+Worst-wins across all bot bodies on the PR. If a bot left a comment
+but neither check matched, default to P2 — new bot output formats
+degrade to "low signal" rather than dropping off the chart entirely.
+
+Historical bug (pre-2026-05): only `bodyText` was read, so the badge
+got stripped and ALL P0/P1 findings on inline comments fell through
+to the P2 fallback. Symptom: `with_p1_only ≈ 0` across every repo,
+`with_p2_only` inflated. See PR #508 description for the discovery.
 
 This file is intentionally dependency-light (only `httpx`). It's a
 batch job, not a service — being small and obvious matters more than
@@ -108,6 +123,15 @@ SEVERITY_PATTERNS: dict[str, re.Pattern[str]] = {
 }
 SEVERITY_RANK = {"P0": 0, "P1": 1, "P2": 2}  # lower = worse
 
+# Badge URL pattern emitted by chatgpt-codex-connector[bot] on every inline
+# review comment. Example: `![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)`.
+# We match the URL fragment because it's unambiguous: shields.io/badge/PN-color
+# only appears as a codex severity tag — never as user-written prose.
+# `bodyText` strips images entirely, so this MUST be matched against `body` (markdown).
+BADGE_URL_PATTERN = re.compile(
+    r"img\.shields\.io/badge/(P[0-2])-", re.IGNORECASE
+)
+
 # ── GraphQL query ──────────────────────────────────────────────────────
 # One round trip per page per repo. We fetch reviewThreads + reviews +
 # (top-level) comments because the bot sometimes leaves a summary as a
@@ -130,6 +154,7 @@ query($owner: String!, $name: String!, $cursor: String) {
             comments(first: 50) {
               nodes {
                 author { login }
+                body
                 bodyText
               }
             }
@@ -138,12 +163,14 @@ query($owner: String!, $name: String!, $cursor: String) {
         reviews(first: 50) {
           nodes {
             author { login }
+            body
             bodyText
           }
         }
         comments(first: 100) {
           nodes {
             author { login }
+            body
             bodyText
           }
         }
@@ -210,7 +237,7 @@ def gh_graphql(
 
 
 def detect_severity(body: str) -> str | None:
-    """Return worst severity found in `body` (string), or None if none."""
+    """Return worst severity found in `body` (plain text), or None if none."""
     worst: str | None = None
     for sev in ("P0", "P1", "P2"):
         if SEVERITY_PATTERNS[sev].search(body):
@@ -219,37 +246,79 @@ def detect_severity(body: str) -> str | None:
     return worst
 
 
+def detect_badge_severity(body_md: str) -> str | None:
+    """Return worst severity extracted from codex bot badge images.
+
+    Codex bot wraps inline review comments with
+    `![PN Badge](https://img.shields.io/badge/PN-color?...)`. The URL fragment
+    `shields.io/badge/PN-` is unambiguous — never appears in human prose —
+    so this regex is safe against `body` (markdown) without the URL/code
+    false-positives we'd get from running text-marker regexes there.
+    """
+    worst: str | None = None
+    for m in BADGE_URL_PATTERN.finditer(body_md):
+        sev = m.group(1).upper()
+        if worst is None or SEVERITY_RANK[sev] < SEVERITY_RANK[worst]:
+            worst = sev
+    return worst
+
+
+def _best_severity(*candidates: str | None) -> str | None:
+    """Worst-wins across a tuple of optional severities (lower rank = worse)."""
+    out: str | None = None
+    for s in candidates:
+        if s is None:
+            continue
+        if out is None or SEVERITY_RANK[s] < SEVERITY_RANK[out]:
+            out = s
+    return out
+
+
 def classify_pr(pr_node: dict[str, Any]) -> PRSummary:
-    """Walk all bot-authored bodies, return worst severity + coverage flag."""
-    bot_bodies: list[str] = []
+    """Walk all bot-authored bodies, return worst severity + coverage flag.
+
+    Each bot body is checked TWICE:
+      - `body` (markdown) → badge-URL regex (catches inline-comment badges)
+      - `bodyText` (plain text) → text-marker regex (catches summary text)
+
+    The combined "worst" wins, then we worst-wins across all bot bodies on
+    the PR. See module docstring for the historical bug this fixes.
+    """
+    # (body_md, body_text) tuples — both fields fetched per comment.
+    bot_entries: list[tuple[str, str]] = []
+
+    def _push(node: dict[str, Any]) -> None:
+        author = (node.get("author") or {}).get("login") or ""
+        if author.lower() != CODEX_BOT_LOGIN.lower():
+            return
+        bot_entries.append(
+            (node.get("body", "") or "", node.get("bodyText", "") or "")
+        )
 
     for thread in pr_node.get("reviewThreads", {}).get("nodes", []):
         for comment in thread.get("comments", {}).get("nodes", []):
-            author = (comment.get("author") or {}).get("login") or ""
-            if author.lower() == CODEX_BOT_LOGIN.lower():
-                bot_bodies.append(comment.get("bodyText", "") or "")
+            _push(comment)
 
     for review in pr_node.get("reviews", {}).get("nodes", []):
-        author = (review.get("author") or {}).get("login") or ""
-        if author.lower() == CODEX_BOT_LOGIN.lower():
-            bot_bodies.append(review.get("bodyText", "") or "")
+        _push(review)
 
     for comment in pr_node.get("comments", {}).get("nodes", []):
-        author = (comment.get("author") or {}).get("login") or ""
-        if author.lower() == CODEX_BOT_LOGIN.lower():
-            bot_bodies.append(comment.get("bodyText", "") or "")
+        _push(comment)
 
-    has_codex = len(bot_bodies) > 0
+    has_codex = len(bot_entries) > 0
     severity: str | None = None
     if has_codex:
-        for body in bot_bodies:
-            s = detect_severity(body)
-            if s is not None and (severity is None or SEVERITY_RANK[s] < SEVERITY_RANK[severity]):
-                severity = s
+        for body_md, body_text in bot_entries:
+            entry_sev = _best_severity(
+                detect_badge_severity(body_md),
+                detect_severity(body_text),
+            )
+            severity = _best_severity(severity, entry_sev)
         if severity is None:
-            # Bot left a comment but no recognisable severity tag — count
-            # as low-severity so the data point doesn't vanish. Comment
-            # in the docstring explains the trade-off.
+            # Bot left a comment but neither badge nor text marker matched —
+            # count as low-severity so the data point doesn't vanish, and so
+            # new bot output formats degrade gracefully rather than dropping
+            # off the chart entirely.
             severity = "P2"
 
     merged_at = datetime.fromisoformat(pr_node["mergedAt"].replace("Z", "+00:00"))
