@@ -58,6 +58,138 @@ def test_detect_severity_ignores_generic_english_adjectives() -> None:
     assert sweep.detect_severity("reachability is HIGH for the new endpoint") is None
 
 
+# ── Badge URL detection (regression cover for pre-2026-05 mis-classification) ──
+
+def test_detect_badge_severity_extracts_p1_from_codex_badge() -> None:
+    # Real codex bot output — image markdown wraps every inline finding.
+    body = (
+        "**<sub><sub>![P1 Badge]"
+        "(https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>"
+        "  Continue paging after pre-window merged PRs**\n\n"
+        "This early return assumes..."
+    )
+    assert sweep.detect_badge_severity(body) == "P1"
+
+
+def test_detect_badge_severity_worst_wins_across_multiple_badges() -> None:
+    body = (
+        "![P2 Badge](https://img.shields.io/badge/P2-yellow)\n"
+        "![P0 Badge](https://img.shields.io/badge/P0-red)\n"
+        "![P1 Badge](https://img.shields.io/badge/P1-orange)"
+    )
+    assert sweep.detect_badge_severity(body) == "P0"
+
+
+def test_detect_badge_severity_returns_none_for_no_badges() -> None:
+    assert sweep.detect_badge_severity("Just plain prose, no images.") is None
+    assert sweep.detect_badge_severity("") is None
+
+
+def test_detect_badge_severity_ignores_unrelated_shields_io_badges() -> None:
+    # Other shields.io badges (build status, version, license) must not
+    # false-positive — pattern requires /badge/PN- specifically.
+    body = (
+        "![build](https://img.shields.io/badge/build-passing-green)\n"
+        "![version](https://img.shields.io/badge/v-1.2.3-blue)"
+    )
+    assert sweep.detect_badge_severity(body) is None
+
+
+def test_classify_pr_recovers_p1_from_badge_when_bodytext_strips_it() -> None:
+    """The pre-fix bug: bodyText strips images → P1 marker vanished → fallback to P2.
+
+    This test pins the fix in place: when only the badge image carries the
+    severity (bodyText stripped it), classify_pr MUST return P1, not P2.
+    """
+    pr = {
+        "number": 504,
+        "mergedAt": "2026-05-25T07:17:35Z",
+        "reviewThreads": {
+            "nodes": [
+                {
+                    "comments": {
+                        "nodes": [
+                            {
+                                "author": {"login": "chatgpt-codex-connector"},
+                                # `body` has the badge…
+                                "body": (
+                                    "**<sub><sub>![P1 Badge]"
+                                    "(https://img.shields.io/badge/P1-orange?style=flat)"
+                                    "</sub></sub>  Continue paging after pre-window**"
+                                ),
+                                # …but bodyText strips it — only the prose remains.
+                                "bodyText": "Continue paging after pre-window",
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        "reviews": {"nodes": []},
+        "comments": {"nodes": []},
+    }
+    s = sweep.classify_pr(pr)
+    assert s.has_codex_review is True
+    assert s.severity == "P1", (
+        "Badge URL in `body` must promote severity even when `bodyText` "
+        "strips the image — historical bug fell through to P2 here."
+    )
+
+
+def test_classify_pr_worst_wins_across_badge_and_text_marker() -> None:
+    """Mixed: one comment carries P1 in a badge, another carries P0 in text."""
+    pr = {
+        "number": 1,
+        "mergedAt": "2026-05-22T10:00:00Z",
+        "reviewThreads": {
+            "nodes": [
+                {
+                    "comments": {
+                        "nodes": [
+                            {
+                                "author": {"login": "chatgpt-codex-connector"},
+                                "body": "![P1 Badge](https://img.shields.io/badge/P1-orange)",
+                                "bodyText": "minor refactor suggestion",
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        "reviews": {
+            "nodes": [
+                {
+                    "author": {"login": "chatgpt-codex-connector"},
+                    "body": "Summary: found a P0 blocker in auth.",
+                    "bodyText": "Summary: found a P0 blocker in auth.",
+                }
+            ]
+        },
+        "comments": {"nodes": []},
+    }
+    assert sweep.classify_pr(pr).severity == "P0"
+
+
+def test_classify_pr_handles_missing_body_field_gracefully() -> None:
+    """Defensive: if GraphQL returns no `body` (only `bodyText`), no crash."""
+    pr = {
+        "number": 2,
+        "mergedAt": "2026-05-22T10:00:00Z",
+        "reviewThreads": {"nodes": []},
+        "reviews": {
+            "nodes": [
+                {
+                    "author": {"login": "chatgpt-codex-connector"},
+                    # No `body` key at all — only bodyText.
+                    "bodyText": "P0 blocker",
+                }
+            ]
+        },
+        "comments": {"nodes": []},
+    }
+    assert sweep.classify_pr(pr).severity == "P0"
+
+
 def test_classify_pr_with_bot_review_no_marker_defaults_to_p2() -> None:
     pr = {
         "number": 42,
