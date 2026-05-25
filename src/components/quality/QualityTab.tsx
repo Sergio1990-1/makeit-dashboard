@@ -13,8 +13,19 @@ export function QualityTab() {
   const [mode, setMode] = useState<PeriodMode>("12w");
   const [showAddModal, setShowAddModal] = useState(false);
 
+  const handleAddAnnotation = async (p: AnnotationCreatePayload) => {
+    await createAnnotation(p);
+    await reloadAnnotations();
+  };
+
   if (loading && !data) return <div className="v4-quality-tab">Загрузка…</div>;
   if (unavailable) {
+    // Sweep aggregate (/data/codex-quality.json) hasn't been published yet —
+    // either the GitHub Actions workflow hasn't run for the first time, or
+    // the publish step failed and nginx is serving its SPA fallback. The
+    // annotations mini-API is independent (separate VPS service), so we
+    // still surface "+ событие" — users can pre-seed deploy/skill events
+    // even before the first chart appears.
     return (
       <div className="v4-quality-tab page">
         <div className="pageH">
@@ -24,16 +35,29 @@ export function QualityTab() {
               Доля PR с критическими/высокими замечаниями <b>chatgpt-codex-connector[bot]</b> от общего числа merged PR · события на временной оси
             </div>
           </div>
+          <div className="ctrls">
+            <button className="btn-add-event" onClick={() => setShowAddModal(true)}>+ событие</button>
+            <button className="btn-refresh" onClick={() => refresh()} disabled={loading}>↻ Проверить ещё раз</button>
+          </div>
         </div>
         <div className="quality-empty-panel">
           <div className="quality-empty-icon">📊</div>
-          <h2>Данные ещё не собираются</h2>
+          <h2>Агрегация ещё не выполнялась</h2>
           <p>
-            Sweep-бэкенд на Pipeline Mac не задеплоен — нет источника для <code>/data/codex-quality.json</code>.
-            После настройки cron здесь появится недельная динамика P0/P1/P2 находок Codex по всем 12 проектам.
+            Файл <code>/data/codex-quality.json</code> ещё не опубликован — GitHub Actions sweep пока не отработал.
+            Первый прогон по расписанию (~03:17 Бали, 19:17 UTC) запишет недельную динамику P0/P1/P2 находок Codex по 12 проектам;
+            можно запустить вручную: <code>workflow_dispatch</code> на <code>codex-quality-sweep</code>.
           </p>
-          <button className="btn-refresh" onClick={() => refresh()} disabled={loading}>↻ Проверить ещё раз</button>
+          <p style={{ fontSize: 12, opacity: 0.8 }}>
+            События ниже работают независимо — добавляйте deploy/skill вехи, они появятся на таймлайне сразу как только аггрегация заработает.
+          </p>
         </div>
+        {showAddModal && (
+          <AnnotationModal
+            onSubmit={handleAddAnnotation}
+            onClose={() => setShowAddModal(false)}
+          />
+        )}
       </div>
     );
   }
@@ -48,11 +72,6 @@ export function QualityTab() {
     );
   }
   if (!data) return <div className="v4-quality-tab">Нет данных</div>;
-
-  const handleAddAnnotation = async (p: AnnotationCreatePayload) => {
-    await createAnnotation(p);
-    await reloadAnnotations();
-  };
 
   return (
     <div className="v4-quality-tab page">

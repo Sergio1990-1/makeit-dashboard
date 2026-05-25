@@ -51,6 +51,10 @@ export interface Annotation {
   desc: string;
   created_by: string;
   created_at: string;
+  /** Optional free-text device label (≤40 chars). Not identity — see
+   *  `src/utils/device-hint.ts`. Used only for visual attribution on the
+   *  timeline tooltip ("Mac Sergey"). Absent on legacy events. */
+  device_hint?: string | null;
 }
 
 export interface AnnotationCreatePayload {
@@ -60,4 +64,5 @@ export interface AnnotationCreatePayload {
   repos?: string[];
   title: string;
   desc: string;
+  device_hint?: string;
 }
