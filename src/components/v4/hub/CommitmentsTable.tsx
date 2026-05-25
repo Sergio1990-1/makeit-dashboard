@@ -118,7 +118,7 @@ const inputStyle: React.CSSProperties = {
   boxSizing: "border-box",
   padding: "6px 8px",
   fontSize: 13,
-  border: "1px solid var(--v4-border, rgba(0,0,0,0.15))",
+  border: "1px solid var(--mk-line)",
   borderRadius: 6,
   background: "var(--v4-surface, transparent)",
   color: "var(--v4-ink-900, inherit)",
@@ -127,7 +127,7 @@ const inputStyle: React.CSSProperties = {
 const cellStyle: React.CSSProperties = {
   padding: "8px 10px",
   fontSize: 13,
-  borderBottom: "1px solid var(--v4-border, rgba(0,0,0,0.06))",
+  borderBottom: "1px solid var(--mk-line-soft)",
   verticalAlign: "top",
 };
 
@@ -135,7 +135,7 @@ const btnStyle: React.CSSProperties = {
   fontSize: 12,
   padding: "4px 10px",
   borderRadius: 6,
-  border: "1px solid var(--v4-border, rgba(0,0,0,0.15))",
+  border: "1px solid var(--mk-line)",
   background: "var(--v4-surface, transparent)",
   color: "var(--v4-ink-700, inherit)",
   cursor: "pointer",
@@ -143,8 +143,8 @@ const btnStyle: React.CSSProperties = {
 
 const primaryBtnStyle: React.CSSProperties = {
   ...btnStyle,
-  background: "var(--v4-accent-500, #2563EB)",
-  borderColor: "var(--v4-accent-500, #2563EB)",
+  background: "var(--mk-primary)",
+  borderColor: "var(--mk-primary)",
   color: "#fff",
 };
 
@@ -185,7 +185,7 @@ function DraftForm({ initial, submitLabel, onSubmit, onCancel }: DraftFormProps)
           style={{
             ...inputStyle,
             ...(dueInvalid
-              ? { border: "1px solid var(--v4-danger-500, #EF4444)" }
+              ? { border: "1px solid var(--mk-danger)" }
               : null),
           }}
           value={due}
@@ -435,9 +435,9 @@ export function CommitmentsTable({ repo, onCount }: Props) {
       <div
         style={{
           padding: 16,
-          border: "1px solid var(--v4-danger-500, #EF4444)",
+          border: "1px solid var(--mk-danger)",
           borderRadius: 10,
-          color: "var(--v4-danger-700, #B91C1C)",
+          color: "var(--mk-danger-strong)",
           fontSize: 13,
           display: "flex",
           flexDirection: "column",
@@ -464,7 +464,7 @@ export function CommitmentsTable({ repo, onCount }: Props) {
       <div
         style={{
           padding: 20,
-          border: "1px dashed var(--v4-border, rgba(0,0,0,0.15))",
+          border: "1px dashed var(--mk-line)",
           borderRadius: 10,
           color: "var(--v4-ink-500)",
           fontSize: 13,
@@ -496,10 +496,10 @@ export function CommitmentsTable({ repo, onCount }: Props) {
           role="alert"
           style={{
             padding: 12,
-            border: "1px solid var(--v4-danger-500, #EF4444)",
+            border: "1px solid var(--mk-danger)",
             borderRadius: 8,
-            background: "var(--v4-danger-50, #FEF2F2)",
-            color: "var(--v4-danger-700, #B91C1C)",
+            background: "var(--mk-danger-soft)",
+            color: "var(--mk-danger-strong)",
             fontSize: 13,
             display: "flex",
             justifyContent: "space-between",
@@ -535,9 +535,9 @@ export function CommitmentsTable({ repo, onCount }: Props) {
           role="alert"
           style={{
             padding: 12,
-            border: "1px solid var(--v4-danger-500, #EF4444)",
+            border: "1px solid var(--mk-danger)",
             borderRadius: 8,
-            color: "var(--v4-danger-700, #B91C1C)",
+            color: "var(--mk-danger-strong)",
             fontSize: 13,
           }}
         >
@@ -565,7 +565,7 @@ export function CommitmentsTable({ repo, onCount }: Props) {
                     fontWeight: 600,
                     color: "var(--v4-ink-500)",
                     borderBottom:
-                      "1px solid var(--v4-border, rgba(0,0,0,0.12))",
+                      "1px solid var(--mk-line)",
                     whiteSpace: "nowrap",
                   }}
                 >
@@ -593,7 +593,7 @@ export function CommitmentsTable({ repo, onCount }: Props) {
                       ...cellStyle,
                       color:
                         r.status === "overdue"
-                          ? "var(--v4-danger-700, #B91C1C)"
+                          ? "var(--mk-danger-strong)"
                           : undefined,
                       fontWeight: r.status === "overdue" ? 600 : undefined,
                     }}
@@ -610,11 +610,11 @@ export function CommitmentsTable({ repo, onCount }: Props) {
                         whiteSpace: "nowrap",
                         background:
                           r.status === "overdue"
-                            ? "var(--v4-danger-100, #FEE4E2)"
-                            : "var(--v4-border, rgba(0,0,0,0.08))",
+                            ? "var(--mk-danger-100)"
+                            : "var(--mk-line-soft)",
                         color:
                           r.status === "overdue"
-                            ? "var(--v4-danger-700, #B91C1C)"
+                            ? "var(--mk-danger-strong)"
                             : "var(--v4-ink-700)",
                       }}
                     >
@@ -628,8 +628,8 @@ export function CommitmentsTable({ repo, onCount }: Props) {
                           type="button"
                           style={{
                             ...btnStyle,
-                            borderColor: "var(--v4-danger-500, #EF4444)",
-                            color: "var(--v4-danger-700, #B91C1C)",
+                            borderColor: "var(--mk-danger)",
+                            color: "var(--mk-danger-strong)",
                           }}
                           onClick={() => handleDelete(r._key)}
                         >

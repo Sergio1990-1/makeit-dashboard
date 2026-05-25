@@ -117,7 +117,7 @@ function errorMessage(e: unknown): string {
 
 const cellStyle: React.CSSProperties = {
   padding: "8px 10px",
-  borderBottom: "1px solid var(--v4-border, rgba(0,0,0,0.08))",
+  borderBottom: "1px solid var(--mk-line-soft)",
   fontSize: 13,
   verticalAlign: "top",
 };
@@ -127,7 +127,7 @@ const inputStyle: React.CSSProperties = {
   boxSizing: "border-box",
   padding: "4px 6px",
   fontSize: 13,
-  border: "1px solid var(--v4-border, rgba(0,0,0,0.15))",
+  border: "1px solid var(--mk-line)",
   borderRadius: 6,
   background: "var(--v4-surface, transparent)",
   color: "var(--v4-ink-900, inherit)",
@@ -137,7 +137,7 @@ const pillStyle: React.CSSProperties = {
   fontSize: 11,
   padding: "2px 8px",
   borderRadius: 999,
-  background: "var(--v4-border, rgba(0,0,0,0.08))",
+  background: "var(--mk-line-soft)",
   color: "var(--v4-ink-700)",
   whiteSpace: "nowrap",
 };
@@ -146,7 +146,7 @@ const btn: React.CSSProperties = {
   fontSize: 12,
   padding: "6px 12px",
   borderRadius: 8,
-  border: "1px solid var(--v4-border, rgba(0,0,0,0.15))",
+  border: "1px solid var(--mk-line)",
   background: "var(--v4-surface, transparent)",
   color: "var(--v4-ink-900, inherit)",
   cursor: "pointer",
@@ -154,8 +154,8 @@ const btn: React.CSSProperties = {
 
 const btnPrimary: React.CSSProperties = {
   ...btn,
-  background: "var(--v4-accent, #2563eb)",
-  borderColor: "var(--v4-accent, #2563eb)",
+  background: "var(--mk-primary)",
+  borderColor: "var(--mk-primary)",
   color: "#fff",
 };
 
@@ -515,9 +515,9 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
       <div
         style={{
           padding: 16,
-          border: "1px solid var(--v4-danger, #dc2626)",
+          border: "1px solid var(--mk-danger)",
           borderRadius: 10,
-          color: "var(--v4-danger, #dc2626)",
+          color: "var(--mk-danger)",
           fontSize: 13,
           display: "flex",
           flexDirection: "column",
@@ -537,7 +537,7 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
       <div
         style={{
           padding: 16,
-          border: "1px dashed var(--v4-border, rgba(0,0,0,0.1))",
+          border: "1px dashed var(--mk-line)",
           borderRadius: 10,
           color: "var(--v4-ink-500)",
           fontSize: 13,
@@ -552,7 +552,7 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
           начать вести реестр рисков.
         </span>
         {writeError && (
-          <span style={{ color: "var(--v4-danger, #dc2626)" }}>
+          <span style={{ color: "var(--mk-danger)" }}>
             {writeError}
           </span>
         )}
@@ -616,8 +616,8 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
             fontSize: 12,
             padding: "8px 10px",
             borderRadius: 8,
-            background: "var(--v4-danger-bg, rgba(220,38,38,0.1))",
-            color: "var(--v4-danger, #dc2626)",
+            background: "var(--mk-danger-soft)",
+            color: "var(--mk-danger)",
           }}
         >
           {extractError}
@@ -631,8 +631,8 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
             fontSize: 12,
             padding: "8px 10px",
             borderRadius: 8,
-            background: "var(--v4-danger-bg, rgba(220,38,38,0.1))",
-            color: "var(--v4-danger, #dc2626)",
+            background: "var(--mk-danger-soft)",
+            color: "var(--mk-danger)",
           }}
         >
           {writeError}
@@ -646,8 +646,8 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
             fontSize: 12,
             padding: "8px 10px",
             borderRadius: 8,
-            background: "var(--v4-surface-3, rgba(0,0,0,0.04))",
-            color: "var(--v4-ink-700, #374151)",
+            background: "var(--mk-surface-3)",
+            color: "var(--mk-ink-700)",
           }}
         >
           {infoNotice}
@@ -658,7 +658,7 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
         <div
           style={{
             padding: 16,
-            border: "1px dashed var(--v4-border, rgba(0,0,0,0.1))",
+            border: "1px dashed var(--mk-line)",
             borderRadius: 10,
             color: "var(--v4-ink-500)",
             fontSize: 13,
@@ -743,8 +743,8 @@ export function RiskRegisterTable({ repo, onCount }: Props) {
                             type="button"
                             style={{
                               ...btn,
-                              borderColor: "var(--v4-danger, #dc2626)",
-                              color: "var(--v4-danger, #dc2626)",
+                              borderColor: "var(--mk-danger)",
+                              color: "var(--mk-danger)",
                             }}
                             disabled={busy}
                             onClick={() => void deleteRisk(r)}
@@ -870,7 +870,7 @@ function ExtractReviewModal({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.45)",
+        background: "var(--mk-overlay)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -913,7 +913,7 @@ function ExtractReviewModal({
           <div
             style={{
               padding: 16,
-              border: "1px dashed var(--v4-border, rgba(0,0,0,0.1))",
+              border: "1px dashed var(--mk-line)",
               borderRadius: 10,
               color: "var(--v4-ink-500)",
               fontSize: 13,
@@ -948,7 +948,7 @@ function ExtractReviewModal({
                     key={`${p.source}-${idx}`}
                     style={{
                       border:
-                        "1px solid var(--v4-border, rgba(0,0,0,0.12))",
+                        "1px solid var(--mk-line)",
                       borderRadius: 10,
                       padding: 12,
                       display: "flex",
@@ -1140,13 +1140,13 @@ function ProposalEditForm({ value, onChange }: ProposalEditFormProps) {
 function severityBg(s: RiskSeverity): string {
   switch (s) {
     case "critical":
-      return "var(--v4-danger, #dc2626)";
+      return "var(--mk-danger)";
     case "high":
-      return "var(--v4-warning, #ea580c)";
+      return "var(--mk-warn)";
     case "med":
-      return "var(--v4-caution, #ca8a04)";
+      return "var(--mk-severity-medium)";
     case "low":
-      return "var(--v4-ink-500, #6b7280)";
+      return "var(--mk-ink-500)";
   }
 }
 
@@ -1321,7 +1321,7 @@ function RiskFormModal({ draft, busy, onChange, onSave, onCancel }: EditProps) {
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.45)",
+        background: "var(--mk-overlay)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -1517,7 +1517,7 @@ function ConflictDialog({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.45)",
+        background: "var(--mk-overlay)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

@@ -26,10 +26,10 @@ const COL_ORDER: ReadonlyArray<SortKey> = [
 ];
 
 const PRIORITY_COLOR: Record<"p1" | "p2" | "p3" | "p4", string> = {
-  p1: "#EF4444",
-  p2: "#F79009",
-  p3: "#2563EB",
-  p4: "#94A0B8",
+  p1: "var(--mk-priority-p1)",
+  p2: "var(--mk-priority-p2)",
+  p3: "var(--mk-priority-p3)",
+  p4: "var(--mk-priority-p4)",
 };
 
 interface Row {
@@ -59,10 +59,10 @@ function buildRow(p: ProjectData): Row {
 }
 
 function ringColor(pct: number): string {
-  if (pct >= 0.8) return "#12B76A";
-  if (pct >= 0.4) return "#2563EB";
-  if (pct > 0) return "#F79009";
-  return "#EF4444";
+  if (pct >= 0.8) return "var(--mk-success)";
+  if (pct >= 0.4) return "var(--mk-primary)";
+  if (pct > 0) return "var(--mk-warn)";
+  return "var(--mk-danger)";
 }
 
 function Ring({ pct, anim }: { pct: number; anim: number }) {
@@ -187,7 +187,7 @@ function PriorityCell({ val, max, color, alpha, dimmed, focused }: CellProps) {
     transform: `scale(${scale})`,
     transformOrigin: "left center",
     transition: "opacity .18s, outline .15s, box-shadow .15s",
-    boxShadow: focused ? "0 2px 8px rgba(11,16,32,0.12)" : "none",
+    boxShadow: focused ? "var(--mk-shadow-md)" : "none",
   };
   const labelColor =
     val === 0 ? "var(--v4-ink-300)" : t > 0.55 ? "#fff" : "var(--v4-ink-800)";
@@ -441,8 +441,8 @@ export function ProgressMatrix({ projects }: Props) {
           const openT = maxOpen ? d.open / maxOpen : 0;
           const openColor =
             openT < 0.5
-              ? `color-mix(in oklab, #12B76A ${Math.round((1 - openT * 2) * 100)}%, #F79009)`
-              : `color-mix(in oklab, #F79009 ${Math.round((1 - (openT - 0.5) * 2) * 100)}%, #EF4444)`;
+              ? `color-mix(in oklab, var(--mk-success) ${Math.round((1 - openT * 2) * 100)}%, var(--mk-warn))`
+              : `color-mix(in oklab, var(--mk-warn) ${Math.round((1 - (openT - 0.5) * 2) * 100)}%, var(--mk-danger))`;
           const openBg =
             d.open === 0
               ? "transparent"
@@ -583,10 +583,10 @@ export function ProgressMatrix({ projects }: Props) {
                   outlineOffset: isCellFocus("open") ? "-1px" : 0,
                   color:
                     openT > 0.7
-                      ? "#7F1D1D"
+                      ? "var(--mk-danger-strong)"
                       : openT > 0.35
-                        ? "#92400E"
-                        : "var(--v4-ink-800)",
+                        ? "var(--mk-warn-strong)"
+                        : "var(--mk-ink-800)",
                   fontSize: 12,
                   fontWeight: openT > 0.4 ? 700 : 600,
                   opacity:
@@ -595,7 +595,7 @@ export function ProgressMatrix({ projects }: Props) {
                   transformOrigin: "left center",
                   transition: "opacity .18s, outline .15s, box-shadow .15s",
                   boxShadow: isCellFocus("open")
-                    ? "0 2px 8px rgba(11,16,32,0.12)"
+                    ? "var(--mk-shadow-md)"
                     : "none",
                 }}
               >
@@ -612,9 +612,9 @@ export function ProgressMatrix({ projects }: Props) {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "flex-end",
-                  background: `color-mix(in oklab, #0F172A ${Math.round(totalT * 45)}%, white)`,
+                  background: `color-mix(in oklab, var(--mk-ink-900) ${Math.round(totalT * 45)}%, white)`,
                   borderRadius: 4,
-                  outline: isCellFocus("total") ? "2px solid #0F172A" : "none",
+                  outline: isCellFocus("total") ? "2px solid var(--mk-ink-900)" : "none",
                   outlineOffset: isCellFocus("total") ? "-1px" : 0,
                   color:
                     totalT > 0.55
@@ -631,7 +631,7 @@ export function ProgressMatrix({ projects }: Props) {
                   transition:
                     "opacity .18s, outline .15s, box-shadow .15s, color .15s",
                   boxShadow: isCellFocus("total")
-                    ? "0 2px 8px rgba(11,16,32,0.12)"
+                    ? "var(--mk-shadow-md)"
                     : "none",
                 }}
               >

@@ -64,9 +64,9 @@ const badgeStyle: React.CSSProperties = {
   borderRadius: 999,
   fontSize: 11,
   fontWeight: 600,
-  background: "var(--v4-warning-50, rgba(234,179,8,0.12))",
-  color: "var(--v4-warning-700, #b45309)",
-  border: "1px solid var(--v4-warning-200, rgba(234,179,8,0.4))",
+  background: "var(--mk-warn-soft)",
+  color: "var(--mk-warn-strong)",
+  border: "1px solid var(--mk-warn-100)",
 };
 
 const btnStyle: React.CSSProperties = {
@@ -74,7 +74,7 @@ const btnStyle: React.CSSProperties = {
   fontWeight: 600,
   padding: "6px 12px",
   borderRadius: 8,
-  border: "1px solid var(--v4-border, rgba(0,0,0,0.12))",
+  border: "1px solid var(--mk-line)",
   background: "var(--v4-card, #fff)",
   color: "var(--v4-ink-900)",
   cursor: "pointer",
@@ -84,7 +84,7 @@ const selectStyle: React.CSSProperties = {
   fontSize: 12,
   padding: "6px 8px",
   borderRadius: 8,
-  border: "1px solid var(--v4-border, rgba(0,0,0,0.12))",
+  border: "1px solid var(--mk-line)",
   background: "var(--v4-card, #fff)",
   color: "var(--v4-ink-900)",
 };
@@ -243,10 +243,10 @@ export function DigestViewer({ repo, input }: Props) {
           role="alertdialog"
           aria-label="Подтверждение регенерации дайджеста"
           style={{
-            border: "1px solid var(--v4-border, rgba(0,0,0,0.12))",
+            border: "1px solid var(--mk-line)",
             borderRadius: 10,
             padding: 12,
-            background: "var(--v4-bg-soft, rgba(0,0,0,0.03))",
+            background: "var(--mk-surface-2)",
             display: "flex",
             flexDirection: "column",
             gap: 8,
@@ -265,9 +265,9 @@ export function DigestViewer({ repo, input }: Props) {
               type="button"
               style={{
                 ...btnStyle,
-                background: "var(--v4-accent-600, #2563eb)",
+                background: "var(--mk-primary-active)",
                 color: "#fff",
-                borderColor: "var(--v4-accent-600, #2563eb)",
+                borderColor: "var(--mk-primary-active)",
               }}
               onClick={() => void doRegenerate()}
             >
@@ -298,9 +298,9 @@ export function DigestViewer({ repo, input }: Props) {
         <div
           style={{
             padding: 16,
-            border: "1px solid var(--v4-danger-200, rgba(220,38,38,0.3))",
+            border: "1px solid var(--mk-danger-100)",
             borderRadius: 10,
-            color: "var(--v4-danger-600, #dc2626)",
+            color: "var(--mk-danger-strong)",
             fontSize: 13,
           }}
         >
@@ -324,7 +324,7 @@ export function DigestViewer({ repo, input }: Props) {
         <div
           style={{
             padding: 16,
-            border: "1px dashed var(--v4-border, rgba(0,0,0,0.12))",
+            border: "1px dashed var(--mk-line)",
             borderRadius: 10,
             color: "var(--v4-ink-500)",
             fontSize: 13,

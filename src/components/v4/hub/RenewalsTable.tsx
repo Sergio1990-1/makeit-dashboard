@@ -137,7 +137,7 @@ function blankRenewal(): Renewal {
 
 const cellStyle: React.CSSProperties = {
   padding: "8px 10px",
-  borderBottom: "1px solid var(--v4-border, rgba(0,0,0,0.08))",
+  borderBottom: "1px solid var(--mk-line-soft)",
   fontSize: 13,
   verticalAlign: "top",
 };
@@ -147,7 +147,7 @@ const inputStyle: React.CSSProperties = {
   boxSizing: "border-box",
   padding: "4px 6px",
   fontSize: 13,
-  border: "1px solid var(--v4-border, rgba(0,0,0,0.15))",
+  border: "1px solid var(--mk-line)",
   borderRadius: 6,
   background: "var(--v4-surface, transparent)",
   color: "var(--v4-ink-900, inherit)",
@@ -157,7 +157,7 @@ const pillStyle: React.CSSProperties = {
   fontSize: 11,
   padding: "2px 8px",
   borderRadius: 999,
-  background: "var(--v4-border, rgba(0,0,0,0.08))",
+  background: "var(--mk-line-soft)",
   color: "var(--v4-ink-700)",
   whiteSpace: "nowrap",
 };
@@ -166,7 +166,7 @@ const btn: React.CSSProperties = {
   fontSize: 12,
   padding: "6px 12px",
   borderRadius: 8,
-  border: "1px solid var(--v4-border, rgba(0,0,0,0.15))",
+  border: "1px solid var(--mk-line)",
   background: "var(--v4-surface, transparent)",
   color: "var(--v4-ink-900, inherit)",
   cursor: "pointer",
@@ -174,8 +174,8 @@ const btn: React.CSSProperties = {
 
 const btnPrimary: React.CSSProperties = {
   ...btn,
-  background: "var(--v4-accent, #2563eb)",
-  borderColor: "var(--v4-accent, #2563eb)",
+  background: "var(--mk-primary)",
+  borderColor: "var(--mk-primary)",
   color: "#fff",
 };
 
@@ -518,9 +518,9 @@ export function RenewalsTable({ repo, onCount }: Props) {
       <div
         style={{
           padding: 16,
-          border: "1px solid var(--v4-danger, #dc2626)",
+          border: "1px solid var(--mk-danger)",
           borderRadius: 10,
-          color: "var(--v4-danger, #dc2626)",
+          color: "var(--mk-danger)",
           fontSize: 13,
           display: "flex",
           flexDirection: "column",
@@ -542,7 +542,7 @@ export function RenewalsTable({ repo, onCount }: Props) {
       <div
         style={{
           padding: 16,
-          border: "1px dashed var(--v4-border, rgba(0,0,0,0.1))",
+          border: "1px dashed var(--mk-line)",
           borderRadius: 10,
           color: "var(--v4-ink-500)",
           fontSize: 13,
@@ -557,7 +557,7 @@ export function RenewalsTable({ repo, onCount }: Props) {
           чтобы отслеживать сроки продлений (SSL, домены, контракты, лицензии).
         </span>
         {writeError && (
-          <span style={{ color: "var(--v4-danger, #dc2626)" }}>
+          <span style={{ color: "var(--mk-danger)" }}>
             {writeError}
           </span>
         )}
@@ -627,8 +627,8 @@ export function RenewalsTable({ repo, onCount }: Props) {
             fontSize: 12,
             padding: "8px 10px",
             borderRadius: 8,
-            background: "var(--v4-danger-bg, rgba(220,38,38,0.1))",
-            color: "var(--v4-danger, #dc2626)",
+            background: "var(--mk-danger-soft)",
+            color: "var(--mk-danger)",
           }}
         >
           {writeError}
@@ -642,8 +642,8 @@ export function RenewalsTable({ repo, onCount }: Props) {
             fontSize: 12,
             padding: "8px 10px",
             borderRadius: 8,
-            background: "var(--v4-surface-3, rgba(0,0,0,0.04))",
-            color: "var(--v4-ink-700, #374151)",
+            background: "var(--mk-surface-3)",
+            color: "var(--mk-ink-700)",
           }}
         >
           {infoNotice}
@@ -654,7 +654,7 @@ export function RenewalsTable({ repo, onCount }: Props) {
         <div
           style={{
             padding: 16,
-            border: "1px dashed var(--v4-border, rgba(0,0,0,0.1))",
+            border: "1px dashed var(--mk-line)",
             borderRadius: 10,
             color: "var(--v4-ink-500)",
             fontSize: 13,
@@ -713,9 +713,9 @@ export function RenewalsTable({ repo, onCount }: Props) {
                 const urg = urgencyOf(r.expires_at, now);
                 const dateColor =
                   urg === "expired"
-                    ? "var(--v4-danger, #dc2626)"
+                    ? "var(--mk-danger)"
                     : urg === "soon"
-                      ? "var(--v4-caution, #ca8a04)"
+                      ? "var(--mk-severity-medium)"
                       : undefined;
                 const isAuto = manualIndex === -1;
                 return (
@@ -948,7 +948,7 @@ function RenewalFormModal({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.45)",
+        background: "var(--mk-overlay)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -1065,7 +1065,7 @@ function ConflictDialog({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.45)",
+        background: "var(--mk-overlay)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
