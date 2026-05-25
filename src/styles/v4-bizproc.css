@@ -16,25 +16,25 @@
 .v4-bp-head-ic {
   display: inline-flex;
   font-size: 18px;
-  color: var(--v4-accent-500);
+  color: var(--mk-brand-500);
 }
 .v4-bp-title {
-  font: 800 16px/1.2 var(--v4-sans);
-  color: var(--v4-ink-900);
+  font: 800 16px/1.2 var(--mk-font-sans);
+  color: var(--mk-ink-900);
 }
 .v4-bp-src {
   margin-left: auto;
-  font: 600 11px/1 var(--v4-mono);
-  color: var(--v4-ink-500);
+  font: 600 11px/1 var(--mk-font-mono);
+  color: var(--mk-ink-500);
 }
 .v4-bp-src code,
 .v4-bp-empty-text code,
 .v4-bp-empty-sub code,
 .v4-bp-example-note code {
-  font-family: var(--v4-mono);
+  font-family: var(--mk-font-mono);
   font-size: 0.92em;
-  background: var(--v4-surface-3);
-  color: var(--v4-ink-700);
+  background: var(--mk-surface-3);
+  color: var(--mk-ink-700);
   padding: 1px 5px;
   border-radius: 5px;
 }
@@ -52,34 +52,34 @@
   flex-wrap: wrap;
 }
 .v4-bp-chip {
-  font: 600 12px/1 var(--v4-sans);
+  font: 600 12px/1 var(--mk-font-sans);
   padding: 8px 14px;
-  border-radius: var(--v4-r-md, 8px);
-  border: 1px solid var(--v4-line);
-  background: var(--v4-paper);
-  color: var(--v4-ink-600);
+  border-radius: var(--mk-r-md);
+  border: 1px solid var(--mk-line);
+  background: var(--mk-paper);
+  color: var(--mk-ink-600);
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 .v4-bp-chip:hover {
-  border-color: var(--v4-accent-500);
-  color: var(--v4-ink-900);
+  border-color: var(--mk-brand-500);
+  color: var(--mk-ink-900);
 }
 .v4-bp-chip--on {
-  background: var(--v4-accent-500);
-  border-color: var(--v4-accent-500);
+  background: var(--mk-brand-500);
+  border-color: var(--mk-brand-500);
   color: #fff;
 }
 .v4-bp-meta {
   margin-left: auto;
   display: flex;
   gap: 16px;
-  font: 500 11px/1 var(--v4-sans);
-  color: var(--v4-ink-500);
+  font: 500 11px/1 var(--mk-font-sans);
+  color: var(--mk-ink-500);
 }
 .v4-bp-meta b {
-  color: var(--v4-ink-700);
-  font: 700 11px/1 var(--v4-mono);
+  color: var(--mk-ink-700);
+  font: 700 11px/1 var(--mk-font-mono);
 }
 
 /* ── legend ── */
@@ -87,8 +87,8 @@
   display: flex;
   gap: 18px;
   flex-wrap: wrap;
-  font: 500 11px/1 var(--v4-sans);
-  color: var(--v4-ink-600);
+  font: 500 11px/1 var(--mk-font-sans);
+  color: var(--mk-ink-600);
 }
 .v4-bp-lg {
   display: flex;
@@ -103,9 +103,9 @@
 /* ── canvas ── */
 .v4-bp-canvas {
   overflow-x: auto;
-  border: 1px solid var(--v4-line);
-  border-radius: var(--v4-r-lg, 12px);
-  background: var(--v4-paper);
+  border: 1px solid var(--mk-line);
+  border-radius: var(--mk-r-lg);
+  background: var(--mk-paper);
 }
 .v4-bp-svg {
   display: block;
@@ -113,49 +113,49 @@
 
 /* swimlanes */
 .v4-bp-lane {
-  fill: var(--v4-paper);
-  stroke: var(--v4-line-soft);
+  fill: var(--mk-paper);
+  stroke: var(--mk-line-soft);
   stroke-width: 1;
 }
 .v4-bp-lane--alt {
-  fill: var(--v4-surface-2);
+  fill: var(--mk-surface-2);
 }
 .v4-bp-lane-gutter {
-  fill: var(--v4-surface-3);
-  stroke: var(--v4-line);
+  fill: var(--mk-surface-3);
+  stroke: var(--mk-line);
   stroke-width: 1;
 }
 .v4-bp-lane-label {
-  font: 800 12px var(--v4-sans);
-  fill: var(--v4-ink-700);
+  font: 800 12px var(--mk-font-sans);
+  fill: var(--mk-ink-700);
 }
 
 /* flows */
 .v4-bp-flow {
   fill: none;
-  stroke: var(--v4-ink-400);
+  stroke: var(--mk-ink-400);
   stroke-width: 1.6;
 }
 .v4-bp-flow--warn {
-  stroke: var(--v4-warn-500);
+  stroke: var(--mk-warn);
   stroke-dasharray: 5 4;
 }
 .v4-bp-arrhead {
-  fill: var(--v4-ink-400);
+  fill: var(--mk-ink-400);
 }
 .v4-bp-arrhead--warn {
-  fill: var(--v4-warn-500);
+  fill: var(--mk-warn);
 }
 .v4-bp-flbl-bg {
-  fill: var(--v4-paper);
-  stroke: var(--v4-line);
+  fill: var(--mk-paper);
+  stroke: var(--mk-line);
 }
 .v4-bp-flbl {
-  font: 700 10px var(--v4-mono);
-  fill: var(--v4-ink-600);
+  font: 700 10px var(--mk-font-mono);
+  fill: var(--mk-ink-600);
 }
 .v4-bp-flbl--warn {
-  fill: var(--v4-warn-700);
+  fill: var(--mk-warn-strong);
 }
 
 /* nodes */
@@ -163,44 +163,44 @@
   stroke-width: 2.5;
 }
 .v4-bp-ev--start {
-  fill: var(--v4-success-50);
-  stroke: var(--v4-success-500);
+  fill: var(--mk-success-soft);
+  stroke: var(--mk-success);
 }
 .v4-bp-ev--end {
-  fill: var(--v4-danger-50);
-  stroke: var(--v4-danger-500);
+  fill: var(--mk-danger-soft);
+  stroke: var(--mk-danger);
   stroke-width: 4;
 }
 .v4-bp-gw {
-  fill: var(--v4-warn-50);
-  stroke: var(--v4-warn-500);
+  fill: var(--mk-warn-soft);
+  stroke: var(--mk-warn);
   stroke-width: 1.6;
 }
 .v4-bp-gw-x {
-  font: 800 15px var(--v4-mono);
-  fill: var(--v4-warn-700);
+  font: 800 15px var(--mk-font-mono);
+  fill: var(--mk-warn-strong);
 }
 .v4-bp-task {
-  fill: var(--v4-accent-50);
-  stroke: var(--v4-accent-500);
+  fill: var(--mk-brand-50);
+  stroke: var(--mk-brand-500);
   stroke-width: 1.4;
 }
 .v4-bp-task--sys {
-  fill: var(--v4-purple-50);
-  stroke: var(--v4-purple-500);
+  fill: var(--mk-purple-50);
+  stroke: var(--mk-purple-500);
   stroke-dasharray: 5 3;
 }
 .v4-bp-ntext {
-  font: 600 12px var(--v4-sans);
-  fill: var(--v4-ink-900);
+  font: 600 12px var(--mk-font-sans);
+  fill: var(--mk-ink-900);
 }
 .v4-bp-nsub {
-  font: 600 9.5px var(--v4-mono);
-  fill: var(--v4-ink-500);
+  font: 600 9.5px var(--mk-font-mono);
+  fill: var(--mk-ink-500);
 }
 .v4-bp-ncap {
-  font: 600 10.5px var(--v4-mono);
-  fill: var(--v4-ink-500);
+  font: 600 10.5px var(--mk-font-mono);
+  fill: var(--mk-ink-500);
 }
 .v4-bp-node {
   cursor: default;
@@ -219,54 +219,54 @@
   gap: 8px;
   padding: 44px 24px;
   text-align: center;
-  border: 1px dashed var(--v4-line-strong);
-  border-radius: var(--v4-r-lg, 12px);
-  background: var(--v4-surface-2);
+  border: 1px dashed var(--mk-line-strong);
+  border-radius: var(--mk-r-lg);
+  background: var(--mk-surface-2);
 }
 .v4-bp-empty--cta {
   gap: 10px;
 }
 .v4-bp-empty-ic {
   font-size: 26px;
-  color: var(--v4-ink-400);
+  color: var(--mk-ink-400);
 }
 .v4-bp-empty-text {
-  font: 600 13px/1.5 var(--v4-sans);
-  color: var(--v4-ink-700);
+  font: 600 13px/1.5 var(--mk-font-sans);
+  color: var(--mk-ink-700);
 }
 .v4-bp-empty-sub {
   max-width: 520px;
-  font: 500 12px/1.6 var(--v4-sans);
-  color: var(--v4-ink-500);
+  font: 500 12px/1.6 var(--mk-font-sans);
+  color: var(--mk-ink-500);
 }
 .v4-bp-btn {
   margin-top: 4px;
-  font: 600 12px/1 var(--v4-sans);
+  font: 600 12px/1 var(--mk-font-sans);
   padding: 9px 16px;
-  border-radius: var(--v4-r-md, 8px);
-  border: 1px solid var(--v4-accent-500);
-  background: var(--v4-accent-500);
+  border-radius: var(--mk-r-md);
+  border: 1px solid var(--mk-brand-500);
+  background: var(--mk-brand-500);
   color: #fff;
   cursor: pointer;
   transition: background 0.15s;
 }
 .v4-bp-btn:hover {
-  background: var(--v4-accent-600);
+  background: var(--mk-brand-600);
 }
 .v4-bp-example-note {
-  font: 500 12px/1.5 var(--v4-sans);
-  color: var(--v4-ink-500);
+  font: 500 12px/1.5 var(--mk-font-sans);
+  color: var(--mk-ink-500);
   padding: 10px 14px;
-  background: var(--v4-warn-50);
-  border: 1px solid var(--v4-warn-100);
-  border-radius: var(--v4-r-md, 8px);
+  background: var(--mk-warn-soft);
+  border: 1px solid var(--mk-warn-100);
+  border-radius: var(--mk-r-md);
 }
 .v4-bp-linkbtn {
   background: none;
   border: none;
   padding: 0;
-  font: 600 12px/1 var(--v4-sans);
-  color: var(--v4-accent-600);
+  font: 600 12px/1 var(--mk-font-sans);
+  color: var(--mk-brand-600);
   cursor: pointer;
   text-decoration: underline;
 }

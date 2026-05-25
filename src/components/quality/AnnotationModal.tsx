@@ -42,7 +42,7 @@ const labelStyle: React.CSSProperties = {
 
 const labelTextStyle: React.CSSProperties = {
   fontSize: 11,
-  color: "#666",
+  color: "var(--mk-ink-500)",
   textTransform: "uppercase",
   letterSpacing: 0.4,
 };

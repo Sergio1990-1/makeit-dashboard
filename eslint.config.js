@@ -8,7 +8,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 export default defineConfig([
   // `src/types/generated/**` is machine-generated from backend OpenAPI
   // (npm run gen:api-types) — lint it as the generator emits it.
-  globalIgnores(['dist', 'src/types/generated']),
+  globalIgnores(['dist', 'src/types/generated', '.claude/worktrees']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
