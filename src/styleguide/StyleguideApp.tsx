@@ -526,6 +526,561 @@ function ComponentsSection() {
   );
 }
 
+/* ══════════════════════════════════════════════════════════
+   LAYOUT PATTERNS
+   ══════════════════════════════════════════════════════════ */
+
+function LayoutSection() {
+  const [filter, setFilter] = useState(0);
+  const filterLabels = ["Все", "Pre-dev", "Dev", "Support"];
+
+  return (
+    <section id="layout" className="sg-section">
+      <header className="sg-section-head">
+        <h2>Layout patterns</h2>
+        <p>Структурные контейнеры. Канонические шаблоны для всех вкладок — чтобы у Dashboard, Quality, Pipeline и т.д. был одинаковый каркас.</p>
+      </header>
+
+      <h3 className="sg-sub">App shell</h3>
+      <div className="sg-variants">
+        <div className="sg-variant">
+          <div className="sg-variant-label">КАНОН</div>
+          <div className="sg-variant-name">.v4-app — 240px sidebar + 1fr main</div>
+          <div className="sg-variant-desc">
+            Единственный shell в проекте, legacy-варианта нет. Грид sticky-сайдбар + основной контент. Высота 100dvh.
+          </div>
+          <div className="sg-variant-stage" style={{ padding: 0, background: "transparent" }}>
+            <div className="sg-mini sg-shell" style={{ width: "100%" }}>
+              <div className="sg-shell-side">
+                <div className="row brand" />
+                <div className="row section" />
+                <div className="row" />
+                <div className="row" />
+                <div className="row" />
+                <div className="row section" />
+                <div className="row" />
+                <div className="row" />
+              </div>
+              <div className="sg-shell-main">
+                <div className="top" />
+                <div className="content" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 className="sg-sub">Sidebar</h3>
+      <div className="sg-variants">
+        <div className="sg-variant">
+          <div className="sg-variant-label">SIDEBAR — КАНОН</div>
+          <div className="sg-variant-name">.v4-side</div>
+          <div className="sg-variant-desc">
+            240px ширина, paper-фон, sticky top, brand-блок 56px + nav. Секции «WORKFLOW», «КОНТРОЛЬ» — mono 10px uppercase, color ink-400. Items 7px padding, radius-sm, hover surface-2.
+          </div>
+          <div className="sg-variant-stage" style={{ alignItems: "stretch", justifyContent: "flex-start", background: "var(--mk-surface-2)" }}>
+            <div className="sg-side-mini">
+              <div className="brand-row">
+                <div className="brand-logo">M</div>
+                <div className="brand-name">MakeIT</div>
+              </div>
+              <div className="nav-item active"><span>Дашборд</span><span className="nav-count danger">2</span></div>
+              <div className="nav-item"><span>Проекты</span><span className="nav-count">12</span></div>
+              <div className="nav-item"><span>Milestones</span><span className="nav-count">8</span></div>
+              <div className="nav-section">WORKFLOW</div>
+              <div className="nav-item"><span>Pipeline</span></div>
+              <div className="nav-item"><span>Транскрипты</span></div>
+            </div>
+          </div>
+        </div>
+        <div className="sg-variant">
+          <div className="sg-variant-label">NAV INDICATORS</div>
+          <div className="sg-variant-name">3 типа счётчиков рядом</div>
+          <div className="sg-variant-desc">
+            Сейчас в коде есть .v4-nav-count (нейтральный), .v4-nav-badge (red danger), .sidebar-badge (orange warn), .v4-nav-pulse (6px dot пульсирующий). Все используются параллельно — нужна семантическая иерархия.
+          </div>
+          <div className="sg-variant-stage" style={{ flexDirection: "column", gap: 8, alignItems: "stretch" }}>
+            <div className="sg-side-mini" style={{ width: "100%" }}>
+              <div className="nav-item"><span>Quality</span><span className="nav-count">203</span></div>
+              <div className="nav-item"><span>Аудит</span><span className="nav-count danger">2</span></div>
+              <div className="nav-item"><span>Debate</span><span className="nav-count" style={{ background: "var(--mk-warn-soft)", color: "var(--mk-warn-strong)" }}>!</span></div>
+            </div>
+          </div>
+          <div className="sg-note">Канон: нейтральный count = просто число (информативное), danger pill = срочное действие, warn pill = внимание, pulse-dot = live / new.</div>
+        </div>
+      </div>
+
+      <h3 className="sg-sub">Topbar</h3>
+      <div className="sg-variants">
+        <div className="sg-variant">
+          <div className="sg-variant-label">TOPBAR — КАНОН</div>
+          <div className="sg-variant-name">56px sticky, breadcrumbs + actions</div>
+          <div className="sg-variant-desc">
+            Слева — breadcrumbs (последний сегмент жирный) + live-pill + ratelimit. Справа — search (⌘K), refresh, settings, logout. Все icon-buttons 32×32.
+          </div>
+          <div className="sg-variant-stage" style={{ padding: 12, background: "var(--mk-surface-2)" }}>
+            <div className="sg-top-mini">
+              <div className="crumbs"><span>Все проекты</span><span className="sep">/</span><b>Дашборд</b></div>
+              <span className="live">GitHub API · live</span>
+              <span className="ratelimit">REST 5.0k · GQL 1.3k</span>
+              <span className="spacer" />
+              <div className="search"><span>Поиск</span><span className="kbd">⌘K</span></div>
+              <button className="ibtn" aria-label="refresh">↻</button>
+              <button className="ibtn" aria-label="settings">⚙</button>
+              <button className="ibtn" aria-label="logout">⇲</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 className="sg-sub">Page header</h3>
+      <div className="sg-variants">
+        <div className="sg-variant">
+          <div className="sg-variant-label">PROPOSED — КАНОН</div>
+          <div className="sg-variant-name">Title + meta + actions в одной строке</div>
+          <div className="sg-variant-desc">
+            Заголовок 22px, под ним meta (12px ink-500). Справа — actions (filter toolbar + primary CTA). Сейчас в Dashboard это есть, в Quality иначе, в Audit ещё иначе — унифицируем.
+          </div>
+          <div className="sg-variant-stage" style={{ padding: 0, background: "transparent", alignItems: "stretch" }}>
+            <div className="sg-ph" style={{ width: "100%" }}>
+              <div className="sg-ph-title-row">
+                <h4 className="sg-ph-title">MakeIT · сводка по проектам</h4>
+                <div className="sg-ph-actions">
+                  <div className="sg-toolbar">
+                    {filterLabels.map((l, i) => (
+                      <button key={l} className={i === filter ? "active" : ""} onClick={() => setFilter(i)}>{l}</button>
+                    ))}
+                  </div>
+                  <button className="sg-btn-new primary" style={{ height: 30 }}>Все проекты</button>
+                </div>
+              </div>
+              <div className="sg-ph-meta">12 активных проектов · обновлено 11:13</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 className="sg-sub">Toolbar (filter chips)</h3>
+      <div className="sg-variants">
+        <div className="sg-variant">
+          <div className="sg-variant-label">КАНОН</div>
+          <div className="sg-variant-name">Pill-toolbar для фильтра по таксономии</div>
+          <div className="sg-variant-desc">
+            Тот же стиль что pill-tabs. Используется для inline-фильтров: фазы проекта, статус, период. Активный сегмент — белая подложка.
+          </div>
+          <div className="sg-variant-stage">
+            <div className="sg-toolbar">
+              <button className="active">Все</button>
+              <button>Pre-dev</button>
+              <button>Dev</button>
+              <button>Support</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 className="sg-sub">Grids</h3>
+      <div className="sg-variants">
+        <div className="sg-variant">
+          <div className="sg-variant-label">V4-GRID</div>
+          <div className="sg-variant-name">1.6fr + 1fr</div>
+          <div className="sg-variant-desc">Двухколоночный layout: основной контент слева (шире), aside справа. Используется в Hub.</div>
+          <div className="sg-variant-stage" style={{ padding: 0, background: "transparent", alignItems: "stretch" }}>
+            <div className="sg-grid-demo v4" style={{ width: "100%" }}>
+              <div className="cell">1.6fr</div>
+              <div className="cell">1fr</div>
+            </div>
+          </div>
+        </div>
+        <div className="sg-variant">
+          <div className="sg-variant-label">KPI-ROW</div>
+          <div className="sg-variant-name">repeat(4, 1fr)</div>
+          <div className="sg-variant-desc">Четыре равных KPI-карточки сверху на странице. Главные метрики (прогресс портфеля, открытые задачи, velocity, бюджет).</div>
+          <div className="sg-variant-stage" style={{ padding: 0, background: "transparent", alignItems: "stretch" }}>
+            <div className="sg-grid-demo kpi" style={{ width: "100%" }}>
+              <div className="cell">KPI</div>
+              <div className="cell">KPI</div>
+              <div className="cell">KPI</div>
+              <div className="cell">KPI</div>
+            </div>
+          </div>
+        </div>
+        <div className="sg-variant">
+          <div className="sg-variant-label">BENTO (12-COL)</div>
+          <div className="sg-variant-name">flex spans 4/8/12</div>
+          <div className="sg-variant-desc">12-колоночная сетка для bento-layout. Spans 4, 8, 12. Подходит когда нужна асимметрия (например 8+4).</div>
+          <div className="sg-variant-stage" style={{ padding: 0, background: "transparent", alignItems: "stretch" }}>
+            <div className="sg-grid-demo bento" style={{ width: "100%", height: 100 }}>
+              <div className="cell span-8">8</div>
+              <div className="cell span-4">4</div>
+              <div className="cell span-12">12</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="sg-note">
+        Канон: <strong>KPI-row</strong> сверху страницы, <strong>v4-grid (1.6+1)</strong> для основного контента, <strong>bento (12-col)</strong> только когда требуется асимметрия. Один grid на одну зону, не миксовать.
+      </div>
+
+      <h3 className="sg-sub">Table / list</h3>
+      <div className="sg-variants">
+        <div className="sg-variant" style={{ gridColumn: "1 / -1" }}>
+          <div className="sg-variant-label">КАНОН</div>
+          <div className="sg-variant-name">Mono-uppercase headers, hover surface-2</div>
+          <div className="sg-variant-desc">
+            Сейчас Quality / Pipeline / Audit имеют каждый свою таблицу. Канон — общий шаблон ниже.
+          </div>
+          <div className="sg-variant-stage" style={{ padding: 0, background: "transparent", alignItems: "stretch" }}>
+            <table className="sg-table">
+              <thead>
+                <tr>
+                  <th>Project</th>
+                  <th>Status</th>
+                  <th>Open</th>
+                  <th>Progress</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>Sewing-ERP</td><td><span className="sg-badge success">dev</span></td><td>82</td><td>88%</td></tr>
+                <tr><td>mankassa-app</td><td><span className="sg-badge success">dev</span></td><td>74</td><td>92%</td></tr>
+                <tr><td>moliyakg</td><td><span className="sg-badge info">dev</span></td><td>85</td><td>93%</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   STATE PATTERNS
+   ══════════════════════════════════════════════════════════ */
+
+function StateSection() {
+  return (
+    <section id="states" className="sg-section">
+      <header className="sg-section-head">
+        <h2>State patterns</h2>
+        <p>Что показываем когда данных нет, пришла ошибка, идёт загрузка, токен не введён. Сейчас все вкладки делают это по-своему — здесь единый набор.</p>
+      </header>
+
+      <h3 className="sg-sub">Loading</h3>
+      <div className="sg-variants">
+        <div className="sg-variant">
+          <div className="sg-variant-label">SKELETON</div>
+          <div className="sg-variant-name">Для известной структуры</div>
+          <div className="sg-variant-desc">Когда мы знаем форму данных (карточка, строка таблицы), показываем placeholder с shimmer-анимацией.</div>
+          <div className="sg-variant-stage" style={{ padding: 16 }}>
+            <div className="sg-skeleton-stack">
+              <div className="sg-skeleton sg-skeleton-row" />
+              <div className="sg-skeleton sg-skeleton-row medium" />
+              <div className="sg-skeleton sg-skeleton-row short" />
+            </div>
+          </div>
+        </div>
+        <div className="sg-variant">
+          <div className="sg-variant-label">SPINNER</div>
+          <div className="sg-variant-name">Для inline-действий</div>
+          <div className="sg-variant-desc">Pulse-dots в primary-цвете. Для refresh-кнопок, mini-actions внутри карточки.</div>
+          <div className="sg-variant-stage">
+            <div className="sg-spinner"><span /><span /><span /></div>
+          </div>
+        </div>
+        <div className="sg-variant">
+          <div className="sg-variant-label">BRANDED LOADER</div>
+          <div className="sg-variant-name">Cold-start full-screen</div>
+          <div className="sg-variant-desc">Только при первой загрузке приложения. MakeIT wordmark + stage label («Подтягиваем…»).</div>
+          <div className="sg-variant-stage" style={{ flexDirection: "column", gap: 4 }}>
+            <div className="sg-typewriter">MakeIT</div>
+            <div className="sg-typewriter-label">Подтягиваем данные…</div>
+          </div>
+        </div>
+      </div>
+      <div className="sg-note">
+        Канон: skeleton — для предсказуемых списков и карточек; spinner — для inline-actions и refresh; branded loader — <strong>только</strong> для cold-start (первый mount), не для последующих refresh.
+      </div>
+
+      <h3 className="sg-sub">Empty</h3>
+      <div className="sg-variants">
+        <div className="sg-variant">
+          <div className="sg-variant-label">EMPTY STATE</div>
+          <div className="sg-variant-name">Нет данных</div>
+          <div className="sg-variant-desc">Иконка в surface-3 круге + краткое описание + опциональный CTA.</div>
+          <div className="sg-variant-stage">
+            <div className="sg-state-card" style={{ width: "100%" }}>
+              <div className="sg-empty-icon">∅</div>
+              <div className="sg-empty-title">Нет данных</div>
+              <div className="sg-empty-desc">По текущему фильтру ничего не найдено. Попробуйте сменить период или сбросить фильтр.</div>
+              <button className="sg-btn-new" style={{ marginTop: 6 }}>Сбросить</button>
+            </div>
+          </div>
+        </div>
+        <div className="sg-variant">
+          <div className="sg-variant-label">BACKEND NOT DEPLOYED</div>
+          <div className="sg-variant-name">«Не настроено»</div>
+          <div className="sg-variant-desc">Когда подсистема существует, но backend не развёрнут (Quality на свежем VPS). Без агрессивной ошибки — мягко.</div>
+          <div className="sg-variant-stage">
+            <div className="sg-state-card" style={{ width: "100%" }}>
+              <div className="sg-empty-icon" style={{ background: "var(--mk-brand-50)", color: "var(--mk-brand-700)" }}>⚙</div>
+              <div className="sg-empty-title">Quality backend ещё не развёрнут</div>
+              <div className="sg-empty-desc">Чтобы видеть метрики качества кода, разверните makeit-quality-api на VPS и пропишите URL в config.js.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 className="sg-sub">Error</h3>
+      <div className="sg-variants">
+        <div className="sg-variant" style={{ gridColumn: "1 / -1" }}>
+          <div className="sg-variant-label">API ERROR — КАНОН</div>
+          <div className="sg-variant-name">Краткое описание + retry CTA</div>
+          <div className="sg-variant-desc">Красный border-left, danger-soft фон, иконка «!» в круге, заголовок + причина + кнопка retry. Inline (не модал).</div>
+          <div className="sg-variant-stage" style={{ padding: 0, background: "transparent", alignItems: "stretch" }}>
+            <div className="sg-error" style={{ width: "100%" }}>
+              <div className="sg-error-icon">!</div>
+              <div className="sg-error-body">
+                <strong>Не удалось загрузить данные.</strong><br />
+                GitHub API вернул 502. Возможно, временный сбой. Попробуйте обновить через минуту.
+                <div className="sg-error-actions">
+                  <button className="sg-btn-new primary" style={{ height: 30 }}>Повторить</button>
+                  <button className="sg-btn-new" style={{ height: 30 }}>Скрыть</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 className="sg-sub">Stale data</h3>
+      <div className="sg-variants">
+        <div className="sg-variant" style={{ gridColumn: "1 / -1" }}>
+          <div className="sg-variant-label">КАНОН</div>
+          <div className="sg-variant-name">Warning banner с временем</div>
+          <div className="sg-variant-desc">Если данные не обновлялись &gt;5 минут — показать warning. Mono time-stamp + CTA.</div>
+          <div className="sg-variant-stage" style={{ padding: 0, background: "transparent", alignItems: "stretch" }}>
+            <div className="sg-stale" style={{ width: "100%" }}>
+              <span className="sg-stale-icon">⚠</span>
+              <span>Данные устарели — последнее обновление</span>
+              <span className="time">38 мин назад</span>
+              <span style={{ flex: 1 }} />
+              <button className="sg-btn-new" style={{ height: 28, fontSize: 12 }}>Обновить</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 className="sg-sub">No token / unauthorized</h3>
+      <div className="sg-variants">
+        <div className="sg-variant" style={{ gridColumn: "1 / -1" }}>
+          <div className="sg-variant-label">PASSWORD GATE / TOKEN FORM</div>
+          <div className="sg-variant-name">Минимальная форма входа</div>
+          <div className="sg-variant-desc">Centered card с title + description + input + primary button. Без navigation, без sidebar.</div>
+          <div className="sg-variant-stage" style={{ background: "var(--mk-bg)" }}>
+            <div className="sg-gate">
+              <div className="sg-gate-title">MakeIT Dashboard</div>
+              <div className="sg-gate-desc">Введите пароль для доступа</div>
+              <input className="sg-input" placeholder="Пароль" type="password" style={{ marginBottom: 10 }} />
+              <button className="sg-btn-new primary" style={{ width: "100%" }}>Войти</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   DATA VISUALIZATION
+   ══════════════════════════════════════════════════════════ */
+
+function DataVizSection() {
+  return (
+    <section id="dataviz" className="sg-section">
+      <header className="sg-section-head">
+        <h2>Data visualization</h2>
+        <p>Цветовая семантика данных, единый стиль графиков, heatmap, прогресс-баров и severity-шкал.</p>
+      </header>
+
+      <h3 className="sg-sub">Line chart (KPI sparkline)</h3>
+      <div className="sg-variants">
+        <div className="sg-variant">
+          <div className="sg-variant-label">КАНОН</div>
+          <div className="sg-variant-name">Velocity / closed issues</div>
+          <div className="sg-variant-desc">Кастомный SVG, success-зелёная линия 2px, lightly filled area, нет осей и grid (sparkline-стиль).</div>
+          <div className="sg-variant-stage" style={{ padding: 0, background: "transparent", alignItems: "stretch" }}>
+            <div className="sg-viz-card" style={{ width: "100%" }}>
+              <div className="sg-viz-title">VELOCITY · 7 дней</div>
+              <div className="sg-viz-value">61.6 <span style={{ fontSize: 13, color: "var(--mk-ink-500)", fontWeight: 500 }}>issue/день</span></div>
+              <div className="sg-line">
+                <svg viewBox="0 0 200 60" preserveAspectRatio="none">
+                  <path d="M0,40 L20,32 L40,38 L60,22 L80,28 L100,16 L120,22 L140,10 L160,18 L180,8 L200,12"
+                    fill="none" stroke="var(--mk-success)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M0,40 L20,32 L40,38 L60,22 L80,28 L100,16 L120,22 L140,10 L160,18 L180,8 L200,12 L200,60 L0,60 Z"
+                    fill="var(--mk-success)" opacity="0.1" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="sg-variant">
+          <div className="sg-variant-label">КАНОН</div>
+          <div className="sg-variant-name">Bar chart (closed 30d)</div>
+          <div className="sg-variant-desc">Brand-blue столбцы + ма-trend линия в success. Hover-tooltip с mono labels.</div>
+          <div className="sg-variant-stage" style={{ padding: 0, background: "transparent", alignItems: "stretch" }}>
+            <div className="sg-viz-card" style={{ width: "100%" }}>
+              <div className="sg-viz-title">ЗАКРЫТО · 30 дней</div>
+              <div className="sg-line">
+                <svg viewBox="0 0 300 80" preserveAspectRatio="none">
+                  {[20, 14, 28, 22, 35, 18, 30, 25, 38, 30, 42, 28, 36, 48, 32, 40, 50, 38, 44, 55, 40, 48, 60, 45, 52, 58, 50, 55, 62, 50].map((h, i) => (
+                    <rect key={i} x={i * 10} y={80 - h} width={7} height={h} fill="var(--mk-brand-500)" opacity={0.85} />
+                  ))}
+                  <path d="M3,55 Q50,50 100,42 T200,28 T297,20" fill="none" stroke="var(--mk-success)" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 className="sg-sub">Heatmap (commit activity)</h3>
+      <div className="sg-variants">
+        <div className="sg-variant">
+          <div className="sg-variant-label">5 ступеней</div>
+          <div className="sg-variant-name">Brand-blue scale</div>
+          <div className="sg-variant-desc">
+            0 коммитов — surface-3 (нейтральный фон), 1+ — 4 ступени из <code>--mk-heat-1..4</code>. 10×10px ячейки, pop-in animation 380ms.
+          </div>
+          <div className="sg-variant-stage" style={{ padding: 0, background: "transparent", alignItems: "stretch" }}>
+            <div style={{ width: "100%" }}>
+              <div className="sg-heat" style={{ marginBottom: 12 }}>
+                {Array.from({ length: 84 }).map((_, i) => {
+                  const intensities = [0, 0, 1, 0, 2, 3, 4, 0, 1, 2, 0, 0];
+                  const intensity = (i * 7 + Math.floor(i / 12)) % 5;
+                  const tones = ["var(--mk-surface-3)", "var(--mk-heat-1)", "var(--mk-heat-2)", "var(--mk-heat-3)", "var(--mk-heat-4)"];
+                  return <div key={i} className="cell" style={{ background: tones[intensity] }} />;
+                })}
+              </div>
+              <div className="sg-heat-legend">
+                <span>меньше</span>
+                <div className="lcell" style={{ background: "var(--mk-surface-3)" }} />
+                <div className="lcell" style={{ background: "var(--mk-heat-1)" }} />
+                <div className="lcell" style={{ background: "var(--mk-heat-2)" }} />
+                <div className="lcell" style={{ background: "var(--mk-heat-3)" }} />
+                <div className="lcell" style={{ background: "var(--mk-heat-4)" }} />
+                <span>больше</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="sg-variant">
+          <div className="sg-variant-label">ЗАМЕЧАНИЕ</div>
+          <div className="sg-variant-name">Альтернатива GitHub-style green</div>
+          <div className="sg-variant-desc">
+            Текущий проект использует brand-blue для heatmap. GitHub-style зелёная шкала ниже — для сравнения. Можно сохранить blue (отличается от bare GitHub clone) или вернуть green.
+          </div>
+          <div className="sg-variant-stage" style={{ padding: 0, background: "transparent", alignItems: "stretch" }}>
+            <div style={{ width: "100%" }}>
+              <div className="sg-heat" style={{ marginBottom: 12 }}>
+                {Array.from({ length: 84 }).map((_, i) => {
+                  const intensity = (i * 7 + Math.floor(i / 12)) % 5;
+                  const tones = ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"];
+                  return <div key={i} className="cell" style={{ background: tones[intensity] }} />;
+                })}
+              </div>
+              <div className="sg-heat-legend"><span>GitHub-style green (для сравнения)</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 className="sg-sub">Progress bars</h3>
+      <div className="sg-variants">
+        <div className="sg-variant">
+          <div className="sg-variant-label">КАНОН</div>
+          <div className="sg-variant-name">Single fill — прогресс задач</div>
+          <div className="sg-variant-desc">Height 6px, radius-full, surface-3 track, success-fill. Easing 700ms cubic-out.</div>
+          <div className="sg-variant-stage" style={{ padding: 0, background: "transparent", alignItems: "stretch" }}>
+            <div style={{ width: "100%" }}>
+              <div className="sg-progress-row">
+                <span className="lbl">Sewing-ERP</span>
+                <div className="sg-progress"><div className="fill" style={{ width: "88%" }} /></div>
+                <span className="pct">611/693</span>
+              </div>
+              <div className="sg-progress-row">
+                <span className="lbl">mankassa</span>
+                <div className="sg-progress"><div className="fill" style={{ width: "92%" }} /></div>
+                <span className="pct">811/885</span>
+              </div>
+              <div className="sg-progress-row">
+                <span className="lbl">moliyakg</span>
+                <div className="sg-progress"><div className="fill" style={{ width: "93%" }} /></div>
+                <span className="pct">1104/1189</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="sg-variant">
+          <div className="sg-variant-label">STACKED</div>
+          <div className="sg-variant-name">Paid / unpaid (budget)</div>
+          <div className="sg-variant-desc">Height 10px, radius-sm. Paid (success) + unpaid (surface-3). Подпись слева/справа.</div>
+          <div className="sg-variant-stage" style={{ padding: 0, background: "transparent", alignItems: "stretch" }}>
+            <div style={{ width: "100%" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--mk-ink-500)", fontFamily: "var(--mk-font-mono)", marginBottom: 6 }}>
+                <span>Оплачено $30.6k</span>
+                <span>Остаток $16k</span>
+              </div>
+              <div className="sg-progress-stack">
+                <div className="paid" style={{ width: "66%" }} />
+                <div className="unpaid" style={{ width: "34%" }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 className="sg-sub">Severity scales (priority vs severity)</h3>
+      <div className="sg-variants">
+        <div className="sg-variant">
+          <div className="sg-variant-label">PRIORITY (portfolio tasks)</div>
+          <div className="sg-variant-name">P1 / P2 / P3 / P4</div>
+          <div className="sg-variant-desc">Для задач в портфеле. P3 = normal (синий), P4 = low (серый).</div>
+          <div className="sg-variant-stage" style={{ padding: 0, background: "transparent", alignItems: "stretch" }}>
+            <div className="sg-sev-legend">
+              <div className="sg-sev-row"><span className="sg-sev-dot" style={{ background: "var(--mk-priority-p1)" }} /><span className="sg-sev-name">P1 · critical</span><span className="sg-sev-token">--mk-priority-p1</span></div>
+              <div className="sg-sev-row"><span className="sg-sev-dot" style={{ background: "var(--mk-priority-p2)" }} /><span className="sg-sev-name">P2 · high</span><span className="sg-sev-token">--mk-priority-p2</span></div>
+              <div className="sg-sev-row"><span className="sg-sev-dot" style={{ background: "var(--mk-priority-p3)" }} /><span className="sg-sev-name">P3 · normal</span><span className="sg-sev-token">--mk-priority-p3</span></div>
+              <div className="sg-sev-row"><span className="sg-sev-dot" style={{ background: "var(--mk-priority-p4)" }} /><span className="sg-sev-name">P4 · low</span><span className="sg-sev-token">--mk-priority-p4</span></div>
+            </div>
+          </div>
+        </div>
+        <div className="sg-variant">
+          <div className="sg-variant-label">SEVERITY (code quality)</div>
+          <div className="sg-variant-name">CRIT / HIGH / MED / LOW</div>
+          <div className="sg-variant-desc">Для Quality и Audit findings. Чёткая шкала угрозы — красный → жёлтый.</div>
+          <div className="sg-variant-stage" style={{ padding: 0, background: "transparent", alignItems: "stretch" }}>
+            <div className="sg-sev-legend">
+              <div className="sg-sev-row"><span className="sg-sev-dot" style={{ background: "var(--mk-severity-critical)" }} /><span className="sg-sev-name">CRITICAL</span><span className="sg-sev-token">--mk-severity-critical</span></div>
+              <div className="sg-sev-row"><span className="sg-sev-dot" style={{ background: "var(--mk-severity-high)" }} /><span className="sg-sev-name">HIGH</span><span className="sg-sev-token">--mk-severity-high</span></div>
+              <div className="sg-sev-row"><span className="sg-sev-dot" style={{ background: "var(--mk-severity-medium)" }} /><span className="sg-sev-name">MEDIUM</span><span className="sg-sev-token">--mk-severity-medium</span></div>
+              <div className="sg-sev-row"><span className="sg-sev-dot" style={{ background: "var(--mk-severity-low)" }} /><span className="sg-sev-name">LOW</span><span className="sg-sev-token">--mk-severity-low</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="sg-note">
+        Канон: <strong>priority</strong> и <strong>severity</strong> — разные шкалы с разными переменными. Не смешивать. P3 (синий) ≠ severity-low (тоже синий, но другой контекст). Эта пара уже разнесена в tokens.css.
+      </div>
+
+      <h3 className="sg-sub">Repo colors</h3>
+      <div className="sg-policy">
+        <strong>Gap:</strong> сейчас в проекте <strong>нет</strong> единой схемы цвета per репозиторий. Все репо в heatmap и графиках используют общий brand-blue. Если хочешь, чтобы один и тот же репо был узнаваем во всех представлениях (sewing-ERP всегда красный, mankassa всегда фиолетовый и т.д.) — это <strong>отдельный architectural decision</strong>: вводим mapping <code>repo → mk-token</code> в <code>config.ts</code>.<br /><br />
+        <strong>Альтернатива:</strong> оставить как есть — цвет несёт семантику (success/danger/priority), а не identity. Это проще, и для дашборда уровня «портфель из 12 проектов» избыточная identity-палитра скорее шумит.
+      </div>
+    </section>
+  );
+}
+
 export function StyleguideApp() {
   useEffect(() => {
     document.title = "MakeIT — Styleguide";
@@ -549,6 +1104,9 @@ export function StyleguideApp() {
           <a href="#shadows">Shadows</a>
           <a href="#motion">Motion</a>
           <a href="#components">Компоненты</a>
+          <a href="#layout">Layout</a>
+          <a href="#states">States</a>
+          <a href="#dataviz">Data viz</a>
         </nav>
       </aside>
       <main className="sg-main">
@@ -563,6 +1121,9 @@ export function StyleguideApp() {
         <ShadowsSection />
         <MotionSection />
         <ComponentsSection />
+        <LayoutSection />
+        <StateSection />
+        <DataVizSection />
       </main>
     </div>
   );

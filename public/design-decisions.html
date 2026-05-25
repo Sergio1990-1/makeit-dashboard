@@ -523,9 +523,10 @@
     <h1>MakeIT Dashboard — Design Decisions</h1>
     <p>Сводка по 10 решениям для дизайн-системы. В каждом блоке три колонки: <strong>«Сейчас»</strong> (текущее состояние в проекте), <strong>«Claude»</strong> (моя рекомендация), <strong>«Codex»</strong> (рекомендация Codex). Зелёная плашка = согласие, оранжевая = расхождение.</p>
     <div class="hero-meta">
-      <span><strong>Состояние:</strong> main · коммиты e404223 + 0e3d9a2</span>
+      <span><strong>Состояние:</strong> main · сессии A+B+C завершены</span>
       <span><strong>Базис:</strong> v4-light · single tokens.css · bridge для legacy</span>
-      <span><strong>Просмотр:</strong> file:// или Pages</span>
+      <span><strong>Решений:</strong> 10 базовых + 8 после расширения scope</span>
+      <span><strong>Просмотр:</strong> /makeit-dashboard/design-decisions.html</span>
     </div>
   </header>
 
@@ -534,7 +535,7 @@
   </div>
 
   <div class="toc">
-    <h3>Содержание</h3>
+    <h3>Содержание · базовые токены и компоненты</h3>
     <ol>
       <li><span class="verdict-dot match"></span><a href="#d1">1. Кнопки</a></li>
       <li><span class="verdict-dot match"></span><a href="#d2">2. Tabs</a></li>
@@ -546,7 +547,17 @@
       <li><span class="verdict-dot match"></span><a href="#d8">8. Spacing scale</a></li>
       <li><span class="verdict-dot match"></span><a href="#d9">9. Base font size</a></li>
       <li><span class="verdict-dot diff"></span><a href="#d10">10. Motion durations</a></li>
-      <li><span class="verdict-dot diff"></span><a href="#scope">Scope styleguide (Codex: расширить)</a></li>
+    </ol>
+    <h3 style="margin-top:14px;">Содержание · Layout / State / Data viz (сессия C)</h3>
+    <ol start="11">
+      <li><span class="verdict-dot match"></span><a href="#d11">11. Sidebar nav indicators (семантика)</a></li>
+      <li><span class="verdict-dot match"></span><a href="#d12">12. Grid roles (KPI / v4-grid / bento)</a></li>
+      <li><span class="verdict-dot match"></span><a href="#d13">13. Page header pattern</a></li>
+      <li><span class="verdict-dot match"></span><a href="#d14">14. Loading variants (skeleton/spinner/branded)</a></li>
+      <li><span class="verdict-dot match"></span><a href="#d15">15. Error pattern (inline)</a></li>
+      <li><span class="verdict-dot match"></span><a href="#d16">16. Stale data threshold</a></li>
+      <li><span class="verdict-dot diff"></span><a href="#d17">17. Heatmap palette (blue vs green)</a></li>
+      <li><span class="verdict-dot diff"></span><a href="#d18">18. Repo color identity</a></li>
     </ol>
   </div>
 
@@ -927,59 +938,330 @@
     </div>
   </article>
 
-  <!-- SCOPE EXPANSION -->
-  <article class="codex-additions" id="scope">
-    <h2>Дополнительный пункт от Codex — расширить scope styleguide</h2>
-    <p>Codex считает, что нынешний styleguide <strong>слишком сфокусирован на токенах и отдельных компонентах</strong>, и предлагает добавить ещё 3 слоя <em>до</em> начала миграции:</p>
-    <div class="add-grid">
-      <div class="add-block">
-        <h3>Layout patterns</h3>
-        <ul>
-          <li>App shell</li>
-          <li>Sidebar</li>
-          <li>Topbar</li>
-          <li>Page header</li>
-          <li>Toolbar</li>
-          <li>Grid (bento, projects)</li>
-          <li>Table / list</li>
-        </ul>
-        <p class="note">Стандартизация структурных контейнеров — чтобы все вкладки имели одинаковый каркас.</p>
+  <!-- ═══════════════════════════════════════════════════════════
+       LAYER 1 — LAYOUT PATTERNS
+       ═══════════════════════════════════════════════════════════ -->
+  <h2 class="section-title" id="layer-layout">Layer 1 · Layout patterns</h2>
+
+  <!-- D11 SIDEBAR NAV INDICATORS -->
+  <article class="decision" id="d11">
+    <header>
+      <h3><span class="num">11</span> Sidebar nav indicators</h3>
+      <span class="verdict verdict--match">CANON → 4 семантические роли</span>
+    </header>
+    <p class="desc">В коде сейчас 3 параллельных класса для счётчиков рядом с пунктами nav. Нужна единая семантика — что показывает <em>цифра</em>, что <em>срочное действие</em>, что <em>предупреждение</em>, что <em>live indicator</em>.</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>3 класса параллельно</h4></header>
+        <div class="demo" style="flex-direction: column; gap: 6px;">
+          <span style="font-family: var(--mk-font-mono); font-size: 11px; color: var(--mk-ink-600);">.v4-nav-count · neutral</span>
+          <span style="font-family: var(--mk-font-mono); font-size: 11px; color: var(--mk-ink-600);">.v4-nav-badge · red</span>
+          <span style="font-family: var(--mk-font-mono); font-size: 11px; color: var(--mk-ink-600);">.sidebar-badge · orange</span>
+          <span style="font-family: var(--mk-font-mono); font-size: 11px; color: var(--mk-ink-600);">.v4-nav-pulse · 6px dot</span>
+        </div>
+        <p class="reason">Без правила — выбор зависит от настроения автора. Например count «12 issues» = neutral, но «новый алёрт» = red. Этой логики нигде не зафиксировано.</p>
       </div>
-      <div class="add-block">
-        <h3>State patterns</h3>
-        <ul>
-          <li>Loading (skeleton, spinner)</li>
-          <li>Empty state</li>
-          <li>Partial data</li>
-          <li>API error</li>
-          <li>No token (PasswordGate)</li>
-          <li>Stale data</li>
-        </ul>
-        <p class="note">Унификация UX-состояний — сейчас они стилизованы вразнобой по вкладкам.</p>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>4 роли с семантикой</h4></header>
+        <div class="demo" style="flex-direction: column; gap: 6px; align-items: flex-start; font-size: 12px;">
+          <div><span class="bd-pill" style="background:var(--mk-surface-3);color:var(--mk-ink-600);">12</span> &nbsp; <span style="color:var(--mk-ink-600);">count — информативное</span></div>
+          <div><span class="bd-pill bd-danger">2</span> &nbsp; <span style="color:var(--mk-ink-600);">danger — срочное</span></div>
+          <div><span class="bd-pill bd-warn">!</span> &nbsp; <span style="color:var(--mk-ink-600);">warn — внимание</span></div>
+          <div><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--mk-success);"></span> &nbsp; <span style="color:var(--mk-ink-600);">pulse — live / new</span></div>
+        </div>
+        <p class="reason">Каждый тип используется только в своей роли. Цвет показывает срочность, форма — характер (число vs символ vs точка).</p>
       </div>
-      <div class="add-block">
-        <h3>Data visualization</h3>
-        <ul>
-          <li>Charts (line, bar)</li>
-          <li>Heatmap (commit calendar)</li>
-          <li>Progress bars</li>
-          <li>Severity scales</li>
-          <li>Repo colors</li>
-        </ul>
-        <p class="note">Семантика цвета в данных — что значит «красный» в графике vs в бейдже.</p>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>Семантические роли</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
+        </div>
+        <p class="reason">Codex явно одобрил «pill badges для статусов, square для priority/severity» в исходном brief — та же логика применяется к nav indicators.</p>
       </div>
     </div>
-    <div class="claude-take">
-      <strong>Claude по этому пункту:</strong> Codex прав по сути — без этих слоёв миграция оставит «дырки». Но я бы не запихивал их в сессию B (она уже большая). Предлагаю выделить как <strong>сессию C — Extended styleguide</strong>, и параллельно стартовать <strong>сессию D — token unification</strong> (резать legacy-слоты из tokens.css, добавить <code>.mk-btn</code>/<code>.mk-tab</code>/<code>.mk-card</code> по утверждённым вариантам). Эти две сессии не конфликтуют друг с другом по файлам.
+  </article>
+
+  <!-- D12 GRID ROLES -->
+  <article class="decision" id="d12">
+    <header>
+      <h3><span class="num">12</span> Grid roles (KPI / v4-grid / bento)</h3>
+      <span class="verdict verdict--match">CANON → семантические зоны</span>
+    </header>
+    <p class="desc">В проекте 3 grid-системы используются вперемешку. Канон — фиксируем что куда.</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>3 grid без правил</h4></header>
+        <div class="demo" style="font-size: 11.5px; color: var(--mk-ink-600); text-align: left; line-height: 1.6;">
+          .v4-grid (1.6fr + 1fr)<br>
+          .v4-kpi-row (4×1fr)<br>
+          .bento-grid (12-col spans)<br>
+          .projects-grid (auto-fit)<br>
+        </div>
+        <p class="reason">Один и тот же экран может использовать KPI-row вверху + bento снизу. Иногда вместо bento — projects-grid. Несогласованно.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>3 роли</h4></header>
+        <div class="demo" style="font-size: 12px; color: var(--mk-ink-700); text-align: left; line-height: 1.65;">
+          <strong>KPI-row (4×1fr)</strong> — top-метрики страницы<br>
+          <strong>v4-grid (1.6+1)</strong> — main + aside<br>
+          <strong>bento (12-col)</strong> — для асимметрии 8+4<br>
+        </div>
+        <p class="reason">Один grid на одну зону, не миксовать в пределах одной зоны. KPI-row только сверху страницы. bento — только когда нужна асимметрия.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>Тоже семантика</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
+        </div>
+        <p class="reason">Codex запросил «стандартизацию структурных контейнеров — чтобы все вкладки имели одинаковый каркас». Эта семантика и решает задачу.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- D13 PAGE HEADER PATTERN -->
+  <article class="decision" id="d13">
+    <header>
+      <h3><span class="num">13</span> Page header pattern</h3>
+      <span class="verdict verdict--match">CANON → title + meta + actions</span>
+    </header>
+    <p class="desc">У Dashboard, Quality, Audit, Pipeline сейчас разный layout заголовка страницы. Канон — фиксируем единый.</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>Расходится по вкладкам</h4></header>
+        <div class="demo" style="font-size: 11.5px; color: var(--mk-ink-600); text-align: left; line-height: 1.6;">
+          Dashboard: title + filter chips + button<br>
+          Quality: title + tabs<br>
+          Audit: title + meta inline<br>
+          Pipeline: title only<br>
+        </div>
+        <p class="reason">Юзер каждый раз сканирует страницу заново. Нет «верхней зоны» где всегда title + что-то под ним + actions справа.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>Title 22px + meta 12px + actions справа</h4></header>
+        <div class="demo" style="padding: 0; background: transparent; flex-direction: column; gap: 4px; align-items: flex-start;">
+          <div style="font-size: 18px; font-weight: 700; color: var(--mk-ink-900); letter-spacing: -0.025em;">Заголовок страницы</div>
+          <div style="font-size: 11px; color: var(--mk-ink-500);">12 элементов · обновлено 11:13</div>
+        </div>
+        <p class="reason">Title и meta — слева, actions (filter toolbar + primary CTA) — справа в той же строке. Сразу под — основной контент.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>В списке Layout patterns</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
+        </div>
+        <p class="reason">Codex упомянул «page header» в перечне нужных Layout-патернов. Конкретный вариант одобряется по умолчанию.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LAYER 2 — STATE PATTERNS
+       ═══════════════════════════════════════════════════════════ -->
+  <h2 class="section-title" id="layer-states">Layer 2 · State patterns</h2>
+
+  <!-- D14 LOADING VARIANTS -->
+  <article class="decision" id="d14">
+    <header>
+      <h3><span class="num">14</span> Loading variants — когда какой</h3>
+      <span class="verdict verdict--match">CANON → 3 типа по контексту</span>
+    </header>
+    <p class="desc">Skeleton vs spinner vs branded loader — где какой применять.</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>BrandedLoader на refresh</h4></header>
+        <div class="demo" style="font-size: 11.5px; color: var(--mk-ink-600); text-align: left; line-height: 1.6;">
+          Cold-start → BrandedLoader (full-screen matrix)<br>
+          Refresh → опять BrandedLoader (повторно показывают)<br>
+          Skeleton-ы используются в AI Insights<br>
+        </div>
+        <p class="reason">BrandedLoader включается даже на ручной refresh — это раздражает: только что видел данные, теперь снова матрица на 5 секунд. Skeleton редко.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>Skeleton / Spinner / Branded — по контексту</h4></header>
+        <div class="demo" style="font-size: 12px; color: var(--mk-ink-700); text-align: left; line-height: 1.65;">
+          <strong>Skeleton</strong> — для списков и карточек (известная форма)<br>
+          <strong>Spinner (pulse-dots)</strong> — для refresh / inline actions<br>
+          <strong>Branded</strong> — <em>только</em> cold-start (первый mount)<br>
+        </div>
+        <p class="reason">Branded красивый — но дорогой по вниманию. Использовать редко. Refresh уже виденного контента — spinner или вообще ничего (warm-update).</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>3 варианта в перечне</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
+        </div>
+        <p class="reason">Codex перечислил «Loading (skeleton, spinner)» — а branded подразумевается. Семантика разнесения одобрена.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- D15 ERROR PATTERN -->
+  <article class="decision" id="d15">
+    <header>
+      <h3><span class="num">15</span> Error pattern — inline vs модал</h3>
+      <span class="verdict verdict--match">CANON → inline error</span>
+    </header>
+    <p class="desc">Когда API упал или загрузка не удалась — где показывать ошибку.</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>Кто как</h4></header>
+        <div class="demo" style="font-size: 11.5px; color: var(--mk-ink-600); text-align: left; line-height: 1.6;">
+          ErrorBoundary — dashed red border<br>
+          useDashboard — отдельный baner вверху<br>
+          ChatPanel — модал?<br>
+          Audit — inline red text без structure<br>
+        </div>
+        <p class="reason">Юзер не знает где искать ошибки. Когда что-то сломалось — неясно «это локальная проблема одного блока или вся вкладка не работает».</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>Inline error в зоне</h4></header>
+        <div class="demo" style="padding: 0; background: transparent;">
+          <div class="sg-error-soft" style="background: var(--mk-danger-soft); border-left: 3px solid var(--mk-danger); padding: 10px 14px; border-radius: 6px; font-size: 12px; color: var(--mk-ink-800);">
+            <strong style="color: var(--mk-danger-strong);">Не удалось загрузить данные.</strong><br>
+            <span style="color: var(--mk-ink-600);">GitHub API вернул 502 · </span><a href="#" style="color: var(--mk-brand-500);">Повторить</a>
+          </div>
+        </div>
+        <p class="reason">Ошибка показывается в той зоне, которая сломалась. Не модал (модал = всё работает, но один диалог). Не toast (toast = мимолётная нотификация).</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>В перечне State patterns</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
+        </div>
+        <p class="reason">Codex упомянул «API error» как требующий унификации. Inline-вариант с retry — стандартный паттерн для дашбордов.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- D16 STALE DATA -->
+  <article class="decision" id="d16">
+    <header>
+      <h3><span class="num">16</span> Stale data threshold</h3>
+      <span class="verdict verdict--match">CANON → 5 минут</span>
+    </header>
+    <p class="desc">Сколько должно пройти, прежде чем показывать предупреждение «данные устарели».</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>Только timestamp</h4></header>
+        <div class="demo" style="font-size: 11.5px; color: var(--mk-ink-600); text-align: left; line-height: 1.6;">
+          Везде показано «обновлено N мин назад» — но без визуального предупреждения. Юзер сам должен заметить «о, час назад» и обновить.
+        </div>
+        <p class="reason">Stale без warning = юзер принимает решения по устаревшим данным.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>5 минут → warning banner</h4></header>
+        <div class="demo" style="padding: 0; background: transparent;">
+          <div style="background: var(--mk-warn-soft); border-left: 3px solid var(--mk-warn); padding: 10px 14px; border-radius: 6px; font-size: 12px; color: var(--mk-ink-800); display: flex; gap: 8px; align-items: center;">
+            <span style="color: var(--mk-warn-strong);">⚠</span>
+            <span>Данные устарели —</span>
+            <span style="font-family: var(--mk-font-mono); color: var(--mk-warn-strong);">38 мин назад</span>
+          </div>
+        </div>
+        <p class="reason">Под 5 минут — обычный «обновлено X назад». Над 5 — warning. Над 30 — error-tone. Конкретные пороги можно подкрутить под потребности.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>В перечне</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
+        </div>
+        <p class="reason">«Stale data» в списке требуемых patterns. Конкретный threshold — детализация.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LAYER 3 — DATA VISUALIZATION
+       ═══════════════════════════════════════════════════════════ -->
+  <h2 class="section-title" id="layer-dataviz">Layer 3 · Data visualization</h2>
+
+  <!-- D17 HEATMAP PALETTE -->
+  <article class="decision" id="d17">
+    <header>
+      <h3><span class="num">17</span> Heatmap palette</h3>
+      <span class="verdict verdict--diff">РАСХОЖДЕНИЕ — нужен выбор</span>
+    </header>
+    <p class="desc">Какой палитрой раскрашивать commit-heatmap (intensity 0..4 ступеней).</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>Brand-blue scale</h4></header>
+        <div class="demo" style="padding: 12px; background: transparent;">
+          <div style="display: grid; grid-template-columns: repeat(8, 14px); gap: 3px;">
+            <div style="aspect-ratio: 1; background: var(--mk-surface-3); border-radius: 2px;"></div>
+            <div style="aspect-ratio: 1; background: var(--mk-brand-100); border-radius: 2px;"></div>
+            <div style="aspect-ratio: 1; background: #92B0F5; border-radius: 2px;"></div>
+            <div style="aspect-ratio: 1; background: #3F73E8; border-radius: 2px;"></div>
+            <div style="aspect-ratio: 1; background: var(--mk-brand-700); border-radius: 2px;"></div>
+            <div style="aspect-ratio: 1; background: var(--mk-surface-3); border-radius: 2px;"></div>
+            <div style="aspect-ratio: 1; background: var(--mk-brand-100); border-radius: 2px;"></div>
+            <div style="aspect-ratio: 1; background: var(--mk-brand-700); border-radius: 2px;"></div>
+          </div>
+        </div>
+        <p class="reason">Текущая heatmap в проекте. <code class="inline">--mk-heat-1..4</code> = blue scale + surface-3 для пустых.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>Оставить brand-blue</h4></header>
+        <div class="demo" style="padding: 12px; background: transparent; flex-direction: column; gap: 8px;">
+          <div style="font-size: 12px; color: var(--mk-ink-700);">Heatmap = производный signal от brand. Не нужно изобретать вторую палитру.</div>
+        </div>
+        <p class="reason">Зелёная шкала — GitHub-узнаваемый штамп, но это «общественная» эстетика. Blue делает heatmap частью идентичности дашборда.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>Не комментировал</h4></header>
+        <div class="demo" style="background: var(--mk-warn-soft);">
+          <span style="font: 600 16px var(--mk-font-mono); color: var(--mk-warn-strong);">? нужен ответ</span>
+        </div>
+        <p class="reason">Стоит спросить отдельно. Альтернатива в /styleguide показана для сравнения.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- D18 REPO COLOR IDENTITY -->
+  <article class="decision" id="d18">
+    <header>
+      <h3><span class="num">18</span> Repo color identity</h3>
+      <span class="verdict verdict--diff">РАСХОЖДЕНИЕ — архитектурное</span>
+    </header>
+    <p class="desc">Должен ли каждый репозиторий иметь свой узнаваемый цвет (как в GitHub-language-bar) или цвет всегда несёт семантику (статус, severity).</p>
+    <div class="cols">
+      <div class="col">
+        <header><span class="tag tag--current">Сейчас</span><h4>Mood-only</h4></header>
+        <div class="demo" style="font-size: 11.5px; color: var(--mk-ink-600); text-align: left; line-height: 1.6;">
+          Все репо в heatmap, графиках — brand-blue.<br>
+          Цвета — это статусы (success / danger), не identity.<br>
+          Repo узнаётся по имени, не цвету.
+        </div>
+        <p class="reason">Универсально, не размывает семантику. Минус — в большом наборе репо сложно отслеживать «вот этот столбик — это какой проект».</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--claude">Claude</span><h4>Mood-only — без identity</h4></header>
+        <div class="demo" style="font-size: 12px; color: var(--mk-ink-700); text-align: left; line-height: 1.6;">
+          Для портфеля 12 репо identity-палитра скорее шумит. Цвет должен означать <strong>state</strong>, не <strong>kind</strong>.<br><br>
+          Если нужно отличать репо — лучше через icon / repo-name chip.
+        </div>
+        <p class="reason">Identity-палитра требует mapping repo→color в config.ts. Это +ещё одна сущность, которая должна обновляться при добавлении репо. Усложняет.</p>
+      </div>
+      <div class="col">
+        <header><span class="tag tag--codex">Codex</span><h4>Не комментировал</h4></header>
+        <div class="demo" style="background: var(--mk-warn-soft);">
+          <span style="font: 600 16px var(--mk-font-mono); color: var(--mk-warn-strong);">? нужен ответ</span>
+        </div>
+        <p class="reason">Codex упомянул «Repo colors» в списке вопросов dataviz, но не дал направления. Стоит запросить.</p>
+      </div>
     </div>
   </article>
 
   <!-- SUMMARY -->
   <section class="summary">
     <h2>Итого согласовано</h2>
-    <p>Из 10 решений — <strong>9 совпадают</strong> между Claude и Codex (включая «семантические» варианты для tabs и badges). По одному пункту (Motion durations) Codex явно не высказался — принимаем Claude-дефолт по умолчанию.</p>
-    <p><strong>Дополнительно:</strong> Codex предлагает расширить scope styleguide на 3 слоя (Layout / State / Data viz). Claude рекомендует вынести это в отдельную сессию C, параллельно с сессией D (token unification).</p>
-    <p><strong>Что дальше:</strong> подтвердить расхождение по Motion + scope expansion → начать сессии C и D параллельно.</p>
+    <p><strong>Базовые токены и компоненты (1–10):</strong> 9 совпадений из 10. По Motion (#10) Codex не высказался — принимаем Claude-дефолт.</p>
+    <p><strong>Layout / State / Data viz (11–18):</strong> 6 совпадений из 8. По Heatmap palette (#17) и Repo identity (#18) Codex не комментировал — нужен отдельный ответ.</p>
+    <p><strong>Итого решений зафиксировано:</strong> <span style="font-family: var(--mk-font-mono); font-weight: 600;">15/18</span>. Осталось 3 «нужен ответ Codex» (motion, heatmap, repo-identity) — не блокеры для старта миграции, можно принять Claude-дефолт молчанием или подождать.</p>
+    <p><strong>Что дальше:</strong></p>
+    <ul style="margin: 4px 0 0 20px; color: var(--mk-ink-700); font-size: 13px; line-height: 1.6;">
+      <li>Сессия D — token unification: убрать <code class="inline">*-legacy-*</code> слоты из tokens.css, добавить <code class="inline">.mk-btn</code> / <code class="inline">.mk-tab</code> / <code class="inline">.mk-card</code> компонентные классы.</li>
+      <li>Сессия E — миграция подсистем: Audit / Pipeline / Monitoring / Transcripts / Dashboard на новые классы и токены, мелкими PR.</li>
+      <li>Сессия F — финальная зачистка: убрать bridge-алиасы из App.css/v4.css, добавить ESLint правило против hex-цветов вне tokens.css.</li>
+    </ul>
   </section>
 
   <footer>
