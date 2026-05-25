@@ -1,0 +1,389 @@
+/* ══════════════════════════════════════════════════════════
+   MakeIT Dashboard — Component classes
+   ──────────────────────────────────────────────────────────
+   Single source for canonical UI components per design
+   decisions (см. public/design-decisions.html).
+
+   Prefix: .mk-*
+   Все стили опираются только на --mk-* токены из tokens.css.
+
+   Migration plan: легаси-классы .btn / .v4-btn / .pc / .v4-pcard
+   мигрируются на .mk-* по одной подсистеме за PR.
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Buttons (D1: 36h · r8 · weight 600 · brand-blue primary) ── */
+.mk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mk-sp-2);
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--mk-r-md);
+  border: 1px solid var(--mk-line);
+  background: var(--mk-paper);
+  color: var(--mk-ink-800);
+  font-family: var(--mk-font-sans);
+  font-size: var(--mk-text-sm);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: var(--mk-tracking-base);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background var(--mk-dur-fast) var(--mk-ease-out),
+    border-color var(--mk-dur-fast) var(--mk-ease-out),
+    color var(--mk-dur-fast) var(--mk-ease-out),
+    box-shadow var(--mk-dur-fast) var(--mk-ease-out),
+    transform var(--mk-dur-fast) var(--mk-ease-out);
+}
+.mk-btn:hover {
+  background: var(--mk-surface-3);
+  border-color: var(--mk-line-strong);
+}
+.mk-btn:active { transform: scale(0.98); }
+.mk-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mk-primary) 30%, transparent);
+}
+.mk-btn:disabled,
+.mk-btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Variants */
+.mk-btn--primary {
+  background: var(--mk-primary);
+  border-color: var(--mk-primary);
+  color: var(--mk-on-primary);
+}
+.mk-btn--primary:hover {
+  background: var(--mk-primary-active);
+  border-color: var(--mk-primary-active);
+}
+
+.mk-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--mk-ink-700);
+}
+.mk-btn--ghost:hover {
+  background: var(--mk-surface-3);
+  border-color: transparent;
+  color: var(--mk-ink-900);
+}
+
+.mk-btn--danger {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--mk-danger) 40%, transparent);
+  color: var(--mk-danger);
+}
+.mk-btn--danger:hover {
+  background: var(--mk-danger-soft);
+  border-color: var(--mk-danger);
+}
+.mk-btn--danger.mk-btn--solid {
+  background: var(--mk-danger);
+  border-color: var(--mk-danger);
+  color: #fff;
+}
+.mk-btn--danger.mk-btn--solid:hover {
+  background: var(--mk-danger-strong);
+  border-color: var(--mk-danger-strong);
+}
+
+/* Size mods */
+.mk-btn--sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: var(--mk-text-xs);
+  border-radius: var(--mk-r-sm);
+}
+.mk-btn--lg {
+  height: 44px;
+  padding: 0 18px;
+  font-size: var(--mk-text-base);
+}
+
+/* Full-width helper */
+.mk-btn--block {
+  display: flex;
+  width: 100%;
+}
+
+/* Icon-only mod (square button for refresh / settings / close) */
+.mk-btn--icon {
+  width: 36px;
+  padding: 0;
+}
+.mk-btn--icon.mk-btn--sm { width: 28px; }
+.mk-btn--icon.mk-btn--lg { width: 44px; }
+
+
+/* ══════════════════════════════════════════════════════════
+   TABS (D2: 3 семантические роли)
+   ══════════════════════════════════════════════════════════ */
+
+.mk-tabs {
+  display: inline-flex;
+  align-items: center;
+}
+.mk-tabs button,
+.mk-tabs a {
+  font-family: var(--mk-font-sans);
+  font-size: var(--mk-text-sm);
+  font-weight: 500;
+  letter-spacing: var(--mk-tracking-base);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--mk-ink-500);
+  transition:
+    background var(--mk-dur-fast) var(--mk-ease-out),
+    color var(--mk-dur-fast) var(--mk-ease-out),
+    border-color var(--mk-dur-fast) var(--mk-ease-out),
+    box-shadow var(--mk-dur-fast) var(--mk-ease-out);
+  text-decoration: none;
+}
+.mk-tabs button:focus-visible,
+.mk-tabs a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mk-primary) 30%, transparent);
+}
+
+/* ── Variant 1: underline (раздел / основная навигация страницы) ── */
+.mk-tabs--underline {
+  display: flex;
+  gap: var(--mk-sp-1);
+  border-bottom: 1px solid var(--mk-line);
+}
+.mk-tabs--underline button,
+.mk-tabs--underline a {
+  padding: var(--mk-sp-2) var(--mk-sp-3);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.mk-tabs--underline button:hover,
+.mk-tabs--underline a:hover { color: var(--mk-ink-800); }
+.mk-tabs--underline .is-active,
+.mk-tabs--underline [aria-selected="true"] {
+  color: var(--mk-ink-900);
+  border-bottom-color: var(--mk-primary);
+  font-weight: 600;
+}
+
+/* ── Variant 2: pill (inline-фильтры / toggle group) ── */
+.mk-tabs--pill {
+  display: inline-flex;
+  gap: var(--mk-sp-1);
+  padding: 3px;
+  background: var(--mk-surface-3);
+  border-radius: var(--mk-r-md);
+}
+.mk-tabs--pill button,
+.mk-tabs--pill a {
+  padding: 5px 12px;
+  border-radius: var(--mk-r-sm);
+  color: var(--mk-ink-600);
+}
+.mk-tabs--pill button:hover,
+.mk-tabs--pill a:hover { color: var(--mk-ink-900); }
+.mk-tabs--pill .is-active,
+.mk-tabs--pill [aria-selected="true"] {
+  background: var(--mk-paper);
+  color: var(--mk-ink-900);
+  box-shadow: 0 1px 2px rgba(11, 16, 32, 0.08);
+}
+
+/* ── Variant 3: segmented (выбор режима / представления) ── */
+.mk-tabs--segmented {
+  display: inline-flex;
+  border: 1px solid var(--mk-line);
+  border-radius: var(--mk-r-md);
+  overflow: hidden;
+  background: var(--mk-paper);
+}
+.mk-tabs--segmented button,
+.mk-tabs--segmented a {
+  padding: 6px 14px;
+  color: var(--mk-ink-600);
+  border-right: 1px solid var(--mk-line);
+}
+.mk-tabs--segmented button:last-child,
+.mk-tabs--segmented a:last-child { border-right: none; }
+.mk-tabs--segmented button:hover,
+.mk-tabs--segmented a:hover { color: var(--mk-ink-900); background: var(--mk-surface-2); }
+.mk-tabs--segmented .is-active,
+.mk-tabs--segmented [aria-selected="true"] {
+  background: var(--mk-primary);
+  color: var(--mk-on-primary);
+  font-weight: 600;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   CARDS (D3: r12 · p16 · shadow-sm + border)
+   ══════════════════════════════════════════════════════════ */
+
+.mk-card {
+  background: var(--mk-paper);
+  border: 1px solid var(--mk-line);
+  border-radius: var(--mk-r-lg);
+  padding: var(--mk-sp-4);
+  box-shadow: var(--mk-shadow-sm);
+  transition:
+    box-shadow var(--mk-dur-base) var(--mk-ease-out),
+    border-color var(--mk-dur-base) var(--mk-ease-out),
+    transform var(--mk-dur-base) var(--mk-ease-out);
+}
+.mk-card--interactive { cursor: pointer; }
+.mk-card--interactive:hover {
+  box-shadow: var(--mk-shadow-card-hover);
+  border-color: var(--mk-line-strong);
+}
+.mk-card--flat {
+  box-shadow: none;
+}
+.mk-card--elevated {
+  box-shadow: var(--mk-shadow-elevated);
+}
+.mk-card--compact {
+  padding: var(--mk-sp-3) var(--mk-sp-4);
+}
+
+.mk-card-title {
+  font-size: var(--mk-text-md);
+  font-weight: 700;
+  color: var(--mk-ink-900);
+  letter-spacing: var(--mk-tracking-tight);
+  margin: 0 0 var(--mk-sp-1);
+}
+.mk-card-meta {
+  font-size: var(--mk-text-xs);
+  color: var(--mk-ink-500);
+}
+.mk-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--mk-sp-2);
+  margin-bottom: var(--mk-sp-3);
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   BADGES (D4: pill default · square для severity/priority)
+   ══════════════════════════════════════════════════════════ */
+
+.mk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mk-sp-1);
+  padding: 2px 8px;
+  border-radius: var(--mk-r-full);
+  font-family: var(--mk-font-mono);
+  font-size: var(--mk-text-xs);
+  font-weight: 600;
+  line-height: 1.5;
+  background: var(--mk-surface-3);
+  color: var(--mk-ink-600);
+  white-space: nowrap;
+}
+
+/* Square variant for technical labels (severity, priority codes) */
+.mk-badge--square {
+  border-radius: var(--mk-r-xs, 4px);
+}
+
+/* Status modifiers */
+.mk-badge--success { background: var(--mk-success-soft); color: var(--mk-success-strong); }
+.mk-badge--danger  { background: var(--mk-danger-soft);  color: var(--mk-danger-strong); }
+.mk-badge--warn    { background: var(--mk-warn-soft);    color: var(--mk-warn-strong); }
+.mk-badge--info    { background: var(--mk-brand-50);     color: var(--mk-brand-700); }
+.mk-badge--review  { background: var(--mk-purple-50);    color: var(--mk-purple-700); }
+
+/* Solid variants (для priority dots, severity badges) */
+.mk-badge--solid { color: #fff; }
+.mk-badge--solid.mk-badge--success { background: var(--mk-success); }
+.mk-badge--solid.mk-badge--danger  { background: var(--mk-danger); }
+.mk-badge--solid.mk-badge--warn    { background: var(--mk-warn); }
+.mk-badge--solid.mk-badge--info    { background: var(--mk-primary); }
+
+
+/* ══════════════════════════════════════════════════════════
+   INPUTS (D5: soft focus ring)
+   ══════════════════════════════════════════════════════════ */
+
+.mk-input {
+  display: block;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--mk-r-md);
+  border: 1px solid var(--mk-line);
+  background: var(--mk-paper);
+  color: var(--mk-ink-900);
+  font-family: var(--mk-font-sans);
+  font-size: var(--mk-text-sm);
+  letter-spacing: var(--mk-tracking-base);
+  outline: none;
+  transition:
+    border-color var(--mk-dur-fast) var(--mk-ease-out),
+    box-shadow var(--mk-dur-fast) var(--mk-ease-out);
+}
+.mk-input::placeholder { color: var(--mk-ink-400); }
+.mk-input:hover { border-color: var(--mk-line-strong); }
+.mk-input:focus,
+.mk-input:focus-visible {
+  border-color: var(--mk-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mk-primary) 20%, transparent);
+}
+.mk-input:disabled {
+  background: var(--mk-surface-2);
+  color: var(--mk-ink-400);
+  cursor: not-allowed;
+}
+.mk-input[aria-invalid="true"] {
+  border-color: var(--mk-danger);
+}
+.mk-input[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mk-danger) 20%, transparent);
+}
+
+/* Multi-line variant */
+textarea.mk-input {
+  height: auto;
+  min-height: 80px;
+  padding: 8px 12px;
+  line-height: var(--mk-leading-base);
+  resize: vertical;
+}
+
+/* Input group with leading icon */
+.mk-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.mk-field-icon {
+  position: absolute;
+  left: 10px;
+  pointer-events: none;
+  color: var(--mk-ink-400);
+  display: inline-flex;
+}
+.mk-field .mk-input { padding-left: 32px; }
+
+
+/* ══════════════════════════════════════════════════════════
+   FOCUS RING UTILITY
+   For non-native interactive elements (custom divs with role).
+   ══════════════════════════════════════════════════════════ */
+.mk-focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mk-primary) 30%, transparent);
+}

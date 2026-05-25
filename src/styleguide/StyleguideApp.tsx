@@ -342,8 +342,8 @@ function ButtonsBlock() {
           <div className="sg-variant-name">Новый унифицированный</div>
           <div className="sg-variant-desc">36px высота, padding 0/14, radius 8px, font-weight 600, primary = brand-blue. Совмещает плотность v4 и кликабельность legacy.</div>
           <div className="sg-variant-stage">
-            <button className="sg-btn-new primary">Сохранить</button>
-            <button className="sg-btn-new">Отмена</button>
+            <button className="mk-btn mk-btn--primary">Сохранить</button>
+            <button className="mk-btn">Отмена</button>
           </div>
         </div>
       </div>
@@ -389,7 +389,7 @@ function TabsBlock() {
           <div className="sg-variant-name">Segmented (proposed)</div>
           <div className="sg-variant-desc">Кнопочный control с активным сегментом в primary-цвете. Хорошо читается как выбор режима.</div>
           <div className="sg-variant-stage">
-            <div className="sg-tabs-segmented">
+            <div className="mk-tabs mk-tabs--segmented">
               {labels.map((l, i) => (
                 <button key={l} className={i === c ? "is-active" : ""} onClick={() => setC(i)}>{l}</button>
               ))}
@@ -436,7 +436,7 @@ function CardsBlock() {
           <div className="sg-variant-name">Новый унифицированный</div>
           <div className="sg-variant-desc">radius 12px, padding 16, лёгкая тень shadow-sm, border opcjonalный. Сбалансирован между плотностью и premium-ощущением.</div>
           <div className="sg-variant-stage">
-            <div className="sg-card-new">
+            <div className="mk-card">
               <div className="sg-card-title">Project Alpha</div>
               <div className="sg-card-meta">12 открытых · 88% готово</div>
             </div>
@@ -650,7 +650,7 @@ function LayoutSection() {
                       <button key={l} className={i === filter ? "active" : ""} onClick={() => setFilter(i)}>{l}</button>
                     ))}
                   </div>
-                  <button className="sg-btn-new primary" style={{ height: 30 }}>Все проекты</button>
+                  <button className="mk-btn mk-btn--primary" style={{ height: 30 }}>Все проекты</button>
                 </div>
               </div>
               <div className="sg-ph-meta">12 активных проектов · обновлено 11:13</div>
@@ -811,7 +811,7 @@ function StateSection() {
               <div className="sg-empty-icon">∅</div>
               <div className="sg-empty-title">Нет данных</div>
               <div className="sg-empty-desc">По текущему фильтру ничего не найдено. Попробуйте сменить период или сбросить фильтр.</div>
-              <button className="sg-btn-new" style={{ marginTop: 6 }}>Сбросить</button>
+              <button className="mk-btn" style={{ marginTop: 6 }}>Сбросить</button>
             </div>
           </div>
         </div>
@@ -842,8 +842,8 @@ function StateSection() {
                 <strong>Не удалось загрузить данные.</strong><br />
                 GitHub API вернул 502. Возможно, временный сбой. Попробуйте обновить через минуту.
                 <div className="sg-error-actions">
-                  <button className="sg-btn-new primary" style={{ height: 30 }}>Повторить</button>
-                  <button className="sg-btn-new" style={{ height: 30 }}>Скрыть</button>
+                  <button className="mk-btn mk-btn--primary" style={{ height: 30 }}>Повторить</button>
+                  <button className="mk-btn" style={{ height: 30 }}>Скрыть</button>
                 </div>
               </div>
             </div>
@@ -863,7 +863,7 @@ function StateSection() {
               <span>Данные устарели — последнее обновление</span>
               <span className="time">38 мин назад</span>
               <span style={{ flex: 1 }} />
-              <button className="sg-btn-new" style={{ height: 28, fontSize: 12 }}>Обновить</button>
+              <button className="mk-btn" style={{ height: 28, fontSize: 12 }}>Обновить</button>
             </div>
           </div>
         </div>
@@ -880,7 +880,7 @@ function StateSection() {
               <div className="sg-gate-title">MakeIT Dashboard</div>
               <div className="sg-gate-desc">Введите пароль для доступа</div>
               <input className="sg-input" placeholder="Пароль" type="password" style={{ marginBottom: 10 }} />
-              <button className="sg-btn-new primary" style={{ width: "100%" }}>Войти</button>
+              <button className="mk-btn mk-btn--primary" style={{ width: "100%" }}>Войти</button>
             </div>
           </div>
         </div>
