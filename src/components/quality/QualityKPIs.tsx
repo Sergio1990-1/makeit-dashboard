@@ -1,12 +1,16 @@
 import type { CSSProperties } from "react";
 import type { QualityPayload, PeriodMode } from "../../types/quality";
+import type { FocusMode } from "./QualityChart";
 
 interface Props {
   data: QualityPayload;
   mode: PeriodMode;
+  focus?: FocusMode;
+  /** Toggle handler — клик по уже активной плитке снимает фильтр. */
+  onToggleFocus?: (mode: FocusMode) => void;
 }
 
-export function QualityKPIs({ data, mode }: Props) {
+export function QualityKPIs({ data, mode, focus = "all", onToggleFocus }: Props) {
   const buckets = data.buckets[mode].summary;
   const total = buckets.reduce((a, b) => a + b.total_pr, 0);
   const totalP0 = buckets.reduce((a, b) => a + b.with_p0, 0);
@@ -21,12 +25,51 @@ export function QualityKPIs({ data, mode }: Props) {
   const periodLabel = mode === "12w" ? "за 12 нед." : "за 30 дней";
   const avgLabel = mode === "12w" ? "среднем за неделю" : "среднем за день";
 
-  const kpiStyle = (i: number): CSSProperties => ({ ["--i" as string]: i } as CSSProperties);
+  const kpiStyle = (i: number, active: boolean): CSSProperties =>
+    ({
+      ["--i" as string]: i,
+      // Active state — рамка цветом метрики + лёгкий лифт. Не трогаем CSS-файл,
+      // чтобы не плодить -active классы по всем темам.
+      ...(active
+        ? {
+            outline: "2px solid currentColor",
+            outlineOffset: -2,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+          }
+        : null),
+    }) as CSSProperties;
+
+  const tileButtonProps = (m: FocusMode) =>
+    onToggleFocus
+      ? {
+          role: "button" as const,
+          tabIndex: 0,
+          onClick: () => onToggleFocus(m),
+          onKeyDown: (e: React.KeyboardEvent) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onToggleFocus(m);
+            }
+          },
+          "aria-pressed": focus === m,
+          style: { cursor: "pointer" as const },
+        }
+      : {};
 
   return (
     <div className="kpis">
       {totalP0 > 0 && (
-        <div className="kpi-p0-alert" title="Блокирующие баги от Codex. Требуют немедленного внимания.">
+        <div
+          className="kpi-p0-alert"
+          title="Блокирующие баги от Codex. Клик — отфильтровать чарт по P0."
+          {...tileButtonProps("p0")}
+          style={{
+            ...(tileButtonProps("p0").style ?? {}),
+            ...(focus === "p0"
+              ? { outline: "2px solid white", outlineOffset: -3 }
+              : null),
+          }}
+        >
           <span className="kpi-p0-icon">🔴</span>
           <div className="kpi-p0-text">
             <b>P0: {totalP0}</b>
@@ -34,20 +77,43 @@ export function QualityKPIs({ data, mode }: Props) {
           </div>
         </div>
       )}
-      <div className="kpi" style={kpiStyle(0)} title="PR с P0 или P1 находкой codex (P2-нит не считается).">
+      <div
+        className="kpi"
+        style={kpiStyle(0, focus === "dirty")}
+        title="PR с P0 или P1 находкой codex (P2-нит не считается). Клик — фильтр чарта."
+        {...tileButtonProps("dirty")}
+      >
         <div className="kpi-lbl">% грязных PR · {periodLabel}</div>
-        <div className="kpi-v">{dirtyPct}%</div>
+        <div className="kpi-v" style={focus === "dirty" ? { color: "var(--mk-danger-100)" } : undefined}>
+          {dirtyPct}%
+        </div>
         <div className="kpi-sub">{dirty} из {total} PR · только P0/P1</div>
       </div>
-      <div className="kpi" style={kpiStyle(1)} title="Доля PR с хотя бы одной P1 находкой codex.">
+      <div
+        className="kpi"
+        style={{
+          ...kpiStyle(1, focus === "p1"),
+          color: focus === "p1" ? "var(--mk-quality-p1)" : undefined,
+        }}
+        title="Доля PR с хотя бы одной P1 находкой codex. Клик — фильтр чарта."
+        {...tileButtonProps("p1")}
+      >
         <div className="kpi-lbl">% P1 · {periodLabel}</div>
         <div className="kpi-v" style={{ color: "var(--mk-quality-p1-text)" }}>{p1Pct}%</div>
       </div>
-      <div className="kpi" style={kpiStyle(2)} title="Фоновый шум — стиль, нейминг, мелкие нитпики. Не блокирует ship.">
+      <div
+        className="kpi"
+        style={{
+          ...kpiStyle(2, focus === "p2"),
+          color: focus === "p2" ? "var(--mk-quality-p2)" : undefined,
+        }}
+        title="Фоновый шум — стиль, нейминг, мелкие нитпики. Клик — фильтр чарта."
+        {...tileButtonProps("p2")}
+      >
         <div className="kpi-lbl">% P2 · {periodLabel} <span style={{ opacity: 0.6 }}>· фон</span></div>
         <div className="kpi-v" style={{ color: "var(--mk-quality-p2-text)" }}>{p2Pct}%</div>
       </div>
-      <div className="kpi" style={kpiStyle(3)}>
+      <div className="kpi" style={kpiStyle(3, false)}>
         <div className="kpi-lbl">PR {periodLabel}</div>
         <div className="kpi-v">{total}</div>
         <div className="kpi-sub">{avgPerPeriod} в {avgLabel}</div>

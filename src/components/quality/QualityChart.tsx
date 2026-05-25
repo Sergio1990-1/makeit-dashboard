@@ -23,35 +23,90 @@ import type { QualityBucket } from "../../types/quality";
  *  - has-p0: bucket с ≥1 P0 → постоянный gradient + topper-pill (main only)
  */
 
+/** Какой срез данных подсвечивать. Управляется кликом по KPI-плиткам:
+ * "all" = дефолт (стек целиком + линия %-чистых), остальные изолируют
+ * один сегмент бара и переключают линию overlay на эту метрику. */
+export type FocusMode = "all" | "p0" | "p1" | "p2" | "dirty";
+
 export interface QualityChartProps {
   buckets: QualityBucket[];
   labels: string[];
   compact: boolean;
   /** Окно скользящего среднего (баров). Дефолт: 7 для main, без overlay для compact. */
   rollingWindow?: number;
+  /** Активный фильтр от KPI-плиток (только для main-чарта). */
+  focus?: FocusMode;
 }
 
 const LOW_SAMPLE = 8;
 
-/** «Чистый PR» по новой метрике = без P0 и без P1. P2-нит не считается грязью.
- * Возвращает null если в бакете нет PR (чтобы не загрязнять rolling avg нулями). */
-function cleanPct(b: QualityBucket): number | null {
+/** Извлекает значение для конкретной метрики из бакета.
+ * Возвращает null если бакет пустой — пропускаем такие точки в rolling avg
+ * (выходные/праздники иначе дают ложные провалы линии). */
+function bucketPct(b: QualityBucket, mode: FocusMode): number | null {
   if (b.total_pr === 0) return null;
-  const dirty = b.with_p0 + b.with_p1_only;
-  return ((b.total_pr - dirty) / b.total_pr) * 100;
+  switch (mode) {
+    case "p0":
+      return (b.with_p0 / b.total_pr) * 100;
+    case "p1":
+      return (b.with_p1_only / b.total_pr) * 100;
+    case "p2":
+      return (b.with_p2_only / b.total_pr) * 100;
+    case "dirty":
+      return ((b.with_p0 + b.with_p1_only) / b.total_pr) * 100;
+    case "all":
+    default:
+      // % чистых = без P0/P1. P2-нит не делает PR «грязным».
+      return ((b.total_pr - b.with_p0 - b.with_p1_only) / b.total_pr) * 100;
+  }
 }
 
-/** Скользящее среднее «% чистых PR» по последним `window` бакетам.
+function lineColor(mode: FocusMode): string {
+  switch (mode) {
+    case "p0":
+      return "var(--mk-quality-p0, #dc2626)";
+    case "p1":
+      return "var(--mk-quality-p1, #f59e0b)";
+    case "p2":
+      return "var(--mk-quality-p2, #eab308)";
+    case "dirty":
+      return "var(--mk-danger-100, #ef4444)";
+    case "all":
+    default:
+      return "var(--mk-success-100, #16a34a)";
+  }
+}
+
+function badgeLabel(mode: FocusMode): string {
+  switch (mode) {
+    case "p0":
+      return "с P0";
+    case "p1":
+      return "с P1";
+    case "p2":
+      return "с P2";
+    case "dirty":
+      return "грязных";
+    case "all":
+    default:
+      return "чистых";
+  }
+}
+
+/** Скользящее среднее выбранной метрики по последним `window` бакетам.
  * Пустые бакеты (нет PR) пропускаем — иначе выходные/праздники дают
  * ложные провалы в линии. Возвращаем null если в окне совсем нет данных. */
 function computeRollingAvg(
   buckets: QualityBucket[],
   window: number,
+  mode: FocusMode,
 ): Array<number | null> {
   return buckets.map((_, i) => {
     const start = Math.max(0, i - window + 1);
     const slice = buckets.slice(start, i + 1);
-    const pcts = slice.map(cleanPct).filter((p): p is number => p !== null);
+    const pcts = slice
+      .map((b) => bucketPct(b, mode))
+      .filter((p): p is number => p !== null);
     if (pcts.length === 0) return null;
     return pcts.reduce((a, b) => a + b, 0) / pcts.length;
   });
@@ -82,6 +137,7 @@ export function QualityChart({
   labels,
   compact,
   rollingWindow,
+  focus = "all",
 }: QualityChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
@@ -101,9 +157,15 @@ export function QualityChart({
   }, [compact, rollingWindow, buckets.length]);
 
   const rollingAvgPct = useMemo(
-    () => (effectiveWindow > 0 ? computeRollingAvg(buckets, effectiveWindow) : []),
-    [buckets, effectiveWindow],
+    () =>
+      effectiveWindow > 0
+        ? computeRollingAvg(buckets, effectiveWindow, focus)
+        : [],
+    [buckets, effectiveWindow, focus],
   );
+
+  const overlayColor = useMemo(() => lineColor(focus), [focus]);
+  const overlayLabel = useMemo(() => badgeLabel(focus), [focus]);
 
   // Точки SVG-линии overlay: Y инвертирован (100% наверху), null значения
   // прерывают линию (выходные/пустые дни). Координаты в долях 0–1.
@@ -203,19 +265,42 @@ export function QualityChart({
         // worst-wins: P0+P1 объединены в crit (один красный сегмент)
         const critCount = b.with_p0 + b.with_p1_only;
         const cleanCount = Math.max(0, total - critCount - b.with_p2_only);
-        const critPct = total > 0 ? (critCount / total) * heightPct : 0;
-        const p2Pct = total > 0 ? (b.with_p2_only / total) * heightPct : 0;
-        const cleanPct = heightPct - critPct - p2Pct;
         const lowSample = total > 0 && total < LOW_SAMPLE;
         const hasP0 = b.with_p0 > 0;
+
+        // Под фильтром оставляем ТОЛЬКО релевантный сегмент (вместо стека).
+        // Высоту фильтрованного бара берём пропорционально соответствующего
+        // count'а — так на чарте сразу виден объём метрики, без шума соседей.
+        type Seg = { kind: "clean" | "p2" | "crit"; count: number };
+        const segments: Seg[] =
+          focus === "all"
+            ? [
+                { kind: "clean", count: cleanCount },
+                { kind: "p2", count: b.with_p2_only },
+                { kind: "crit", count: critCount },
+              ]
+            : focus === "p2"
+              ? [{ kind: "p2", count: b.with_p2_only }]
+              : focus === "p0"
+                ? [{ kind: "crit", count: b.with_p0 }]
+                : focus === "p1"
+                  ? [{ kind: "crit", count: b.with_p1_only }]
+                  : /* dirty */ [{ kind: "crit", count: critCount }];
 
         const classNames = [
           "bar",
           lowSample ? "is-low-sample" : "",
-          hasP0 ? "has-p0" : "",
+          hasP0 && focus !== "p2" ? "has-p0" : "",
         ]
           .filter(Boolean)
           .join(" ");
+
+        // В фильтр-моде P0:N топпер виден только если он входит в выборку,
+        // иначе ярлык про блокеры под фильтром «P2» сбивает с толку.
+        const showP0Topper =
+          !compact &&
+          hasP0 &&
+          (focus === "all" || focus === "p0" || focus === "dirty");
 
         return (
           <div
@@ -227,33 +312,24 @@ export function QualityChart({
               el.onmouseleave = () => handleLeave(el);
             }}
           >
-            {!compact && hasP0 && (
+            {showP0Topper && (
               <div className="bar-topper-p0">P0:{b.with_p0}</div>
             )}
             <div className="bar-stack" style={{ height: `${heightPct}%` }}>
-              {cleanPct > 0 && (
-                <div
-                  className="bar-clean"
-                  style={{ height: `${(cleanCount / total) * 100}%` }}
-                />
-              )}
-              {p2Pct > 0 && (
-                <div
-                  className="bar-p2"
-                  style={{ height: `${(b.with_p2_only / total) * 100}%` }}
-                />
-              )}
-              {critPct > 0 && (
-                <div
-                  className="bar-crit"
-                  style={{ height: `${(critCount / total) * 100}%` }}
-                />
+              {segments.map((seg) =>
+                seg.count > 0 ? (
+                  <div
+                    key={seg.kind}
+                    className={`bar-${seg.kind}`}
+                    style={{ height: `${(seg.count / total) * 100}%` }}
+                  />
+                ) : null,
               )}
             </div>
             {heightPct === 0 && <div className="bar-empty" />}
             <div className="bar-chip">
               {total} PR
-              {hasP0 && (
+              {showP0Topper && (
                 <>
                   {" · "}
                   <b style={{ color: "var(--mk-danger-100)" }}>P0:{b.with_p0}</b>
@@ -292,7 +368,7 @@ export function QualityChart({
             <polyline
               points={linePoints}
               fill="none"
-              stroke="var(--mk-success-100, #16a34a)"
+              stroke={overlayColor}
               strokeWidth="2"
               strokeLinejoin="round"
               strokeLinecap="round"
@@ -311,7 +387,7 @@ export function QualityChart({
               width: 32,
               fontFamily: "var(--mk-font-mono)",
               fontSize: 10,
-              color: "var(--mk-success-100, #16a34a)",
+              color: overlayColor,
               opacity: 0.85,
               pointerEvents: "none",
             }}
@@ -328,7 +404,7 @@ export function QualityChart({
                 right: 4,
                 top: `calc(${100 - latestRollingPct}% - 10px)`,
                 padding: "2px 6px",
-                background: "var(--mk-success-100, #16a34a)",
+                background: overlayColor,
                 color: "white",
                 fontFamily: "var(--mk-font-mono)",
                 fontSize: 10,
@@ -340,7 +416,7 @@ export function QualityChart({
                 boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
               }}
             >
-              {latestRollingPct.toFixed(0)}% чистых · {effectiveWindow}
+              {latestRollingPct.toFixed(0)}% {overlayLabel} · {effectiveWindow}
               {buckets.length >= 20 ? "д" : "нед"} avg
             </div>
           )}
