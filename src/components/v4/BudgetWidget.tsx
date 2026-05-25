@@ -20,10 +20,10 @@ function statusColor(status: BudgetSummary["status"], percentage: number | null)
   // >=80% red.  ``status`` from the API already encodes this band, but
   // we re-derive the colour from ``percentage`` so a buggy backend that
   // returns ``status="ok"`` with ``percentage=92`` still paints red.
-  if (percentage === null) return "var(--v4-muted-500, #6b7280)";
-  if (percentage >= 80 || status === "exceeded") return "var(--v4-danger-500, #ef4444)";
-  if (percentage >= 60 || status === "warning") return "var(--v4-warning-500, #f59e0b)";
-  return "var(--v4-success-500, #10b981)";
+  if (percentage === null) return "var(--mk-ink-500)";
+  if (percentage >= 80 || status === "exceeded") return "var(--mk-danger)";
+  if (percentage >= 60 || status === "warning") return "var(--mk-warn)";
+  return "var(--mk-success)";
 }
 
 /**

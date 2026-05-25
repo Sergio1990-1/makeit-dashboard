@@ -8,16 +8,16 @@ const wrap: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   gap: 28,
-  fontFamily: "var(--v4-sans, system-ui)",
-  color: "var(--v4-ink-900, #0E1320)",
-  background: "var(--v4-bg, #F6F7F9)",
+  fontFamily: "var(--mk-font-sans)",
+  color: "var(--mk-ink-900)",
+  background: "var(--mk-bg)",
   minHeight: "100vh",
 };
 
 const blockHd: React.CSSProperties = {
-  fontFamily: "var(--v4-mono, monospace)",
+  fontFamily: "var(--mk-font-mono)",
   fontSize: 10.5,
-  color: "var(--v4-ink-500, #6B7691)",
+  color: "var(--mk-ink-500)",
   textTransform: "uppercase",
   letterSpacing: "0.06em",
   fontWeight: 600,
@@ -32,9 +32,9 @@ const hdBox: React.CSSProperties = {
 };
 
 const hdSub: React.CSSProperties = {
-  fontFamily: "var(--v4-mono, monospace)",
+  fontFamily: "var(--mk-font-mono)",
   fontSize: 11,
-  color: "var(--v4-ink-500, #6B7691)",
+  color: "var(--mk-ink-500)",
 };
 
 const block: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 8 };

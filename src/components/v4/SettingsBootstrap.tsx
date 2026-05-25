@@ -148,9 +148,9 @@ export function SettingsBootstrap({ onSuccess }: Props) {
                   marginTop: 14,
                   padding: "10px 12px",
                   borderRadius: 8,
-                  background: "var(--v4-danger-50, rgba(239,68,68,0.08))",
-                  border: "1px solid var(--v4-danger-100, rgba(239,68,68,0.25))",
-                  color: "var(--v4-danger-700, #b91c1c)",
+                  background: "var(--mk-danger-soft)",
+                  border: "1px solid var(--mk-danger-100)",
+                  color: "var(--mk-danger-strong)",
                   fontSize: 13,
                   lineHeight: 1.4,
                 }}

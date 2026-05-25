@@ -22,16 +22,16 @@ interface Props {
 function tierStyle(tier: DoraTier): { background: string; accent: string; label: string } {
   switch (tier) {
     case "elite":
-      return { background: "rgba(34, 197, 94, 0.12)", accent: "#16a34a", label: "Элитный" };
+      return { background: "color-mix(in srgb, var(--mk-success) 12%, transparent)", accent: "var(--mk-success)", label: "Элитный" };
     case "high":
-      return { background: "rgba(132, 204, 22, 0.12)", accent: "#65a30d", label: "Высокий" };
+      return { background: "color-mix(in srgb, var(--mk-success) 12%, transparent)", accent: "var(--mk-success-strong)", label: "Высокий" };
     case "medium":
-      return { background: "rgba(234, 179, 8, 0.14)", accent: "#ca8a04", label: "Средний" };
+      return { background: "color-mix(in srgb, var(--mk-severity-medium) 14%, transparent)", accent: "var(--mk-severity-medium)", label: "Средний" };
     case "low":
-      return { background: "rgba(239, 68, 68, 0.12)", accent: "#dc2626", label: "Низкий" };
+      return { background: "color-mix(in srgb, var(--mk-danger) 12%, transparent)", accent: "var(--mk-danger)", label: "Низкий" };
     case "na":
     default:
-      return { background: "var(--v4-border, rgba(0,0,0,0.05))", accent: "var(--v4-ink-500)", label: "н/д" };
+      return { background: "var(--mk-line-soft)", accent: "var(--v4-ink-500)", label: "н/д" };
   }
 }
 
@@ -100,7 +100,7 @@ function Card({ title, value, tier, tooltip }: CardProps) {
           fontSize: 24,
           fontWeight: 700,
           fontVariantNumeric: "tabular-nums",
-          color: "var(--v4-ink-900, inherit)",
+          color: "var(--mk-ink-900)",
         }}
       >
         {value}

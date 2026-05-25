@@ -10,12 +10,12 @@ interface MetricDef {
 }
 
 const METRICS: MetricDef[] = [
-  { key: "first_pass_success_rate", label: "С первой попытки", color: "#12B76A", isPercent: true, format: pctFmt },
-  { key: "retry_rate", label: "Повторы", color: "#F79009", isPercent: true, format: pctFmt },
-  { key: "error_recovery_rate", label: "Восстановление", color: "#2563EB", isPercent: true, format: pctFmt },
-  { key: "qa_pass_rate", label: "Прохождение QA", color: "#7C3AED", isPercent: true, format: pctFmt },
-  { key: "rollback_rate", label: "Откаты", color: "#EF4444", isPercent: true, format: pctFmt },
-  { key: "avg_finding_density", label: "Находки", color: "#06B6D4", isPercent: false, format: (v) => v === null ? "—" : v.toFixed(2) },
+  { key: "first_pass_success_rate", label: "С первой попытки", color: "var(--mk-success)", isPercent: true, format: pctFmt },
+  { key: "retry_rate", label: "Повторы", color: "var(--mk-priority-p2)", isPercent: true, format: pctFmt },
+  { key: "error_recovery_rate", label: "Восстановление", color: "var(--mk-priority-p3)", isPercent: true, format: pctFmt },
+  { key: "qa_pass_rate", label: "Прохождение QA", color: "var(--mk-purple-500)", isPercent: true, format: pctFmt },
+  { key: "rollback_rate", label: "Откаты", color: "var(--mk-priority-p1)", isPercent: true, format: pctFmt },
+  { key: "avg_finding_density", label: "Находки", color: "var(--mk-sky-500)", isPercent: false, format: (v) => v === null ? "—" : v.toFixed(2) },
 ];
 
 const PERIODS = [4, 8, 12] as const;

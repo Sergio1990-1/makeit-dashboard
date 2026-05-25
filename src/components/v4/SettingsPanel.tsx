@@ -312,9 +312,9 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
               style={{
                 padding: "8px 12px",
                 borderRadius: 8,
-                background: "var(--v4-warn-50, rgba(234,179,8,0.08))",
-                border: "1px solid var(--v4-warn-100, rgba(234,179,8,0.25))",
-                color: "var(--v4-ink-700, #92400e)",
+                background: "var(--mk-warn-soft)",
+                border: "1px solid var(--mk-warn-100)",
+                color: "var(--mk-warn-strong)",
                 fontSize: 12,
                 lineHeight: 1.4,
               }}
@@ -335,10 +335,10 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
                 <div
                   key={key}
                   style={{
-                    border: "1px solid var(--v4-border, rgba(0,0,0,0.08))",
+                    border: "1px solid var(--mk-line-soft)",
                     borderRadius: 10,
                     padding: 12,
-                    background: "var(--v4-card, transparent)",
+                    background: "transparent",
                   }}
                 >
                   <div
@@ -446,7 +446,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
                       <button
                         type="button"
                         className="v4-btn"
-                        style={{ color: "var(--v4-danger-700, #b91c1c)" }}
+                        style={{ color: "var(--mk-danger-strong)" }}
                         onClick={() => void handleDelete(key)}
                         disabled={busy || bulkDeleting}
                       >
@@ -481,7 +481,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
                       style={{
                         marginTop: 8,
                         fontSize: 12,
-                        color: "var(--v4-danger-700, #b91c1c)",
+                        color: "var(--mk-danger-strong)",
                       }}
                     >
                       {row.error}
@@ -495,7 +495,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
             style={{
               marginTop: 4,
               padding: 12,
-              border: "1px dashed var(--v4-border, rgba(0,0,0,0.1))",
+              border: "1px dashed var(--mk-line)",
               borderRadius: 10,
             }}
           >
@@ -522,9 +522,9 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
             style={{
               marginTop: 4,
               padding: 12,
-              border: "1px solid var(--v4-danger-100, rgba(239,68,68,0.25))",
+              border: "1px solid var(--mk-danger-100)",
               borderRadius: 10,
-              background: "var(--v4-danger-50, rgba(239,68,68,0.04))",
+              background: "var(--mk-danger-soft)",
             }}
           >
             <div
@@ -532,7 +532,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
                 fontWeight: 600,
                 fontSize: 13,
                 marginBottom: 4,
-                color: "var(--v4-danger-700, #b91c1c)",
+                color: "var(--mk-danger-strong)",
               }}
             >
               Опасная зона
@@ -558,7 +558,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
                 <button
                   type="button"
                   className="v4-btn"
-                  style={{ color: "var(--v4-danger-700, #b91c1c)" }}
+                  style={{ color: "var(--mk-danger-strong)" }}
                   onClick={() => void handleClearAll()}
                   disabled={bulkDeleting}
                 >
@@ -569,7 +569,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
               <button
                 type="button"
                 className="v4-btn"
-                style={{ color: "var(--v4-danger-700, #b91c1c)" }}
+                style={{ color: "var(--mk-danger-strong)" }}
                 onClick={() => setConfirmAllDelete(true)}
                 disabled={!keys || keys.length === 0}
               >
@@ -584,7 +584,7 @@ export function SettingsPanel({ onClose, onBootstrapCleared }: Props) {
             display: "flex",
             justifyContent: "flex-end",
             padding: "12px 20px 16px",
-            borderTop: "1px solid var(--v4-border, rgba(0,0,0,0.06))",
+            borderTop: "1px solid var(--mk-line-soft)",
             marginTop: 8,
           }}
         >

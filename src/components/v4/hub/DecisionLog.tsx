@@ -71,7 +71,7 @@ export function DecisionLog({ decisions }: Props) {
       <div
         style={{
           padding: 16,
-          border: "1px dashed var(--v4-border, rgba(0,0,0,0.1))",
+          border: "1px dashed var(--mk-line)",
           borderRadius: 10,
           color: "var(--v4-ink-500)",
           fontSize: 13,
@@ -102,7 +102,7 @@ export function DecisionLog({ decisions }: Props) {
             key={d.id}
             style={{
               padding: 12,
-              border: "1px solid var(--v4-border, rgba(0,0,0,0.08))",
+              border: "1px solid var(--mk-line-soft)",
               borderRadius: 8,
               display: "flex",
               flexDirection: "column",
@@ -135,7 +135,7 @@ export function DecisionLog({ decisions }: Props) {
                     fontSize: 11,
                     padding: "2px 8px",
                     borderRadius: 999,
-                    background: "var(--v4-border, rgba(0,0,0,0.08))",
+                    background: "var(--mk-line-soft)",
                     color: "var(--v4-ink-700)",
                     textDecoration: "none",
                   }}
@@ -149,7 +149,7 @@ export function DecisionLog({ decisions }: Props) {
                     fontSize: 11,
                     padding: "2px 8px",
                     borderRadius: 999,
-                    background: "var(--v4-border, rgba(0,0,0,0.08))",
+                    background: "var(--mk-line-soft)",
                     color: "var(--v4-ink-700)",
                   }}
                 >

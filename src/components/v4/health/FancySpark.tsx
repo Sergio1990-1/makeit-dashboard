@@ -33,10 +33,10 @@ export function FancySpark({ trend }: Props) {
         : "var(--v4-ink-400)";
   const fill =
     trend.direction === "up"
-      ? "rgba(18,183,106,0.12)"
+      ? "color-mix(in srgb, var(--mk-success) 12%, transparent)"
       : trend.direction === "down"
-        ? "rgba(239,68,68,0.10)"
-        : "rgba(148,160,184,0.10)";
+        ? "color-mix(in srgb, var(--mk-danger) 10%, transparent)"
+        : "color-mix(in srgb, var(--mk-ink-400) 10%, transparent)";
   const last = coords[coords.length - 1];
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [hover, setHover] = useState<number | null>(null);

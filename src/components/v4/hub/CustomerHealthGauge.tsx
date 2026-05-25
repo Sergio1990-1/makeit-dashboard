@@ -53,12 +53,12 @@ function zoneOf(score: number): {
   label: string;
 } {
   if (score >= 70) {
-    return { color: "#16a34a", bg: "rgba(34,197,94,0.12)", label: "Здоровый" };
+    return { color: "var(--mk-success)", bg: "color-mix(in srgb, var(--mk-success) 12%, transparent)", label: "Здоровый" };
   }
   if (score >= 40) {
-    return { color: "#ca8a04", bg: "rgba(234,179,8,0.14)", label: "Под наблюдением" };
+    return { color: "var(--mk-severity-medium)", bg: "color-mix(in srgb, var(--mk-severity-medium) 14%, transparent)", label: "Под наблюдением" };
   }
-  return { color: "#dc2626", bg: "rgba(239,68,68,0.12)", label: "Критичный" };
+  return { color: "var(--mk-danger)", bg: "color-mix(in srgb, var(--mk-danger) 12%, transparent)", label: "Критичный" };
 }
 
 const GAUGE_W = 200;
@@ -208,7 +208,7 @@ export function CustomerHealthGauge({
         gap: 10,
         padding: 14,
         borderRadius: 10,
-        background: "var(--v4-card, var(--v4-paper))",
+        background: "var(--mk-paper)",
         border: "1px solid var(--v4-line)",
       }}
     >
@@ -264,7 +264,7 @@ export function CustomerHealthGauge({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "var(--v4-danger-500, #dc2626)",
+            color: "var(--mk-danger)",
             fontSize: 13,
             textAlign: "center",
           }}
@@ -321,7 +321,7 @@ export function CustomerHealthGauge({
                   <path
                     d={arcPath(0, 1)}
                     fill="none"
-                    stroke="var(--v4-line, rgba(0,0,0,0.08))"
+                    stroke="var(--mk-line-soft)"
                     strokeWidth="12"
                     strokeLinecap="round"
                   />
@@ -373,7 +373,7 @@ export function CustomerHealthGauge({
                     display: "flex",
                     justifyContent: "space-between",
                     fontSize: 10,
-                    color: "var(--v4-ink-400, var(--v4-ink-500))",
+                    color: "var(--mk-ink-400)",
                     marginTop: 2,
                   }}
                 >
@@ -424,7 +424,7 @@ export function CustomerHealthGauge({
                         fontSize: 15,
                         fontWeight: 700,
                         fontVariantNumeric: "tabular-nums",
-                        color: "var(--v4-ink-900, inherit)",
+                        color: "var(--mk-ink-900)",
                       }}
                     >
                       {fmt(value)}

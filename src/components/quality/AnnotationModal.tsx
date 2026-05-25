@@ -14,7 +14,7 @@ interface Props {
 const overlayStyle: React.CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "rgba(0, 0, 0, 0.45)",
+  background: "var(--mk-overlay)",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -24,7 +24,7 @@ const overlayStyle: React.CSSProperties = {
 const modalStyle: React.CSSProperties = {
   background: "#fff",
   borderRadius: 8,
-  boxShadow: "0 10px 40px rgba(0, 0, 0, 0.2)",
+  boxShadow: "var(--mk-shadow-md)",
   padding: 20,
   width: "100%",
   maxWidth: 480,
@@ -171,10 +171,10 @@ export function AnnotationModal({ onSubmit, onClose }: Props) {
             role="alert"
             style={{
               padding: "8px 10px",
-              background: "#fef2f2",
-              border: "1px solid #fecaca",
+              background: "var(--mk-danger-soft)",
+              border: "1px solid var(--mk-danger-100)",
               borderRadius: 4,
-              color: "#991b1b",
+              color: "var(--mk-danger-strong)",
               fontSize: 12,
             }}
           >

@@ -134,7 +134,7 @@
 }
 .pl2-banner--stopping .pl2-banner-dot {
   background: var(--v4-warn-500);
-  box-shadow: 0 0 0 4px rgba(247, 144, 9, 0.15);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--mk-warn) 15%, transparent);
   animation: pl2-pulse 1.5s ease-in-out infinite;
 }
 .pl2-banner-spin {
@@ -259,7 +259,7 @@
   transition: background .15s;
 }
 .pl2-card-wrap:last-child .pl2-card { border-bottom: 0; }
-.pl2-card:hover { background: #FCFCFD; }
+.pl2-card:hover { background: var(--mk-surface-2); }
 .pl2-card.is-density-compact { padding: 7px 40px 7px 21px; }
 .pl2-card-strip {
   position: absolute;

@@ -184,7 +184,7 @@ export function QualityChart({ buckets, labels, compact }: QualityChartProps) {
               {hasP0 && (
                 <>
                   {" · "}
-                  <b style={{ color: "#fca5a5" }}>P0:{b.with_p0}</b>
+                  <b style={{ color: "var(--mk-danger-100)" }}>P0:{b.with_p0}</b>
                 </>
               )}
             </div>

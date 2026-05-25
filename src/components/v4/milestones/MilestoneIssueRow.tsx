@@ -46,7 +46,7 @@ export function MilestoneIssueRow({ issue, dense = false }: Props) {
         {isBlocked && (
           <span
             className="v4-ptag"
-            style={{ background: "#FEE4E2", color: "#B42318" }}
+            style={{ background: "var(--mk-danger-100)", color: "var(--mk-danger-strong)" }}
           >
             blocked
           </span>

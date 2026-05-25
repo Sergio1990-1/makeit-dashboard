@@ -103,8 +103,8 @@ function VelocitySpark({ values }: { values: number[] }) {
       <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} preserveAspectRatio="none">
         <defs>
           <linearGradient id="kpi-vel-area" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#12B76A" stopOpacity="0.22" />
-            <stop offset="100%" stopColor="#12B76A" stopOpacity="0.02" />
+            <stop offset="0%" stopColor="var(--mk-success)" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="var(--mk-success)" stopOpacity="0.02" />
           </linearGradient>
         </defs>
         <path d={geom.area} fill="url(#kpi-vel-area)" />

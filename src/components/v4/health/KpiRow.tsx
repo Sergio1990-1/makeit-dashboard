@@ -59,7 +59,7 @@ function ScoreTile({ score, grade, passes, fails, unknowns }: ScoreProps) {
       <div className="ph-tile-main-body">
         <div className="ph-ring">
           <svg viewBox="0 0 120 120">
-            <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="10" />
+            <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.18)" /* high-contrast stroke on color overlay — D-exception, не критично для миграции */ strokeWidth="10" />
             <circle
               className="ph-ring-fg"
               cx="60"

@@ -45,9 +45,12 @@ export function BrandedLoader({ stage, subtitle }: Props) {
     const canvas: HTMLCanvasElement = canvasEl;
     const g: CanvasRenderingContext2D = ctx;
 
-    // Detect accent color from CSS custom property
+    // Detect accent color from CSS custom property.
+    // Canvas 2D context needs literal CSS color strings; var() refs не работают
+    // в g.fillStyle. Поэтому читаем computed hex через getPropertyValue +
+    // безопасный fallback на канонический literal (равен текущему --mk-primary).
     const accent = getComputedStyle(document.documentElement)
-      .getPropertyValue("--v4-accent-600")
+      .getPropertyValue("--mk-primary")
       .trim() || "#2563EB";
 
     // Parse hex to r,g,b for rgba() usage

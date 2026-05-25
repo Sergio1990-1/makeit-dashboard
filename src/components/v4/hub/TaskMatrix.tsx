@@ -27,11 +27,11 @@ const COL_LABEL: Record<ComplexityCol, string> = {
 // Row colour mirrors ProgressMatrix's priority palette; "—" (no priority)
 // uses the muted ink tone, same as P4's neutral grey there.
 const ROW_COLOR: Record<PriorityRow, string> = {
-  P1: "#EF4444",
-  P2: "#F79009",
-  P3: "#2563EB",
-  P4: "#94A0B8",
-  "—": "#94A0B8",
+  P1: "var(--mk-priority-p1)",
+  P2: "var(--mk-priority-p2)",
+  P3: "var(--mk-priority-p3)",
+  P4: "var(--mk-priority-p4)",
+  "—": "var(--mk-priority-p4)",
 };
 
 function rowKey(issue: Issue): PriorityRow {

@@ -64,9 +64,9 @@ interface Props {
 }
 
 const PHASE_BADGE: Record<Phase, { icon: string; label: string; color: string }> = {
-  development: { icon: "▶", label: "dev", color: "var(--v4-accent-600, #1D4ED8)" },
-  support: { icon: "⏸", label: "support", color: "var(--v4-ink-500, #6B7691)" },
-  "pre-dev": { icon: "◻", label: "pre-dev", color: "var(--v4-purple-700, #5B21B6)" },
+  development: { icon: "▶", label: "dev", color: "var(--mk-primary-active)" },
+  support: { icon: "⏸", label: "support", color: "var(--mk-ink-500)" },
+  "pre-dev": { icon: "◻", label: "pre-dev", color: "var(--mk-purple-700)" },
 };
 
 // Grade → tone. Shared severity palette (see ./constants) so this can't
@@ -136,7 +136,7 @@ function KpiItem({ icon, value, label, danger }: KpiItemProps) {
         alignItems: "baseline",
         gap: 4,
         fontSize: 12,
-        color: isAlert ? SEVERITY_COLORS.danger : "var(--v4-ink-800, #1B2235)",
+        color: isAlert ? SEVERITY_COLORS.danger : "var(--mk-ink-800)",
         fontWeight: isAlert ? 700 : 500,
       }}
     >
@@ -144,7 +144,7 @@ function KpiItem({ icon, value, label, danger }: KpiItemProps) {
         {icon}
       </span>
       <b style={{ fontVariantNumeric: "tabular-nums" }}>{value}</b>
-      <span style={{ fontSize: 11, color: "var(--v4-ink-500, #6B7691)", fontWeight: 500 }}>
+      <span style={{ fontSize: 11, color: "var(--mk-ink-500)", fontWeight: 500 }}>
         {label}
       </span>
     </span>
@@ -168,7 +168,7 @@ export function ProjectScorecard({
   const { norm, loading: normLoading } = useDriftNorm(repo, tier);
 
   const phaseBadge = PHASE_BADGE[phase];
-  const gradeTone = grade ? GRADE_TONE[grade] : "var(--v4-ink-400, #94A0B8)";
+  const gradeTone = grade ? GRADE_TONE[grade] : "var(--mk-ink-400)";
   const cost = compactUsd(costMtdUsd);
 
   const activate = () => onSelectRepo(repo);
@@ -194,9 +194,9 @@ export function ProjectScorecard({
         flexDirection: "column",
         gap: 10,
         padding: 14,
-        borderRadius: "var(--v4-r-lg, 12px)",
-        background: "var(--v4-card, var(--v4-bg, #fff))",
-        border: "1px solid var(--v4-line, #E4E8EF)",
+        borderRadius: "var(--mk-r-lg)",
+        background: "var(--mk-paper)",
+        border: "1px solid var(--mk-line)",
         cursor: "pointer",
         minWidth: 0,
       }}
@@ -207,10 +207,10 @@ export function ProjectScorecard({
           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             <span
               style={{
-                fontFamily: "var(--v4-mono, ui-monospace, monospace)",
+                fontFamily: "var(--mk-font-mono)",
                 fontSize: 13,
                 fontWeight: 600,
-                color: "var(--v4-ink-900, #0E1320)",
+                color: "var(--mk-ink-900)",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
@@ -226,8 +226,8 @@ export function ProjectScorecard({
                 fontWeight: 700,
                 padding: "1px 6px",
                 borderRadius: 999,
-                background: "var(--v4-accent-50, #EEF4FF)",
-                color: "var(--v4-accent-700, #1E40AF)",
+                background: "var(--mk-brand-50)",
+                color: "var(--mk-brand-700)",
                 flexShrink: 0,
               }}
             >
@@ -253,7 +253,7 @@ export function ProjectScorecard({
               style={{
                 marginTop: 3,
                 fontSize: 11,
-                color: "var(--v4-ink-500, #6B7691)",
+                color: "var(--mk-ink-500)",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
@@ -299,7 +299,7 @@ export function ProjectScorecard({
           alignItems: "center",
           gap: 14,
           flexWrap: "wrap",
-          borderTop: "1px solid var(--v4-line-soft, #EEF1F6)",
+          borderTop: "1px solid var(--mk-line-soft)",
           paddingTop: 8,
         }}
       >
@@ -320,8 +320,8 @@ export function ProjectScorecard({
           justifyContent: "space-between",
           gap: 8,
           fontSize: 11,
-          color: "var(--v4-ink-500, #6B7691)",
-          borderTop: "1px solid var(--v4-line-soft, #EEF1F6)",
+          color: "var(--mk-ink-500)",
+          borderTop: "1px solid var(--mk-line-soft)",
           paddingTop: 8,
         }}
       >

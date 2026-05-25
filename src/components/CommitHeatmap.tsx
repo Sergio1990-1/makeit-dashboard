@@ -10,11 +10,11 @@ const DAYS = 7;
 const TOTAL_DAYS = WEEKS * DAYS;
 
 function getColor(count: number): string {
-  if (count === 0) return "var(--heatmap-0, #161b22)";
-  if (count === 1) return "var(--heatmap-1, #0e4429)";
-  if (count <= 3) return "var(--heatmap-2, #006d32)";
-  if (count <= 6) return "var(--heatmap-3, #26a641)";
-  return "var(--heatmap-4, #39d353)";
+  if (count === 0) return "var(--mk-surface-3)";
+  if (count === 1) return "var(--mk-heat-1)";
+  if (count <= 3) return "var(--mk-heat-2)";
+  if (count <= 6) return "var(--mk-heat-3)";
+  return "var(--mk-heat-4)";
 }
 
 function CommitHeatmapImpl({ activity }: Props) {

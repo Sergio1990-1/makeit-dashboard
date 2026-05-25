@@ -28,16 +28,16 @@ function fmtUsd(n: number): string {
 
 /** Tier-based colour for the progress bar and percentage label. */
 function tierColor(pct: number): string {
-  if (pct >= FALLBACK_PCT) return "var(--v4-danger-700, #b91c1c)";
-  if (pct >= WARN_PCT) return "var(--v4-warning-700, #b45309)";
-  return "var(--v4-success-700, #15803d)";
+  if (pct >= FALLBACK_PCT) return "var(--mk-danger-strong)";
+  if (pct >= WARN_PCT) return "var(--mk-warn-strong)";
+  return "var(--mk-success-strong)";
 }
 
 /** Background tint matching tier — used for the progress bar fill. */
 function tierFill(pct: number): string {
-  if (pct >= FALLBACK_PCT) return "var(--v4-danger-500, #ef4444)";
-  if (pct >= WARN_PCT) return "var(--v4-warning-500, #f59e0b)";
-  return "var(--v4-success-500, #10b981)";
+  if (pct >= FALLBACK_PCT) return "var(--mk-danger)";
+  if (pct >= WARN_PCT) return "var(--mk-warn)";
+  return "var(--mk-success)";
 }
 
 /** Russian label for a known call category. Unknown values pass through. */
@@ -92,17 +92,17 @@ export function SettingsBudgetPanel() {
   if (spend.capPct >= HARD_STOP_PCT) {
     tierMessage = {
       text: `Hard-stop активен (≥${HARD_STOP_PCT}%) — все Claude-запросы отклоняются до конца месяца или сброса.`,
-      color: "var(--v4-danger-700, #b91c1c)",
+      color: "var(--mk-danger-strong)",
     };
   } else if (spend.capPct >= FALLBACK_PCT) {
     tierMessage = {
       text: `Активен fallback на Haiku (≥${FALLBACK_PCT}%) — Sonnet/Opus автоматически заменяются.`,
-      color: "var(--v4-danger-700, #b91c1c)",
+      color: "var(--mk-danger-strong)",
     };
   } else if (spend.capPct >= WARN_PCT) {
     tierMessage = {
       text: `Расход выше ${WARN_PCT}% — приближаемся к fallback на Haiku.`,
-      color: "var(--v4-warning-700, #b45309)",
+      color: "var(--mk-warn-strong)",
     };
   }
 
@@ -111,7 +111,7 @@ export function SettingsBudgetPanel() {
       style={{
         marginTop: 4,
         padding: 12,
-        border: "1px solid var(--v4-border, rgba(0,0,0,0.1))",
+        border: "1px solid var(--mk-line)",
         borderRadius: 10,
       }}
     >
@@ -164,7 +164,7 @@ export function SettingsBudgetPanel() {
         aria-valuemax={HARD_STOP_PCT}
         style={{
           height: 8,
-          background: "var(--v4-border, rgba(0,0,0,0.08))",
+          background: "var(--mk-line-soft)",
           borderRadius: 4,
           overflow: "hidden",
         }}
@@ -250,7 +250,7 @@ export function SettingsBudgetPanel() {
             <button
               type="button"
               className="v4-btn"
-              style={{ color: "var(--v4-danger-700, #b91c1c)" }}
+              style={{ color: "var(--mk-danger-strong)" }}
               onClick={() => {
                 resetCurrentMonth();
                 setConfirmReset(false);

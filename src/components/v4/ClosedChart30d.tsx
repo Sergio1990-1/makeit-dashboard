@@ -204,7 +204,7 @@ export function ClosedChart30d({ projects }: Props) {
                 strokeLinejoin="round"
                 strokeDasharray={trendLen ? `${trendLen} ${trendLen}` : undefined}
                 strokeDashoffset={trendLen ? trendLen * (1 - t) : 0}
-                style={{ filter: "drop-shadow(0 1px 0 rgba(18,183,106,0.15))" }}
+                style={{ filter: "drop-shadow(0 1px 0 color-mix(in srgb, var(--mk-success) 15%, transparent))" }}
               />
               <path
                 d={trendD}

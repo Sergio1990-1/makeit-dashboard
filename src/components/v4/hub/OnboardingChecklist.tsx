@@ -55,7 +55,7 @@ export function OnboardingChecklist({ findings }: Props) {
       <div
         style={{
           padding: 16,
-          border: "1px dashed var(--v4-border, rgba(0,0,0,0.1))",
+          border: "1px dashed var(--mk-line)",
           borderRadius: 10,
           color: "var(--v4-ink-500)",
           fontSize: 13,
@@ -132,7 +132,7 @@ export function OnboardingChecklist({ findings }: Props) {
                 alignItems: "center",
                 gap: 8,
                 padding: "6px 10px",
-                border: "1px solid var(--v4-border, rgba(0,0,0,0.08))",
+                border: "1px solid var(--mk-line-soft)",
                 borderRadius: 6,
                 fontSize: 13,
               }}
@@ -147,9 +147,9 @@ export function OnboardingChecklist({ findings }: Props) {
                   justifyContent: "center",
                   color:
                     kind === "pass"
-                      ? "var(--v4-ok, #16a34a)"
+                      ? "var(--mk-success)"
                       : kind === "fail"
-                        ? "var(--v4-err, #dc2626)"
+                        ? "var(--mk-danger)"
                         : "var(--v4-ink-500)",
                   fontWeight: 600,
                 }}

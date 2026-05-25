@@ -29,7 +29,7 @@ const M_BRICKS = [
 export function MakeItLoader({
   size = 56,
   dark,
-  accent = 'var(--v4-accent-600, #2563EB)',
+  accent = 'var(--mk-primary-active)',
   center = false,
   className,
 }: MakeItLoaderProps) {
@@ -41,7 +41,7 @@ export function MakeItLoader({
 
   const rootStyle: CSSProperties = {
     fontSize: size,
-    color: dark === true ? '#FFFFFF' : dark === false ? '#0E1320' : undefined,
+    color: dark === true ? '#FFFFFF' : dark === false ? 'var(--mk-ink-900)' : undefined,
     ['--ml-accent' as string]: accent,
     ['--ml-caret-w' as string]: `${caretWidth}px`,
     ['--ml-caret-gap' as string]: `${caretGap}px`,

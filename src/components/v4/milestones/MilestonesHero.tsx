@@ -103,8 +103,8 @@ function VelocitySpark({ values }: { values: number[] }) {
       <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} preserveAspectRatio="none">
         <defs>
           <linearGradient id="ms-vel-area" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#12B76A" stopOpacity="0.22" />
-            <stop offset="100%" stopColor="#12B76A" stopOpacity="0.02" />
+            <stop offset="0%" stopColor="var(--mk-success)" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="var(--mk-success)" stopOpacity="0.02" />
           </linearGradient>
         </defs>
         <path d={geom.area} className="v4-mshero-spark-area" fill="url(#ms-vel-area)" />
@@ -249,6 +249,9 @@ export function MilestonesHero({ milestones, projects, now }: Props) {
                 cy="60"
                 r={RING_R}
                 fill="none"
+                /* white/transparent stroke на цветном hero-фоне — это
+                   намеренный «контраст на color bg» паттерн; mk-токены сюда
+                   не применяются (hero всегда tinted). */
                 stroke="rgba(255,255,255,0.18)"
                 strokeWidth="9"
               />
@@ -299,7 +302,7 @@ export function MilestonesHero({ milestones, projects, now }: Props) {
       {/* SUPPORT 1: velocity */}
       <div className="v4-mshero-tile">
         <div className="v4-mshero-lbl">
-          <span className="v4-mshero-lbl-ic" style={{ color: "#7C3AED" }}>
+          <span className="v4-mshero-lbl-ic" style={{ color: "var(--mk-purple-500)" }}>
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M13 2L3 14h7l-1 8 11-13h-8l1-7z" />
             </svg>
@@ -326,7 +329,7 @@ export function MilestonesHero({ milestones, projects, now }: Props) {
       {/* SUPPORT 2: next deadline */}
       <div className="v4-mshero-tile">
         <div className="v4-mshero-lbl">
-          <span className="v4-mshero-lbl-ic" style={{ color: "#16A34A" }}>
+          <span className="v4-mshero-lbl-ic" style={{ color: "var(--mk-success)" }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2" />
               <path d="M16 2v4M8 2v4M3 10h18" />

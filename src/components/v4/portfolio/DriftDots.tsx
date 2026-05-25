@@ -60,7 +60,7 @@ const DOT_STYLE: Record<DriftSeverity, DotStyle> = {
   ok: { bg: SEVERITY_COLORS.ok, glyph: "●", word: "в норме" },
   warn: { bg: SEVERITY_COLORS.warn, glyph: "◐", word: "отставание" },
   stale: { bg: SEVERITY_COLORS.danger, glyph: "▲", word: "просрочено" },
-  unknown: { bg: "var(--v4-ink-300, #C5CCDA)", glyph: "○", word: "нет данных" },
+  unknown: { bg: "var(--mk-ink-300)", glyph: "○", word: "нет данных" },
 };
 
 /**

@@ -45,7 +45,7 @@
 
 .it {
   letter-spacing: -0.02em;
-  color: var(--ml-accent, #2563eb);
+  color: var(--ml-accent, var(--mk-primary));
   text-transform: uppercase;
 }
 
@@ -60,7 +60,7 @@
   display: inline-block;
   width: var(--ml-caret-w, 4px);
   height: 0.72em;
-  background: var(--ml-accent, #2563eb);
+  background: var(--ml-accent, var(--mk-primary));
   margin-left: var(--ml-caret-gap, 5px);
   transform: translateY(var(--ml-caret-y, 2px));
   opacity: 0;

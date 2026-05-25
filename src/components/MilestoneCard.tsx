@@ -63,12 +63,12 @@ export function MilestoneCard({ milestone }: Props) {
             className="progress-bar-fill"
             style={{
               width: `${progress}%`,
-              background: progress < 30 ? "#f85149" : progress < 70 ? "#d29922" : "#3fb950",
+              background: progress < 30 ? "var(--mk-danger)" : progress < 70 ? "var(--mk-warn)" : "var(--mk-success)",
             }}
           />
         </div>
         <span className="milestone-progress-text" style={{
-          color: progress < 30 ? "#f85149" : progress < 70 ? "#d29922" : "#3fb950",
+          color: progress < 30 ? "var(--mk-danger)" : progress < 70 ? "var(--mk-warn)" : "var(--mk-success)",
         }}>
           {milestone.closedIssues}/{total} ({progress}%)
         </span>

@@ -104,7 +104,7 @@ export function QualityProjectCard({ repo, client, data, mode, index }: Props) {
               <b
                 style={{
                   color: "var(--v4-p0-text)",
-                  background: "rgba(239,68,68,0.12)",
+                  background: "color-mix(in srgb, var(--mk-danger) 12%, transparent)",
                   padding: "1px 6px",
                   borderRadius: 3,
                   fontWeight: 700,

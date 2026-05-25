@@ -96,7 +96,7 @@ export function PulseTimeline({ events }: Props) {
       <div
         style={{
           padding: 16,
-          border: "1px dashed var(--v4-border, rgba(0,0,0,0.1))",
+          border: "1px dashed var(--mk-line)",
           borderRadius: 10,
           color: "var(--v4-ink-500)",
           fontSize: 13,
@@ -133,7 +133,7 @@ export function PulseTimeline({ events }: Props) {
               flexDirection: "column",
               gap: 6,
               // Vertical timeline rail.
-              borderLeft: "2px solid var(--v4-border, rgba(0,0,0,0.08))",
+              borderLeft: "2px solid var(--mk-line-soft)",
               paddingLeft: 14,
             }}
           >
@@ -162,10 +162,10 @@ export function PulseTimeline({ events }: Props) {
                     alignItems: "flex-start",
                     gap: 10,
                     padding: 10,
-                    border: "1px solid var(--v4-border, rgba(0,0,0,0.08))",
+                    border: "1px solid var(--mk-line-soft)",
                     borderRadius: 8,
                     cursor: clickable ? "pointer" : "default",
-                    background: "var(--v4-card, transparent)",
+                    background: "transparent",
                   }}
                 >
                   <span
@@ -211,7 +211,7 @@ export function PulseTimeline({ events }: Props) {
                         style={{
                           padding: "1px 7px",
                           borderRadius: 999,
-                          background: "var(--v4-border, rgba(0,0,0,0.08))",
+                          background: "var(--mk-line-soft)",
                           color: "var(--v4-ink-700)",
                         }}
                       >

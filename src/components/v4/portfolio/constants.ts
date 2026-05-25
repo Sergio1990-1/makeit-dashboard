@@ -13,15 +13,15 @@
 
 export const SEVERITY_COLORS = {
   /** A grade · in-norm drift */
-  ok: "#16a34a",
+  ok: "var(--mk-success)",
   /** B grade */
-  strong: "#65a30d",
+  strong: "var(--mk-success-strong)",
   /** C grade · lagging drift */
-  warn: "#ca8a04",
+  warn: "var(--mk-severity-medium)",
   /** D grade */
-  elevated: "#ea580c",
+  elevated: "var(--mk-warn)",
   /** F grade · overdue drift · KPI alert */
-  danger: "#dc2626",
+  danger: "var(--mk-danger)",
 } as const;
 
 /**
