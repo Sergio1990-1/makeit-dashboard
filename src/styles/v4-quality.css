@@ -1,0 +1,558 @@
+/* ============================================================
+ * v4-quality.css — стили вкладки «Качество кода».
+ * Портировано из docs/superpowers/specs/quality-tab-prototype.html (Task 18).
+ *
+ * Scope: все правила обёрнуты в `.v4-quality-tab`, чтобы:
+ *  - переопределение `--v4-p1`/`--v4-p2` (теперь оранж/жёлтый по shields.io,
+ *    а не red/orange как в v4.css) не утекало в остальной UI;
+ *  - блок-классы из прототипа (`.chart`, `.bar`, `.kpi` и т.д.) не
+ *    конфликтовали с одноимёнными элементами других секций (если такие есть).
+ *
+ * Перформанс-критичные правила (см. specs section "Перформанс"):
+ *   1) NO `transition: height` — height триггерит layout; меняем opacity/transform.
+ *   2) NO `:has(.bar:hover)` — toggle class `is-hovering`/`is-active` через JS.
+ *   3) NO `clip-path` на контейнере с десятками детей — opacity + translateY.
+ *   4) NO `innerHTML = ...` на hover — pre-create структуру, обновлять textContent.
+ *   5) GPU-friendly transitions only: transform / opacity.
+ * ============================================================ */
+
+.v4-quality-tab {
+  /* Codex severity palette — align с shields.io бейджами в PR-коммитах */
+  --v4-p0: #EF4444;             /* red — БЛОКЕР */
+  --v4-p1: #F59E0B;             /* orange — высокое */
+  --v4-p2: #EAB308;             /* yellow — среднее */
+  --v4-clean: #2563EB;          /* синий — чистые PR */
+  --v4-clean-soft: #93C5FD;     /* голубой для светлого фона */
+  --v4-p0-text: #991B1B;        /* dark red для текста на белом */
+  --v4-p1-text: #B45309;        /* dark amber */
+  --v4-p2-text: #854D0E;        /* dark yellow-amber */
+  --v4-clean-text: #1D4ED8;
+}
+
+/* ──── KPI · P0 alert pill ──── */
+.v4-quality-tab .kpi-p0-alert {
+  background: var(--v4-p0);
+  color: #fff;
+  border-radius: var(--v4-r-md);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45);
+  animation: q-p0-pulse 1.8s ease-in-out infinite;
+}
+@keyframes q-p0-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); }
+  50%      { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+}
+.v4-quality-tab .kpi-p0-icon { font-size: 22px; line-height: 1; }
+.v4-quality-tab .kpi-p0-text { display: flex; flex-direction: column; }
+.v4-quality-tab .kpi-p0-text b { font-family: var(--v4-mono); font-size: 18px; line-height: 1.1; }
+.v4-quality-tab .kpi-p0-text span { font-size: 11px; opacity: 0.9; margin-top: 2px; }
+
+/* ──── KPI cards ──── */
+.v4-quality-tab .kpi {
+  background: var(--v4-paper);
+  border: 1px solid var(--v4-line);
+  border-radius: var(--v4-r-md);
+  padding: 12px 14px;
+  animation: q-kpi-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms + 200ms);
+  transition: transform .22s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow .22s ease,
+              border-color .2s ease;
+}
+.v4-quality-tab .kpi:hover {
+  transform: translateY(-2px);
+  border-color: var(--v4-line-strong);
+  box-shadow: 0 10px 28px rgba(11, 16, 32, 0.07);
+}
+@keyframes q-kpi-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.v4-quality-tab .kpi-lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--v4-ink-500);
+  font-family: var(--v4-mono);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.v4-quality-tab .kpi-v {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--v4-ink-900);
+  font-family: var(--v4-mono);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.v4-quality-tab .kpi-v.dirty { color: var(--v4-ink-900); }
+.v4-quality-tab .kpi-sub { font-size: 11px; color: var(--v4-ink-500); margin-top: 4px; }
+
+/* ──── Chart — vertical bars (main) ──── */
+.v4-quality-tab .chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  flex: 1;
+  min-height: 220px;
+  border-bottom: 1px dashed var(--v4-line);
+  position: relative;
+  /* Coordinated reveal — opacity + translateY (GPU). НЕ clip-path
+     (репейнтит N детей каждый кадр). */
+  animation: q-chart-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 80ms;
+}
+@keyframes q-chart-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Dim non-hovered bars: через class toggle (JS), не :has() — последний дорогой.
+   Селектор покрывает оба контейнера — .chart (главный) и .card-chart (мини). */
+.v4-quality-tab .is-hovering .bar:not(.is-active) .bar-stack { opacity: 0.4; }
+
+.v4-quality-tab .chart-axis {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.v4-quality-tab .chart-axis::before,
+.v4-quality-tab .chart-axis::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed var(--v4-line-soft);
+}
+.v4-quality-tab .chart-axis::before { top: 50%; }
+.v4-quality-tab .chart-axis::after  { top: 0; }
+.v4-quality-tab .chart-axis-label {
+  position: absolute;
+  right: 4px;
+  font-family: var(--v4-mono);
+  font-size: 9px;
+  color: var(--v4-ink-400);
+  background: var(--v4-paper);
+  padding: 0 3px;
+}
+
+/* ──── Bar ──── */
+.v4-quality-tab .bar {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  position: relative;
+  cursor: crosshair;
+  min-width: 4px;
+}
+/* Column-wide подсветка за активным баром (як v4-ClosedChart30d) */
+.v4-quality-tab .bar::before {
+  content: '';
+  position: absolute;
+  inset: -6px -4px -4px -4px;
+  background: var(--v4-accent-100);
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity .15s ease;
+  pointer-events: none;
+}
+.v4-quality-tab .bar.is-active::before,
+.v4-quality-tab .bar:hover::before { opacity: 0.45; }
+
+/* P0 day — ВСЕГДА видимая подсветка колонки (без hover).
+   Юзер должен сразу видеть "тут был блокер". */
+.v4-quality-tab .bar.has-p0 {
+  background: linear-gradient(to bottom,
+    rgba(239, 68, 68, 0.18) 0%,
+    rgba(239, 68, 68, 0.08) 60%,
+    rgba(239, 68, 68, 0.02) 100%);
+}
+/* В mini-чарте дополнительно border-top — gradient слабо читается на 80px. */
+.v4-quality-tab .card-chart .bar.has-p0 .bar-stack {
+  border-top: 2px solid var(--v4-p0);
+}
+
+/* Mini-pill "P0:N" сверху столбца, ВСЕГДА видна (только main chart). */
+.v4-quality-tab .bar-topper-p0 {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--v4-p0);
+  color: #fff;
+  font-family: var(--v4-mono);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.45);
+  animation: q-p0-topper-pulse 2s ease-in-out infinite;
+}
+@keyframes q-p0-topper-pulse {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%      { transform: translateX(-50%) translateY(-2px); }
+}
+/* В mini-чарте топпер прячем — нет места + border-top уже сигналит */
+.v4-quality-tab .card-chart .bar-topper-p0 { display: none; }
+
+.v4-quality-tab .bar-stack {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  overflow: hidden;
+  transition: opacity .15s ease;
+  /* NO transition: height — height триггерит layout. На period switch DOM
+     пересоздаётся, .bar-stack рождается с правильной высотой. */
+}
+
+/* Dashed guide line от верха активного бара до базы */
+.v4-quality-tab .bar.is-active .bar-stack::after,
+.v4-quality-tab .bar:hover .bar-stack::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-image: linear-gradient(to bottom, var(--v4-accent-700) 50%, transparent 50%);
+  background-size: 1px 4px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Value-chip над активным баром */
+.v4-quality-tab .bar-chip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(2px);
+  background: var(--v4-ink-900);
+  color: #fff;
+  font-family: var(--v4-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .12s ease, transform .15s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-bottom: 6px;
+  white-space: nowrap;
+}
+.v4-quality-tab .bar.is-active .bar-chip,
+.v4-quality-tab .bar:hover .bar-chip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Red сегмент = P0+P1 worst-wins (одна красная категория для читабельности).
+   Tooltip разбивает их отдельно. P0-alert pulse — в KPI выше. */
+.v4-quality-tab .bar-crit {
+  background: var(--v4-p0);
+  width: 100%;
+}
+.v4-quality-tab .bar-p2 {
+  background: var(--v4-p2);
+  width: 100%;
+}
+.v4-quality-tab .bar-clean {
+  background: var(--v4-clean-soft);
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+}
+.v4-quality-tab .bar-empty {
+  background: var(--v4-line-soft);
+  width: 100%;
+  height: 1px;
+  margin-top: auto;
+}
+
+/* Low-sample флаг — приглушаем бар, total_pr < 8 (LOW_SAMPLE) */
+.v4-quality-tab .bar.is-low-sample .bar-stack { opacity: 0.55; }
+
+/* ──── Card chart (mini) ──── */
+.v4-quality-tab .card-chart {
+  height: 80px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  border-bottom: 1px dashed var(--v4-line-soft);
+  position: relative;
+}
+
+/* ──── Tooltip — main chart card ──── */
+.v4-quality-tab .chart-tip {
+  position: absolute;
+  top: 8px;
+  background: var(--v4-paper);
+  border: 1px solid var(--v4-line-strong);
+  box-shadow: 0 8px 24px rgba(11, 16, 32, 0.12), 0 2px 6px rgba(11, 16, 32, 0.06);
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-width: 180px;
+  pointer-events: none;
+  font-size: 12px;
+  z-index: 5;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity .18s ease, transform .22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.v4-quality-tab .chart-tip.show { opacity: 1; transform: translateY(0); }
+.v4-quality-tab .chart-tip-l {
+  font-family: var(--v4-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--v4-ink-500);
+  margin-bottom: 6px;
+}
+.v4-quality-tab .chart-tip-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.v4-quality-tab .chart-tip-v {
+  font-family: var(--v4-mono);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--v4-ink-900);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.v4-quality-tab .chart-tip-u { color: var(--v4-ink-500); font-size: 12px; }
+.v4-quality-tab .chart-tip-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--v4-line-soft);
+  color: var(--v4-ink-500);
+  font-size: 11px;
+}
+.v4-quality-tab .chart-tip-foot--tight { padding-top: 4px; border-top: 0; }
+.v4-quality-tab .chart-tip-tr {
+  font-family: var(--v4-mono);
+  font-weight: 600;
+  color: var(--v4-ink-700);
+}
+.v4-quality-tab .chart-tip-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--v4-mono);
+  font-weight: 600;
+}
+.v4-quality-tab .chart-tip-seg .sw { width: 8px; height: 8px; border-radius: 2px; }
+
+/* ──── Tooltip — compact (для миничартов в карточках) ──── */
+.v4-quality-tab .chart-tip--compact {
+  min-width: 160px;
+  padding: 8px 10px;
+  font-size: 11px;
+  background: var(--v4-ink-900);
+  color: #fff;
+  border: 0;
+  box-shadow: 0 8px 20px rgba(11, 16, 32, 0.32);
+  top: auto;
+  bottom: calc(100% + 8px);
+  white-space: nowrap;
+  line-height: 1.45;
+  font-family: var(--v4-mono);
+}
+.v4-quality-tab .chart-tip--compact .ct-line1 {
+  display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px;
+  padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+.v4-quality-tab .chart-tip--compact .ct-line2 {
+  display: flex; gap: 10px; align-items: center;
+}
+.v4-quality-tab .chart-tip--compact .ct-d  { color: rgba(255,255,255,0.7); font-size: 10px; }
+.v4-quality-tab .chart-tip--compact .ct-v  { font-weight: 700; font-size: 13px; }
+.v4-quality-tab .chart-tip--compact .ct-u  { color: rgba(255,255,255,0.6); font-size: 10px; }
+.v4-quality-tab .chart-tip--compact .ct-pct { font-weight: 700; margin-left: auto; font-size: 12px; }
+.v4-quality-tab .chart-tip--compact .ct-seg { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; }
+.v4-quality-tab .chart-tip--compact .ct-seg .sw {
+  width: 7px; height: 7px; border-radius: 2px; display: inline-block;
+}
+.v4-quality-tab .chart-tip--compact .ct-seg b { font-weight: 700; color: #fff; }
+.v4-quality-tab .chart-tip--compact .ct-p0-wrap { color: #fecaca; font-weight: 800; }
+.v4-quality-tab .chart-tip--compact .ct-p0-wrap b { color: #fff; }
+
+/* ──── Chart labels / legend (under main chart) ──── */
+.v4-quality-tab .chart-labels {
+  display: flex;
+  margin-top: 6px;
+  gap: 2px;
+}
+.v4-quality-tab .chart-label {
+  flex: 1;
+  text-align: center;
+  font-family: var(--v4-mono);
+  font-size: 9px;
+  color: var(--v4-ink-400);
+  min-width: 4px;
+  overflow: hidden;
+}
+.v4-quality-tab .chart-legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--v4-ink-500);
+  font-family: var(--v4-mono);
+  font-weight: 500;
+}
+.v4-quality-tab .chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.v4-quality-tab .chart-legend .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* ──── Annotation markers ──── */
+.v4-quality-tab .annot {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-image: linear-gradient(to bottom,
+    var(--v4-purple-500, #7C3AED) 50%,
+    transparent 50%);
+  background-size: 1px 6px;
+  pointer-events: auto;
+  cursor: help;
+  z-index: 2;
+}
+.v4-quality-tab .annot-dot {
+  position: absolute;
+  top: -3px;
+  left: -5px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--v4-purple-500, #7C3AED);
+  border: 2px solid var(--v4-paper);
+  box-shadow: 0 0 0 1px var(--v4-purple-500, #7C3AED);
+}
+.v4-quality-tab .annot.is-skill  .annot-dot { background: var(--v4-accent-600);  box-shadow: 0 0 0 1px var(--v4-accent-600); }
+.v4-quality-tab .annot.is-deploy .annot-dot { background: var(--v4-success-500); box-shadow: 0 0 0 1px var(--v4-success-500); }
+.v4-quality-tab .annot.is-manual .annot-dot { background: var(--v4-purple-500, #7C3AED); }
+.v4-quality-tab .annot:hover { background-image: linear-gradient(to bottom, var(--v4-ink-900) 50%, transparent 50%); }
+.v4-quality-tab .annot:hover .annot-dot { transform: scale(1.2); transition: transform .12s; }
+
+.v4-quality-tab .annot-tip {
+  position: absolute;
+  top: 22px;
+  left: 0;
+  transform: translateX(-50%) translateY(2px);
+  background: var(--v4-ink-900);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 8px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  max-width: 260px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s ease, transform .18s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 6;
+  box-shadow: 0 6px 16px rgba(11, 16, 32, 0.25);
+}
+.v4-quality-tab .annot-tip-cat {
+  display: inline-block;
+  font-family: var(--v4-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: rgba(255,255,255,0.15);
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-bottom: 4px;
+}
+.v4-quality-tab .annot-tip-date { font-family: var(--v4-mono); font-size: 10px; color: rgba(255,255,255,0.65); margin-top: 4px; }
+.v4-quality-tab .annot:hover .annot-tip { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ──── Add-event button ──── */
+.v4-quality-tab .btn-add-event {
+  border: 1px dashed var(--v4-line-strong);
+  background: transparent;
+  border-radius: var(--v4-r-md);
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--v4-ink-500);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all .15s ease;
+}
+.v4-quality-tab .btn-add-event:hover {
+  color: var(--v4-purple-500, #7C3AED);
+  border-color: var(--v4-purple-500, #7C3AED);
+  background: var(--v4-purple-50, #F5F0FF);
+}
+
+/* ──── Project card (grid) ──── */
+.v4-quality-tab .card {
+  background: var(--v4-paper);
+  border: 1px solid var(--v4-line);
+  border-radius: var(--v4-r-lg);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  will-change: transform;
+  animation: q-card-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms + 300ms);
+  transition:
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms ease,
+    border-color 200ms ease;
+}
+.v4-quality-tab .card:hover {
+  transform: translateY(-3px);
+  border-color: var(--v4-line-strong);
+  box-shadow: 0 14px 32px -14px rgba(11, 16, 32, 0.18),
+              0 4px 12px -4px rgba(11, 16, 32, 0.08);
+}
+@keyframes q-card-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ──── REDUCED MOTION GUARD ────
+ * Пользователи с prefers-reduced-motion отключают всю кинетику.
+ * (Аналог @media-блока в v4.css.) */
+@media (prefers-reduced-motion: reduce) {
+  .v4-quality-tab .chart,
+  .v4-quality-tab .card,
+  .v4-quality-tab .kpi,
+  .v4-quality-tab .kpi-p0-alert,
+  .v4-quality-tab .bar-topper-p0 {
+    animation: none !important;
+    clip-path: none !important;
+  }
+  .v4-quality-tab .bar-stack,
+  .v4-quality-tab .chart-tip,
+  .v4-quality-tab .bar-chip,
+  .v4-quality-tab .annot-tip {
+    transition: opacity .15s ease !important;
+  }
+  .v4-quality-tab .card:hover,
+  .v4-quality-tab .kpi:hover {
+    transform: none !important;
+  }
+}
