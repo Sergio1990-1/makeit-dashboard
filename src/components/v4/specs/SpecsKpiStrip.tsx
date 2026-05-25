@@ -18,7 +18,7 @@ export function SpecsKpiStrip({ projects }: Props) {
         <div className="v4-projects-agg-cell" title="PRD в активной разработке">
           <div
             className="v4-projects-agg-n num"
-            style={{ color: t.inDevelopment > 0 ? "var(--mk-success-strong)" : undefined }}
+            style={{ color: t.inDevelopment > 0 ? "var(--v4-success-700)" : undefined }}
           >
             {t.inDevelopment}
           </div>
@@ -27,7 +27,7 @@ export function SpecsKpiStrip({ projects }: Props) {
         <div className="v4-projects-agg-cell" title="Спека готова, можно запускать">
           <div
             className="v4-projects-agg-n num"
-            style={{ color: t.specReady > 0 ? "var(--mk-warn-strong)" : undefined }}
+            style={{ color: t.specReady > 0 ? "var(--v4-warn-600)" : undefined }}
           >
             {t.specReady}
           </div>
@@ -40,7 +40,7 @@ export function SpecsKpiStrip({ projects }: Props) {
         <div className="v4-projects-agg-cell" title="Завершённые проекты">
           <div
             className="v4-projects-agg-n num"
-            style={{ color: t.completed > 0 ? "var(--mk-success-strong)" : undefined }}
+            style={{ color: t.completed > 0 ? "var(--v4-success-700)" : undefined }}
           >
             {t.completed}
           </div>

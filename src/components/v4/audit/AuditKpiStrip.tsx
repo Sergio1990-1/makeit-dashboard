@@ -32,7 +32,7 @@ export function AuditKpiStrip({ projects }: Props) {
         <div className="v4-projects-agg-cell" title="Сумма critical-находок по портфелю">
           <div
             className="v4-projects-agg-n num"
-            style={{ color: totals.critical > 0 ? "var(--mk-danger-strong)" : undefined }}
+            style={{ color: totals.critical > 0 ? "var(--v4-danger-700)" : undefined }}
           >
             {totals.critical}
           </div>
@@ -41,7 +41,7 @@ export function AuditKpiStrip({ projects }: Props) {
         <div className="v4-projects-agg-cell" title="Сумма high-находок по портфелю">
           <div
             className="v4-projects-agg-n num"
-            style={{ color: totals.high > 0 ? "var(--mk-warn-strong)" : undefined }}
+            style={{ color: totals.high > 0 ? "var(--v4-warn-700)" : undefined }}
           >
             {totals.high}
           </div>

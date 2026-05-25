@@ -62,7 +62,7 @@ export function QualityTab() {
             // (mini-API + sweep are independent, so this can be non-zero
             // even with no chart data).
             <p
-              style={{ fontSize: 11, opacity: 0.7, fontFamily: "var(--mk-font-mono)" }}
+              style={{ fontSize: 11, opacity: 0.7, fontFamily: "var(--v4-mono)" }}
               aria-live="polite"
             >
               сохранено событий: {annotations.length} — появятся на таймлайне после первой агрегации
@@ -111,9 +111,9 @@ export function QualityTab() {
             <button className={mode === "12w" ? "active" : ""} onClick={() => setMode("12w")}>12 недель · По неделям</button>
           </div>
           <button className="btn-add-event" onClick={() => setShowAddModal(true)}>+ событие</button>
-          <div style={{ fontFamily: "var(--mk-font-mono)", fontSize: 10, color: "var(--mk-ink-500)", textAlign: "right" }}>
+          <div style={{ fontFamily: "var(--v4-mono)", fontSize: 10, color: "var(--v4-ink-500)", textAlign: "right" }}>
             <div>Синхр. ежедневно · 03:00 Бали</div>
-            <div style={{ color: "var(--mk-ink-400)" }}>
+            <div style={{ color: "var(--v4-ink-400)" }}>
               последняя: {new Date(data.generated_at).toLocaleString("ru")}
             </div>
           </div>

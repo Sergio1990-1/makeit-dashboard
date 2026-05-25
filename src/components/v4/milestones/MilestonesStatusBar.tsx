@@ -13,12 +13,12 @@ const ORDER: {
   l: string;
   c: string;
 }[] = [
-  { k: "overdue", l: "Просрочено", c: "var(--mk-danger)" },
-  { k: "warn", l: "≤ 3 дн", c: "var(--mk-warn)" },
-  { k: "soon", l: "≤ 14 дн", c: "var(--mk-brand-500)" },
-  { k: "norm", l: "Дальше", c: "var(--mk-ink-400)" },
-  { k: "noeta", l: "Без даты", c: "var(--mk-ink-300)" },
-  { k: "done", l: "Завершено", c: "var(--mk-success)" },
+  { k: "overdue", l: "Просрочено", c: "var(--v4-danger-500)" },
+  { k: "warn", l: "≤ 3 дн", c: "var(--v4-warn-500)" },
+  { k: "soon", l: "≤ 14 дн", c: "var(--v4-accent-500)" },
+  { k: "norm", l: "Дальше", c: "var(--v4-ink-400)" },
+  { k: "noeta", l: "Без даты", c: "var(--v4-ink-300)" },
+  { k: "done", l: "Завершено", c: "var(--v4-success-500)" },
 ];
 
 export function MilestonesStatusBar({ milestones, now }: Props) {

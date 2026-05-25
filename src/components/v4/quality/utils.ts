@@ -101,10 +101,10 @@ export function healthOf(
 }
 
 export function healthColor(h: Health): string {
-  if (h === "ok") return "var(--mk-success-strong)";
-  if (h === "warn") return "var(--mk-warn-strong)";
-  if (h === "danger") return "var(--mk-danger-strong)";
-  return "var(--mk-ink-500)";
+  if (h === "ok") return "var(--v4-success-700)";
+  if (h === "warn") return "var(--v4-warn-700)";
+  if (h === "danger") return "var(--v4-danger-700)";
+  return "var(--v4-ink-500)";
 }
 
 /** Compose an SVG polyline path scaled to the given viewBox. */

@@ -209,7 +209,7 @@ export function CustomerHealthGauge({
         padding: 14,
         borderRadius: 10,
         background: "var(--mk-paper)",
-        border: "1px solid var(--mk-line)",
+        border: "1px solid var(--v4-line)",
       }}
     >
       <div
@@ -226,7 +226,7 @@ export function CustomerHealthGauge({
             fontWeight: 600,
             textTransform: "uppercase",
             letterSpacing: 0.4,
-            color: "var(--mk-ink-500)",
+            color: "var(--v4-ink-500)",
           }}
         >
           Здоровье клиента
@@ -249,7 +249,7 @@ export function CustomerHealthGauge({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "var(--mk-ink-500)",
+            color: "var(--v4-ink-500)",
             fontSize: 13,
           }}
         >
@@ -282,7 +282,7 @@ export function CustomerHealthGauge({
             alignItems: "center",
             justifyContent: "center",
             gap: 6,
-            color: "var(--mk-ink-500)",
+            color: "var(--v4-ink-500)",
             fontSize: 13,
             textAlign: "center",
           }}
@@ -355,7 +355,7 @@ export function CustomerHealthGauge({
                     style={{
                       fontSize: 11,
                       fontWeight: 600,
-                      fill: "var(--mk-ink-500)",
+                      fill: "var(--v4-ink-500)",
                     }}
                   >
                     {zone.label}
@@ -414,7 +414,7 @@ export function CustomerHealthGauge({
                         fontWeight: 600,
                         textTransform: "uppercase",
                         letterSpacing: 0.3,
-                        color: "var(--mk-ink-500)",
+                        color: "var(--v4-ink-500)",
                       }}
                     >
                       {label}

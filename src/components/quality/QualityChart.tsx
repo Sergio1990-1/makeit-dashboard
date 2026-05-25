@@ -229,7 +229,7 @@ export function QualityChart({ buckets, labels, compact }: QualityChartProps) {
                 />
               </span>
               <span className="ct-seg">
-                <i className="sw" style={{ background: "var(--mk-quality-p1)" }} />
+                <i className="sw" style={{ background: "var(--v4-p1)" }} />
                 P1:
                 <b
                   ref={(el) => {
@@ -238,7 +238,7 @@ export function QualityChart({ buckets, labels, compact }: QualityChartProps) {
                 />
               </span>
               <span className="ct-seg">
-                <i className="sw" style={{ background: "var(--mk-quality-p2)" }} />
+                <i className="sw" style={{ background: "var(--v4-p2)" }} />
                 P2:
                 <b
                   ref={(el) => {
@@ -249,7 +249,7 @@ export function QualityChart({ buckets, labels, compact }: QualityChartProps) {
               <span className="ct-seg">
                 <i
                   className="sw"
-                  style={{ background: "var(--mk-quality-clean-soft)" }}
+                  style={{ background: "var(--v4-clean-soft)" }}
                 />
                 clean:
                 <b
@@ -281,7 +281,7 @@ export function QualityChart({ buckets, labels, compact }: QualityChartProps) {
               <span className="chart-tip-seg">
                 <i
                   className="sw"
-                  style={{ background: "var(--mk-quality-clean-soft)" }}
+                  style={{ background: "var(--v4-clean-soft)" }}
                 />{" "}
                 чистые
               </span>
@@ -294,7 +294,7 @@ export function QualityChart({ buckets, labels, compact }: QualityChartProps) {
             </div>
             <div className="chart-tip-foot chart-tip-foot--tight">
               <span className="chart-tip-seg">
-                <i className="sw" style={{ background: "var(--mk-quality-p2)" }} /> P2
+                <i className="sw" style={{ background: "var(--v4-p2)" }} /> P2
                 only
               </span>
               <span
@@ -302,24 +302,24 @@ export function QualityChart({ buckets, labels, compact }: QualityChartProps) {
                   if (el) tipRefsObj.current.p2 = el;
                 }}
                 className="chart-tip-tr"
-                style={{ color: "var(--mk-quality-p2-text)" }}
+                style={{ color: "var(--v4-p2-text)" }}
               />
             </div>
             <div className="chart-tip-foot chart-tip-foot--tight">
               <span className="chart-tip-seg">
-                <i className="sw" style={{ background: "var(--mk-quality-p1)" }} /> P1
+                <i className="sw" style={{ background: "var(--v4-p1)" }} /> P1
               </span>
               <span
                 ref={(el) => {
                   if (el) tipRefsObj.current.p1 = el;
                 }}
                 className="chart-tip-tr"
-                style={{ color: "var(--mk-quality-p1-text)" }}
+                style={{ color: "var(--v4-p1-text)" }}
               />
             </div>
             <div className="chart-tip-foot chart-tip-foot--tight">
               <span className="chart-tip-seg">
-                <i className="sw" style={{ background: "var(--mk-quality-p0)" }} /> P0
+                <i className="sw" style={{ background: "var(--v4-p0)" }} /> P0
                 (blockers)
               </span>
               <span
@@ -327,13 +327,13 @@ export function QualityChart({ buckets, labels, compact }: QualityChartProps) {
                   if (el) tipRefsObj.current.p0 = el;
                 }}
                 className="chart-tip-tr"
-                style={{ color: "var(--mk-quality-p0-text)" }}
+                style={{ color: "var(--v4-p0-text)" }}
               />
             </div>
             <div
               className="chart-tip-foot"
               style={{
-                borderTop: "1px solid var(--mk-line-soft)",
+                borderTop: "1px solid var(--v4-line-soft)",
                 paddingTop: 8,
                 marginTop: 4,
               }}

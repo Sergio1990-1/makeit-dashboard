@@ -23,7 +23,7 @@ export function DebateKpiStrip({ debates }: Props) {
         <div className="v4-projects-agg-cell" title="В работе или в очереди">
           <div
             className="v4-projects-agg-n num"
-            style={{ color: running > 0 ? "var(--mk-warn-strong)" : undefined }}
+            style={{ color: running > 0 ? "var(--v4-warn-700)" : undefined }}
           >
             {running}
           </div>
@@ -32,7 +32,7 @@ export function DebateKpiStrip({ debates }: Props) {
         <div className="v4-projects-agg-cell" title="Успешно завершены">
           <div
             className="v4-projects-agg-n num"
-            style={{ color: done > 0 ? "var(--mk-success-strong)" : undefined }}
+            style={{ color: done > 0 ? "var(--v4-success-700)" : undefined }}
           >
             {done}
           </div>
@@ -40,7 +40,7 @@ export function DebateKpiStrip({ debates }: Props) {
         </div>
         {error > 0 && (
           <div className="v4-projects-agg-cell" title="Завершились с ошибкой">
-            <div className="v4-projects-agg-n num" style={{ color: "var(--mk-danger-strong)" }}>
+            <div className="v4-projects-agg-n num" style={{ color: "var(--v4-danger-700)" }}>
               {error}
             </div>
             <div className="v4-projects-agg-l">ошибки</div>

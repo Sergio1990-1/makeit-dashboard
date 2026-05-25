@@ -71,7 +71,7 @@ function Ring({ pct, anim }: { pct: number; anim: number }) {
   const len = pct * c * anim;
   return (
     <svg width="24" height="24" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r={r} fill="none" stroke="var(--mk-line)" strokeWidth="3" />
+      <circle cx="12" cy="12" r={r} fill="none" stroke="var(--v4-line)" strokeWidth="3" />
       <circle
         cx="12"
         cy="12"
@@ -131,9 +131,9 @@ function SortHeader({
         border: 0,
         cursor: "pointer",
         background: active
-          ? "var(--mk-surface-2)"
+          ? "var(--v4-surface-2)"
           : hovered
-            ? "var(--mk-brand-50)"
+            ? "var(--v4-accent-50)"
             : "transparent",
         padding: "8px 10px",
         borderRadius: 6,
@@ -141,12 +141,12 @@ function SortHeader({
         alignItems: "center",
         justifyContent: align,
         gap: 6,
-        fontFamily: "var(--mk-font-mono)",
+        fontFamily: "var(--v4-mono)",
         fontSize: 10,
         fontWeight: 700,
         letterSpacing: ".08em",
         textTransform: "uppercase",
-        color: active ? "var(--mk-ink-900)" : "var(--mk-ink-500)",
+        color: active ? "var(--v4-ink-900)" : "var(--v4-ink-500)",
         transition: "background .15s, color .15s",
       }}
     >
@@ -190,13 +190,13 @@ function PriorityCell({ val, max, color, alpha, dimmed, focused }: CellProps) {
     boxShadow: focused ? "var(--mk-shadow-md)" : "none",
   };
   const labelColor =
-    val === 0 ? "var(--mk-ink-300)" : t > 0.55 ? "#fff" : "var(--mk-ink-800)";
+    val === 0 ? "var(--v4-ink-300)" : t > 0.55 ? "#fff" : "var(--v4-ink-800)";
   return (
     <div style={style}>
       <span
         className="num"
         style={{
-          fontFamily: "var(--mk-font-mono)",
+          fontFamily: "var(--v4-mono)",
           fontSize: 12,
           fontWeight: t > 0.4 ? 700 : 500,
           color: labelColor,
@@ -321,7 +321,7 @@ export function ProgressMatrix({ projects }: Props) {
         </div>
         <div
           className="v4-panel-meta"
-          style={{ color: "var(--mk-ink-500)" }}
+          style={{ color: "var(--v4-ink-500)" }}
         >
           плотность = доля от макс по столбцу
         </div>
@@ -334,19 +334,19 @@ export function ProgressMatrix({ projects }: Props) {
           gridTemplateColumns:
             "170px 100px 70px repeat(4, 1fr) 70px 70px",
           padding: "4px 14px",
-          borderBottom: "1px solid var(--mk-line-soft)",
+          borderBottom: "1px solid var(--v4-line-soft)",
           alignItems: "center",
         }}
       >
         <div
           style={{
             padding: "8px 10px",
-            fontFamily: "var(--mk-font-mono)",
+            fontFamily: "var(--v4-mono)",
             fontSize: 10,
             fontWeight: 700,
             letterSpacing: ".08em",
             textTransform: "uppercase",
-            color: "var(--mk-ink-500)",
+            color: "var(--v4-ink-500)",
           }}
         >
           проект
@@ -368,15 +368,15 @@ export function ProgressMatrix({ projects }: Props) {
           }
           style={{
             padding: "8px 10px",
-            fontFamily: "var(--mk-font-mono)",
+            fontFamily: "var(--v4-mono)",
             fontSize: 10,
             fontWeight: 700,
             letterSpacing: ".08em",
             textTransform: "uppercase",
-            color: "var(--mk-ink-500)",
+            color: "var(--v4-ink-500)",
             textAlign: "right",
             background:
-              hover?.col === "closed" ? "var(--mk-brand-50)" : "transparent",
+              hover?.col === "closed" ? "var(--v4-accent-50)" : "transparent",
             borderRadius: 6,
             transition: "background .15s",
           }}
@@ -470,7 +470,7 @@ export function ProgressMatrix({ projects }: Props) {
                 padding: "3px 0",
                 opacity: a,
                 transform: `translateX(${(1 - a) * -14}px)`,
-                background: isRowHover ? "var(--mk-surface-2)" : "transparent",
+                background: isRowHover ? "var(--v4-surface-2)" : "transparent",
                 borderRadius: 6,
                 transition: "background .15s",
               }}
@@ -479,8 +479,8 @@ export function ProgressMatrix({ projects }: Props) {
                 className="num"
                 style={{
                   padding: "0 10px",
-                  fontFamily: "var(--mk-font-mono)",
-                  color: isRowHover ? "var(--mk-ink-900)" : "var(--mk-ink-800)",
+                  fontFamily: "var(--v4-mono)",
+                  color: isRowHover ? "var(--v4-ink-900)" : "var(--v4-ink-800)",
                   fontSize: 13,
                   fontWeight: isRowHover ? 600 : 500,
                   opacity: dimRow ? 0.4 : 1,
@@ -508,10 +508,10 @@ export function ProgressMatrix({ projects }: Props) {
                 <span
                   className="num"
                   style={{
-                    fontFamily: "var(--mk-font-mono)",
+                    fontFamily: "var(--v4-mono)",
                     fontSize: 12,
                     fontWeight: 700,
-                    color: "var(--mk-ink-800)",
+                    color: "var(--v4-ink-800)",
                   }}
                 >
                   {Math.round(d.progress * 100)}%
@@ -521,10 +521,10 @@ export function ProgressMatrix({ projects }: Props) {
               <div
                 className="num"
                 style={{
-                  fontFamily: "var(--mk-font-mono)",
+                  fontFamily: "var(--v4-mono)",
                   textAlign: "right",
                   padding: "0 10px",
-                  color: "var(--mk-ink-600)",
+                  color: "var(--v4-ink-600)",
                   fontSize: 12,
                   opacity:
                     cellAlpha(rowI, colIdx("closed")) * (isCellDim("closed") ? 0.4 : 1),
@@ -570,7 +570,7 @@ export function ProgressMatrix({ projects }: Props) {
               <div
                 className="num"
                 style={{
-                  fontFamily: "var(--mk-font-mono)",
+                  fontFamily: "var(--v4-mono)",
                   textAlign: "right",
                   padding: "0 6px",
                   height: 30,
@@ -605,7 +605,7 @@ export function ProgressMatrix({ projects }: Props) {
               <div
                 className="num"
                 style={{
-                  fontFamily: "var(--mk-font-mono)",
+                  fontFamily: "var(--v4-mono)",
                   textAlign: "right",
                   padding: "0 6px",
                   height: 30,
@@ -620,8 +620,8 @@ export function ProgressMatrix({ projects }: Props) {
                     totalT > 0.55
                       ? "#fff"
                       : isRowHover
-                        ? "var(--mk-ink-900)"
-                        : "var(--mk-ink-800)",
+                        ? "var(--v4-ink-900)"
+                        : "var(--v4-ink-800)",
                   fontSize: 13,
                   fontWeight: 700,
                   opacity:

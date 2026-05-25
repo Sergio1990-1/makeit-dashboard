@@ -140,7 +140,7 @@ export function QualityTrendsV4({ trends }: Props) {
               >
                 <span
                   className="v4-qa-metric-dot"
-                  style={{ background: on ? m.color : "var(--mk-line-strong)" }}
+                  style={{ background: on ? m.color : "var(--v4-line-strong)" }}
                 />
                 {m.label}
               </button>

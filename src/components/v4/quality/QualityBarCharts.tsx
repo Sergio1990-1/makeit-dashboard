@@ -1,12 +1,12 @@
 import type { QualityFindingsDistribution, QualityErrorsDistribution } from "../../../types";
 
 const PALETTE = [
-  "var(--mk-brand-500)",
-  "var(--mk-purple-500)",
+  "var(--v4-accent-500)",
+  "var(--v4-purple-500)",
   "var(--mk-sky-500)",
-  "var(--mk-success)",
-  "var(--mk-warn)",
-  "var(--mk-danger)",
+  "var(--v4-success-500)",
+  "var(--v4-warn-500)",
+  "var(--v4-danger-500)",
 ];
 
 function sortedEntries(record: Record<string, number>): [string, number][] {

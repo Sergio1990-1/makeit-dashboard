@@ -68,22 +68,22 @@ export function ClassifyDialog({
                   <div className="v4-ptrack" style={{ height: 8 }}>
                     <div
                       className="v4-pfill"
-                      style={{ width: `${pct}%`, background: "var(--mk-brand-500)" }}
+                      style={{ width: `${pct}%`, background: "var(--v4-accent-500)" }}
                     />
                   </div>
                   <div className="v4-pl-classify-meta v4-pl-mono">
                     {done} / {total} ({pct}%)
                   </div>
                   <div className="v4-pl-classify-breakdown">
-                    <span style={{ color: "var(--mk-success-strong)" }}>
+                    <span style={{ color: "var(--v4-success-700)" }}>
                       auto: {progress.breakdown.auto}
                     </span>
                     <span className="v4-pl-sep">·</span>
-                    <span style={{ color: "var(--mk-warn-strong)" }}>
+                    <span style={{ color: "var(--v4-warn-700)" }}>
                       assisted: {progress.breakdown.assisted}
                     </span>
                     <span className="v4-pl-sep">·</span>
-                    <span style={{ color: "var(--mk-danger-strong)" }}>
+                    <span style={{ color: "var(--v4-danger-700)" }}>
                       manual: {progress.breakdown.manual}
                     </span>
                     {progress.breakdown.errors > 0 && (
@@ -106,19 +106,19 @@ export function ClassifyDialog({
             <div className="v4-pl-classify-done">
               <div className="v4-pl-classify-grid">
                 <div>
-                  <div className="num" style={{ fontSize: 28, fontWeight: 700, color: "var(--mk-success-strong)" }}>
+                  <div className="num" style={{ fontSize: 28, fontWeight: 700, color: "var(--v4-success-700)" }}>
                     {progress.breakdown.auto}
                   </div>
                   <div className="v4-pl-classify-cell-l">Auto</div>
                 </div>
                 <div>
-                  <div className="num" style={{ fontSize: 28, fontWeight: 700, color: "var(--mk-warn-strong)" }}>
+                  <div className="num" style={{ fontSize: 28, fontWeight: 700, color: "var(--v4-warn-700)" }}>
                     {progress.breakdown.assisted}
                   </div>
                   <div className="v4-pl-classify-cell-l">Assisted</div>
                 </div>
                 <div>
-                  <div className="num" style={{ fontSize: 28, fontWeight: 700, color: "var(--mk-danger-strong)" }}>
+                  <div className="num" style={{ fontSize: 28, fontWeight: 700, color: "var(--v4-danger-700)" }}>
                     {progress.breakdown.manual}
                   </div>
                   <div className="v4-pl-classify-cell-l">Manual</div>

@@ -61,10 +61,10 @@ export function QualityKpiGrid({ snapshot, trends }: Props) {
             : (trend === "up") === def.higherIsBetter;
         const trendColor =
           trendBetter === null
-            ? "var(--mk-ink-400)"
+            ? "var(--v4-ink-400)"
             : trendBetter
-              ? "var(--mk-success-strong)"
-              : "var(--mk-danger-strong)";
+              ? "var(--v4-success-700)"
+              : "var(--v4-danger-700)";
         const sparkD = series.length > 1 ? sparklinePath(series, SPARK_W, SPARK_H) : "";
 
         return (
@@ -133,6 +133,6 @@ export function QualityKpiGrid({ snapshot, trends }: Props) {
 
 function deltaColor(abs: number, higherIsBetter: boolean): string {
   const better = higherIsBetter ? abs > 0 : abs < 0;
-  if (Math.abs(abs) < 0.005) return "var(--mk-ink-400)";
-  return better ? "var(--mk-success-strong)" : "var(--mk-danger-strong)";
+  if (Math.abs(abs) < 0.005) return "var(--v4-ink-400)";
+  return better ? "var(--v4-success-700)" : "var(--v4-danger-700)";
 }

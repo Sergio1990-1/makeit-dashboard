@@ -8,10 +8,10 @@ export type Severity = "critical" | "high" | "medium" | "low";
 export type AuditHealth = "ok" | "warn" | "danger" | "unknown";
 
 export const SEVERITY_COLOR: Record<Severity, string> = {
-  critical: "var(--mk-danger)",
-  high: "var(--mk-warn)",
-  medium: "var(--mk-brand-500)",
-  low: "var(--mk-ink-400)",
+  critical: "var(--v4-danger-500)",
+  high: "var(--v4-warn-500)",
+  medium: "var(--v4-accent-500)",
+  low: "var(--v4-ink-400)",
 };
 
 export const SEVERITY_LABEL: Record<Severity, string> = {

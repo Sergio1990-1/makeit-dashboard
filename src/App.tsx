@@ -505,7 +505,7 @@ function AppInner({ onFirstFetchDone }: AppInnerProps = {}) {
         <main className="v4-main">
           <div className="v4-content" style={{ paddingTop: 60 }}>
             <h1 style={{ fontSize: 28, marginBottom: 8 }}>MakeIT Dashboard</h1>
-            <p style={{ color: "var(--mk-ink-500)", marginBottom: 24 }}>
+            <p style={{ color: "var(--v4-ink-500)", marginBottom: 24 }}>
               Укажите GitHub Token для начала работы.
             </p>
             <TokenForm onTokenSet={handleRefresh} />

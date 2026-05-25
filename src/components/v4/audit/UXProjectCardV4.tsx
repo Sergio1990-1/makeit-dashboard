@@ -282,7 +282,7 @@ function UXFindingsList({
             <div className="v4-au-ux-finding-h">
               <span
                 className="v4-au-ux-finding-sev"
-                style={{ color: SEVERITY_COLOR[f.severity as Severity] ?? "var(--mk-ink-500)" }}
+                style={{ color: SEVERITY_COLOR[f.severity as Severity] ?? "var(--v4-ink-500)" }}
               >
                 {f.severity.toUpperCase()}
               </span>

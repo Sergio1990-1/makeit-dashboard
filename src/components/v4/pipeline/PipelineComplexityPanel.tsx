@@ -11,9 +11,9 @@ export function PipelineComplexityPanel({ stats }: Props) {
   if (total === 0 && (!stats.model_usage || stats.model_usage.length === 0)) return null;
 
   const items = [
-    { key: "auto" as const, label: "Auto", count: b.auto, color: "var(--mk-success-strong)" },
-    { key: "assisted" as const, label: "Assisted", count: b.assisted, color: "var(--mk-warn-strong)" },
-    { key: "manual" as const, label: "Manual", count: b.manual, color: "var(--mk-danger-strong)" },
+    { key: "auto" as const, label: "Auto", count: b.auto, color: "var(--v4-success-700)" },
+    { key: "assisted" as const, label: "Assisted", count: b.assisted, color: "var(--v4-warn-700)" },
+    { key: "manual" as const, label: "Manual", count: b.manual, color: "var(--v4-danger-700)" },
   ];
 
   return (

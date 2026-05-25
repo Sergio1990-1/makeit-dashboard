@@ -172,7 +172,7 @@ export function AIInsightsPanel({ reports, loading, lastUpdated, onOpenHealth, e
       <div className="v4-panel-h">
         <div className="v4-panel-t">
           <svg
-            style={{ width: 14, height: 14, color: "var(--mk-purple-500)" }}
+            style={{ width: 14, height: 14, color: "var(--v4-purple-500)" }}
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"

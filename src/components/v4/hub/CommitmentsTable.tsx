@@ -120,8 +120,8 @@ const inputStyle: React.CSSProperties = {
   fontSize: 13,
   border: "1px solid var(--mk-line)",
   borderRadius: 6,
-  background: "transparent",
-  color: "var(--mk-ink-900)",
+  background: "var(--v4-surface, transparent)",
+  color: "var(--v4-ink-900, inherit)",
 };
 
 const cellStyle: React.CSSProperties = {
@@ -136,8 +136,8 @@ const btnStyle: React.CSSProperties = {
   padding: "4px 10px",
   borderRadius: 6,
   border: "1px solid var(--mk-line)",
-  background: "transparent",
-  color: "var(--mk-ink-700)",
+  background: "var(--v4-surface, transparent)",
+  color: "var(--v4-ink-700, inherit)",
   cursor: "pointer",
 };
 
@@ -421,7 +421,7 @@ export function CommitmentsTable({ repo, onCount }: Props) {
       <div
         style={{
           padding: 16,
-          color: "var(--mk-ink-500)",
+          color: "var(--v4-ink-500)",
           fontSize: 13,
         }}
       >
@@ -466,7 +466,7 @@ export function CommitmentsTable({ repo, onCount }: Props) {
           padding: 20,
           border: "1px dashed var(--mk-line)",
           borderRadius: 10,
-          color: "var(--mk-ink-500)",
+          color: "var(--v4-ink-500)",
           fontSize: 13,
           display: "flex",
           flexDirection: "column",
@@ -563,7 +563,7 @@ export function CommitmentsTable({ repo, onCount }: Props) {
                     padding: "8px 10px",
                     fontSize: 12,
                     fontWeight: 600,
-                    color: "var(--mk-ink-500)",
+                    color: "var(--v4-ink-500)",
                     borderBottom:
                       "1px solid var(--mk-line)",
                     whiteSpace: "nowrap",
@@ -615,7 +615,7 @@ export function CommitmentsTable({ repo, onCount }: Props) {
                         color:
                           r.status === "overdue"
                             ? "var(--mk-danger-strong)"
-                            : "var(--mk-ink-700)",
+                            : "var(--v4-ink-700)",
                       }}
                     >
                       {statusLabel(r.status)}
@@ -723,7 +723,7 @@ export function CommitmentsTable({ repo, onCount }: Props) {
           {saving ? "Сохранение…" : "Сохранить изменения"}
         </button>
         {dirty && !saving && (
-          <span style={{ fontSize: 12, color: "var(--mk-ink-500)" }}>
+          <span style={{ fontSize: 12, color: "var(--v4-ink-500)" }}>
             Несохранённые изменения
           </span>
         )}

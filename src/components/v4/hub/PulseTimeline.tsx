@@ -98,7 +98,7 @@ export function PulseTimeline({ events }: Props) {
           padding: 16,
           border: "1px dashed var(--mk-line)",
           borderRadius: 10,
-          color: "var(--mk-ink-500)",
+          color: "var(--v4-ink-500)",
           fontSize: 13,
         }}
       >
@@ -118,7 +118,7 @@ export function PulseTimeline({ events }: Props) {
               fontWeight: 600,
               textTransform: "uppercase",
               letterSpacing: "0.04em",
-              color: "var(--mk-ink-500)",
+              color: "var(--v4-ink-500)",
               margin: "0 0 8px",
             }}
           >
@@ -173,7 +173,7 @@ export function PulseTimeline({ events }: Props) {
                     style={{
                       fontSize: 16,
                       lineHeight: "20px",
-                      color: "var(--mk-ink-500)",
+                      color: "var(--v4-ink-500)",
                       flexShrink: 0,
                     }}
                   >
@@ -191,7 +191,7 @@ export function PulseTimeline({ events }: Props) {
                     <div
                       style={{
                         fontSize: 13,
-                        color: "var(--mk-ink-900)",
+                        color: "var(--v4-ink-900)",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                       }}
@@ -204,7 +204,7 @@ export function PulseTimeline({ events }: Props) {
                         alignItems: "center",
                         gap: 8,
                         fontSize: 11,
-                        color: "var(--mk-ink-500)",
+                        color: "var(--v4-ink-500)",
                       }}
                     >
                       <span
@@ -212,7 +212,7 @@ export function PulseTimeline({ events }: Props) {
                           padding: "1px 7px",
                           borderRadius: 999,
                           background: "var(--mk-line-soft)",
-                          color: "var(--mk-ink-700)",
+                          color: "var(--v4-ink-700)",
                         }}
                       >
                         {SOURCE_LABEL[ev.source]}

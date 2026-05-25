@@ -124,10 +124,10 @@ export function SettingsBudgetPanel() {
         }}
       >
         <div style={{ fontWeight: 600, fontSize: 13 }}>Claude API budget</div>
-        <div style={{ fontSize: 12, color: "var(--mk-ink-500)" }}>{spend.month}</div>
+        <div style={{ fontSize: 12, color: "var(--v4-ink-500)" }}>{spend.month}</div>
       </div>
 
-      <div style={{ color: "var(--mk-ink-500)", fontSize: 12, marginBottom: 10 }}>
+      <div style={{ color: "var(--v4-ink-500)", fontSize: 12, marginBottom: 10 }}>
         Hard cap {fmtUsd(MONTHLY_CAP_USD)} в месяц на весь портфель. На {WARN_PCT}% — UI
         warning, на {FALLBACK_PCT}% — авто-fallback на Haiku, на {HARD_STOP_PCT}% — hard-stop.
       </div>
@@ -195,14 +195,14 @@ export function SettingsBudgetPanel() {
         <div
           style={{
             fontSize: 12,
-            color: "var(--mk-ink-500)",
+            color: "var(--v4-ink-500)",
             marginBottom: 6,
           }}
         >
           Разбивка по типу вызовов
         </div>
         {breakdownEntries.length === 0 ? (
-          <div style={{ fontSize: 12, color: "var(--mk-ink-500)" }}>
+          <div style={{ fontSize: 12, color: "var(--v4-ink-500)" }}>
             В этом месяце ещё не было Claude API вызовов.
           </div>
         ) : (
@@ -237,7 +237,7 @@ export function SettingsBudgetPanel() {
       <div style={{ marginTop: 12 }}>
         {confirmReset ? (
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12, color: "var(--mk-ink-700)" }}>
+            <span style={{ fontSize: 12, color: "var(--v4-ink-700)" }}>
               Сбросить расход за {spend.month}? История прошлых месяцев останется.
             </span>
             <button

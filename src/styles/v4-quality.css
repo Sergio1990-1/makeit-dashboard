@@ -17,30 +17,16 @@
  * ============================================================ */
 
 .v4-quality-tab {
-  /* Codex severity palette — align с shields.io бейджами в PR-коммитах.
-   * Scoped к `.v4-quality-tab` намеренно: в Quality «P0/P1/P2» — это
-   * severity (БЛОКЕР/высокое/среднее), а не project priority (см.
-   * --mk-priority-p* в tokens.css). --mk-quality-* — новые имена для
-   * TSX (Session J); --v4-* остаются для совместимости с селекторами
-   * v4-quality.css до Session K. */
-  --mk-quality-p0: #EF4444;
-  --mk-quality-p1: #F59E0B;
-  --mk-quality-p2: #EAB308;
-  --mk-quality-clean: #2563EB;
-  --mk-quality-clean-soft: #93C5FD;
-  --mk-quality-p0-text: #991B1B;
-  --mk-quality-p1-text: #B45309;
-  --mk-quality-p2-text: #854D0E;
-  --mk-quality-clean-text: #1D4ED8;
-  --v4-p0: var(--mk-quality-p0);
-  --v4-p1: var(--mk-quality-p1);
-  --v4-p2: var(--mk-quality-p2);
-  --v4-clean: var(--mk-quality-clean);
-  --v4-clean-soft: var(--mk-quality-clean-soft);
-  --v4-p0-text: var(--mk-quality-p0-text);
-  --v4-p1-text: var(--mk-quality-p1-text);
-  --v4-p2-text: var(--mk-quality-p2-text);
-  --v4-clean-text: var(--mk-quality-clean-text);
+  /* Codex severity palette — align с shields.io бейджами в PR-коммитах */
+  --v4-p0: #EF4444;             /* red — БЛОКЕР */
+  --v4-p1: #F59E0B;             /* orange — высокое */
+  --v4-p2: #EAB308;             /* yellow — среднее */
+  --v4-clean: #2563EB;          /* синий — чистые PR */
+  --v4-clean-soft: #93C5FD;     /* голубой для светлого фона */
+  --v4-p0-text: #991B1B;        /* dark red для текста на белом */
+  --v4-p1-text: #B45309;        /* dark amber */
+  --v4-p2-text: #854D0E;        /* dark yellow-amber */
+  --v4-clean-text: #1D4ED8;
 }
 
 /* ──── KPI · P0 alert pill ──── */

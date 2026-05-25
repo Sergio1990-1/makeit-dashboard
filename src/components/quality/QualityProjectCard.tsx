@@ -103,7 +103,7 @@ export function QualityProjectCard({ repo, client, data, mode, index }: Props) {
             <span className="num-p0" title="БЛОКЕР">
               <b
                 style={{
-                  color: "var(--mk-quality-p0-text)",
+                  color: "var(--v4-p0-text)",
                   background: "color-mix(in srgb, var(--mk-danger) 12%, transparent)",
                   padding: "1px 6px",
                   borderRadius: 3,

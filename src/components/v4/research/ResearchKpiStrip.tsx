@@ -18,7 +18,7 @@ export function ResearchKpiStrip({ projects }: Props) {
         <div className="v4-projects-agg-cell" title="Проекты с RESEARCH.md">
           <div
             className="v4-projects-agg-n num"
-            style={{ color: t.withResearch > 0 ? "var(--mk-success-strong)" : undefined }}
+            style={{ color: t.withResearch > 0 ? "var(--v4-success-700)" : undefined }}
           >
             {t.withResearch}
           </div>
@@ -27,7 +27,7 @@ export function ResearchKpiStrip({ projects }: Props) {
         <div className="v4-projects-agg-cell" title="Проекты с DISCOVERY.md">
           <div
             className="v4-projects-agg-n num"
-            style={{ color: t.withDiscovery > 0 ? "var(--mk-success-strong)" : undefined }}
+            style={{ color: t.withDiscovery > 0 ? "var(--v4-success-700)" : undefined }}
           >
             {t.withDiscovery}
           </div>
@@ -44,7 +44,7 @@ export function ResearchKpiStrip({ projects }: Props) {
         <div className="v4-projects-agg-cell" title="Quick Wins — быстрые победы из DISCOVERY.md">
           <div
             className="v4-projects-agg-n num"
-            style={{ color: t.quickWins > 0 ? "var(--mk-success-strong)" : undefined }}
+            style={{ color: t.quickWins > 0 ? "var(--v4-success-700)" : undefined }}
           >
             {t.quickWins}
           </div>

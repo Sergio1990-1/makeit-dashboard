@@ -39,11 +39,11 @@ export function poolHealth(monitors: Monitor[]): MonitorHealth {
 }
 
 export function uptimeColor(pct: number | null): string {
-  if (pct === null) return "var(--mk-ink-400)";
-  if (pct >= 99.9) return "var(--mk-success-strong)";
-  if (pct >= 99) return "var(--mk-success)";
-  if (pct >= 95) return "var(--mk-warn-strong)";
-  return "var(--mk-danger-strong)";
+  if (pct === null) return "var(--v4-ink-400)";
+  if (pct >= 99.9) return "var(--v4-success-700)";
+  if (pct >= 99) return "var(--v4-success-500)";
+  if (pct >= 95) return "var(--v4-warn-700)";
+  return "var(--v4-danger-700)";
 }
 
 /** Reverse-lookup project repo for a monitor via MONITOR_MATCH keywords. */

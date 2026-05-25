@@ -111,7 +111,7 @@ function VelocitySpark({ values }: { values: number[] }) {
         <path
           d={geom.line}
           fill="none"
-          stroke="var(--mk-success)"
+          stroke="var(--v4-success-500)"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -123,18 +123,18 @@ function VelocitySpark({ values }: { values: number[] }) {
               x2={hover.x}
               y1={SPARK_P}
               y2={SPARK_H}
-              stroke="var(--mk-success)"
+              stroke="var(--v4-success-500)"
               strokeWidth="1"
               strokeDasharray="2 2"
               opacity="0.5"
             />
-            <circle cx={hover.x} cy={hover.y} r="6" fill="var(--mk-success)" opacity="0.18" />
+            <circle cx={hover.x} cy={hover.y} r="6" fill="var(--v4-success-500)" opacity="0.18" />
             <circle
               cx={hover.x}
               cy={hover.y}
               r="3.5"
               fill="#fff"
-              stroke="var(--mk-success)"
+              stroke="var(--v4-success-500)"
               strokeWidth="2"
             />
           </g>
@@ -332,19 +332,19 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
               key: "P1",
               n: <TweenedNumber value={priorityTotals.P1} />,
               l: "P1",
-              color: "var(--mk-priority-p1)",
+              color: "var(--v4-p1)",
             },
             {
               key: "P2",
               n: <TweenedNumber value={priorityTotals.P2} />,
               l: "P2",
-              color: "var(--mk-priority-p2)",
+              color: "var(--v4-p2)",
             },
             {
               key: "P3",
               n: <TweenedNumber value={priorityTotals.P3} />,
               l: "P3",
-              color: "var(--mk-priority-p3)",
+              color: "var(--v4-p3)",
             },
           ]}
         />
@@ -444,7 +444,7 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
               >
                 <span
                   className="v4-fin-lg-sw"
-                  style={{ background: "var(--mk-success)" }}
+                  style={{ background: "var(--v4-success-500)" }}
                 />
                 Оплачено <b>{compactUSD(summary.totalPaid)}</b>
               </span>
@@ -465,7 +465,7 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
                 key: "paid",
                 n: compactUSD(summary.totalPaid),
                 l: "Оплачено",
-                color: "var(--mk-success-strong)",
+                color: "var(--v4-success-700)",
               },
               {
                 key: "rem",
