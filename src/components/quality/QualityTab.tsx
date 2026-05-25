@@ -35,7 +35,7 @@ export function QualityTab() {
     <div className="v4-quality-tab page">
       <div className="pageH">
         <div>
-          <h1>Качество кода и изменения</h1>
+          <h1>Качество кода</h1>
           <div className="sub">
             Доля PR с критическими/высокими замечаниями <b>chatgpt-codex-connector[bot]</b> от общего числа merged PR · события на временной оси
           </div>
