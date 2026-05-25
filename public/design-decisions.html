@@ -523,9 +523,9 @@
     <h1>MakeIT Dashboard — Design Decisions</h1>
     <p>Сводка по 10 решениям для дизайн-системы. В каждом блоке три колонки: <strong>«Сейчас»</strong> (текущее состояние в проекте), <strong>«Claude»</strong> (моя рекомендация), <strong>«Codex»</strong> (рекомендация Codex). Зелёная плашка = согласие, оранжевая = расхождение.</p>
     <div class="hero-meta">
-      <span><strong>Состояние:</strong> main · сессии A+B+C завершены</span>
-      <span><strong>Базис:</strong> v4-light · single tokens.css · bridge для legacy</span>
-      <span><strong>Решений:</strong> 10 базовых + 8 после расширения scope</span>
+      <span><strong>Состояние:</strong> main · сессии A→E завершены, Codex review закрыт</span>
+      <span><strong>Базис:</strong> v4-light · tokens.css · components.css · bridge для legacy</span>
+      <span><strong>Решений:</strong> <span style="color: var(--mk-success-strong);">18 / 18 confirmed</span></span>
       <span><strong>Просмотр:</strong> /makeit-dashboard/design-decisions.html</span>
     </div>
   </header>
@@ -546,7 +546,7 @@
       <li><span class="verdict-dot match"></span><a href="#d7">7. Radius scale</a></li>
       <li><span class="verdict-dot match"></span><a href="#d8">8. Spacing scale</a></li>
       <li><span class="verdict-dot match"></span><a href="#d9">9. Base font size</a></li>
-      <li><span class="verdict-dot diff"></span><a href="#d10">10. Motion durations</a></li>
+      <li><span class="verdict-dot match"></span><a href="#d10">10. Motion durations</a></li>
     </ol>
     <h3 style="margin-top:14px;">Содержание · Layout / State / Data viz (сессия C)</h3>
     <ol start="11">
@@ -556,8 +556,8 @@
       <li><span class="verdict-dot match"></span><a href="#d14">14. Loading variants (skeleton/spinner/branded)</a></li>
       <li><span class="verdict-dot match"></span><a href="#d15">15. Error pattern (inline)</a></li>
       <li><span class="verdict-dot match"></span><a href="#d16">16. Stale data threshold</a></li>
-      <li><span class="verdict-dot diff"></span><a href="#d17">17. Heatmap palette (blue vs green)</a></li>
-      <li><span class="verdict-dot diff"></span><a href="#d18">18. Repo color identity</a></li>
+      <li><span class="verdict-dot match"></span><a href="#d17">17. Heatmap palette (blue vs green)</a></li>
+      <li><span class="verdict-dot match"></span><a href="#d18">18. Repo color identity</a></li>
     </ol>
   </div>
 
@@ -908,7 +908,7 @@
   <article class="decision" id="d10">
     <header>
       <h3><span class="num">10</span> Motion durations</h3>
-      <span class="verdict verdict--diff">CODEX не комментировал</span>
+      <span class="verdict verdict--match">CLAUDE ≡ CODEX → 120/200/300ms</span>
     </header>
     <p class="desc">Длительности transitions. Сейчас в tokens.css: fast=120ms, base=200ms, slow=300ms.</p>
     <div class="cols">
@@ -929,11 +929,11 @@
         <p class="reason">Стандартный диапазон Material/Apple. Easings: ease-out (вход), ease-in-out (трансформы), ease-spring (intra-card).</p>
       </div>
       <div class="col">
-        <header><span class="tag tag--codex">Codex</span><h4>Не комментировал</h4></header>
-        <div class="demo" style="background: var(--mk-warn-soft);">
-          <span style="font: 600 16px var(--mk-font-mono); color: var(--mk-warn-strong);">? нет ответа</span>
+        <header><span class="tag tag--codex">Codex</span><h4>«120/200/300ms — согласен»</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
         </div>
-        <p class="reason">В brief Codex эту тему не затронул. Можно отдельно спросить, или принять Claude-дефолт молчанием.</p>
+        <p class="reason">Codex (review #2): «D10 120/200/300ms — согласен». Решение зафиксировано.</p>
       </div>
     </div>
   </article>
@@ -1178,7 +1178,7 @@
   <article class="decision" id="d17">
     <header>
       <h3><span class="num">17</span> Heatmap palette</h3>
-      <span class="verdict verdict--diff">РАСХОЖДЕНИЕ — нужен выбор</span>
+      <span class="verdict verdict--match">CLAUDE ≡ CODEX → brand-blue</span>
     </header>
     <p class="desc">Какой палитрой раскрашивать commit-heatmap (intensity 0..4 ступеней).</p>
     <div class="cols">
@@ -1206,11 +1206,11 @@
         <p class="reason">Зелёная шкала — GitHub-узнаваемый штамп, но это «общественная» эстетика. Blue делает heatmap частью идентичности дашборда.</p>
       </div>
       <div class="col">
-        <header><span class="tag tag--codex">Codex</span><h4>Не комментировал</h4></header>
-        <div class="demo" style="background: var(--mk-warn-soft);">
-          <span style="font: 600 16px var(--mk-font-mono); color: var(--mk-warn-strong);">? нужен ответ</span>
+        <header><span class="tag tag--codex">Codex</span><h4>«Brand-blue, не GitHub-green»</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
         </div>
-        <p class="reason">Стоит спросить отдельно. Альтернатива в /styleguide показана для сравнения.</p>
+        <p class="reason">Codex (review #2): «D17 heatmap — оставил бы brand-blue, не GitHub-green».</p>
       </div>
     </div>
   </article>
@@ -1219,7 +1219,7 @@
   <article class="decision" id="d18">
     <header>
       <h3><span class="num">18</span> Repo color identity</h3>
-      <span class="verdict verdict--diff">РАСХОЖДЕНИЕ — архитектурное</span>
+      <span class="verdict verdict--match">CLAUDE ≡ CODEX → mood-only (+ glyph/dot для milestones)</span>
     </header>
     <p class="desc">Должен ли каждый репозиторий иметь свой узнаваемый цвет (как в GitHub-language-bar) или цвет всегда несёт семантику (статус, severity).</p>
     <div class="cols">
@@ -1241,11 +1241,11 @@
         <p class="reason">Identity-палитра требует mapping repo→color в config.ts. Это +ещё одна сущность, которая должна обновляться при добавлении репо. Усложняет.</p>
       </div>
       <div class="col">
-        <header><span class="tag tag--codex">Codex</span><h4>Не комментировал</h4></header>
-        <div class="demo" style="background: var(--mk-warn-soft);">
-          <span style="font: 600 16px var(--mk-font-mono); color: var(--mk-warn-strong);">? нужен ответ</span>
+        <header><span class="tag tag--codex">Codex</span><h4>«Mood-only, glyph/dot для milestones»</h4></header>
+        <div class="demo" style="background: var(--mk-success-soft);">
+          <span style="font: 600 22px var(--mk-font-mono); color: var(--mk-success-strong);">✓ match</span>
         </div>
-        <p class="reason">Codex упомянул «Repo colors» в списке вопросов dataviz, но не дал направления. Стоит запросить.</p>
+        <p class="reason">Codex (review #2): «mood-only согласен; постоянную repo-палитру не вводил бы, кроме маленьких glyph/dot в milestones» — оговорка зафиксирована как exception, основное решение принято.</p>
       </div>
     </div>
   </article>
@@ -1253,15 +1253,24 @@
   <!-- SUMMARY -->
   <section class="summary">
     <h2>Итого согласовано</h2>
-    <p><strong>Базовые токены и компоненты (1–10):</strong> 9 совпадений из 10. По Motion (#10) Codex не высказался — принимаем Claude-дефолт.</p>
-    <p><strong>Layout / State / Data viz (11–18):</strong> 6 совпадений из 8. По Heatmap palette (#17) и Repo identity (#18) Codex не комментировал — нужен отдельный ответ.</p>
-    <p><strong>Итого решений зафиксировано:</strong> <span style="font-family: var(--mk-font-mono); font-weight: 600;">15/18</span>. Осталось 3 «нужен ответ Codex» (motion, heatmap, repo-identity) — не блокеры для старта миграции, можно принять Claude-дефолт молчанием или подождать.</p>
-    <p><strong>Что дальше:</strong></p>
+    <p><strong>Базовые токены и компоненты (1–10):</strong> 10 / 10 — Claude+Codex match (D10 подтверждён вторым review).</p>
+    <p><strong>Layout / State / Data viz (11–18):</strong> 8 / 8 — Claude+Codex match (D17 brand-blue confirmed, D18 mood-only confirmed; оговорка про glyph/dot в milestones зафиксирована как exception).</p>
+    <p><strong>Итого:</strong> <span style="font-family: var(--mk-font-mono); font-weight: 600; color: var(--mk-success-strong);">18 / 18 confirmed</span>. Все архитектурные споры закрыты.</p>
+
+    <p style="margin-top: 16px;"><strong>Дополнительно Codex по components.css:</strong></p>
     <ul style="margin: 4px 0 0 20px; color: var(--mk-ink-700); font-size: 13px; line-height: 1.6;">
-      <li>Сессия D — token unification: убрать <code class="inline">*-legacy-*</code> слоты из tokens.css, добавить <code class="inline">.mk-btn</code> / <code class="inline">.mk-tab</code> / <code class="inline">.mk-card</code> компонентные классы.</li>
-      <li>Сессия E — миграция подсистем: Audit / Pipeline / Monitoring / Transcripts / Dashboard на новые классы и токены, мелкими PR.</li>
-      <li>Сессия F — финальная зачистка: убрать bridge-алиасы из App.css/v4.css, добавить ESLint правило против hex-цветов вне tokens.css.</li>
+      <li>BEM-style modifier (<code class="inline">--primary</code>) — норм.</li>
+      <li><code class="inline">.mk-tabs--underline button</code> ОК на старт; позже перейти на <code class="inline">[role="tab"] / [data-state="active"]</code> когда появятся React-обёртки.</li>
+      <li>Focus через <code class="inline">box-shadow</code> оставить + добавить <code class="inline">@media (prefers-contrast: more)</code> с solid outline — <strong>уже сделано в сессии E.1</strong>.</li>
+      <li>tokens.css ~98 переменных — приемлемо, дальше не резать пока живёт bridge.</li>
     </ul>
+
+    <p style="margin-top: 16px;"><strong>Стратегия миграции (согласована):</strong></p>
+    <ol style="margin: 4px 0 0 20px; color: var(--mk-ink-700); font-size: 13px; line-height: 1.6;">
+      <li><strong>Сессия F (pilot):</strong> Pipeline — 17 хардкодов цветов в <code class="inline">PipelineControlPanel.tsx</code> → новые <code class="inline">--mk-pipeline-status-*</code> токены.</li>
+      <li><strong>Сессии G–H:</strong> Audit → Monitoring → Transcripts → Quality/Dashboard на <code class="inline">.mk-*</code> классы, мелкими PR.</li>
+      <li><strong>Финал:</strong> убрать bridge из App.css/v4.css, добавить ESLint правило против hex в JSX/inline style.</li>
+    </ol>
   </section>
 
   <footer>

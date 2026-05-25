@@ -296,7 +296,7 @@
 
 /* Square variant for technical labels (severity, priority codes) */
 .mk-badge--square {
-  border-radius: var(--mk-r-xs, 4px);
+  border-radius: var(--mk-r-xs);
 }
 
 /* Status modifiers */
@@ -386,4 +386,24 @@ textarea.mk-input {
 .mk-focus-ring:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--mk-primary) 30%, transparent);
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   HIGH-CONTRAST A11Y FALLBACK
+   Soft box-shadow rings can wash out under prefers-contrast: more
+   (or Windows high-contrast). Switch to a solid outline that
+   browsers honour even when transparent box-shadows are stripped.
+   ══════════════════════════════════════════════════════════ */
+@media (prefers-contrast: more) {
+  .mk-btn:focus-visible,
+  .mk-tabs button:focus-visible,
+  .mk-tabs a:focus-visible,
+  .mk-input:focus,
+  .mk-input:focus-visible,
+  .mk-focus-ring:focus-visible {
+    outline: 2px solid var(--mk-primary);
+    outline-offset: 2px;
+    box-shadow: none;
+  }
 }

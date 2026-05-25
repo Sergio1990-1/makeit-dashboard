@@ -232,7 +232,6 @@ function RadiusSection() {
     { name: "--mk-r-md",   val: "8px"   },
     { name: "--mk-r-lg",   val: "12px"  },
     { name: "--mk-r-xl",   val: "16px"  },
-    { name: "--mk-r-2xl",  val: "24px"  },
     { name: "--mk-r-full", val: "9999px" },
   ];
   return (
@@ -954,7 +953,6 @@ function DataVizSection() {
             <div style={{ width: "100%" }}>
               <div className="sg-heat" style={{ marginBottom: 12 }}>
                 {Array.from({ length: 84 }).map((_, i) => {
-                  const intensities = [0, 0, 1, 0, 2, 3, 4, 0, 1, 2, 0, 0];
                   const intensity = (i * 7 + Math.floor(i / 12)) % 5;
                   const tones = ["var(--mk-surface-3)", "var(--mk-heat-1)", "var(--mk-heat-2)", "var(--mk-heat-3)", "var(--mk-heat-4)"];
                   return <div key={i} className="cell" style={{ background: tones[intensity] }} />;

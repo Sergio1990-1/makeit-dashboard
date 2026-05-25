@@ -117,10 +117,12 @@
   --mk-text-xl: 1.25rem;      /* 20px */
   --mk-text-data: 1.5rem;     /* 24px */
 
-  --mk-leading-base: 1.45;
-  --mk-tracking-tight: -0.025em;   /* headings */
-  --mk-tracking-base: -0.015em;    /* body */
-  --mk-tracking-wide: 0.06em;      /* uppercase labels */
+  --mk-leading-tight: 1.2;         /* headings, compact blocks */
+  --mk-leading-base: 1.45;          /* body default */
+  --mk-leading-relaxed: 1.6;        /* long-form copy */
+  --mk-tracking-tight: -0.025em;    /* headings */
+  --mk-tracking-base: -0.015em;     /* body */
+  --mk-tracking-wide: 0.06em;       /* uppercase labels */
 
   /* ── Spacing scale (4px base) ────────────────────────── */
   --mk-sp-1: 4px;
@@ -133,11 +135,12 @@
   --mk-sp-10: 40px;
 
   /* ── Radius scale (5 шагов + full) ───────────────────── */
-  --mk-r-sm: 6px;
-  --mk-r-md: 8px;
-  --mk-r-lg: 12px;
-  --mk-r-xl: 16px;
-  --mk-r-full: 9999px;
+  --mk-r-xs: 4px;     /* square badges (priority/severity), small chips */
+  --mk-r-sm: 6px;     /* pill buttons, small inputs */
+  --mk-r-md: 8px;     /* default — buttons, inputs, panels */
+  --mk-r-lg: 12px;    /* cards */
+  --mk-r-xl: 16px;    /* large cards, dialogs */
+  --mk-r-full: 9999px; /* pills, avatars, dots */
 
   /* ── Shadows (light theme) ───────────────────────────── */
   --mk-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.02);
