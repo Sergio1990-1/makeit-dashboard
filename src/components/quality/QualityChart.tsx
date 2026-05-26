@@ -452,7 +452,6 @@ export function QualityChart({
               панели (QualitySummaryPanel) — там он никогда не перекрывает
               бары/topперы и доступен для drilldown'а вместе с метаданными
               периода. Здесь, в чарте, остаётся только линия + gridline'ы. */}
-          )}
         </>
       )}
 
