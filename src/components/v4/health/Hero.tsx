@@ -10,6 +10,18 @@ function DiscoveryBadge({ discovery }: { discovery: HealthReportDiscovery }) {
   const parts: { mod: string; text: string; icon?: string; tooltip: string } = (() => {
     switch (discovery.status) {
       case "completed":
+        // Code review d2e717b D3: fresh === undefined означает «не могу определить»
+        // (например NaN в review_due / completed_at). Раньше попадало в "stale"
+        // ветку — misleading. Теперь — нейтральное состояние.
+        if (discovery.fresh === undefined) {
+          return {
+            mod: "na",
+            text: "discovery: ✓ (даты невалидны)",
+            tooltip: `Discovery completed${
+              discovery.completed_at ? ` (${discovery.completed_at})` : ""
+            }, но review_due/completed_at не парсятся как дата — не могу проверить срок`,
+          };
+        }
         return discovery.fresh
           ? {
               mod: "ok",

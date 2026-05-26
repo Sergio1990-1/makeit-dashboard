@@ -39,6 +39,22 @@ const DISCOVERY_REVIEW_DUE_DEFAULT_DAYS = 90;
 const VALID_DISCOVERY_STATUSES = new Set(["completed", "not_required", "in_progress"]);
 const VALID_COMPLEXITIES = new Set(["transactional", "simple"]);
 
+// Code review d2e717b D2: allowlist для artifact_key. Без runtime check typo
+// в YAML (`artifact_key: "breif"`) silently fall back на legacy path — это
+// нарушает Codex P1 about artifact-path indirection. param<T> делает unchecked
+// cast, TS не защищает.
+const VALID_ARTIFACT_KEYS = new Set<keyof ProjectYamlArtifacts>([
+  "brief",
+  "market_research",
+  "market_research_na_reason",
+  "overview",
+  "operating_model",
+  "state_machines",
+  "invariants",
+  "source_of_truth",
+  "business_process",
+]);
+
 // Helper: read a typed param from a check object with a fallback.
 function param<T>(obj: Record<string, unknown>, key: string, fallback: T): T {
   return (obj[key] as T | undefined) ?? fallback;
@@ -279,7 +295,8 @@ export class ClassificationMissingError extends Error {
   }
 }
 
-interface RunCtx {
+// Exported для testing — production code uses internally.
+export interface RunCtx {
   token: string;
   owner: string;
   repo: string;
@@ -315,7 +332,9 @@ function getAuditProjects(ctx: RunCtx): Promise<AuditProjectStatus[] | null> {
 //   - { kind: "missing" } — file not present (legacy/pre-retrofit, not error)
 //   - { kind: "invalid", reason } — file present but malformed
 // Result is cached on `ctx.projectYamlPromise` for the lifetime of the scan.
-function getProjectYaml(ctx: RunCtx): Promise<ProjectYamlState> {
+// Exported только для direct testing (см. health-engine.test.ts) — production
+// code зовёт через executeCheck / summarizeDiscovery.
+export function getProjectYaml(ctx: RunCtx): Promise<ProjectYamlState> {
   if (ctx.projectYamlPromise) return ctx.projectYamlPromise;
   ctx.projectYamlPromise = (async (): Promise<ProjectYamlState> => {
     let text: string;
@@ -323,8 +342,19 @@ function getProjectYaml(ctx: RunCtx): Promise<ProjectYamlState> {
       text = await readRepoFile(ctx.token, ctx.owner, ctx.repo, PROJECT_YAML_PATH, ctx.signal);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") throw err;
-      // readRepoFile throws on 404 — treat as missing, not invalid.
-      return { kind: "missing" };
+      // Code review d2e717b D1: distinguish "file not present" (legitimate
+      // legacy/pre-retrofit) от auth/server errors (transient, нельзя маскировать
+      // под missing — иначе UI пишет "discovery: —" а на самом деле token истёк
+      // или GitHub 500). rest() в src/utils/github-actions.ts throws:
+      //   - "GitHub token истёк..." на 401/403
+      //   - "GitHub API <status>" на остальные не-ok
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("GitHub API 404")) {
+        return { kind: "missing" };
+      }
+      // Auth / 5xx / network — surface as invalid с readable reason. UI badge
+      // покажет "discovery: invalid" + tooltip с reason вместо misleading "—".
+      return { kind: "invalid", reason: `Не удалось прочитать ${PROJECT_YAML_PATH}: ${msg}` };
     }
     let parsed: unknown;
     try {
@@ -406,12 +436,30 @@ export function validateProjectYaml(
 // Codex review d118a6a P1: artifact-path dereferencing is critical, not P3.
 // Without it, retrofitted projects fail health on legacy paths even though
 // discovery succeeded.
-async function resolveArtifactPath(
+// Exported для testing — также RunCtx + ProjectYamlState нужны как public.
+export async function resolveArtifactPath(
   ctx: RunCtx,
   artifactKey: keyof ProjectYamlArtifacts | undefined,
   fallback: string,
-): Promise<{ path: string; source: "project_yaml" | "fallback"; intentional_skip?: boolean }> {
+): Promise<{
+  path: string;
+  source: "project_yaml" | "fallback" | "invalid_key";
+  intentional_skip?: boolean;
+  invalid_key_warning?: string;
+}> {
   if (!artifactKey) return { path: fallback, source: "fallback" };
+  // Code review d2e717b D2: validate artifact_key против allowlist. param<T>
+  // (line 43-45) делает unchecked cast — typo в YAML (`artifact_key: breif`)
+  // прокатится через TS и silently fall back на legacy path. Это нарушает
+  // Codex P1 contract — индирекция должна работать. Surface как warning,
+  // продолжаем на fallback (не падаем — graceful).
+  if (!VALID_ARTIFACT_KEYS.has(artifactKey)) {
+    return {
+      path: fallback,
+      source: "invalid_key",
+      invalid_key_warning: `artifact_key="${String(artifactKey)}" не в ProjectYamlArtifacts (valid: ${[...VALID_ARTIFACT_KEYS].join(", ")})`,
+    };
+  }
   const state = await getProjectYaml(ctx);
   if (state.kind !== "loaded") return { path: fallback, source: "fallback" };
   const arts = state.data.discovery.artifacts;
@@ -450,6 +498,9 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         const artifactKey = param<keyof ProjectYamlArtifacts | undefined>(c, "artifact_key", undefined);
         const caseInsensitive = param<boolean>(c, "case_insensitive", false);
         const resolved = await resolveArtifactPath(ctx, artifactKey, fallbackPath);
+        if (resolved.source === "invalid_key") {
+          return { ...base, status: "unknown", detail: resolved.invalid_key_warning ?? "invalid artifact_key" };
+        }
         if (resolved.intentional_skip) {
           return { ...base, status: "skipped", detail: `${artifactKey}: явно пропущен в .makeit/project.yaml (см. *_na_reason)` };
         }
@@ -484,6 +535,9 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         const containsAny = param<string[] | undefined>(c, "contains_any", undefined);
         const caseInsensitive = param<boolean>(c, "case_insensitive", false);
         const resolved = await resolveArtifactPath(ctx, artifactKey, fallbackPath);
+        if (resolved.source === "invalid_key") {
+          return { ...base, status: "unknown", detail: resolved.invalid_key_warning ?? "invalid artifact_key" };
+        }
         if (resolved.intentional_skip) {
           return { ...base, status: "skipped", detail: `${artifactKey}: явно пропущен в .makeit/project.yaml` };
         }
@@ -526,6 +580,9 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         const fallbackPath = param(c, "path", "");
         const artifactKey = param<keyof ProjectYamlArtifacts | undefined>(c, "artifact_key", undefined);
         const resolved = await resolveArtifactPath(ctx, artifactKey, fallbackPath);
+        if (resolved.source === "invalid_key") {
+          return { ...base, status: "unknown", detail: resolved.invalid_key_warning ?? "invalid artifact_key" };
+        }
         if (resolved.intentional_skip) {
           return { ...base, status: "skipped", detail: `${artifactKey}: явно пропущен в .makeit/project.yaml` };
         }
@@ -679,6 +736,9 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         } else {
           const fallbackPath = (pathTpl ? pathTpl.replace("{repo}", ctx.repo) : literalPath) ?? "";
           const resolved = await resolveArtifactPath(ctx, artifactKey, fallbackPath);
+          if (resolved.source === "invalid_key") {
+            return { ...base, status: "unknown", detail: resolved.invalid_key_warning ?? "invalid artifact_key" };
+          }
           if (resolved.intentional_skip) {
             return { ...base, status: "skipped", detail: `${artifactKey}: явно пропущен в .makeit/project.yaml` };
           }
@@ -1000,6 +1060,30 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
 
       // ── Discovery contract checks (P1 from Codex review d118a6a) ─────────
 
+      case "project_yaml_present": {
+        // Code review ee10641 K1: для tier-1 complex проектов отсутствие
+        // .makeit/project.yaml — это retrofit gap, который должен fail health,
+        // а не silently skipped. Используется отдельным правилом
+        // discovery.retrofit_required с applies_to { tiers: [1], complex: true }.
+        // В отличие от project_yaml_valid (Layer 1 general), этот case
+        // возвращает FAIL вместо skipped на missing.
+        const state = await getProjectYaml(ctx);
+        if (state.kind === "missing") {
+          return {
+            ...base,
+            status: "fail",
+            detail:
+              "Нет .makeit/project.yaml — этот tier-1 complex проект не прошёл retrofit. " +
+              "Запусти /makeit-discovery.",
+          };
+        }
+        if (state.kind === "invalid") {
+          // Конкретные details — в отдельном project_yaml_valid finding.
+          return { ...base, status: "fail", detail: state.reason };
+        }
+        return { ...base, status: "pass", detail: `complexity=${state.data.complexity}, status=${state.data.discovery.status}` };
+      }
+
       case "project_yaml_valid": {
         // Validates structural integrity of .makeit/project.yaml: parseable,
         // required fields, enum для status/complexity, paired market_research
@@ -1260,7 +1344,7 @@ export async function runHealthCheck(
 // First-class discovery summary for HealthReport — UI badge reads from here.
 // Codex review d118a6a P3: discovery state must be a first-class report field,
 // not derived from findings (skipped/unknown/missing cases make findings fragile).
-async function summarizeDiscovery(ctx: RunCtx): Promise<HealthReportDiscovery> {
+export async function summarizeDiscovery(ctx: RunCtx): Promise<HealthReportDiscovery> {
   const state = await getProjectYaml(ctx);
   if (state.kind === "missing") {
     return { status: "missing" };
@@ -1271,17 +1355,32 @@ async function summarizeDiscovery(ctx: RunCtx): Promise<HealthReportDiscovery> {
   const data = state.data;
   const disc = data.discovery;
   const defaultDays = ctx.doc.settings.discovery_review_due_days ?? DISCOVERY_REVIEW_DUE_DEFAULT_DAYS;
-  const reviewDueDate = disc.review_due
+  const reviewDueRaw = disc.review_due
     ? new Date(disc.review_due)
     : disc.completed_at
       ? new Date(new Date(disc.completed_at).getTime() + defaultDays * 86400000)
       : null;
-  const reviewDueIso =
-    reviewDueDate && !Number.isNaN(reviewDueDate.getTime())
-      ? reviewDueDate.toISOString().slice(0, 10)
-      : undefined;
+  // Code review d2e717b D3: унифицируем NaN-handling с discovery_not_stale rule.
+  // Rule возвращает status: "unknown" на NaN; summarizeDiscovery должен делать
+  // fresh: undefined (а не false), чтобы UI badge показал neutral вместо
+  // ложного "stale". Любая Invalid Date → reviewDueDate = null + fresh: undefined.
+  const reviewDueDate =
+    reviewDueRaw && !Number.isNaN(reviewDueRaw.getTime()) ? reviewDueRaw : null;
+  const reviewDueIso = reviewDueDate ? reviewDueDate.toISOString().slice(0, 10) : undefined;
   const isGreen = disc.status === "completed" || disc.status === "not_required";
-  const fresh = isGreen && reviewDueDate ? new Date() < reviewDueDate : isGreen && !reviewDueDate ? true : false;
+  let fresh: boolean | undefined;
+  if (!isGreen) {
+    fresh = false;
+  } else if (reviewDueDate) {
+    fresh = new Date() < reviewDueDate;
+  } else if (reviewDueRaw) {
+    // Был указан review_due / completed_at, но parse failed → unknown freshness.
+    // Honest signal — UI скажет "не могу проверить" вместо ложного "stale".
+    fresh = undefined;
+  } else {
+    // Green без любых дат (бывает у synthetic test fixtures) → считаем свежим.
+    fresh = true;
+  }
   return {
     status: disc.status,
     complexity: data.complexity,
