@@ -1,3 +1,4 @@
+import yaml from "js-yaml";
 import type {
   ChecklistDocument,
   ChecklistRule,
@@ -6,9 +7,13 @@ import type {
   HealthLayer,
   HealthLayerSummary,
   HealthReport,
+  HealthReportDiscovery,
   HealthScore,
   HealthTrend,
   ProjectClassification,
+  ProjectYaml,
+  ProjectYamlArtifacts,
+  ProjectYamlState,
 } from "../types/health";
 import {
   getRepoMeta,
@@ -28,6 +33,11 @@ import {
 import { Semaphore } from "./semaphore";
 import { fetchAuditProjects } from "./auditor";
 import type { AuditProjectStatus } from "../types";
+
+const PROJECT_YAML_PATH = ".makeit/project.yaml";
+const DISCOVERY_REVIEW_DUE_DEFAULT_DAYS = 90;
+const VALID_DISCOVERY_STATUSES = new Set(["completed", "not_required", "in_progress"]);
+const VALID_COMPLEXITIES = new Set(["transactional", "simple"]);
 
 // Helper: read a typed param from a check object with a fallback.
 function param<T>(obj: Record<string, unknown>, key: string, fallback: T): T {
@@ -280,6 +290,10 @@ interface RunCtx {
   // Shared lazy promise so multiple rules in the same scan don't each refetch
   // the auditor project list. `null` means the service was unreachable.
   auditProjectsPromise?: Promise<AuditProjectStatus[] | null>;
+  // Shared lazy promise for `.makeit/project.yaml`. Resolved once per repo
+  // scan and reused by every artifact-path-aware rule + by runHealthCheck
+  // for HealthReport.discovery. AbortError propagates as with dirCache.
+  projectYamlPromise?: Promise<ProjectYamlState>;
   // Forwarded to every fetch helper. When this aborts, all in-flight rule
   // checks reject with AbortError and the top-level Promise.all reflects it.
   signal?: AbortSignal;
@@ -293,6 +307,124 @@ function getAuditProjects(ctx: RunCtx): Promise<AuditProjectStatus[] | null> {
     });
   }
   return ctx.auditProjectsPromise;
+}
+
+// Read and parse `.makeit/project.yaml` from the repo via GitHub Contents API.
+// Returns one of three states:
+//   - { kind: "loaded", data } — parsed successfully + minimal structure ok
+//   - { kind: "missing" } — file not present (legacy/pre-retrofit, not error)
+//   - { kind: "invalid", reason } — file present but malformed
+// Result is cached on `ctx.projectYamlPromise` for the lifetime of the scan.
+function getProjectYaml(ctx: RunCtx): Promise<ProjectYamlState> {
+  if (ctx.projectYamlPromise) return ctx.projectYamlPromise;
+  ctx.projectYamlPromise = (async (): Promise<ProjectYamlState> => {
+    let text: string;
+    try {
+      text = await readRepoFile(ctx.token, ctx.owner, ctx.repo, PROJECT_YAML_PATH, ctx.signal);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") throw err;
+      // readRepoFile throws on 404 — treat as missing, not invalid.
+      return { kind: "missing" };
+    }
+    let parsed: unknown;
+    try {
+      parsed = yaml.load(text);
+    } catch (err) {
+      return { kind: "invalid", reason: `YAML parse error: ${(err as Error).message}` };
+    }
+    const validation = validateProjectYaml(parsed);
+    if (validation.kind === "invalid") return validation;
+    return { kind: "loaded", data: validation.data };
+  })();
+  return ctx.projectYamlPromise;
+}
+
+// Structural + enum + paired-field validation of the parsed project.yaml.
+// Returns `{ kind: "loaded", data }` if valid, `{ kind: "invalid", reason }`
+// otherwise. Codex review d118a6a P2: paired_fields_xor is part of contract
+// validity, folded in here.
+// Exported для direct unit testing (см. health-engine.test.ts) — это pure
+// function, не требует mocking RunCtx или GitHub API.
+export function validateProjectYaml(
+  parsed: unknown,
+):
+  | { kind: "loaded"; data: ProjectYaml }
+  | { kind: "invalid"; reason: string } {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { kind: "invalid", reason: "корневой объект не найден" };
+  }
+  const p = parsed as Record<string, unknown>;
+
+  if (p.version !== 1) {
+    return { kind: "invalid", reason: `version должно быть 1, получено ${JSON.stringify(p.version)}` };
+  }
+  if (typeof p.project_name !== "string" || p.project_name.length === 0) {
+    return { kind: "invalid", reason: "project_name отсутствует или не строка" };
+  }
+  if (typeof p.complexity !== "string" || !VALID_COMPLEXITIES.has(p.complexity)) {
+    return { kind: "invalid", reason: `complexity должно быть transactional|simple, получено ${JSON.stringify(p.complexity)}` };
+  }
+  if (!p.discovery || typeof p.discovery !== "object") {
+    return { kind: "invalid", reason: "discovery блок отсутствует" };
+  }
+
+  const disc = p.discovery as Record<string, unknown>;
+  if (typeof disc.status !== "string" || !VALID_DISCOVERY_STATUSES.has(disc.status)) {
+    return { kind: "invalid", reason: `discovery.status должно быть completed|not_required|in_progress, получено ${JSON.stringify(disc.status)}` };
+  }
+
+  // Paired-field validation для market_research / market_research_na_reason.
+  // Codex review d118a6a P2: эти поля — часть contract validity, не косметика.
+  if (disc.artifacts && typeof disc.artifacts === "object") {
+    const arts = disc.artifacts as Record<string, unknown>;
+    if ("market_research" in arts || "market_research_na_reason" in arts) {
+      const mr = arts.market_research;
+      const naReason = arts.market_research_na_reason;
+      const mrIsPath = typeof mr === "string" && mr.length > 0;
+      const naIsReason = typeof naReason === "string" && naReason.length > 0;
+      if (!mrIsPath && !naIsReason) {
+        return { kind: "invalid", reason: "market_research и market_research_na_reason оба пусты — нарушение парного контракта (нужно одно из двух)" };
+      }
+      if (mrIsPath && naIsReason) {
+        return { kind: "invalid", reason: "market_research и market_research_na_reason оба заполнены — нарушение парного контракта (взаимоисключающие)" };
+      }
+    }
+  }
+
+  return { kind: "loaded", data: parsed as ProjectYaml };
+}
+
+// Resolves the artifact path to actually check on disk:
+// 1. If `.makeit/project.yaml` is loaded AND has `discovery.artifacts[key]`
+//    as a non-null string → use that path (the canonical one written by
+//    makeit-discovery skill).
+// 2. Otherwise → use the rule's hardcoded `fallback` path (legacy behavior).
+// 3. Returns null if artifacts[key] is explicitly null (marker for "this
+//    project skipped this artifact with a reason", e.g. market_research:null
+//    + market_research_na_reason set).
+//
+// Codex review d118a6a P1: artifact-path dereferencing is critical, not P3.
+// Without it, retrofitted projects fail health on legacy paths even though
+// discovery succeeded.
+async function resolveArtifactPath(
+  ctx: RunCtx,
+  artifactKey: keyof ProjectYamlArtifacts | undefined,
+  fallback: string,
+): Promise<{ path: string; source: "project_yaml" | "fallback"; intentional_skip?: boolean }> {
+  if (!artifactKey) return { path: fallback, source: "fallback" };
+  const state = await getProjectYaml(ctx);
+  if (state.kind !== "loaded") return { path: fallback, source: "fallback" };
+  const arts = state.data.discovery.artifacts;
+  if (!arts || !(artifactKey in arts)) return { path: fallback, source: "fallback" };
+  const value = arts[artifactKey];
+  if (value === null) {
+    // Explicit skip marker (e.g. market_research:null + na_reason set).
+    return { path: fallback, source: "project_yaml", intentional_skip: true };
+  }
+  if (typeof value === "string" && value.length > 0) {
+    return { path: value, source: "project_yaml" };
+  }
+  return { path: fallback, source: "fallback" };
 }
 
 async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFinding> {
@@ -314,10 +446,20 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
   try {
     switch (c.type) {
       case "file_exists": {
-        const path = param(c, "path", "");
+        const fallbackPath = param(c, "path", "");
+        const artifactKey = param<keyof ProjectYamlArtifacts | undefined>(c, "artifact_key", undefined);
         const caseInsensitive = param<boolean>(c, "case_insensitive", false);
-        const ok = await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file", caseInsensitive, ctx.signal);
-        return { ...base, status: ok ? "pass" : "fail", detail: ok ? path : `Нет файла ${path}` };
+        const resolved = await resolveArtifactPath(ctx, artifactKey, fallbackPath);
+        if (resolved.intentional_skip) {
+          return { ...base, status: "skipped", detail: `${artifactKey}: явно пропущен в .makeit/project.yaml (см. *_na_reason)` };
+        }
+        const ok = await pathExists(ctx.token, ctx.owner, ctx.repo, resolved.path, ctx.dirCache, "file", caseInsensitive, ctx.signal);
+        const sourceTag = resolved.source === "project_yaml" ? " (из .makeit/project.yaml)" : "";
+        return {
+          ...base,
+          status: ok ? "pass" : "fail",
+          detail: ok ? `${resolved.path}${sourceTag}` : `Нет файла ${resolved.path}${sourceTag}`,
+        };
       }
 
       case "file_not_empty": {
@@ -336,10 +478,16 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
       }
 
       case "file_contains": {
-        const path = param(c, "path", "");
+        const fallbackPath = param(c, "path", "");
+        const artifactKey = param<keyof ProjectYamlArtifacts | undefined>(c, "artifact_key", undefined);
         const contains = param<string | undefined>(c, "contains", undefined);
         const containsAny = param<string[] | undefined>(c, "contains_any", undefined);
         const caseInsensitive = param<boolean>(c, "case_insensitive", false);
+        const resolved = await resolveArtifactPath(ctx, artifactKey, fallbackPath);
+        if (resolved.intentional_skip) {
+          return { ...base, status: "skipped", detail: `${artifactKey}: явно пропущен в .makeit/project.yaml` };
+        }
+        const path = resolved.path;
         const canonicalPath = await pathExists(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, "file", caseInsensitive, ctx.signal);
         if (!canonicalPath) {
           return { ...base, status: "fail", detail: `Нет файла ${path}` };
@@ -375,7 +523,13 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
       }
 
       case "dir_not_empty": {
-        const path = param(c, "path", "");
+        const fallbackPath = param(c, "path", "");
+        const artifactKey = param<keyof ProjectYamlArtifacts | undefined>(c, "artifact_key", undefined);
+        const resolved = await resolveArtifactPath(ctx, artifactKey, fallbackPath);
+        if (resolved.intentional_skip) {
+          return { ...base, status: "skipped", detail: `${artifactKey}: явно пропущен в .makeit/project.yaml` };
+        }
+        const path = resolved.path;
         const items = await listDirCached(ctx.token, ctx.owner, ctx.repo, path, ctx.dirCache, ctx.signal);
         const ok = items.length > 0;
         return {
@@ -516,11 +670,19 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         const externalRepo = param<string | undefined>(c, "external_repo", undefined);
         const pathTpl = param<string | undefined>(c, "path_template", undefined);
         const literalPath = param<string | undefined>(c, "path", undefined);
+        const artifactKey = param<keyof ProjectYamlArtifacts | undefined>(c, "artifact_key", undefined);
         let path: string;
         if (externalRepo && pathTpl) {
+          // External repo path — artifact_key не применяется (artifacts только
+          // в проекте под scan, не в makeit-knowledge).
           path = resolveExternalPath(externalRepo, pathTpl, ctx.classification, ctx.repo);
         } else {
-          path = (pathTpl ? pathTpl.replace("{repo}", ctx.repo) : literalPath) ?? "";
+          const fallbackPath = (pathTpl ? pathTpl.replace("{repo}", ctx.repo) : literalPath) ?? "";
+          const resolved = await resolveArtifactPath(ctx, artifactKey, fallbackPath);
+          if (resolved.intentional_skip) {
+            return { ...base, status: "skipped", detail: `${artifactKey}: явно пропущен в .makeit/project.yaml` };
+          }
+          path = resolved.path;
         }
         if (!path) return { ...base, status: "unknown", detail: "doc_freshness: нет пути" };
 
@@ -836,6 +998,93 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
         };
       }
 
+      // ── Discovery contract checks (P1 from Codex review d118a6a) ─────────
+
+      case "project_yaml_valid": {
+        // Validates structural integrity of .makeit/project.yaml: parseable,
+        // required fields, enum для status/complexity, paired market_research
+        // contract. File absence is acceptable here (legacy project) — surface
+        // as "skipped" not "fail" so legacy projects don't burn score until
+        // they get retrofitted.
+        const state = await getProjectYaml(ctx);
+        if (state.kind === "missing") {
+          return { ...base, status: "skipped", detail: "Нет .makeit/project.yaml (legacy / pre-retrofit)" };
+        }
+        if (state.kind === "invalid") {
+          return { ...base, status: "fail", detail: state.reason };
+        }
+        return { ...base, status: "pass", detail: "Контракт корректен" };
+      }
+
+      case "classification_consistent": {
+        // Codex review d118a6a P1: silent override of complexity via
+        // .makeit/project.yaml will mask divergence from
+        // PROJECT_CHECKLIST.yaml::project_classification. Until we collapse to
+        // a single source of truth, fail loudly on mismatch — no silent
+        // preference. After all projects converge, this rule will reduce to
+        // tautology and can be retired.
+        const state = await getProjectYaml(ctx);
+        if (state.kind === "missing") {
+          return { ...base, status: "skipped", detail: "Нет .makeit/project.yaml — fallback на CHECKLIST classification" };
+        }
+        if (state.kind === "invalid") {
+          // project_yaml_valid rule already surfaces the parse failure;
+          // here we can't make a consistency decision, return unknown.
+          return { ...base, status: "unknown", detail: "project.yaml невалиден — consistency не проверить" };
+        }
+        const yamlComplexity = state.data.complexity;
+        const checklistComplex = ctx.classification.complex;
+        const yamlIsComplex = yamlComplexity === "transactional";
+        if (yamlIsComplex === checklistComplex) {
+          return { ...base, status: "pass", detail: `${yamlComplexity} ↔ complex:${checklistComplex}` };
+        }
+        return {
+          ...base,
+          status: "fail",
+          detail:
+            `Расхождение: .makeit/project.yaml::complexity=${yamlComplexity} ` +
+            `vs PROJECT_CHECKLIST.yaml::project_classification.complex=${checklistComplex}. ` +
+            `Один из источников устарел — синхронизировать.`,
+        };
+      }
+
+      case "discovery_not_stale": {
+        // Codex review d118a6a P2: apply к completed И not_required (оба
+        // green-состояния имеют review_due). `review_due` из файла wins over
+        // computed completed_at + default. in_progress всегда fail.
+        const state = await getProjectYaml(ctx);
+        if (state.kind === "missing") {
+          return { ...base, status: "skipped", detail: "Нет .makeit/project.yaml — нечего проверять на stale" };
+        }
+        if (state.kind === "invalid") {
+          return { ...base, status: "unknown", detail: "project.yaml невалиден" };
+        }
+        const disc = state.data.discovery;
+        if (disc.status === "in_progress") {
+          const failuresHint = disc.validation_failures?.length
+            ? ` (${disc.validation_failures.length} validation_failures, см. .makeit/project.yaml)`
+            : "";
+          return { ...base, status: "fail", detail: `Discovery в статусе in_progress${failuresHint}` };
+        }
+        // For green statuses (completed | not_required) — check freshness.
+        const defaultDays = ctx.doc.settings.discovery_review_due_days ?? DISCOVERY_REVIEW_DUE_DEFAULT_DAYS;
+        const reviewDue = disc.review_due
+          ? new Date(disc.review_due)
+          : disc.completed_at
+            ? new Date(new Date(disc.completed_at).getTime() + defaultDays * 86400000)
+            : null;
+        if (!reviewDue || Number.isNaN(reviewDue.getTime())) {
+          return { ...base, status: "unknown", detail: "Нет review_due и нет completed_at — не вычислить срок" };
+        }
+        const today = new Date();
+        if (today < reviewDue) {
+          const daysLeft = Math.ceil((reviewDue.getTime() - today.getTime()) / 86400000);
+          return { ...base, status: "pass", detail: `Discovery ${disc.status}, до review_due ${daysLeft} дн.` };
+        }
+        const daysOverdue = Math.floor((today.getTime() - reviewDue.getTime()) / 86400000);
+        return { ...base, status: "fail", detail: `Discovery просрочен на ${daysOverdue} дн. (review_due ${reviewDue.toISOString().slice(0, 10)})` };
+      }
+
       // ── Layer 4 (LLM) — отложено, реализуется в iteration 3. ─────────────
       case "ai_template_filled":
       case "ai_doc_code_sync":
@@ -993,6 +1242,7 @@ export async function runHealthCheck(
 
   const score = computeScore(findings, doc);
   const trend = buildTrend(repo, score.raw);
+  const discovery = await summarizeDiscovery(ctx);
   return {
     repo,
     generated_at: new Date().toISOString(),
@@ -1003,5 +1253,41 @@ export async function runHealthCheck(
     score,
     by_layer: summarizeByLayer(findings),
     trend,
+    discovery,
+  };
+}
+
+// First-class discovery summary for HealthReport — UI badge reads from here.
+// Codex review d118a6a P3: discovery state must be a first-class report field,
+// not derived from findings (skipped/unknown/missing cases make findings fragile).
+async function summarizeDiscovery(ctx: RunCtx): Promise<HealthReportDiscovery> {
+  const state = await getProjectYaml(ctx);
+  if (state.kind === "missing") {
+    return { status: "missing" };
+  }
+  if (state.kind === "invalid") {
+    return { status: "invalid" };
+  }
+  const data = state.data;
+  const disc = data.discovery;
+  const defaultDays = ctx.doc.settings.discovery_review_due_days ?? DISCOVERY_REVIEW_DUE_DEFAULT_DAYS;
+  const reviewDueDate = disc.review_due
+    ? new Date(disc.review_due)
+    : disc.completed_at
+      ? new Date(new Date(disc.completed_at).getTime() + defaultDays * 86400000)
+      : null;
+  const reviewDueIso =
+    reviewDueDate && !Number.isNaN(reviewDueDate.getTime())
+      ? reviewDueDate.toISOString().slice(0, 10)
+      : undefined;
+  const isGreen = disc.status === "completed" || disc.status === "not_required";
+  const fresh = isGreen && reviewDueDate ? new Date() < reviewDueDate : isGreen && !reviewDueDate ? true : false;
+  return {
+    status: disc.status,
+    complexity: data.complexity,
+    completed_at: disc.completed_at,
+    review_due: reviewDueIso,
+    fresh,
+    validation_failures: disc.validation_failures,
   };
 }

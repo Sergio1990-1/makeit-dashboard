@@ -77,6 +77,13 @@
 .ph-tag--client { background: #FDF2F8; color: #9D174D; }
 .ph-tag--internal { background: var(--mk-surface-2); color: var(--mk-ink-600); }
 .ph-tag--grace { background: var(--mk-success-soft); color: var(--mk-success-strong); }
+/* Discovery badge (Codex review d118a6a P3 — first-class report field) */
+.ph-tag--discovery-ok       { background: var(--mk-success-soft); color: var(--mk-success-strong); }
+.ph-tag--discovery-warn     { background: var(--mk-warn-soft);    color: var(--mk-warn-strong); }
+.ph-tag--discovery-na       { background: var(--mk-surface-2);    color: var(--mk-ink-600); }
+.ph-tag--discovery-progress { background: var(--mk-warn-soft);    color: var(--mk-warn-strong); }
+.ph-tag--discovery-invalid  { background: var(--mk-danger-soft, #FEE2E2); color: var(--mk-danger-strong, #991B1B); }
+.ph-tag--discovery-missing  { background: var(--mk-surface-2);    color: var(--mk-ink-400); }
 .ph-hero-sub {
   font-size: 12px;
   color: var(--mk-ink-500);

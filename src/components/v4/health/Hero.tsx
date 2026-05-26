@@ -1,7 +1,70 @@
-import type { HealthReport } from "../../../types/health";
+import type { HealthReport, HealthReportDiscovery } from "../../../types/health";
 import { Icon } from "./Icon";
 import { KpiRow } from "./KpiRow";
 import { formatScanTime } from "./utils";
+
+// Discovery badge — first-class field on HealthReport (Codex review d118a6a P3:
+// not derived from findings). Color/text depends on status + freshness.
+function DiscoveryBadge({ discovery }: { discovery: HealthReportDiscovery }) {
+  // Map status → CSS modifier + visible text + tooltip
+  const parts: { mod: string; text: string; icon?: string; tooltip: string } = (() => {
+    switch (discovery.status) {
+      case "completed":
+        return discovery.fresh
+          ? {
+              mod: "ok",
+              text: "discovery ✓",
+              icon: "check",
+              tooltip: `Discovery completed${discovery.completed_at ? ` (${discovery.completed_at})` : ""}${
+                discovery.review_due ? `, review_due ${discovery.review_due}` : ""
+              }`,
+            }
+          : {
+              mod: "warn",
+              text: "discovery: stale",
+              icon: "alert",
+              tooltip: `Discovery completed but past review_due${
+                discovery.review_due ? ` (${discovery.review_due})` : ""
+              } — пора re-run /makeit-discovery`,
+            };
+      case "not_required":
+        return {
+          mod: "na",
+          text: "discovery: simple",
+          tooltip: `Short-path для simple-проекта${
+            discovery.completed_at ? ` (зафиксировано ${discovery.completed_at})` : ""
+          }`,
+        };
+      case "in_progress":
+        return {
+          mod: "progress",
+          text: "discovery: in progress",
+          icon: "clock",
+          tooltip: discovery.validation_failures?.length
+            ? `Validation gate упал (${discovery.validation_failures.length} проблем) — см. .makeit/project.yaml`
+            : "Discovery в работе, validation gate не пройден",
+        };
+      case "invalid":
+        return {
+          mod: "invalid",
+          text: "discovery: invalid",
+          icon: "alert",
+          tooltip: ".makeit/project.yaml невалиден — см. project_yaml_valid finding",
+        };
+      case "missing":
+        return {
+          mod: "missing",
+          text: "discovery: —",
+          tooltip: "Legacy/pre-retrofit: нет .makeit/project.yaml. Запусти /makeit-discovery когда удобно.",
+        };
+    }
+  })();
+  return (
+    <span className={`ph-tag ph-tag--discovery-${parts.mod}`} title={parts.tooltip}>
+      {parts.icon && <Icon name={parts.icon} />} {parts.text}
+    </span>
+  );
+}
 
 interface Props {
   report: HealthReport;
@@ -75,6 +138,7 @@ export function Hero({
                   {report.grace_period_days === 1 ? "день" : report.grace_period_days < 5 ? "дня" : "дней"}
                 </span>
               )}
+              {report.discovery && <DiscoveryBadge discovery={report.discovery} />}
             </div>
           </div>
           <div className="ph-hero-sub">
