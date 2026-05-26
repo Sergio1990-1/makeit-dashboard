@@ -1,0 +1,29 @@
+version: 1
+project_name: makeit-dashboard
+created_at: 2026-03-25
+
+complexity: simple
+
+# Discovery: short-path для simple-проекта (SPA UI для read-only визуализации
+# портфеля). Retrofit 2026-05-26 по фактам из код-базы (см. BRIEF).
+#
+# Note 1: artifacts.brief указывает на docs/BRIEF.md (не docs/briefs/BRIEF-001.md) —
+#         исторический путь. validation gate использует artifacts.brief как параметр.
+#
+# Note 2: проект имеет docs/business_process.yaml несмотря на complexity: simple.
+#         Это намеренное exception — дашборд визуализирует процессы ДРУГИХ проектов
+#         (delivery e2e, pipeline auto-dev), не свой собственный dev workflow.
+discovery:
+  status: not_required
+  completed_at: 2026-05-26
+  interviewer: makeit-discovery@v1
+  artifacts:
+    brief: docs/BRIEF.md
+    market_research: null
+    market_research_na_reason: "Внутренний инструмент команды MakeIT для портфельного мониторинга; не коммерческий продукт, конкурентов в нише single-operator-portfolio-dashboard нет"
+    overview: docs/OVERVIEW.md
+  review_due: 2026-08-26
+
+domain:
+  key_entities: [Project, Issue, Milestone, AuditFinding, PipelineRun, Transcript, QualityMetric]
+  key_actors: [MakeIT_operator]
