@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import type { QualityPayload, Annotation, PeriodMode } from "../../types/quality";
+import { QualityChart } from "./QualityChart";
 import {
-  QualityChart,
   badgeLabel,
   computeRollingAvg,
   lineColor,
   type FocusMode,
-} from "./QualityChart";
+} from "./quality-trend";
 import { QualityKPIs } from "./QualityKPIs";
 import { QualityAnnotations } from "./QualityAnnotations";
 
