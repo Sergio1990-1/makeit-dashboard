@@ -1,5 +1,14 @@
 import { useMemo, useRef } from "react";
 import type { QualityBucket } from "../../types/quality";
+import {
+  computeRollingAvg,
+  lineColor,
+  type FocusMode,
+} from "./quality-trend";
+
+// Re-export FocusMode для обратной совместимости — раньше тип жил здесь,
+// внешние модули продолжают импортировать его из QualityChart.
+export type { FocusMode } from "./quality-trend";
 
 /**
  * QualityChart — переиспользуемый чарт качества (main panel + mini в карточках).
@@ -24,11 +33,6 @@ import type { QualityBucket } from "../../types/quality";
  *  - has-p0: bucket с ≥1 P0 → постоянный gradient + topper-pill (main only)
  */
 
-/** Какой срез данных подсвечивать. Управляется кликом по KPI-плиткам:
- * "all" = дефолт (стек целиком + линия %-чистых), остальные изолируют
- * один сегмент бара и переключают линию overlay на эту метрику. */
-export type FocusMode = "all" | "p0" | "p1" | "p2" | "dirty";
-
 export interface QualityChartProps {
   buckets: QualityBucket[];
   labels: string[];
@@ -40,78 +44,6 @@ export interface QualityChartProps {
 }
 
 const LOW_SAMPLE = 8;
-
-/** Извлекает значение для конкретной метрики из бакета.
- * Возвращает null если бакет пустой — пропускаем такие точки в rolling avg
- * (выходные/праздники иначе дают ложные провалы линии). */
-function bucketPct(b: QualityBucket, mode: FocusMode): number | null {
-  if (b.total_pr === 0) return null;
-  switch (mode) {
-    case "p0":
-      return (b.with_p0 / b.total_pr) * 100;
-    case "p1":
-      return (b.with_p1_only / b.total_pr) * 100;
-    case "p2":
-      return (b.with_p2_only / b.total_pr) * 100;
-    case "dirty":
-      return ((b.with_p0 + b.with_p1_only) / b.total_pr) * 100;
-    case "all":
-    default:
-      // % чистых = без P0/P1. P2-нит не делает PR «грязным».
-      return ((b.total_pr - b.with_p0 - b.with_p1_only) / b.total_pr) * 100;
-  }
-}
-
-function lineColor(mode: FocusMode): string {
-  switch (mode) {
-    case "p0":
-      return "var(--mk-quality-p0)";
-    case "p1":
-      return "var(--mk-quality-p1)";
-    case "p2":
-      return "var(--mk-quality-p2)";
-    case "dirty":
-      return "var(--mk-danger-100)";
-    case "all":
-    default:
-      return "var(--mk-success-100)";
-  }
-}
-
-function badgeLabel(mode: FocusMode): string {
-  switch (mode) {
-    case "p0":
-      return "с P0";
-    case "p1":
-      return "с P1";
-    case "p2":
-      return "с P2";
-    case "dirty":
-      return "грязных";
-    case "all":
-    default:
-      return "чистых";
-  }
-}
-
-/** Скользящее среднее выбранной метрики по последним `window` бакетам.
- * Пустые бакеты (нет PR) пропускаем — иначе выходные/праздники дают
- * ложные провалы в линии. Возвращаем null если в окне совсем нет данных. */
-function computeRollingAvg(
-  buckets: QualityBucket[],
-  window: number,
-  mode: FocusMode,
-): Array<number | null> {
-  return buckets.map((_, i) => {
-    const start = Math.max(0, i - window + 1);
-    const slice = buckets.slice(start, i + 1);
-    const pcts = slice
-      .map((b) => bucketPct(b, mode))
-      .filter((p): p is number => p !== null);
-    if (pcts.length === 0) return null;
-    return pcts.reduce((a, b) => a + b, 0) / pcts.length;
-  });
-}
 
 function niceCeil(n: number): number {
   if (n <= 5) return 5;
@@ -184,7 +116,6 @@ export function QualityChart({
   );
 
   const overlayColor = useMemo(() => lineColor(focus), [focus]);
-  const overlayLabel = useMemo(() => badgeLabel(focus), [focus]);
 
   // Сегменты SVG-линии overlay: Y инвертирован (100% наверху), null значения
   // прерывают линию (выходные/пустые дни). Каждый сегмент — отдельный
@@ -220,13 +151,6 @@ export function QualityChart({
   }, [rollingAvgPct, buckets.length, effectiveWindow]);
 
   const hasLineData = lineSegments.length > 0 || singlePoints.length > 0;
-
-  const latestRollingPct = useMemo(() => {
-    for (let i = rollingAvgPct.length - 1; i >= 0; i--) {
-      if (rollingAvgPct[i] !== null) return rollingAvgPct[i];
-    }
-    return null;
-  }, [rollingAvgPct]);
 
   const handleEnter = (
     b: QualityBucket,
@@ -394,8 +318,10 @@ export function QualityChart({
         );
       })}
 
-      {/* SVG overlay: 7-day rolling avg «% чистых PR» (без P0/P1).
-          Правая Y-ось 0–100%. Pointer-events: none — чтобы не ломать hover баров. */}
+      {/* SVG overlay: rolling-avg линия + опорные gridline'ы 0/50/100%.
+          Текстовые подписи правой Y-оси НЕТ — они конфликтовали с числовой
+          шкалой PR-count на той же стороне («200» + «100%» читались как
+          «200 100%»). Шкала линии читается через бейдж в углу + два tick'а. */}
       {effectiveWindow > 0 && hasLineData && (
         <>
           <svg
@@ -411,7 +337,17 @@ export function QualityChart({
               overflow: "visible",
             }}
           >
-            {/* Опорные линии 50% и 100% — eдва видны, но дают шкалу */}
+            {/* Gridline 100% (top) — на одном уровне с верхом chart-area,
+                служит «ceiling» для линии чтобы было видно когда она прижата. */}
+            <line
+              x1="0" y1="0" x2="100" y2="0"
+              stroke={overlayColor}
+              strokeWidth="0.15"
+              strokeDasharray="0.4 0.6"
+              vectorEffect="non-scaling-stroke"
+              opacity="0.3"
+            />
+            {/* Gridline 50% — мягкая, нейтральный цвет (не дублирует overlayColor). */}
             <line
               x1="0" y1="50" x2="100" y2="50"
               stroke="var(--mk-line-soft)"
@@ -444,50 +380,10 @@ export function QualityChart({
               />
             ))}
           </svg>
-          {/* Правая Y-ось (0–100%) + бейдж с актуальным значением */}
-          <div
-            className="chart-trend-axis"
-            style={{
-              position: "absolute",
-              right: -36,
-              top: 0,
-              bottom: 0,
-              width: 32,
-              fontFamily: "var(--mk-font-mono)",
-              fontSize: 10,
-              color: overlayColor,
-              opacity: 0.85,
-              pointerEvents: "none",
-            }}
-          >
-            <div style={{ position: "absolute", top: -2 }}>100%</div>
-            <div style={{ position: "absolute", top: "calc(50% - 6px)" }}>50%</div>
-            <div style={{ position: "absolute", bottom: -2 }}>0%</div>
-          </div>
-          {latestRollingPct !== null && (
-            <div
-              className="chart-trend-badge"
-              style={{
-                position: "absolute",
-                right: 4,
-                top: `calc(${100 - latestRollingPct}% - 10px)`,
-                padding: "2px 6px",
-                background: overlayColor,
-                color: "white",
-                fontFamily: "var(--mk-font-mono)",
-                fontSize: 10,
-                fontWeight: 700,
-                borderRadius: 4,
-                pointerEvents: "none",
-                whiteSpace: "nowrap",
-                transform: "translateY(-50%)",
-                boxShadow: "0 1px 4px color-mix(in srgb, var(--mk-ink-900) 15%, transparent)",
-              }}
-            >
-              {latestRollingPct.toFixed(0)}% {overlayLabel} · {effectiveWindow}
-              {buckets.length >= 20 ? "д" : "нед"} avg
-            </div>
-          )}
+          {/* Бейдж с текущим значением rolling-avg рендерится в заголовке
+              панели (QualitySummaryPanel) — там он никогда не перекрывает
+              бары/topперы и доступен для drilldown'а вместе с метаданными
+              периода. Здесь, в чарте, остаётся только линия + gridline'ы. */}
         </>
       )}
 
