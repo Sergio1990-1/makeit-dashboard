@@ -71,6 +71,42 @@ export function badgeLabel(mode: FocusMode): string {
   }
 }
 
+/** Полная подпись для tooltip / легенды линии. Отличается от badgeLabel:
+ * badgeLabel компактен («чистых», «с P0») для бейджа над цифрой; этот —
+ * читаемая фраза, описывающая что именно усредняется. */
+export function trendLineLabel(mode: FocusMode): string {
+  switch (mode) {
+    case "p0":
+      return "% PR с P0";
+    case "p1":
+      return "% PR с P1";
+    case "p2":
+      return "% PR с P2";
+    case "dirty":
+      return "% грязных PR (P0+P1)";
+    case "all":
+    default:
+      return "% PR без P0/P1";
+  }
+}
+
+/** Короткое имя текущего фильтра для бейджа «Фильтр: только X». */
+export function focusFilterName(mode: FocusMode): string {
+  switch (mode) {
+    case "p0":
+      return "только P0";
+    case "p1":
+      return "только P1";
+    case "p2":
+      return "только P2";
+    case "dirty":
+      return "только грязные (P0+P1)";
+    case "all":
+    default:
+      return "все";
+  }
+}
+
 /** Скользящее среднее выбранной метрики по последним `window` бакетам.
  * Пустые бакеты (нет PR) пропускаем — иначе выходные/праздники дают
  * ложные провалы в линии. Возвращаем null если в окне совсем нет данных. */

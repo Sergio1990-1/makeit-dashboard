@@ -4,7 +4,9 @@ import { QualityChart } from "./QualityChart";
 import {
   badgeLabel,
   computeRollingAvg,
+  focusFilterName,
   lineColor,
+  trendLineLabel,
   type FocusMode,
 } from "./quality-trend";
 import { QualityKPIs } from "./QualityKPIs";
@@ -39,20 +41,14 @@ export function QualitySummaryPanel({ data, annotations, mode }: Props) {
     return null;
   }, [buckets, rollingWindow, focus]);
   const unitLabel = buckets.length >= 20 ? "д" : "нед";
+  const windowAdjective = unitLabel === "д" ? "дневное" : "недельное";
 
   return (
     <div className="panel summary">
       <div className="chartwrap">
-        <div
-          className="panel-t"
-          style={{
-            marginBottom: 14,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            flexWrap: "wrap",
-          }}
-        >
+        <div className="panel-t" style={{ marginBottom: 14 }}>
+          {/* Layout (flex/gap/wrap) приходит из CSS `.panel-t` —
+              не дублируем inline. Здесь только override marginBottom. */}
           <span>Сводная по всем {Object.keys(data.repo_status).length} проектам</span>
           <span className="tag">All repos</span>
           {errored.length > 0 && (
@@ -66,11 +62,11 @@ export function QualitySummaryPanel({ data, annotations, mode }: Props) {
           {/* Бейдж rolling-avg вынесен из чарта в заголовок: больше не
               пересекается с барами/topперами и читается как часть метрики,
               а не как deco-наклейка на графике. Цвет/подпись подстраиваются
-              под текущий focus-фильтр (общая утилита lineColor/badgeLabel). */}
+              под текущий focus-фильтр (общие утилиты quality-trend). */}
           {latestRollingPct !== null && (
             <span
               className="chart-trend-badge"
-              title={`${rollingWindow}-${unitLabel === "д" ? "дневное" : "недельное"} скользящее среднее «${badgeLabel(focus) === "чистых" ? "% PR без P0/P1" : `% PR с ${badgeLabel(focus).replace("с ", "")}`}»`}
+              title={`${rollingWindow}-${windowAdjective} скользящее среднее «${trendLineLabel(focus)}»`}
               style={{
                 marginLeft: "auto",
                 padding: "3px 8px",
@@ -101,7 +97,7 @@ export function QualitySummaryPanel({ data, annotations, mode }: Props) {
             </>
           ) : (
             <span style={{ opacity: 0.7 }}>
-              Фильтр: {focusLabel(focus)} · клик по карточке ещё раз — снять
+              Фильтр: {focusFilterName(focus)} · клик по карточке ещё раз — снять
             </span>
           )}
           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
@@ -110,67 +106,15 @@ export function QualitySummaryPanel({ data, annotations, mode }: Props) {
                 display: "inline-block",
                 width: 18,
                 height: 2,
-                background: focusLineColor(focus),
+                background: lineColor(focus),
                 borderRadius: 2,
               }}
             />
-            {mode === "30d" ? "7-дневное" : "3-недельное"} скользящее среднее «
-            {focusLineLabel(focus)}»
+            {rollingWindow}-{windowAdjective} скользящее среднее «{trendLineLabel(focus)}»
           </span>
         </div>
       </div>
       <QualityKPIs data={data} mode={mode} focus={focus} onToggleFocus={toggleFocus} />
     </div>
   );
-}
-
-// Centralised because three places reference the same focus-mode → display
-// mapping (legend swatch colour, legend label, KPI tile hover). Keeping them
-// here means a new mode lands in one diff, not three.
-function focusLineColor(f: FocusMode): string {
-  switch (f) {
-    case "p0":
-      return "var(--mk-quality-p0)";
-    case "p1":
-      return "var(--mk-quality-p1)";
-    case "p2":
-      return "var(--mk-quality-p2)";
-    case "dirty":
-      return "var(--mk-danger-100)";
-    case "all":
-    default:
-      return "var(--mk-success-100)";
-  }
-}
-
-function focusLineLabel(f: FocusMode): string {
-  switch (f) {
-    case "p0":
-      return "% PR с P0";
-    case "p1":
-      return "% PR с P1";
-    case "p2":
-      return "% PR с P2";
-    case "dirty":
-      return "% грязных PR (P0+P1)";
-    case "all":
-    default:
-      return "% PR без P0/P1";
-  }
-}
-
-function focusLabel(f: FocusMode): string {
-  switch (f) {
-    case "p0":
-      return "только P0";
-    case "p1":
-      return "только P1";
-    case "p2":
-      return "только P2";
-    case "dirty":
-      return "только грязные (P0+P1)";
-    case "all":
-    default:
-      return "все";
-  }
 }
