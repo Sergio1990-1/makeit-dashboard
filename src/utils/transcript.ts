@@ -149,6 +149,7 @@ export type TranscriptQuality = "pass" | "warning" | "needs_review";
 
 export interface QualityCheck {
   name: string;
+  label: string;
   status: "pass" | "warning" | "fail";
   message: string;
 }
@@ -159,6 +160,29 @@ export interface QualityReport {
 }
 
 const QUALITY_VERDICTS = new Set<TranscriptQuality>(["pass", "warning", "needs_review"]);
+
+const QUALITY_CHECK_LABELS: Record<string, string> = {
+  speaker_coverage: "Метки спикеров",
+  speaker_resolution: "Имена спикеров",
+  uncertain_density: "Неразборчивые места",
+  contradiction_density: "Противоречия",
+  business_term_hit_rate: "Бизнес-термины",
+  numeric_facts: "Числа и суммы",
+  numeric_facts_confidence: "Уверенность в числах",
+  numeric_facts_avg_confidence: "Уверенность в числах",
+  action_items_recall: "Action items",
+  required_sections: "Разделы брифа",
+  section_coverage: "Разделы брифа",
+};
+
+function formatQualityCheckLabel(name: string): string {
+  return QUALITY_CHECK_LABELS[name] ?? name.replace(/_/g, " ");
+}
+
+function formatMetric(value: number): string {
+  if (Number.isInteger(value)) return String(value);
+  return value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
 
 /** Pull the overall quality verdict out of the backend `quality_report.json`.
  * The result endpoint (`TranscriptResultResponse`) carries no standalone
@@ -184,7 +208,7 @@ function adaptQualityReport(raw: unknown): QualityReport | null {
   const entries = Object.entries(r.checks as Record<string, unknown>);
   const checks: QualityCheck[] = entries.map(([name, raw]) => {
     if (!raw || typeof raw !== "object") {
-      return { name, status: "warning", message: "" };
+      return { name, label: formatQualityCheckLabel(name), status: "warning", message: "" };
     }
     const e = raw as { status?: string; value?: number; threshold?: number; empty?: number };
     const status: QualityCheck["status"] =
@@ -192,10 +216,10 @@ function adaptQualityReport(raw: unknown): QualityReport | null {
         ? e.status
         : "warning";
     const parts: string[] = [];
-    if (typeof e.value === "number") parts.push(`value=${e.value}`);
-    if (typeof e.threshold === "number") parts.push(`threshold=${e.threshold}`);
-    if (typeof e.empty === "number") parts.push(`empty=${e.empty}`);
-    return { name, status, message: parts.join(", ") };
+    if (typeof e.value === "number") parts.push(`значение ${formatMetric(e.value)}`);
+    if (typeof e.threshold === "number") parts.push(`порог ${formatMetric(e.threshold)}`);
+    if (typeof e.empty === "number") parts.push(`пустых ${formatMetric(e.empty)}`);
+    return { name, label: formatQualityCheckLabel(name), status, message: parts.join(", ") };
   });
   return {
     checks,
@@ -248,22 +272,25 @@ export async function fetchTranscriptResult(taskId: string): Promise<TranscriptR
 
 /**
  * STT model choice — a DELIBERATE FRONTEND-OWNED enum (#447 rule 3). The
- * backend types `transcription_model` as a free-text `string` (generated
- * `Body_upload_transcript_transcript_upload_post.transcription_model` and
- * `TranscriptListItem.transcription_model`, pydantic default `"fast"`).
- * The UI deliberately narrows it to the two values it offers as an upload
- * choice and renders in the history list; it is not aliased to the
- * backend's `string` so a typo in a consumer is still caught by `tsc`.
+ * backend types `transcription_model` as a free-text `string` in the
+ * generated snapshot, but the canonical Phase 4 values are `draft` and
+ * `quality`; legacy `fast` rows are read-side normalized to `draft`.
  */
-export type TranscriptionModel = "fast" | "quality";
+export type TranscriptionModel = "draft" | "quality";
+
+export function normalizeTranscriptionModel(raw: unknown): TranscriptionModel | undefined {
+  if (raw === "quality") return "quality";
+  if (raw === "draft" || raw === "fast") return "draft";
+  return undefined;
+}
 
 /**
  * `/transcript/list` item — the dashboard's normalized refinement of the
  * backend `TranscriptListItem` (raw shape typed below as
  * `BackendTranscriptListItem`). Deliberate frontend-derived shape, NOT a
  * plain alias: the client renames `job_id`→`task_id`, `file_name`→
- * `filename`, narrows the free-text backend `transcription_model` to the
- * UI's `TranscriptionModel` enum (or `undefined`), and narrows the
+ * `filename`, normalizes the free-text backend `transcription_model` to the
+ * UI's canonical `TranscriptionModel` enum (or `undefined`), and narrows the
  * free-text backend `status` to the known lifecycle set. The backend
  * `file_type` is intentionally not surfaced — not drift. The `status`
  * narrowing is best-effort: `fetchTranscriptList` passes the backend
@@ -292,16 +319,15 @@ export async function fetchTranscriptList(): Promise<TranscriptListItem[]> {
   // The backend declares `project`/`file_name`/`created_at`/
   // `transcription_model` required (pydantic defaults), so the `|| ""` /
   // `|| undefined` guards are now harmless defensive no-ops. The backend
-  // `status`/`transcription_model` are free-text `string`; the casts below
-  // narrow them to the UI vocabularies (consumers tolerate unknown values).
-  // Runtime unchanged.
+  // `status`/`transcription_model` are free-text `string`; the normalization
+  // below preserves legacy `fast` rows as canonical `draft`.
   return data.map((item) => ({
     task_id: item.job_id,
     project: item.project || "",
     filename: item.file_name || "",
     status: item.status as TranscriptListItem["status"],
     created_at: item.created_at || "",
-    transcription_model: (item.transcription_model as TranscriptionModel) || undefined,
+    transcription_model: normalizeTranscriptionModel(item.transcription_model),
   }));
 }
 
@@ -361,7 +387,7 @@ const UPLOAD_FIELDS: Record<
 export async function uploadTranscript(
   file: File,
   project: string,
-  transcriptionModel: TranscriptionModel = "fast",
+  transcriptionModel: TranscriptionModel = "quality",
   resumeJobId?: string,
 ): Promise<TranscriptUploadResponse> {
   const form = new FormData();

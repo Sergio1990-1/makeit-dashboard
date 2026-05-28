@@ -44,7 +44,7 @@ export function TranscriptsTab({ projects }: Props) {
   const [editing, setEditing] = useState(false);
   const [loadingBrief, setLoadingBrief] = useState(false);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
-  const [transcriptionModel, setTranscriptionModel] = useState<TranscriptionModel>("fast");
+  const [transcriptionModel, setTranscriptionModel] = useState<TranscriptionModel>("quality");
 
   // Batch upload state
   const [batchFiles, setBatchFiles] = useState<BatchFile[]>([]);
@@ -274,7 +274,7 @@ export function TranscriptsTab({ projects }: Props) {
       try {
         const res = await retryTranscript(
           taskId,
-          originalModel ?? "fast",
+          originalModel ?? "quality",
           originalProject,
         );
         setActiveTaskId(res.task_id);
@@ -491,12 +491,12 @@ export function TranscriptsTab({ projects }: Props) {
                 <div className="tpc-model-toggle">
                   <button
                     type="button"
-                    className={`tpc-model-option${transcriptionModel === "fast" ? " tpc-model-option--active" : ""}`}
-                    onClick={() => setTranscriptionModel("fast")}
-                    title="30 секунд, спикеры определяются по контексту"
+                    className={`tpc-model-option${transcriptionModel === "draft" ? " tpc-model-option--active" : ""}`}
+                    onClick={() => setTranscriptionModel("draft")}
+                    title="Быстрый черновик без надёжных спикеров и таймкодов"
                   >
                     <span className="tpc-model-icon">&#9889;</span>
-                    Быстрая
+                    Черновик
                   </button>
                   <button
                     type="button"

@@ -6,7 +6,7 @@ import {
   summarizeDiscovery,
   type RunCtx,
 } from "../../src/utils/health-engine";
-import type { ChecklistDocument, ProjectClassification, ProjectYaml } from "../../src/types/health";
+import type { ChecklistDocument, ProjectClassification } from "../../src/types/health";
 import * as github from "../../src/utils/github-actions";
 
 // Mocked во всех тестах ниже. Per-test override через mockResolvedValue/mockRejectedValue.

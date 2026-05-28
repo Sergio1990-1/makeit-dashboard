@@ -141,7 +141,7 @@ export function TranscriptBrief({ result, onNewUpload, onEdit }: Props) {
           <div className="tpc-quality-report-header">
             <span className="tpc-quality-report-title">Отчёт о качестве</span>
             <span className="tpc-quality-report-score">
-              Score: {result.quality_report.score}
+              Оценка: {result.quality_report.score}
             </span>
           </div>
           <ul className="tpc-quality-report-checks">
@@ -150,7 +150,7 @@ export function TranscriptBrief({ result, onNewUpload, onEdit }: Props) {
                 <span className="tpc-quality-check-icon" aria-hidden="true">
                   {CHECK_ICON[check.status]}
                 </span>
-                <span className="tpc-quality-check-name">{check.name}</span>
+                <span className="tpc-quality-check-name">{check.label}</span>
                 <span className="tpc-quality-check-message">{check.message}</span>
               </li>
             ))}

@@ -240,17 +240,17 @@ export function UploadZone({
             <div className="v4-pillgrp">
               <button
                 type="button"
-                className={selectedModel === "fast" ? "is-active" : ""}
-                onClick={() => setSelectedModel("fast")}
-                title="30 секунд, спикеры по контексту"
+                className={selectedModel === "draft" ? "is-active" : ""}
+                onClick={() => setSelectedModel("draft")}
+                title="Быстрый черновик без надёжных спикеров и таймкодов"
               >
-                ⚡ Быстрая
+                ⚡ Черновик
               </button>
               <button
                 type="button"
                 className={selectedModel === "quality" ? "is-active" : ""}
                 onClick={() => setSelectedModel("quality")}
-                title="7-15 минут, точная диаризация"
+                title="Production BRIEF с полной обработкой спикеров"
               >
                 🎯 Качественная
               </button>

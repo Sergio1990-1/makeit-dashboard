@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchTranscriptList,
   deleteTranscript,
+  normalizeTranscriptionModel,
   type TranscriptListItem,
   type TranscriptionModel,
 } from "../../../utils/transcript";
@@ -68,22 +69,20 @@ const STORAGE_KEY = "makeit.transcriptsHistory.v1";
 
 const VALID_FILTERS: readonly StatusFilter[] = ["all", "active", "done", "error"];
 const VALID_SORTS: readonly SortKey[] = ["date", "filename", "project", "model", "status"];
-const VALID_MODELS: readonly (TranscriptionModel | "all")[] = ["all", "fast", "quality"];
 
 function loadState(): ToolbarState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const p = JSON.parse(raw) as Partial<ToolbarState>;
+      const model = p.model === "all" ? "all" : normalizeTranscriptionModel(p.model);
       return {
         filter: VALID_FILTERS.includes(p.filter as StatusFilter)
           ? (p.filter as StatusFilter)
           : "all",
         query: "",
         project: typeof p.project === "string" ? p.project : "",
-        model: VALID_MODELS.includes(p.model as TranscriptionModel | "all")
-          ? (p.model as TranscriptionModel | "all")
-          : "all",
+        model: model ?? "all",
         sort: VALID_SORTS.includes(p.sort as SortKey) ? (p.sort as SortKey) : "date",
         asc: typeof p.asc === "boolean" ? p.asc : false,
       };
@@ -364,7 +363,7 @@ export function TranscriptHistoryV4({ onOpen, onResume, onRetry, refreshKey, onI
             aria-label="Фильтр по модели"
           >
             <option value="all">Все модели</option>
-            <option value="fast">Быстрая</option>
+            <option value="draft">Черновик</option>
             <option value="quality">Качественная</option>
           </select>
           <div className="v4-projects-sort" ref={sortMenuRef}>
@@ -456,8 +455,8 @@ export function TranscriptHistoryV4({ onOpen, onResume, onRetry, refreshKey, onI
                 <div className="v4-tpc-history-cell v4-tpc-history-model">
                   {item.transcription_model === "quality" ? (
                     <span title="Качественная (диаризация)">🎯 quality</span>
-                  ) : item.transcription_model === "fast" ? (
-                    <span title="Быстрая">⚡ fast</span>
+                  ) : item.transcription_model === "draft" ? (
+                    <span title="Черновик без надёжных спикеров">⚡ draft</span>
                   ) : (
                     <span className="v4-tpc-text-muted">—</span>
                   )}
