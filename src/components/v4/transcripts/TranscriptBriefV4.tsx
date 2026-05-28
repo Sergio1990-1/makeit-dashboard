@@ -140,7 +140,7 @@ export function TranscriptBriefV4({ result, onNewUpload, onEdit }: Props) {
           <div className="v4-tpc-quality-report-h">
             <span className="v4-tpc-quality-report-t">Отчёт о качестве</span>
             <span className="v4-pl-mono v4-tpc-quality-report-score">
-              Score: {result.quality_report.score}
+              Оценка: {result.quality_report.score}
             </span>
           </div>
           <ul className="v4-tpc-quality-checks">
@@ -152,7 +152,7 @@ export function TranscriptBriefV4({ result, onNewUpload, onEdit }: Props) {
                 <span className="v4-tpc-quality-check-icon" aria-hidden="true">
                   {CHECK_ICON[check.status]}
                 </span>
-                <span className="v4-tpc-quality-check-name">{check.name}</span>
+                <span className="v4-tpc-quality-check-name">{check.label}</span>
                 <span className="v4-tpc-quality-check-msg">{check.message}</span>
               </li>
             ))}

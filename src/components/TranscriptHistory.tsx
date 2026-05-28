@@ -209,8 +209,8 @@ export function TranscriptHistory({ onOpen, onResume, onRetry, refreshKey }: Pro
                     <td className="tpc-history-model">
                       {item.transcription_model === "quality" ? (
                         <span title="Качественная (диаризация)">&#127919;</span>
-                      ) : item.transcription_model === "fast" ? (
-                        <span title="Быстрая">&#9889;</span>
+                      ) : item.transcription_model === "draft" ? (
+                        <span title="Черновик без надёжных спикеров">&#9889;</span>
                       ) : (
                         <span className="tpc-text-muted">—</span>
                       )}

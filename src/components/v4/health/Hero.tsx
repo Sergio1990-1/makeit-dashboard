@@ -1,5 +1,5 @@
 import type { HealthReport, HealthReportDiscovery } from "../../../types/health";
-import { Icon } from "./Icon";
+import { Icon, type IconName } from "./Icon";
 import { KpiRow } from "./KpiRow";
 import { formatScanTime } from "./utils";
 
@@ -7,7 +7,7 @@ import { formatScanTime } from "./utils";
 // not derived from findings). Color/text depends on status + freshness.
 function DiscoveryBadge({ discovery }: { discovery: HealthReportDiscovery }) {
   // Map status → CSS modifier + visible text + tooltip
-  const parts: { mod: string; text: string; icon?: string; tooltip: string } = (() => {
+  const parts: { mod: string; text: string; icon?: IconName; tooltip: string } = (() => {
     switch (discovery.status) {
       case "completed":
         // Code review d2e717b D3: fresh === undefined означает «не могу определить»

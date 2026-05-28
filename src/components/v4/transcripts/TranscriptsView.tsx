@@ -4,6 +4,7 @@ import {
   retryTranscript,
   fetchTranscriptResult,
   fetchTranscriptList,
+  normalizeTranscriptionModel,
   type TranscriptResult,
   type TranscriptionModel,
 } from "../../../utils/transcript";
@@ -32,8 +33,7 @@ export function TranscriptsView({ projects }: Props) {
     return localStorage.getItem(STORAGE.project) || projects[0]?.repo || "";
   });
   const [selectedModel, setSelectedModel] = useState<TranscriptionModel>(() => {
-    const v = localStorage.getItem(STORAGE.model);
-    return v === "fast" || v === "quality" ? v : "fast";
+    return normalizeTranscriptionModel(localStorage.getItem(STORAGE.model)) ?? "quality";
   });
 
   useEffect(() => { localStorage.setItem(STORAGE.project, selectedProject); }, [selectedProject]);
@@ -238,7 +238,7 @@ export function TranscriptsView({ projects }: Props) {
       try {
         const res = await retryTranscript(
           taskId,
-          originalModel ?? "fast",
+          originalModel ?? "quality",
           originalProject,
         );
         setActiveTaskId(res.task_id);
