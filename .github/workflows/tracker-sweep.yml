@@ -1,0 +1,57 @@
+name: tracker-sweep
+
+# Reconciles MakeIT Tracker (Projects V2 #1) membership: adds every open issue
+# across all MakeIT repos that isn't on the board yet. Source-agnostic and
+# self-healing — issues land on the Tracker regardless of whether an agent (or
+# a human) remembered to run the add step. See scripts/sweep_tracker_membership.py.
+#
+# Cadence: every 15 min. makeit-dashboard is a PUBLIC repo, so Actions minutes
+# are free — no cost concern. Cron is approximate on GitHub Actions (≈10-20 min
+# drift on shared runners), so real freshness is ~15-30 min. Loosen to
+# "*/30 * * * *" or "0 * * * *" if you want fewer runs.
+#
+# Manual trigger: workflow_dispatch is enabled. Run it once with DRY_RUN to
+# preview what would be added before the first real sweep (set the input below).
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview only — log what would be added, mutate nothing"
+        type: boolean
+        default: false
+
+# Never overlap two reconciliations — the mutation is idempotent so overlap is
+# harmless, but cancelling keeps the run list clean.
+concurrency:
+  group: tracker-sweep
+  cancel-in-progress: true
+
+permissions:
+  contents: read # Only need to check out the script. Project writes use the PAT.
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install --no-cache-dir 'httpx==0.27.2'
+
+      - name: Reconcile Tracker membership
+        env:
+          # PAT needs to read issues on every MakeIT repo + read/write Project #1.
+          # Project #1 is USER-owned, which fine-grained PATs cannot access, so
+          # use a CLASSIC PAT with scopes: repo + project. The default
+          # GITHUB_TOKEN can't write a user-owned project across repos.
+          GH_TRACKER_PAT: ${{ secrets.MAKEIT_TRACKER_PAT }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: python scripts/sweep_tracker_membership.py
