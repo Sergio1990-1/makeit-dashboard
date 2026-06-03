@@ -59,6 +59,12 @@ interface Props {
   daysSinceActivity?: number | null;
   /** Cost month-to-date in USD. `null`/omitted → footer omits it. */
   costMtdUsd?: number | null;
+  /**
+   * True when this repo's GitHub fetch failed (#523): the KPIs are
+   * placeholder zeros, NOT a genuinely empty repo. Renders a warn badge so
+   * a failed fetch is visually distinct. Absent/false → no badge.
+   */
+  fetchError?: boolean;
   /** Epic-009 routing handler — receives `repo` on card activation. */
   onSelectRepo: (repo: string) => void;
 }
@@ -161,6 +167,7 @@ export function ProjectScorecard({
   drift,
   daysSinceActivity,
   costMtdUsd,
+  fetchError,
   onSelectRepo,
 }: Props) {
   // The card owns the norm hook so DriftDots can color against per-project
@@ -247,6 +254,23 @@ export function ProjectScorecard({
             >
               {phaseBadge.icon} {phaseBadge.label}
             </span>
+            {fetchError && (
+              <span
+                title="Не удалось загрузить данные из GitHub — показаны нули-заглушки, а не реальные значения"
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  padding: "1px 6px",
+                  borderRadius: 999,
+                  background: "var(--mk-warn-soft)",
+                  color: "var(--mk-warn-strong)",
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                ⚠ ошибка загрузки
+              </span>
+            )}
           </div>
           {client && (
             <div

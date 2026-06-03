@@ -116,6 +116,14 @@ export function DashboardProjectCard({ project, monitor, index = 0 }: Props) {
           {project.repo}
         </a>
         <div className="v4-pcard-badges">
+          {project.fetchError === true && (
+            <span
+              className="v4-chip v4-chip--error"
+              title="Не удалось загрузить данные из GitHub — показаны нули-заглушки, а не реальные значения"
+            >
+              ⚠ ошибка загрузки
+            </span>
+          )}
           {monitor && monitor.status !== "paused" && (
             <span className={`v4-chip v4-chip--${monitor.status === "up" ? "alive" : monitor.status === "down" ? "down" : "paused"}`}>
               <span className="v4-chip-dot" />

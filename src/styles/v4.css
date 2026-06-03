@@ -969,6 +969,10 @@ body.v4 .v4-mono { font-family: var(--mk-font-mono); }
 .v4-chip--down .v4-chip-dot { background: var(--mk-danger); }
 .v4-chip--paused { background: var(--mk-surface-2); color: var(--mk-ink-500); }
 .v4-chip--paused .v4-chip-dot { background: var(--mk-ink-400); }
+/* Fetch failed (#523): repo's GitHub fetch errored — counts are placeholder
+   zeros, NOT a genuinely empty repo. Warn tone so it reads as "needs
+   attention", distinct from the danger `down` monitor chip. */
+.v4-chip--error { background: var(--mk-warn-soft); color: var(--mk-warn-strong); }
 .v4-chip--dev { background: var(--mk-brand-50); color: var(--mk-brand-700); }
 .v4-chip--support { background: var(--mk-purple-50); color: var(--mk-purple-700); }
 .v4-chip--predev { background: var(--mk-surface-2); color: var(--mk-ink-600); }
