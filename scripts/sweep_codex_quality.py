@@ -33,6 +33,15 @@ must look at **both** to avoid silently mis-classifying findings:
    (or synonyms BLOCKER / CRITICAL). Cheap and safe against `bodyText`,
    which is plain text and won't false-positive on URL fragments.
 
+**Badge takes precedence.** When an entry carries a badge, that badge IS
+the bot's severity for it — we trust it and do NOT also run the text-marker
+regex on its prose. The regex is a FALLBACK applied only to badge-less
+entries. Reason: finding prose routinely contains words like "blocker" /
+"critical" or task names like "P0 bridge", which the loose regex would
+promote to P0; worst-wins then flips the whole PR into the blocker bucket,
+inflating P0 counts versus Codex's own analytics (where a P2-badged finding
+stays P2). See PR description / test_classify_pr_badged_entry_not_*.
+
 Worst-wins across all bot bodies on the PR. If a bot left a comment
 but neither check matched, default to P2 — new bot output formats
 degrade to "low signal" rather than dropping off the chart entirely.
@@ -309,9 +318,18 @@ def classify_pr(pr_node: dict[str, Any]) -> PRSummary:
     severity: str | None = None
     if has_codex:
         for body_md, body_text in bot_entries:
-            entry_sev = _best_severity(
-                detect_badge_severity(body_md),
-                detect_severity(body_text),
+            # The badge is the bot's authoritative severity for this entry.
+            # When present, trust it and DON'T also run the loose text-marker
+            # regex on the prose: bot findings routinely mention "blocker" /
+            # "critical" or name tasks like "P0 bridge" descriptively, and the
+            # regex would wrongly promote those to P0 (worst-wins then flips
+            # the entire PR into the blocker bucket — inflating P0 vs Codex's
+            # own analytics, which counts a badged P2 as P2). The text marker
+            # is a FALLBACK only for badge-less entries (older / non-inline
+            # summary comments) where it's the sole severity signal.
+            badge_sev = detect_badge_severity(body_md)
+            entry_sev = (
+                badge_sev if badge_sev is not None else detect_severity(body_text)
             )
             severity = _best_severity(severity, entry_sev)
         if severity is None:
