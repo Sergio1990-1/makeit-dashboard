@@ -324,8 +324,6 @@ query($owner: String!, $repo: String!) {
       }
     }
     description
-    openIssueCount: issues(states: OPEN) { totalCount }
-    closedIssueCount: issues(states: CLOSED) { totalCount }
     openMilestones: milestones(first: 100, states: OPEN, orderBy: {field: DUE_DATE, direction: ASC}) {
       nodes {
         title
@@ -368,8 +366,6 @@ interface RepoInfoResponse {
       target: { committedDate: string };
     } | null;
     description: string | null;
-    openIssueCount: { totalCount: number };
-    closedIssueCount: { totalCount: number };
     openMilestones: { nodes: MilestoneNode[] };
     closedMilestones: { nodes: MilestoneNode[] };
   };
@@ -388,8 +384,6 @@ export async function fetchRepoInfo(owner: string, repo: string): Promise<RepoIn
       description: "",
       milestones: [],
       commitActivity,
-      openIssueCount: 0,
-      closedIssueCount: 0,
     };
   }
 
@@ -415,7 +409,5 @@ export async function fetchRepoInfo(owner: string, repo: string): Promise<RepoIn
       issues: [],
     })),
     commitActivity,
-    openIssueCount: graphqlResult.repository.openIssueCount.totalCount,
-    closedIssueCount: graphqlResult.repository.closedIssueCount.totalCount,
   };
 }

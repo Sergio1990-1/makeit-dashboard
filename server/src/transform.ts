@@ -22,6 +22,26 @@ export function refreshCommitActivity(raw: CommitActivity): CommitActivity {
 }
 
 /**
+ * #519: derive open/done/total from the Project #1 board subset (`repoIssues`)
+ * so the cache backend produces identical counts to the direct-GitHub fallback
+ * in ../src/utils/github.ts (`boardIssueCounts`). An issue counts as **done**
+ * iff `closedAt` is set — the same closed-signal velocity/cycle-time/milestone
+ * hydration use. `openCount` is the remainder and `totalCount` is the board
+ * size, so `open + done === total` by construction. (The repo-wide
+ * openIssueCount/closedIssueCount that RepoInfo used to expose were dropped.)
+ */
+export function boardIssueCounts(
+  issues: ReadonlyArray<Pick<Issue, "closedAt">>
+): { openCount: number; doneCount: number; totalCount: number } {
+  let doneCount = 0;
+  for (const issue of issues) {
+    if (issue.closedAt) doneCount++;
+  }
+  const totalCount = issues.length;
+  return { openCount: totalCount - doneCount, doneCount, totalCount };
+}
+
+/**
  * Recalculate daysSinceActivity from raw dates.
  * Called on every API response for freshness.
  */
@@ -85,10 +105,11 @@ export function buildProjectData(
     if (issue.priority && issue.status !== "Done") priorityCounts[issue.priority]++;
   }
 
-  // Use real GitHub issue counts (lines 477-480)
-  const openCount = repoInfo.openIssueCount;
-  const doneCount = repoInfo.closedIssueCount;
-  const totalCount = openCount + doneCount;
+  // #519: board (Project #1) is the single source of truth for these counts.
+  // Derived from repoIssues so they reconcile with priorityCounts/velocity/
+  // etaDays/bugRatio, and so the cache backend matches the direct-GitHub
+  // fallback.
+  const { openCount, doneCount, totalCount } = boardIssueCounts(repoIssues);
   const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
 
   // Last activity (lines 483-492)
