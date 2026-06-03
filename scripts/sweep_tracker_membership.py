@@ -30,13 +30,12 @@ number of OPEN issues (~hundreds), not board size (~thousands).
 
 Token
 -----
-`GH_TRACKER_PAT` must be able to read issues on every repo AND read+write the
-user-owned Project #1. Two options:
-  * Fine-grained PAT: Repository → Issues: Read; Account → Projects: Read and
-    write. (Direct addProjectV2ItemById works; the historical fine-grained
-    limitation was specific to the `actions/add-to-project` action.)
-  * Classic PAT: scopes `repo` + `project`. Guaranteed to work if the
-    fine-grained token ever misbehaves with Projects GraphQL.
+`GH_TRACKER_PAT` must read issues on every repo AND read+write Project #1.
+Project #1 is USER-owned, and fine-grained PATs cannot access user-owned
+Projects at all (GitHub limitation — there is no "Projects" permission to
+grant for a personal project), so use a **classic PAT** with scopes
+`repo` + `project`. The default GITHUB_TOKEN can't write a user-owned
+project across repos either, which is why a PAT secret is required.
 
 Set DRY_RUN=1 to log what WOULD be added without mutating — handy for the
 first manual `workflow_dispatch`.

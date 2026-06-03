@@ -48,11 +48,10 @@ jobs:
 
       - name: Reconcile Tracker membership
         env:
-          # PAT needs: read issues on every MakeIT repo + read/write Project #1.
-          #   Fine-grained: Repository → Issues: Read; Account → Projects: R/W.
-          #   Classic (fallback): scopes `repo` + `project`.
-          # The default GITHUB_TOKEN can't write a user-owned project across
-          # repos, so a PAT secret is required.
+          # PAT needs to read issues on every MakeIT repo + read/write Project #1.
+          # Project #1 is USER-owned, which fine-grained PATs cannot access, so
+          # use a CLASSIC PAT with scopes: repo + project. The default
+          # GITHUB_TOKEN can't write a user-owned project across repos.
           GH_TRACKER_PAT: ${{ secrets.MAKEIT_TRACKER_PAT }}
           DRY_RUN: ${{ github.event.inputs.dry_run }}
         run: python scripts/sweep_tracker_membership.py
