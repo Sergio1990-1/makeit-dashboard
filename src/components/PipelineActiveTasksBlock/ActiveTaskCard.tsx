@@ -1,12 +1,14 @@
 import { useState } from "react";
 import {
   type ActiveTask,
+  type PhaseAnchor,
   PHASES,
   PHASE_LABEL,
   currentPhase,
   detectAnomalies,
   fmtCost,
   fmtDuration,
+  phaseElapsedSeconds,
   phaseStateMap,
   stripVariant,
   useNow,
@@ -58,26 +60,26 @@ export function ActiveTaskCard({
   const cur = currentPhase(task.stages);
   const a = detectAnomalies(task);
 
-  // Live timer: backend returned `cur.duration_seconds` at last poll;
-  // keep ticking client-side. Re-anchor in render when the running phase
-  // identity changes so the displayed duration stays in sync with the
-  // server's reported value at fetch time. (React's "storing prior render"
-  // pattern: https://react.dev/reference/react/useState#storing-information-from-previous-renders.)
+  // Live timer: the backend returns `cur.duration_seconds` at each ~2s poll.
+  // We capture that value + the client clock once at PHASE ENTRY (the anchor)
+  // and tick client-side between polls. Re-anchor ONLY when the phase identity
+  // changes — re-anchoring on every poll (because `duration_seconds` grows)
+  // made the timer snap/jitter each poll instead of ticking smoothly (#524).
+  // `PipelineStageEntry` exposes no per-entry timestamp, so phase identity is
+  // the phase name. (React "storing prior render" pattern:
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders.)
   const now = useNow(true, 1000);
-  const phaseKey = cur ? `${cur.phase}:${(cur as { ts?: number }).ts ?? ""}` : "";
+  const phaseKey = cur ? cur.phase : "";
   const baseSecs = cur?.duration_seconds || 0;
-  const [anchor, setAnchor] = useState<{ key: string; baseSecs: number; nowMs: number }>(() => ({
+  const [anchor, setAnchor] = useState<PhaseAnchor>(() => ({
     key: phaseKey,
     baseSecs,
     nowMs: now,
   }));
-  if (anchor.key !== phaseKey || anchor.baseSecs !== baseSecs) {
+  if (anchor.key !== phaseKey) {
     setAnchor({ key: phaseKey, baseSecs, nowMs: now });
   }
-  const liveSecs =
-    cur?.status === "running" && anchor.key === phaseKey
-      ? anchor.baseSecs + Math.max(0, Math.floor((now - anchor.nowMs) / 1000))
-      : baseSecs;
+  const liveSecs = phaseElapsedSeconds(cur?.status, phaseKey, anchor, now, baseSecs);
 
   const stripCls = `pl2-card-strip--${stripVariant(a)}`;
   const isPlaceholderTitle = !task.title || /^Issue\s+#/.test(task.title);
