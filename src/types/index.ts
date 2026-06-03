@@ -64,6 +64,13 @@ export interface ProjectData {
   etaDate: string | null; // прогноз даты завершения
   cycleTimeDays: number | null; // медиана дней issue open→close (последние 28 дней)
   commitActivity: CommitActivity; // активность коммитов за 84 дня
+  /**
+   * True when REPO_INFO_QUERY failed (auth/network) during a direct GitHub
+   * fetch and the issue counts / milestones are placeholder zeros, NOT a
+   * genuinely empty repo. Optional + absent on the cache-backend path (the
+   * backend doesn't emit it). Lets consumers tell "fetch failed" from "0".
+   */
+  fetchError?: boolean;
 }
 
 export interface SummaryMetrics {

@@ -1,6 +1,7 @@
 import type { Issue, IssueStatus, Priority, Complexity, Phase, ProjectData, Milestone, CommitActivity } from "../types";
 import { getProjects, GITHUB_OWNER, GITHUB_PROJECT_NUMBER, DEFAULT_PROJECTS, loadFinances, getToken } from "./config";
 import { dispatchExternalAuthLost } from "./external-auth-events";
+import { toLocalDay } from "./date";
 
 function getCacheUrl(): string {
   return (window as unknown as { __MAKEIT_CONFIG__?: { CACHE_URL?: string } }).__MAKEIT_CONFIG__?.CACHE_URL ?? "";
@@ -27,10 +28,34 @@ async function restGet<T>(token: string, path: string): Promise<T | null> {
 
 // GitHub Stats API — 1 request per repo, no pagination, covers up to 52 weeks
 // Returns 202 while stats are being computed → retry up to 3 times
-interface CommitWeekStat {
+export interface CommitWeekStat {
   days: number[]; // [Sun, Mon, Tue, Wed, Thu, Fri, Sat]
   total: number;
   week: number;   // Unix timestamp (seconds) of the Sunday that starts this week (UTC)
+}
+
+/**
+ * Convert GitHub's weekly commit-activity stats into a `CommitActivity`.
+ *
+ * `week.week` is the Unix-seconds timestamp for the Sunday that starts the
+ * week (GitHub anchors it at UTC 00:00); `days[0]=Sun … days[6]=Sat`.
+ *
+ * Day keys are bucketed by the **browser's local day** (`toLocalDay`) so the
+ * producer matches every consumer (heatmap axis, `getLast7Days`, etc.) that
+ * keys on local days. Keying on UTC here caused commits near midnight to land
+ * on the wrong heatmap cell for users west/east of UTC.
+ */
+export function commitActivityFromWeeks(weeks: CommitWeekStat[]): CommitActivity {
+  const byDate: Record<string, number> = {};
+  for (const week of weeks) {
+    for (let d = 0; d < 7; d++) {
+      const count = week.days[d];
+      if (count === 0) continue;
+      const date = toLocalDay(new Date((week.week + d * 86400) * 1000));
+      byDate[date] = (byDate[date] ?? 0) + count;
+    }
+  }
+  return buildActivity(byDate);
 }
 
 async function fetchCommitActivity(token: string, owner: string, repo: string): Promise<CommitActivity> {
@@ -52,19 +77,8 @@ async function fetchCommitActivity(token: string, owner: string, repo: string): 
   }
 
   if (weeks) {
-    // Convert weekly stats to byDate map
-    // week.week = Unix seconds for the Sunday that starts this week (UTC 00:00)
-    // days[0]=Sun … days[6]=Sat
-    const byDate: Record<string, number> = {};
-    for (const week of weeks) {
-      for (let d = 0; d < 7; d++) {
-        const count = week.days[d];
-        if (count === 0) continue;
-        const date = new Date((week.week + d * 86400) * 1000).toISOString().split("T")[0];
-        byDate[date] = count;
-      }
-    }
-    return buildActivity(byDate);
+    // Convert weekly stats to byDate map (keyed by local day — see helper).
+    return commitActivityFromWeeks(weeks);
   }
 
   // Fallback: commits endpoint with pagination (up to 5 pages = 500 commits)
@@ -79,20 +93,26 @@ async function fetchCommitActivity(token: string, owner: string, repo: string): 
     if (!Array.isArray(commits) || commits.length === 0) break;
     for (const c of commits) {
       const dateStr = c.commit?.committer?.date ?? c.commit?.author?.date ?? "";
-      const date = dateStr.split("T")[0];
-      if (date) byDate[date] = (byDate[date] ?? 0) + 1;
+      if (!dateStr) continue;
+      // Key by the browser's local day to match the heatmap axis / consumers
+      // (toLocalDay), not the UTC calendar day the ISO string encodes.
+      const date = toLocalDay(new Date(dateStr));
+      byDate[date] = (byDate[date] ?? 0) + 1;
     }
     if (commits.length < 100) break;
   }
   return buildActivity(byDate);
 }
 
-function buildActivity(byDate: Record<string, number>): CommitActivity {
+export function buildActivity(byDate: Record<string, number>): CommitActivity {
   const now = Date.now();
-  const todayStr = new Date().toISOString().split("T")[0];
-  const weekAgo = new Date(now - 7 * 86400000).toISOString().split("T")[0];
-  const monthAgo = new Date(now - 30 * 86400000).toISOString().split("T")[0];
-  const period84dAgo = new Date(now - 84 * 86400000).toISOString().split("T")[0];
+  // Derive boundaries in LOCAL days so they line up with the local-day keys
+  // in `byDate` (and the heatmap axis). Using UTC here would mis-bucket the
+  // today/thisWeek/thisMonth windows for users east/west of UTC.
+  const todayStr = toLocalDay(new Date());
+  const weekAgo = toLocalDay(new Date(now - 7 * 86400000));
+  const monthAgo = toLocalDay(new Date(now - 30 * 86400000));
+  const period84dAgo = toLocalDay(new Date(now - 84 * 86400000));
   return {
     byDate,
     today: byDate[todayStr] ?? 0,
@@ -100,6 +120,20 @@ function buildActivity(byDate: Record<string, number>): CommitActivity {
     thisMonth: Object.entries(byDate).filter(([d]) => d >= monthAgo).reduce((s, [, v]) => s + v, 0),
     total84d: Object.entries(byDate).filter(([d]) => d >= period84dAgo).reduce((s, [, v]) => s + v, 0),
   };
+}
+
+/**
+ * Whole-repo completion percentage (0–100).
+ *
+ * Only reaches 100 when every issue is closed (`done === total`); an
+ * incomplete repo that would otherwise round up (e.g. 199/200 = 99.5%) is
+ * capped at 99 so "almost done" never reads as "done". Returns 0 when there
+ * are no issues at all (guarded `total > 0`).
+ */
+export function computeProgress(doneCount: number, totalCount: number): number {
+  if (totalCount <= 0) return 0;
+  if (doneCount === totalCount) return 100;
+  return Math.min(99, Math.round((doneCount / totalCount) * 100));
 }
 
 export interface OpenMilestone {
@@ -375,7 +409,12 @@ export async function fetchAllProjectItems(token: string): Promise<Issue[]> {
   return issues;
 }
 
-const REPO_INFO_QUERY = `
+// Milestone caps match the cache backend (server/src/github.ts uses 100/50) so
+// the portfolio milestone count is path-independent — whether the dashboard
+// reads from the cache backend or hits GitHub directly, the per-repo arrays
+// (and thus their `.length`) line up. Not paginated: the caps are high enough
+// for every MakeIT repo's milestone set in practice.
+export const REPO_INFO_QUERY = `
 query($owner: String!, $repo: String!) {
   repository(owner: $owner, name: $repo) {
     defaultBranchRef {
@@ -388,7 +427,7 @@ query($owner: String!, $repo: String!) {
     description
     openIssueCount: issues(states: OPEN) { totalCount }
     closedIssueCount: issues(states: CLOSED) { totalCount }
-    openMilestones: milestones(first: 20, states: OPEN, orderBy: {field: DUE_DATE, direction: ASC}) {
+    openMilestones: milestones(first: 100, states: OPEN, orderBy: {field: DUE_DATE, direction: ASC}) {
       nodes {
         title
         description
@@ -401,7 +440,7 @@ query($owner: String!, $repo: String!) {
         openIssues: issues(states: OPEN) { totalCount }
       }
     }
-    closedMilestones: milestones(first: 10, states: CLOSED, orderBy: {field: DUE_DATE, direction: DESC}) {
+    closedMilestones: milestones(first: 50, states: CLOSED, orderBy: {field: DUE_DATE, direction: DESC}) {
       nodes {
         title
         description
@@ -450,6 +489,10 @@ interface RepoInfo {
   commitActivity: CommitActivity;
   openIssueCount: number;
   closedIssueCount: number;
+  /** True when REPO_INFO_QUERY failed (auth/network) and the issue counts /
+   * milestones below are placeholder zeros, NOT a genuine empty repo. Lets
+   * downstream distinguish "fetch failed" from "really 0 issues". */
+  fetchError: boolean;
 }
 
 async function fetchRepoInfo(token: string, owner: string, repo: string): Promise<RepoInfo> {
@@ -459,7 +502,11 @@ async function fetchRepoInfo(token: string, owner: string, repo: string): Promis
   ]);
 
   if (!graphqlResult) {
-    return { lastCommitDate: null, description: "", milestones: [], commitActivity, openIssueCount: 0, closedIssueCount: 0 };
+    // Transient failure: surface a flag instead of silently masquerading as a
+    // real "0 issues / no milestones" repo (which would render a healthy-but-
+    // empty card). The zeros below are placeholders; `fetchError` marks them.
+    console.warn(`[Dashboard] REPO_INFO_QUERY failed for ${owner}/${repo} — rendering placeholder zeros (fetchError)`);
+    return { lastCommitDate: null, description: "", milestones: [], commitActivity, openIssueCount: 0, closedIssueCount: 0, fetchError: true };
   }
 
   const allMs = [
@@ -487,6 +534,7 @@ async function fetchRepoInfo(token: string, owner: string, repo: string): Promis
     commitActivity,
     openIssueCount: graphqlResult.repository.openIssueCount.totalCount,
     closedIssueCount: graphqlResult.repository.closedIssueCount.totalCount,
+    fetchError: false,
   };
 }
 
@@ -699,7 +747,7 @@ export async function fetchDashboardData(
     const openCount = repoInfo.openIssueCount;
     const doneCount = repoInfo.closedIssueCount;
     const totalCount = openCount + doneCount;
-    const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+    const progress = computeProgress(doneCount, totalCount);
 
     const dates = [
       repoInfo.lastCommitDate,
@@ -768,6 +816,9 @@ export async function fetchDashboardData(
       etaDate,
       cycleTimeDays,
       commitActivity: repoInfo.commitActivity,
+      // G3: true when REPO_INFO_QUERY failed; the counts above are placeholder
+      // zeros, not a genuinely empty repo. Consumers can distinguish the two.
+      fetchError: repoInfo.fetchError,
     };
   });
 
