@@ -1190,13 +1190,55 @@ async function executeCheck(rule: ChecklistRule, ctx: RunCtx): Promise<HealthFin
   }
 }
 
-function computeScore(findings: HealthFinding[], doc: ChecklistDocument): HealthScore {
+// A7: above this share of unknown findings the scan is "incomplete" and we
+// start down-weighting the grade. Below it, a stray unknown (one flaky check,
+// one unreadable file) is tolerated and the grade is unaffected — preserving
+// the normal full-data behaviour exactly.
+const INCOMPLETE_SCAN_UNKNOWN_RATIO = 0.25;
+// Max points subtracted by the coverage caveat at 100% unknown. Sized so an
+// all-unknown scan (auditor offline, repo unreadable) lands around grade C
+// rather than fabricating an A from missing data — but never zeroes a scan
+// that did surface real passes.
+const MAX_COVERAGE_PENALTY = 40;
+
+// Exported (A1): useProjectHealth re-runs this after merging Layer-4 drift
+// findings so the A–F grade reflects the fails shown on the same screen,
+// instead of staying anchored to the pre-drift sync score.
+export function computeScore(findings: HealthFinding[], doc: ChecklistDocument): HealthScore {
   let deduct = 0;
+  // Coverage tracking for the A7 caveat. Scoring-eligible = everything except
+  // `skipped` (not-applicable rules are legitimately out of scope) AND except
+  // Layer 4 (drift/AI), whose checks are `unknown`-by-design while deferred —
+  // counting them would fire the caveat on every normal scan and shift the
+  // grade. So the caveat measures missing data in the *deterministic* layers
+  // (1–3): auditor offline, unreadable files, transient API failures.
+  let eligible = 0;
+  let unknown = 0;
   for (const f of findings) {
+    if (f.status === "skipped") continue;
+    if (f.layer !== 4) {
+      eligible++;
+      if (f.status === "unknown") {
+        // A7: `unknown` (auditor offline, file unreadable) is missing data,
+        // NOT a pass. It no longer slips through silently — see the coverage
+        // caveat below.
+        unknown++;
+      }
+    }
     if (f.status !== "fail") continue;
     deduct += doc.severity_weights[f.severity] ?? 0;
   }
-  const raw = Math.max(0, 100 - deduct);
+
+  // Coverage caveat: if too large a share of the scan is unknown, down-weight
+  // the grade proportionally so an incomplete scan reads as incomplete rather
+  // than as a clean bill of health.
+  const unknownRatio = eligible > 0 ? unknown / eligible : 0;
+  let coveragePenalty = 0;
+  if (unknownRatio > INCOMPLETE_SCAN_UNKNOWN_RATIO) {
+    coveragePenalty = Math.round(unknownRatio * MAX_COVERAGE_PENALTY);
+  }
+
+  const raw = Math.max(0, Math.min(100, 100 - deduct - coveragePenalty));
   const grade: HealthScore["grade"] =
     raw >= 90 ? "A" : raw >= 75 ? "B" : raw >= 60 ? "C" : raw >= 40 ? "D" : "F";
   return { raw, grade };
