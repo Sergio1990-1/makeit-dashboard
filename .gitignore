@@ -35,6 +35,11 @@ pnpm-debug.log*
 # Coverage
 coverage/
 
+# Python (sweep scripts in scripts/ + their pytest tests)
+__pycache__/
+*.pyc
+.pytest_cache/
+
 # Playwright E2E
 test-results/
 playwright-report/
