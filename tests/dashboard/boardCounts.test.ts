@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { boardIssueCounts } from "../../src/utils/github";
 import type { Issue } from "../../src/types";
 
-// ── #519: the Project #1 board (`repoIssues`) is the single source of truth
+// ── issue 519: the Project #1 board (`repoIssues`) is the single source of truth
 //    for open/done/total. Previously open/done came from repo-wide
 //    `issues().totalCount`, so when an issue wasn't on the board the parts
 //    didn't sum to the whole. These counts must now be derived purely from
@@ -29,7 +29,7 @@ function issue(id: string, closed: boolean): Issue {
   };
 }
 
-describe("boardIssueCounts (#519: board as single source of truth)", () => {
+describe("boardIssueCounts (issue 519: board as single source of truth)", () => {
   it("returns all-zero counts for an empty board", () => {
     expect(boardIssueCounts([])).toEqual({ openCount: 0, doneCount: 0, totalCount: 0 });
   });

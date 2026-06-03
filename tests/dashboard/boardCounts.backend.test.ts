@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import { boardIssueCounts } from "../../server/src/transform";
 import type { Issue } from "../../server/src/types";
 
-// ── #519 (cache backend mirror): the cache backend must derive
+// ── issue 519 (cache backend mirror): the cache backend must derive
 //    open/done/total from the same board subset as the direct-GitHub
 //    fallback, so both paths produce identical counts. An issue counts as
 //    "done" iff `closedAt` is set.
@@ -27,7 +27,7 @@ function issue(id: string, closed: boolean): Issue {
   };
 }
 
-describe("boardIssueCounts (backend mirror of #519)", () => {
+describe("boardIssueCounts (backend mirror of issue 519)", () => {
   it("returns all-zero counts for an empty board", () => {
     expect(boardIssueCounts([])).toEqual({ openCount: 0, doneCount: 0, totalCount: 0 });
   });
