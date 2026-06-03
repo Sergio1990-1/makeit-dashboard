@@ -136,6 +136,29 @@ export function computeProgress(doneCount: number, totalCount: number): number {
   return Math.min(99, Math.round((doneCount / totalCount) * 100));
 }
 
+/**
+ * #519: derive open/done/total from the Project #1 board subset (`repoIssues`)
+ * so they reconcile with `priorityCounts`/`velocity`/`etaDays`/`bugRatio`,
+ * which all iterate the same board population. Previously open/done came from
+ * the repo-wide `issues().totalCount`, which double-counts issues that aren't
+ * on the board — making the parts fail to sum to the whole.
+ *
+ * An issue counts as **done** iff `closedAt` is set — the same closed-signal
+ * used by velocity, cycle time, and milestone hydration. `openCount` is the
+ * remainder and `totalCount` is the board size, so `open + done === total` by
+ * construction.
+ */
+export function boardIssueCounts(
+  issues: ReadonlyArray<Pick<Issue, "closedAt">>
+): { openCount: number; doneCount: number; totalCount: number } {
+  let doneCount = 0;
+  for (const issue of issues) {
+    if (issue.closedAt) doneCount++;
+  }
+  const totalCount = issues.length;
+  return { openCount: totalCount - doneCount, doneCount, totalCount };
+}
+
 export interface OpenMilestone {
   number: number;
   title: string;
@@ -425,8 +448,6 @@ query($owner: String!, $repo: String!) {
       }
     }
     description
-    openIssueCount: issues(states: OPEN) { totalCount }
-    closedIssueCount: issues(states: CLOSED) { totalCount }
     openMilestones: milestones(first: 100, states: OPEN, orderBy: {field: DUE_DATE, direction: ASC}) {
       nodes {
         title
@@ -475,8 +496,6 @@ interface RepoInfoResponse {
       target: { committedDate: string };
     } | null;
     description: string | null;
-    openIssueCount: { totalCount: number };
-    closedIssueCount: { totalCount: number };
     openMilestones: { nodes: MilestoneNode[] };
     closedMilestones: { nodes: MilestoneNode[] };
   };
@@ -487,11 +506,9 @@ interface RepoInfo {
   description: string;
   milestones: Milestone[];
   commitActivity: CommitActivity;
-  openIssueCount: number;
-  closedIssueCount: number;
-  /** True when REPO_INFO_QUERY failed (auth/network) and the issue counts /
-   * milestones below are placeholder zeros, NOT a genuine empty repo. Lets
-   * downstream distinguish "fetch failed" from "really 0 issues". */
+  /** True when REPO_INFO_QUERY failed (auth/network) and the milestones /
+   * description below are placeholder empties, NOT a genuine empty repo. Lets
+   * downstream distinguish "fetch failed" from "really nothing here". */
   fetchError: boolean;
 }
 
@@ -506,7 +523,7 @@ async function fetchRepoInfo(token: string, owner: string, repo: string): Promis
     // real "0 issues / no milestones" repo (which would render a healthy-but-
     // empty card). The zeros below are placeholders; `fetchError` marks them.
     console.warn(`[Dashboard] REPO_INFO_QUERY failed for ${owner}/${repo} — rendering placeholder zeros (fetchError)`);
-    return { lastCommitDate: null, description: "", milestones: [], commitActivity, openIssueCount: 0, closedIssueCount: 0, fetchError: true };
+    return { lastCommitDate: null, description: "", milestones: [], commitActivity, fetchError: true };
   }
 
   const allMs = [
@@ -532,8 +549,6 @@ async function fetchRepoInfo(token: string, owner: string, repo: string): Promis
       issues: [],
     })),
     commitActivity,
-    openIssueCount: graphqlResult.repository.openIssueCount.totalCount,
-    closedIssueCount: graphqlResult.repository.closedIssueCount.totalCount,
     fetchError: false,
   };
 }
@@ -744,9 +759,12 @@ export async function fetchDashboardData(
       if (issue.priority && issue.status !== "Done") priorityCounts[issue.priority]++;
     }
 
-    const openCount = repoInfo.openIssueCount;
-    const doneCount = repoInfo.closedIssueCount;
-    const totalCount = openCount + doneCount;
+    // #519: board (Project #1) is the single source of truth for these counts.
+    // Derived from repoIssues so they reconcile with priorityCounts/velocity/
+    // etaDays/bugRatio (which all iterate the same board subset). The repo-wide
+    // issue counts REPO_INFO_QUERY used to return were dropped — repoInfo now
+    // supplies only milestones / commitActivity / description.
+    const { openCount, doneCount, totalCount } = boardIssueCounts(repoIssues);
     const progress = computeProgress(doneCount, totalCount);
 
     const dates = [

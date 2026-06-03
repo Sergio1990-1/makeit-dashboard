@@ -86,6 +86,4 @@ export interface RepoInfo {
   description: string;
   milestones: Milestone[];
   commitActivity: CommitActivity;
-  openIssueCount: number;
-  closedIssueCount: number;
 }
