@@ -3,7 +3,7 @@ import type { Milestone, ProjectData } from "../../../types";
 import { daysUntil } from "../../../utils/date";
 import { calcPortfolioVelocity } from "../../../utils/dashboardMetrics";
 import { classifyMilestone } from "./classifyMilestone";
-import { stripEpicPrefix } from "./utils";
+import { deadlineTier, stripEpicPrefix } from "./utils";
 
 interface Props {
   /**
@@ -186,16 +186,21 @@ export function MilestonesHero({ milestones, projects, now }: Props) {
       .filter((x) => x.cls !== "done" && x.days !== null && x.days >= 0)
       .sort((a, b) => (a.days ?? 0) - (b.days ?? 0))[0];
 
+    // Breakdown derives from the canonical deadline tiers (utils.deadlineTier)
+    // so "≤ 7 дн / ≤ 30 дн / дальше" stay in lock-step with the card group
+    // headers and status-bar legend. Overdue milestones are not upcoming, so
+    // they're excluded from all three counters. `noeta` (no dueOn) rolls into
+    // "дальше".
     const cnt7 = enriched.filter(
-      (x) =>
-        x.cls !== "done" && x.days !== null && x.days >= 0 && x.days <= 7
+      (x) => x.cls !== "done" && deadlineTier(x.days) === "week"
     ).length;
     const cnt30 = enriched.filter(
-      (x) =>
-        x.cls !== "done" && x.days !== null && x.days > 7 && x.days <= 30
+      (x) => x.cls !== "done" && deadlineTier(x.days) === "month"
     ).length;
     const cntFar = enriched.filter(
-      (x) => x.cls !== "done" && (x.days === null || x.days > 30)
+      (x) =>
+        x.cls !== "done" &&
+        (deadlineTier(x.days) === "later" || deadlineTier(x.days) === "noeta")
     ).length;
 
     return {

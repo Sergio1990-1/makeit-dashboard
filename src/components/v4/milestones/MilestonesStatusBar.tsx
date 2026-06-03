@@ -8,16 +8,21 @@ interface Props {
   now: Date;
 }
 
+// Labels MUST match the canonical deadline-tier headers used by the card
+// grouping (utils.deadlineBucket): week → "Эта неделя" (≤7), month →
+// "Этот месяц" (≤30), later → "Дальше" (>30). Keeping them in sync means a
+// milestone never appears under "≤ 3 дн" here while sitting in "Эта неделя"
+// on the cards below.
 const ORDER: {
   k: MilestoneStatusKind;
   l: string;
   c: string;
 }[] = [
   { k: "overdue", l: "Просрочено", c: "var(--mk-danger)" },
-  { k: "warn", l: "≤ 3 дн", c: "var(--mk-warn)" },
-  { k: "soon", l: "≤ 14 дн", c: "var(--mk-brand-500)" },
+  { k: "warn", l: "Эта неделя", c: "var(--mk-warn)" },
+  { k: "soon", l: "Этот месяц", c: "var(--mk-brand-500)" },
   { k: "norm", l: "Дальше", c: "var(--mk-ink-400)" },
-  { k: "noeta", l: "Без даты", c: "var(--mk-ink-300)" },
+  { k: "noeta", l: "Без дедлайна", c: "var(--mk-ink-300)" },
   { k: "done", l: "Завершено", c: "var(--mk-success)" },
 ];
 

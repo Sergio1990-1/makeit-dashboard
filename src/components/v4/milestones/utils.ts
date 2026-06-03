@@ -35,16 +35,45 @@ export function ruDow(d: Date): string {
   return RU_DOW[d.getDay()];
 }
 
+/**
+ * SINGLE canonical deadline-tier table. Every milestone tile (card grouping,
+ * status bar, hero breakdown, gantt colour via `classifyMilestone`) derives
+ * its bucket from this one place, so the same milestone never lands in two
+ * differently-named groups.
+ *
+ * Thresholds (days until due):
+ *   overdue: < 0   week: ≤ 7   month: ≤ 30   later: > 30   noeta: no dueOn
+ */
+export type DeadlineTier = "overdue" | "week" | "month" | "later" | "noeta";
+
+export function deadlineTier(days: number | null): DeadlineTier {
+  if (days === null) return "noeta";
+  if (days < 0) return "overdue";
+  if (days <= 7) return "week";
+  if (days <= 30) return "month";
+  return "later";
+}
+
+/** Human label + sort order for each canonical tier (card group headers,
+ *  status-bar legend). Labels MUST match across every consumer. */
+const TIER_META: Record<
+  DeadlineTier,
+  { label: string; order: number }
+> = {
+  overdue: { label: "Просрочено", order: 0 },
+  week: { label: "Эта неделя", order: 1 },
+  month: { label: "Этот месяц", order: 2 },
+  later: { label: "Дальше", order: 3 },
+  noeta: { label: "Без дедлайна", order: 99 },
+};
+
 export function deadlineBucket(days: number | null): {
-  key: "overdue" | "week" | "month" | "later" | "noeta";
+  key: DeadlineTier;
   label: string;
   order: number;
 } {
-  if (days === null) return { key: "noeta", label: "Без дедлайна", order: 99 };
-  if (days < 0) return { key: "overdue", label: "Просрочено", order: 0 };
-  if (days <= 7) return { key: "week", label: "Эта неделя", order: 1 };
-  if (days <= 30) return { key: "month", label: "Этот месяц", order: 2 };
-  return { key: "later", label: "Дальше", order: 3 };
+  const key = deadlineTier(days);
+  return { key, ...TIER_META[key] };
 }
 
 export function diffDays(a: Date, b: Date): number {
