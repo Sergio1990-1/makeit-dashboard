@@ -153,7 +153,9 @@ function VelocitySpark({ values }: { values: number[] }) {
           <div className="v4-kpi-spark-tip-l">{daysAgo(hover.idx)}</div>
           <div className="v4-kpi-spark-tip-v">
             {values[hover.idx]}
-            <small>задач/день</small>
+            {/* These are per-day CLOSED totals, not a rate — only the divided
+                headline KPI ("issue/день") is a per-day velocity. */}
+            <small>задач (закрыто)</small>
           </div>
         </div>
       )}
@@ -235,8 +237,12 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
   });
 
   const [budgetSeg, setBudgetSeg] = useState<"paid" | "rem" | null>(null);
-  const isVelDown = velocity.delta7dVsPrev < 0;
-  const isVelUp = velocity.delta7dVsPrev > 0;
+  // `delta7dVsPrev === null` ⇒ activity grew from a zero prior-week base, so a
+  // percentage is undefined. We show a "новый" badge instead of a fake +100%.
+  const velDelta = velocity.delta7dVsPrev;
+  const isVelNew = velDelta === null;
+  const isVelDown = velDelta !== null && velDelta < 0;
+  const isVelUp = velDelta !== null && velDelta > 0;
 
   return (
     <div className="v4-kpi-row">
@@ -369,20 +375,28 @@ export function KpiRow({ projects, summary, onFinanceClick }: Props) {
             />
           </span>
           <span className="v4-kpi-num-u">issue/день</span>
-          {velocity.delta7dVsPrev !== 0 && (
-            <span
-              className={`v4-kpi-delta-chip v4-kpi-delta-chip--${
-                isVelDown ? "neg" : "pos"
-              }`}
-            >
-              {isVelUp ? "↑" : "↓"} {Math.abs(velocity.delta7dVsPrev)}%
+          {isVelNew ? (
+            <span className="v4-kpi-delta-chip v4-kpi-delta-chip--pos">
+              новый
             </span>
+          ) : (
+            velDelta !== 0 && (
+              <span
+                className={`v4-kpi-delta-chip v4-kpi-delta-chip--${
+                  isVelDown ? "neg" : "pos"
+                }`}
+              >
+                {isVelUp ? "↑" : "↓"} {Math.abs(velDelta as number)}%
+              </span>
+            )
           )}
         </div>
         <div className="v4-kpi-sub">
-          {velocity.delta7dVsPrev === 0
-            ? "28-дн. ритм закрытия"
-            : "vs. предыдущая неделя"}
+          {isVelNew
+            ? "впервые за неделю"
+            : velDelta === 0
+              ? "28-дн. ритм закрытия"
+              : "vs. предыдущая неделя"}
         </div>
         <VelocitySpark values={velocity.daily28d} />
       </div>

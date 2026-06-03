@@ -178,7 +178,10 @@ export function MilestonesHero({ milestones, projects, now }: Props) {
     if (projects && projects.length > 0) {
       const v = calcPortfolioVelocity(projects);
       velocityPerDay = v.perDay7d;
-      velocityDelta = v.delta7dVsPrev;
+      // delta7dVsPrev is now `number | null` (null = "new from a zero base",
+      // not a real ±%). The Hero's delta chip hides on 0, so coalesce null to 0
+      // — surfaces no misleading "+100%" here (KpiRow shows the "новый" badge).
+      velocityDelta = v.delta7dVsPrev ?? 0;
       daily14 = v.daily28d.slice(-14);
     }
 

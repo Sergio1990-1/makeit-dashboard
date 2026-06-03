@@ -29,8 +29,14 @@ function closedInWindow(issues: Issue[], days: number, shiftBackDays = 0): numbe
 export interface PortfolioVelocity {
   perDay7d: number;
   perDay14d: number;
-  /** percent change of 7d vs the prior 7d period (positive = improving) */
-  delta7dVsPrev: number;
+  /**
+   * Percent change of 7d vs the prior 7d period (positive = improving).
+   * `null` when the prior 7d base is zero but there *was* activity this week:
+   * growth from a zero base is mathematically undefined, so we surface a
+   * "new" sentinel instead of fabricating a "+100%". A flat 0→0 stays `0`
+   * (genuinely no change).
+   */
+  delta7dVsPrev: number | null;
   /** counts per day for the trailing N days, oldest first (used for sparkline) */
   daily28d: number[];
 }
@@ -47,7 +53,9 @@ export function calcPortfolioVelocity(projects: ProjectData[]): PortfolioVelocit
 
   const delta7dVsPrev =
     closedPrev7d === 0
-      ? closed7d > 0 ? 100 : 0
+      ? closed7d > 0
+        ? null // growth from a zero base is undefined — surface "new", not a fake +100%
+        : 0 // 0 → 0: genuinely no change
       : Math.round(((closed7d - closedPrev7d) / closedPrev7d) * 100);
 
   const days = getLastNDays(28);
