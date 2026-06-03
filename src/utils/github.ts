@@ -555,8 +555,16 @@ async function fetchRepoInfo(token: string, owner: string, repo: string): Promis
 
 const CACHE_KEY = "makeit_dashboard_cache";
 const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+// Bump when the cached ProjectData shape changes so structurally-incompatible
+// entries written by an older bundle are discarded on read instead of being
+// rendered on first paint. Issue 537: legacy milestones lacked `state`, which
+// (post-M5) leaked closed milestones into the active Gantt until a fresh fetch.
+const CACHE_VERSION = 2;
 
 interface CacheEntry {
+  // Schema version of `data`. Absent on entries written before versioning —
+  // those are treated as incompatible and discarded on read.
+  v?: number;
   data: ProjectData[];
   // Wall-clock time the entry was written (used for TTL expiration only).
   timestamp: number;
@@ -582,6 +590,7 @@ function readLocalCache(): CacheEntry | null {
     const entry = JSON.parse(raw) as CacheEntry;
     if (
       !entry ||
+      entry.v !== CACHE_VERSION || // stale/legacy shape — discard, don't render
       !Array.isArray(entry.data) ||
       typeof entry.timestamp !== "number"
     ) return null;
@@ -598,6 +607,7 @@ function readLocalCache(): CacheEntry | null {
 function writeLocalCache(data: ProjectData[], lastSync: Date | null = null): void {
   try {
     const entry: CacheEntry = {
+      v: CACHE_VERSION,
       data,
       timestamp: Date.now(),
       lastSyncIso: lastSync ? lastSync.toISOString() : undefined,

@@ -24,12 +24,20 @@ const TIER_TO_KIND = {
  * pre-computed from `daysUntil(m.dueOn)` so the caller controls the time
  * anchor.
  *
- * "done" is driven ONLY by `m.state === "CLOSED"`. An OPEN milestone whose
- * issues all happen to be closed keeps its normal deadline classification so it
- * stays visible in the deadline plan (it isn't actually finished until GitHub
- * closes the milestone).
+ * "done" is driven by `m.state === "CLOSED"`. An OPEN milestone whose issues
+ * all happen to be closed keeps its normal deadline classification so it stays
+ * visible in the deadline plan (it isn't actually finished until GitHub closes
+ * the milestone).
+ *
+ * Resilience (issue 537): on first paint the dashboard may serve legacy cached
+ * data whose milestones lack a reliable `state`. We treat a milestone with all
+ * issues closed (and none open) as done WHEN `state` is missing — guarded to
+ * `state !== "OPEN"` so a genuine open-but-all-closed milestone still stays in
+ * the active plan. Without this, stale state-less closed milestones flash into
+ * the active Gantt until the fresh fetch (with `state`) replaces them.
  */
 export function classifyMilestone(m: Milestone, days: number | null): MilestoneStatusKind {
   if (m.state === "CLOSED") return "done";
+  if (m.state !== "OPEN" && m.openIssues === 0 && m.closedIssues > 0) return "done";
   return TIER_TO_KIND[deadlineTier(days)];
 }

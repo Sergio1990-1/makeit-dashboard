@@ -53,6 +53,10 @@ export async function seedApp(page: Page): Promise<void> {
       localStorage.setItem(
         "makeit_dashboard_cache",
         JSON.stringify({
+          // Must match CACHE_VERSION in src/utils/github.ts — readLocalCache
+          // discards entries whose `v` differs, so a versionless seed would be
+          // dropped and no projects would render.
+          v: 2,
           data: payload.projects,
           timestamp: payload.now,
           lastSyncIso: new Date(payload.now).toISOString(),

@@ -39,6 +39,27 @@ describe("classifyMilestone — done detection (M5)", () => {
   });
 });
 
+describe("classifyMilestone — resilience to stale cache without state (issue 537)", () => {
+  // On first paint the dashboard may serve legacy cached data whose milestones
+  // lack a reliable `state`. A milestone with all issues closed must still read
+  // as done so closed milestones don't flash into the active Gantt until the
+  // fresh fetch (with `state`) lands.
+  it("treats a state-less milestone with all issues closed as done", () => {
+    const m = makeMilestone({ state: undefined, openIssues: 0, closedIssues: 5 });
+    expect(classifyMilestone(m, 3)).toBe("done");
+  });
+
+  it("does NOT mark a state-less milestone done while it still has open issues", () => {
+    const m = makeMilestone({ state: undefined, openIssues: 2, closedIssues: 5 });
+    expect(classifyMilestone(m, 3)).not.toBe("done");
+  });
+
+  it("does NOT mark a state-less milestone with zero issues done", () => {
+    const m = makeMilestone({ state: undefined, openIssues: 0, closedIssues: 0 });
+    expect(classifyMilestone(m, 3)).not.toBe("done");
+  });
+});
+
 describe("classifyMilestone — deadline tiers (M3/M4 canonical thresholds)", () => {
   const open = (over: Partial<Milestone> = {}) =>
     makeMilestone({ state: "OPEN", openIssues: 1, closedIssues: 0, ...over });
