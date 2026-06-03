@@ -34,7 +34,7 @@ function baseInputs(commits: CommitInfo[]): DoraInputs {
   };
 }
 
-describe("computeDora — deploy classification (#527 D6)", () => {
+describe("computeDora — deploy classification (issue 527 D6)", () => {
   it("does NOT count a fix: commit as a deploy", () => {
     // A single fix: commit, well inside the window, fully elapsed.
     const inputs = baseInputs([commit("fix: patch a bug", daysAgo(15))]);
@@ -67,7 +67,7 @@ describe("computeDora — deploy classification (#527 D6)", () => {
   });
 });
 
-describe("computeDora — CFR trailing-window guard (#527 D7)", () => {
+describe("computeDora — CFR trailing-window guard (issue 527 D7)", () => {
   it("excludes a deploy whose 7-day failure window has NOT fully elapsed", () => {
     // One feat: deploy 3 days ago → its 7d lookahead ends 4 days in the FUTURE.
     // It must be excluded from the CFR denominator. No other deploys → n/a.
@@ -93,7 +93,7 @@ describe("computeDora — CFR trailing-window guard (#527 D7)", () => {
   });
 });
 
-describe("computeDora — failure attribution (#527)", () => {
+describe("computeDora — failure attribution (issue 527)", () => {
   it("counts a feat: deploy followed within 7d by a fix: as a failure", () => {
     // feat: deploy 15 days ago (window elapsed), fix: 12 days ago (3d later, within 7d).
     const inputs = baseInputs([
