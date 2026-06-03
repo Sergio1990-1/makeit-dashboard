@@ -155,6 +155,45 @@ export function sumStageCost(stages: PipelineStageEntry[] | undefined): number {
   return stages.reduce((acc, s) => acc + (s.cost_usd || 0), 0);
 }
 
+/**
+ * Anchor captured at phase entry for the live phase timer. `baseSecs` is the
+ * server-reported `duration_seconds` at the moment the running phase was first
+ * seen; `nowMs` is the client wall-clock at that same moment. The client ticks
+ * `now - nowMs` on top of `baseSecs` between polls. Re-anchor ONLY when `key`
+ * (the phase identity) changes — never on every poll just because `baseSecs`
+ * grew, which is what caused the per-poll snap/jitter (#524).
+ */
+export interface PhaseAnchor {
+  key: string;
+  baseSecs: number;
+  nowMs: number;
+}
+
+/**
+ * Elapsed seconds to display for a phase's duration.
+ *
+ * - Running phase whose identity matches the anchor → `anchor.baseSecs` plus
+ *   the client-side wall-clock delta since the anchor, floored and clamped at
+ *   0. This ticks smoothly every second between ~2s polls instead of snapping
+ *   when the server's `duration_seconds` jumps on each poll.
+ * - Any other case (non-running status, or phase identity differs from the
+ *   anchor because we haven't re-anchored yet) → render `serverBaseSecs`
+ *   verbatim with no live ticking, so stale phases show no fake elapsed.
+ */
+export function phaseElapsedSeconds(
+  status: PhaseStatus | undefined,
+  phaseKey: string,
+  anchor: PhaseAnchor,
+  nowMs: number,
+  serverBaseSecs: number = anchor.baseSecs,
+): number {
+  if (status === "running" && anchor.key === phaseKey) {
+    const clientDelta = Math.max(0, Math.floor((nowMs - anchor.nowMs) / 1000));
+    return anchor.baseSecs + clientDelta;
+  }
+  return serverBaseSecs;
+}
+
 // Live-clock hook: re-renders every `intervalMs` while `active`. Used to tick
 // a phase's running-duration without polling the backend.
 export function useNow(active: boolean, intervalMs = 1000): number {

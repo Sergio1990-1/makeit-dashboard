@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { ProjectData } from "../../../types";
 import { toLocalDay, getLast7Days, formatDay } from "../../../utils/date";
+import { closedChartAvgPerDay } from "./utils";
 
 interface Props {
   projects: ProjectData[];
@@ -11,7 +12,7 @@ interface Props {
 const PIPELINE_LABEL = "agent-completed";
 
 export function PipelineClosedChartV4({ projects, lastUpdated }: Props) {
-  const { days, countsByDay, total, avg6Days } = useMemo(() => {
+  const { days, countsByDay, total, avgPerDay } = useMemo(() => {
     const days = getLast7Days();
     const countsByDay: Record<string, number> = {};
     for (const day of days) countsByDay[day] = 0;
@@ -24,10 +25,10 @@ export function PipelineClosedChartV4({ projects, lastUpdated }: Props) {
       }
     }
     const total = Object.values(countsByDay).reduce((a, b) => a + b, 0);
-    const previous6 = days.slice(0, 6);
-    const sum6 = previous6.reduce((s, d) => s + countsByDay[d], 0);
-    const avg6 = Math.round(sum6 / 6);
-    return { days, countsByDay, total, avg6Days: avg6 };
+    // Average over the same 7-day window shown — keeps "ср. в день" honest
+    // (avg ≈ total/7); the old slice(0,6)/6 silently dropped today (#524).
+    const avgPerDay = closedChartAvgPerDay(countsByDay, days);
+    return { days, countsByDay, total, avgPerDay };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projects, lastUpdated?.getTime()]);
 
@@ -41,7 +42,7 @@ export function PipelineClosedChartV4({ projects, lastUpdated }: Props) {
           Закрыто Pipeline за неделю <span className="v4-tag">7 дней</span>
         </div>
         <div className="v4-panel-meta">
-          всего {total} · ср. в день {avg6Days}
+          всего {total} · ср. в день {avgPerDay}
         </div>
       </div>
       <div className="v4-pl-chart">

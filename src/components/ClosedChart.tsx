@@ -1,5 +1,6 @@
 import type { ProjectData } from "../types";
 import { toLocalDay, getLast7Days, formatDay } from "../utils/date";
+import { closedChartAvgPerDay } from "./v4/pipeline/utils";
 
 interface Props {
   projects: ProjectData[];
@@ -41,12 +42,13 @@ export function ClosedChart({ projects }: Props) {
     0,
   );
 
-  const previous6Days = days.slice(0, 6);
-  const sum6Days = previous6Days.reduce(
-    (sum, day) => sum + countsByDay[day].manual + countsByDay[day].pipeline,
-    0,
-  );
-  const avg6Days = Math.round(sum6Days / 6);
+  // Average over the same 7-day window shown — keeps the badge honest
+  // (avg ≈ total/7); the old slice(0,6)/6 silently dropped today (#524).
+  const totalsByDay: Record<string, number> = {};
+  for (const day of days) {
+    totalsByDay[day] = countsByDay[day].manual + countsByDay[day].pipeline;
+  }
+  const avgPerDay = closedChartAvgPerDay(totalsByDay, days);
 
   return (
     <div className="bento-panel span-8 panel-chart">
@@ -59,7 +61,7 @@ export function ClosedChart({ projects }: Props) {
               Pipeline: {totalPipeline}
             </span>
           )}
-          <span className="closed-chart-total-badge">Среднее в день: {avg6Days}</span>
+          <span className="closed-chart-total-badge">Среднее в день: {avgPerDay}</span>
         </div>
       </div>
 

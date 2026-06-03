@@ -60,3 +60,22 @@ export function activeTaskCount(status: PipelineStatus | null): number {
   if (typeof status.active_tasks === "number") return status.active_tasks;
   return Object.keys(status.issue_stages ?? {}).length;
 }
+
+/**
+ * Average closed-per-day for the closed-Pipeline chart.
+ *
+ * Averages over the SAME window that the chart renders (`days`), so the
+ * displayed "ср. в день" honestly describes the bars shown: `avg ≈ total/N`.
+ * The previous implementation summed `days.slice(0, 6)/6`, silently dropping
+ * the current (partial) day from the average while `total` summed all 7 — so
+ * the per-day label lied (#524). Missing day keys count as 0; an empty window
+ * yields 0. Result is rounded to the nearest integer to match the badge format.
+ */
+export function closedChartAvgPerDay(
+  countsByDay: Record<string, number>,
+  days: string[],
+): number {
+  if (days.length === 0) return 0;
+  const sum = days.reduce((s, d) => s + (countsByDay[d] ?? 0), 0);
+  return Math.round(sum / days.length);
+}
