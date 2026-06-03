@@ -701,6 +701,7 @@ export function ProjectsView({
                         : null,
                     }}
                     daysSinceActivity={p.daysSinceActivity}
+                    fetchError={p.fetchError}
                     onSelectRepo={openProject}
                   />
                 ))}
