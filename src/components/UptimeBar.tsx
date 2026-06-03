@@ -1,5 +1,6 @@
 import type { Monitor, MonitorStatus } from "../types";
 import { getWorkerUrl, setWorkerUrl, MONITOR_MATCH } from "../utils/config";
+import { formatUptime } from "./v4/monitoring/utils";
 import { useState } from "react";
 
 /** Reverse lookup: find project name for a monitor */
@@ -24,7 +25,7 @@ const STATUS_LABEL: Record<MonitorStatus, string> = {
 
 function MonitorRow({ monitor }: { monitor: Monitor }) {
   const uptime =
-    monitor.uptimePct != null ? `${monitor.uptimePct.toFixed(2)}%` : "—";
+    monitor.uptimePct != null ? `${formatUptime(monitor.uptimePct)}%` : "—";
   const checked = monitor.lastCheckedAt
     ? new Date(monitor.lastCheckedAt).toLocaleString("ru-RU", {
         day: "2-digit",
