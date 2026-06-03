@@ -170,6 +170,81 @@ def test_classify_pr_worst_wins_across_badge_and_text_marker() -> None:
     assert sweep.classify_pr(pr).severity == "P0"
 
 
+def test_classify_pr_badged_entry_not_escalated_by_prose_words() -> None:
+    """Real-world false-P0 bug: a P2-badged inline finding whose PROSE happens
+    to contain words like "blocker" / "P0 bridge" must stay P2.
+
+    These cases were observed live in mankassa-app / makeit-dashboard:
+    Codex tags the finding P2 via its badge, but the prose references a
+    "blocker" descriptively or names a task like "P0 bridge backfill". The
+    loose text-marker regex caught those words on `bodyText` and worst-wins
+    promoted the whole PR to P0 — inflating the blocker count vs Codex's own
+    analytics (which showed P0=0). When a badge is present, it is the bot's
+    authoritative severity for that entry; the prose must not override it.
+    """
+    # Case A: prose uses the word "blocker" descriptively.
+    pr_a = {
+        "number": 1769,
+        "mergedAt": "2026-05-27T12:17:59Z",
+        "reviewThreads": {
+            "nodes": [
+                {
+                    "comments": {
+                        "nodes": [
+                            {
+                                "author": {"login": "chatgpt-codex-connector"},
+                                "body": (
+                                    "**<sub><sub>![P2 Badge]"
+                                    "(https://img.shields.io/badge/P2-yellow?style=flat)"
+                                    "</sub></sub>  Make the IRMC discovery reachable**\n\n"
+                                    "This blocker points future agents to commit `024dcb58`."
+                                ),
+                                # bodyText strips the badge image; prose "blocker" remains.
+                                "bodyText": (
+                                    "Make the IRMC discovery reachable\n\n"
+                                    "This blocker points future agents to commit 024dcb58."
+                                ),
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        "reviews": {"nodes": []},
+        "comments": {"nodes": []},
+    }
+    assert sweep.classify_pr(pr_a).severity == "P2", (
+        "badge says P2; the word 'blocker' in prose must not promote to P0"
+    )
+
+    # Case B: prose names a task "P0 bridge" — literal P0 token, not severity.
+    pr_b = {
+        "number": 1770,
+        "mergedAt": "2026-05-27T13:00:00Z",
+        "reviews": {
+            "nodes": [
+                {
+                    "author": {"login": "chatgpt-codex-connector"},
+                    "body": (
+                        "![P2 Badge](https://img.shields.io/badge/P2-yellow)\n"
+                        "When this audit is used to plan the P0 bridge backfill, "
+                        "these totals are inconsistent."
+                    ),
+                    "bodyText": (
+                        "When this audit is used to plan the P0 bridge backfill, "
+                        "these totals are inconsistent."
+                    ),
+                }
+            ]
+        },
+        "reviewThreads": {"nodes": []},
+        "comments": {"nodes": []},
+    }
+    assert sweep.classify_pr(pr_b).severity == "P2", (
+        "badge says P2; the literal 'P0' inside a task name must not promote to P0"
+    )
+
+
 def test_classify_pr_handles_missing_body_field_gracefully() -> None:
     """Defensive: if GraphQL returns no `body` (only `bodyText`), no crash."""
     pr = {
