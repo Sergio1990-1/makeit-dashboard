@@ -1,6 +1,7 @@
 import type { Monitor } from "../../../types";
 import {
   fmtAge,
+  formatUptime,
   getProjectName,
   isStale,
   monitorHealth,
@@ -53,7 +54,7 @@ export function MonitorCard({ monitor, nowMs }: Props) {
         <div className="v4-mon-card-uptime-row">
           <span className="v4-mon-text-muted">Uptime</span>
           <span className="v4-pl-mono v4-mon-card-uptime-val" style={{ color: uColor }}>
-            {uptime !== null ? `${uptime.toFixed(2)}%` : "—"}
+            {uptime !== null ? `${formatUptime(uptime)}%` : "—"}
           </span>
         </div>
         {uptime !== null && (

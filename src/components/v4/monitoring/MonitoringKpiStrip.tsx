@@ -1,4 +1,5 @@
 import type { Monitor } from "../../../types";
+import { formatUptime } from "./utils";
 
 interface Props {
   monitors: Monitor[];
@@ -68,7 +69,7 @@ export function MonitoringKpiStrip({ monitors }: Props) {
                     : "var(--mk-warn-strong)",
             }}
           >
-            {avgUptime !== null ? `${avgUptime.toFixed(2)}%` : "—"}
+            {avgUptime !== null ? `${formatUptime(avgUptime)}%` : "—"}
           </div>
           <div className="v4-projects-agg-l">средний uptime</div>
         </div>

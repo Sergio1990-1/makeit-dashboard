@@ -196,7 +196,7 @@ export const MONITOR_MATCH: Record<string, string[]> = {
   "Beer_bot": ["8003", "beer"],
   "Uchet_bot": ["8002", "uchet"],
   "solotax-kg": ["solotax", "api.solotax"],
-  "Business-News": ["8000", "biznews", "content"],
+  "Business-News": ["8000", "biznews"],
   "moliyakg": ["moliya", "8005"],
   "MyMoney": ["3010", "mymoney"],
 };
