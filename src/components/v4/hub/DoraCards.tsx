@@ -156,7 +156,7 @@ export function DoraCards({ metrics }: Props) {
         title="Частота деплоя"
         value={formatNumber(metrics.deployFreq, "/день")}
         tier={metrics.tiers.deployFreq}
-        tooltip="Commits на main с префиксом feat:/fix:/release: за окно ÷ количество дней окна. Elite ≥ 1/день."
+        tooltip="Commits на main с префиксом feat:/release: за окно ÷ количество дней окна (хотфиксы fix: — не деплои). Elite ≥ 1/день."
       />
       <Card
         title="Время поставки"
@@ -174,7 +174,7 @@ export function DoraCards({ metrics }: Props) {
         title="Доля сбойных изменений"
         value={formatPercent(metrics.cfr)}
         tier={metrics.tiers.cfr}
-        tooltip="Доля деплоев, за которыми в течение 7 дней последовал fix-коммит ИЛИ critical audit finding. Elite ≤ 5%."
+        tooltip="Доля деплоев, за которыми в течение 7 дней последовал fix-коммит ИЛИ critical audit finding. Считается только по деплоям с полностью прошедшим 7-дн. окном. Elite ≤ 5%."
       />
     </div>
   );

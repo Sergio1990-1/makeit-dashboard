@@ -7,17 +7,24 @@
  *
  * Conventions (mirrored in docs/DELIVERY.md):
  *   1. **Deploy Frequency** — count of commits on the default branch
- *      whose subject starts with `feat:`, `fix:` or `release:`, divided
- *      by `windowDays`. Unit: deploys/day.
+ *      whose subject starts with `feat:` or `release:`, divided by
+ *      `windowDays`. Unit: deploys/day. Hotfixes (`fix:`) are NOT
+ *      deploys (#527/D6) — they are only a failure signal (see CFR), so
+ *      they neither inflate frequency nor count as their own failure.
  *   2. **Lead Time for Changes** — median(`merged_at - created_at`) over
  *      merged PRs in the window. Unit: hours.
  *   3. **MTTR** — median downtime per incident from BetterStack monitor
  *      matched by repo via `MONITOR_MATCH`. When no matching monitor or
  *      no incidents data is available, returns `n/a` (`null`). Unit:
  *      hours.
- *   4. **Change Failure Rate** — share of deploys (= `feat:`/`fix:`/
- *      `release:` commits) that were followed within 7 days by EITHER
- *      a `fix:` commit OR a critical audit finding. Value in `[0, 1]`.
+ *   4. **Change Failure Rate** — share of deploys (= `feat:`/`release:`
+ *      commits) that were followed within 7 days by EITHER a `fix:`
+ *      commit OR a critical audit finding. Value in `[0, 1]`. Only
+ *      deploys whose full 7-day failure-lookahead window has already
+ *      elapsed (`deployTime + 7d <= now`) are judged (#527/D7) — a
+ *      deploy from the last 7 days is excluded from the denominator
+ *      rather than presumed successful. If no deploy is judgeable yet,
+ *      CFR is `n/a` (`null`), not 0%.
  *
  * Inputs are *injected* — the calculator is pure. The caller is
  * responsible for fetching commits, PRs, monitor incidents and audit
@@ -94,7 +101,12 @@ export interface DoraMetricsResult {
   leadTimeHours: number | null;
   /** Median MTTR in hours; `null` if no incidents data or no matched monitor. */
   mttrHours: number | null;
-  /** Change failure rate in `[0, 1]`; `null` if no deploys in window. */
+  /**
+   * Change failure rate in `[0, 1]`; `null` ("n/a") if there is no
+   * *judgeable* deploy — i.e. no deploy whose full 7-day failure window
+   * has elapsed (#527/D7). Deploys from the last 7 days are excluded
+   * from the denominator, never presumed successful.
+   */
   cfr: number | null;
   /** Tier per metric — `na` when the metric is null. */
   tiers: {
@@ -110,8 +122,13 @@ export interface DoraMetricsResult {
  * `main` carrying one of these is a release-candidate change on a
  * micro-team — we don't gate deploys on git tags because the team
  * doesn't tag religiously.
+ *
+ * `fix:` is deliberately EXCLUDED (#527/D6): a hotfix is purely a
+ * *failure signal* for CFR, not a deploy. Counting it as both inflated
+ * deploy frequency with hotfixes AND made a deploy able to be its own
+ * failure (circular). Deploys are now feat:/release: only.
  */
-const DEPLOY_PREFIXES = ["feat:", "fix:", "release:"] as const;
+const DEPLOY_PREFIXES = ["feat:", "release:"] as const;
 const FIX_PREFIX = "fix:";
 
 /** Match the conventional-commit prefix at the start of a subject. */
@@ -249,7 +266,7 @@ export function computeDora(
   const since = now - windowDays * 86_400_000;
 
   // ── Deploy Frequency ─────────────────────────────────────────────
-  // Count commits whose subject starts with feat:/fix:/release:.
+  // Count commits whose subject starts with feat:/release: (NOT fix:).
   // Divide by windowDays so the unit is deploys/day regardless of
   // the chosen window. Returns 0 (not null) when there are zero
   // qualifying commits — a project with a configured repo but no
@@ -303,10 +320,20 @@ export function computeDora(
   // A deploy "failed" if within 7 days after its commit we see either:
   //   (a) a `fix:` commit, OR
   //   (b) a critical audit finding.
-  // CFR = failed deploys / total deploys. If no deploys → null.
+  // CFR = failed deploys / *judgeable* deploys.
+  //
+  // Trailing-window guard (#527/D7): a deploy can only be judged once
+  // its full 7-day failure-lookahead window has ELAPSED. A deploy from
+  // the last 7 days has its window extend past `now`, so we haven't
+  // observed whether a fix lands yet — counting it as a success is
+  // structurally optimistic and drags CFR toward 0. We therefore
+  // exclude any deploy with `deployTime + 7d > now` from the
+  // denominator. If that leaves zero judgeable deploys we return the
+  // n/a sentinel (null), NOT a misleading 0%.
   let cfr: number | null = null;
-  if (deploys.length > 0) {
-    const sevenDaysMs = 7 * 86_400_000;
+  const sevenDaysMs = 7 * 86_400_000;
+  const judgeableDeploys = deploys.filter((d) => d.time + sevenDaysMs <= now);
+  if (judgeableDeploys.length > 0) {
     // Pre-filter: only fix commits *after* each deploy time count. We
     // scan the full commit list so a `fix:` outside the window (but
     // within 7d of a deploy) still attributes correctly.
@@ -325,20 +352,19 @@ export function computeDora(
       .filter((t) => !Number.isNaN(t));
 
     let failed = 0;
-    for (const d of deploys) {
+    for (const d of judgeableDeploys) {
       const windowEnd = d.time + sevenDaysMs;
       // Match a fix commit strictly *after* the deploy and within 7d.
-      // The strict `>` guards against the deploy counting itself: a
-      // `fix:` deploy commit at time `d.time` would otherwise mark
-      // itself as its own failure and inflate CFR to ~100% for any
-      // project where fixes outnumber features.
+      // The strict `>` keeps a coincident commit from attributing to
+      // itself; with `fix:` no longer a deploy this mainly guards
+      // against same-instant feat:/fix: pairs.
       const hasFix = fixCommits.some(
         (fc) => fc.time > d.time && fc.time <= windowEnd,
       );
       const hasCriticalAudit = criticalAudits.some((t) => t > d.time && t <= windowEnd);
       if (hasFix || hasCriticalAudit) failed++;
     }
-    cfr = failed / deploys.length;
+    cfr = failed / judgeableDeploys.length;
   }
 
   return {
