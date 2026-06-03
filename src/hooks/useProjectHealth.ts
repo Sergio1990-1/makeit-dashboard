@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GITHUB_OWNER, getClaudeKey, getToken } from "../utils/config";
 import { loadChecklist } from "../utils/checklist";
-import { ClassificationMissingError, runHealthCheck } from "../utils/health-engine";
+import { ClassificationMissingError, computeScore, runHealthCheck } from "../utils/health-engine";
 import { runDriftScan } from "../utils/health-llm";
 import type { HealthFinding, HealthLayer, HealthLayerSummary, HealthReport } from "../types/health";
 
@@ -283,9 +283,13 @@ export function useProjectHealth(
           ...s.report,
           findings: mergedFindings,
           by_layer: summarizeByLayer(mergedFindings),
-          // Note: we deliberately don't re-compute `score` here — drift checks
-          // are advisory and shouldn't impact the score until task-08 wires
-          // them in. `generated_at` likewise stays anchored to the sync scan.
+          // A1: recompute `score` from the merged findings (reusing the engine's
+          // computeScore) so the A–F grade reflects the Layer-4 fails now shown
+          // on the same screen. Previously the grade stayed anchored to the
+          // pre-drift sync score and understated the visible fail count.
+          // `generated_at` still stays anchored to the sync scan — it marks when
+          // the deterministic layers ran, and drift is layered on top.
+          score: computeScore(mergedFindings, doc),
         };
         return { ...s, report: merged, driftScanning: false, driftProgress: null };
       });

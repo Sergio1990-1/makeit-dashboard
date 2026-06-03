@@ -164,20 +164,43 @@ export function AuditProjectCardV4({
           )}
 
           {/* Verification stats (only when verified) */}
-          {isVerified && lr.verification && (
-            <div className="v4-au-card-verify">
-              <span className="v4-au-text-muted">Верификация</span>
-              <span className="v4-pl-mono" style={{ color: "var(--mk-danger-strong)" }} title="Подтверждено">
-                ✓ {lr.verification.confirmed}
-              </span>
-              <span className="v4-pl-mono" style={{ color: "var(--mk-success-strong)" }} title="Ложное срабатывание">
-                ✗ {lr.verification.false_positive}
-              </span>
-              <span className="v4-pl-mono" style={{ color: "var(--mk-warn-strong)" }} title="Неуверенно">
-                ? {lr.verification.uncertain}
-              </span>
-            </div>
-          )}
+          {isVerified && lr.verification && (() => {
+            const v = lr.verification;
+            // A3: the per-status cells previously showed only confirmed /
+            // false_positive / uncertain, so they didn't sum to the verified
+            // total — `not_a_bug` (often large) and `errors` were dropped. We
+            // now render not_a_bug, errors (only when >0), and a "проверено N"
+            // total so the numbers reconcile. `not_a_bug` is absent on legacy
+            // reports → treat undefined as 0.
+            const notABug = v.not_a_bug ?? 0;
+            const verifiedTotal =
+              v.confirmed + v.false_positive + v.uncertain + notABug + v.errors;
+            return (
+              <div className="v4-au-card-verify">
+                <span className="v4-au-text-muted">Верификация</span>
+                <span className="v4-pl-mono" style={{ color: "var(--mk-danger-strong)" }} title="Подтверждено">
+                  ✓ {v.confirmed}
+                </span>
+                <span className="v4-pl-mono" style={{ color: "var(--mk-success-strong)" }} title="Ложное срабатывание">
+                  ✗ {v.false_positive}
+                </span>
+                <span className="v4-pl-mono" style={{ color: "var(--mk-success-strong)" }} title="Не баг">
+                  ⊘ {notABug}
+                </span>
+                <span className="v4-pl-mono" style={{ color: "var(--mk-warn-strong)" }} title="Неуверенно">
+                  ? {v.uncertain}
+                </span>
+                {v.errors > 0 && (
+                  <span className="v4-pl-mono v4-au-text-warn" title="Ошибки верификации">
+                    ⚠ {v.errors}
+                  </span>
+                )}
+                <span className="v4-pl-mono v4-au-text-muted" title="Всего проверено">
+                  проверено {verifiedTotal}
+                </span>
+              </div>
+            );
+          })()}
 
           {/* Meta footer */}
           <div className="v4-au-card-meta">

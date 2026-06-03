@@ -42,8 +42,16 @@ export function calcRiskScore(project: ProjectData, monitor?: Monitor): RiskResu
   }
 
   // Stale project — no activity (0–20)
-  const days = project.daysSinceActivity ?? 0;
-  if (days > 30) {
+  // A6: `daysSinceActivity === null` means we have NO activity signal at all
+  // (fetch failed, brand-new repo, or no commits/issues). Previously this was
+  // coalesced to 0 and scored like a perfectly-fresh repo — missing data was
+  // rewarded as best-case. Treat null as a small neutral penalty instead so a
+  // dataless repo never out-scores a genuinely active one.
+  const days = project.daysSinceActivity;
+  if (days === null) {
+    score += 6;
+    factors.push({ text: "Нет данных об активности", points: 6 });
+  } else if (days > 30) {
     score += 20;
     factors.push({ text: `${days}д без активности`, points: 20 });
   } else if (days > 14) {
@@ -76,14 +84,19 @@ export function calcRiskScore(project: ProjectData, monitor?: Monitor): RiskResu
   }
 
   // Cycle time (0–10): slow delivery signals risk
-  if (project.cycleTimeDays !== null) {
-    if (project.cycleTimeDays > 30) {
-      score += 10;
-      factors.push({ text: `Цикл закрытия: ${Math.round(project.cycleTimeDays)}д`, points: 10 });
-    } else if (project.cycleTimeDays > 14) {
-      score += 5;
-      factors.push({ text: `Цикл закрытия: ${Math.round(project.cycleTimeDays)}д`, points: 5 });
-    }
+  // A6: when `cycleTimeDays === null` we have no closed-issue throughput data
+  // (no recent issue open→close pairs). The block used to be skipped entirely,
+  // so a repo with zero delivery signal scored identically to a fast one.
+  // Apply a small neutral penalty for the missing signal instead of nothing.
+  if (project.cycleTimeDays === null) {
+    score += 3;
+    factors.push({ text: "Нет данных о цикле закрытия", points: 3 });
+  } else if (project.cycleTimeDays > 30) {
+    score += 10;
+    factors.push({ text: `Цикл закрытия: ${Math.round(project.cycleTimeDays)}д`, points: 10 });
+  } else if (project.cycleTimeDays > 14) {
+    score += 5;
+    factors.push({ text: `Цикл закрытия: ${Math.round(project.cycleTimeDays)}д`, points: 5 });
   }
 
   score = Math.min(100, score);
