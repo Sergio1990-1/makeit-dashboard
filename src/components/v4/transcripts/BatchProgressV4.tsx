@@ -6,6 +6,8 @@ export interface BatchFile {
   status: BatchFileStatus;
   taskId?: string;
   error?: string;
+  /** Upload progress 0–100 while status === "uploading". */
+  uploadPct?: number;
 }
 
 interface Props {
@@ -88,7 +90,11 @@ export function BatchProgressV4({ files, active, onCancel, onClose }: Props) {
               {bf.file.name}
             </span>
             <span className={`v4-tpc-batch-status v4-tpc-batch-status--${bf.status}`}>
-              {bf.status === "error" && bf.error ? bf.error : STATUS_LABEL[bf.status]}
+              {bf.status === "error" && bf.error
+                ? bf.error
+                : bf.status === "uploading" && typeof bf.uploadPct === "number"
+                  ? `Загрузка… ${bf.uploadPct}%`
+                  : STATUS_LABEL[bf.status]}
             </span>
           </div>
         ))}

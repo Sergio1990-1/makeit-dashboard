@@ -47,6 +47,10 @@ export function TranscriptsView({ projects }: Props) {
   const [loadingBrief, setLoadingBrief] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+  // Single-file upload progress (0–100) while the file is being sent to the
+  // server; null when no upload is in flight. Large audio uploads take a
+  // while, so the UploadZone shows a progress bar instead of a frozen button.
+  const [uploadPct, setUploadPct] = useState<number | null>(null);
 
   // Aggregate counters from history (updates with refreshKey + initial load)
   const [agg, setAgg] = useState({ total: 0, active: 0, done: 0, error: 0 });
@@ -86,8 +90,17 @@ export function TranscriptsView({ projects }: Props) {
     setUploadError(null);
     setBriefResult(null);
     setEditing(false);
+    setUploadPct(0);
     try {
-      const res = await uploadTranscript(file, selectedProject, selectedModel);
+      const res = await uploadTranscript(
+        file,
+        selectedProject,
+        selectedModel,
+        undefined,
+        (loaded, total) => {
+          setUploadPct(total > 0 ? Math.round((loaded / total) * 100) : null);
+        },
+      );
       setActiveTaskId(res.task_id);
       setHistoryRefreshKey((k) => k + 1);
     } catch (err) {
@@ -95,6 +108,8 @@ export function TranscriptsView({ projects }: Props) {
       // Re-throw so UploadZone keeps the selected file and the user can retry
       // without having to pick it again.
       throw err;
+    } finally {
+      setUploadPct(null);
     }
   }, [selectedProject, selectedModel]);
 
@@ -126,10 +141,20 @@ export function TranscriptsView({ projects }: Props) {
         activeIds.delete(bf.id);
         return;
       }
-      updateFile(bf.id, { status: "uploading" });
+      updateFile(bf.id, { status: "uploading", uploadPct: 0 });
       try {
-        const res = await uploadTranscript(bf.file, selectedProject, selectedModel);
-        updateFile(bf.id, { status: "done", taskId: res.task_id });
+        const res = await uploadTranscript(
+          bf.file,
+          selectedProject,
+          selectedModel,
+          undefined,
+          (loaded, total) => {
+            updateFile(bf.id, {
+              uploadPct: total > 0 ? Math.round((loaded / total) * 100) : undefined,
+            });
+          },
+        );
+        updateFile(bf.id, { status: "done", taskId: res.task_id, uploadPct: 100 });
       } catch (err) {
         updateFile(bf.id, { status: "error", error: String(err) });
       } finally {
@@ -355,6 +380,7 @@ export function TranscriptsView({ projects }: Props) {
           setSelectedModel={setSelectedModel}
           onSubmit={onSubmitFromZone}
           errorMessage={uploadError}
+          uploadProgress={uploadPct}
         />
       )}
 

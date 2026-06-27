@@ -15,6 +15,12 @@ interface Props {
   setSelectedModel: (v: TranscriptionModel) => void;
   onSubmit: (files: File[]) => void | Promise<void>;
   errorMessage?: string | null;
+  /**
+   * Upload progress 0–100 for a single-file submit, or null when not
+   * uploading. Drives the progress bar shown while a large audio file is
+   * being sent to the server.
+   */
+  uploadProgress?: number | null;
 }
 
 function getFileExt(name: string): string {
@@ -41,6 +47,7 @@ export function UploadZone({
   setSelectedModel,
   onSubmit,
   errorMessage,
+  uploadProgress,
 }: Props) {
   const [files, setFiles] = useState<File[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -265,12 +272,28 @@ export function UploadZone({
           onClick={handleSubmit}
         >
           {submitting
-            ? "Отправка…"
+            ? typeof uploadProgress === "number"
+              ? `Загрузка… ${uploadProgress}%`
+              : "Отправка…"
             : files.length > 1
               ? `Обработать (${files.length})`
               : "Обработать"}
         </button>
       </div>
+
+      {submitting && typeof uploadProgress === "number" && (
+        <div className="v4-tpc-upload-progress" style={{ marginTop: 12 }}>
+          <div className="v4-ptrack" style={{ height: 6 }}>
+            <div
+              className="v4-pfill"
+              style={{ width: `${uploadProgress}%`, background: "var(--mk-brand-500)" }}
+            />
+          </div>
+          <div className="v4-tpc-text-muted" style={{ marginTop: 6, fontSize: 12 }}>
+            Загрузка файла на сервер… {uploadProgress}% — не закрывайте вкладку
+          </div>
+        </div>
+      )}
 
       {(localError || errorMessage) && (
         <div className="v4-error" style={{ marginTop: 12 }}>
