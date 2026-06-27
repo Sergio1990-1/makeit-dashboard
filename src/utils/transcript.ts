@@ -384,11 +384,42 @@ const UPLOAD_FIELDS: Record<
   transcription_model: "transcription_model",
 };
 
+/** Upload-progress callback: bytes sent so far and total bytes. */
+export type UploadProgressFn = (loaded: number, total: number) => void;
+
+/**
+ * POST a multipart form via XMLHttpRequest so upload progress is observable.
+ * `fetch` cannot report request-body upload progress, and transcript uploads
+ * can be hundreds of MB of audio — the user needs a progress bar, not a
+ * frozen "Отправка…". No timeout is set (xhr.timeout defaults to 0) so a slow
+ * large upload is not cut off client-side; nginx governs the server side.
+ */
+function postFormWithProgress(
+  url: string,
+  form: FormData,
+  onProgress?: UploadProgressFn,
+): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    if (onProgress) {
+      xhr.upload.onprogress = (e: ProgressEvent) => {
+        if (e.lengthComputable) onProgress(e.loaded, e.total);
+      };
+    }
+    xhr.onload = () => resolve({ status: xhr.status, body: xhr.responseText });
+    xhr.onerror = () => reject(new Error("Сетевая ошибка при загрузке файла"));
+    xhr.onabort = () => reject(new Error("Загрузка прервана"));
+    xhr.send(form);
+  });
+}
+
 export async function uploadTranscript(
   file: File,
   project: string,
   transcriptionModel: TranscriptionModel = "quality",
   resumeJobId?: string,
+  onProgress?: UploadProgressFn,
 ): Promise<TranscriptUploadResponse> {
   const form = new FormData();
   form.append("file", file);
@@ -398,18 +429,18 @@ export async function uploadTranscript(
     form.append(UPLOAD_FIELDS.resume, resumeJobId);
   }
 
-  const res = await fetch(`${PIPELINE_BASE_URL}/transcript/upload`, {
-    method: "POST",
-    body: form,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Upload failed (${res.status}): ${text}`);
+  const { status, body } = await postFormWithProgress(
+    `${PIPELINE_BASE_URL}/transcript/upload`,
+    form,
+    onProgress,
+  );
+  if (status < 200 || status >= 300) {
+    throw new Error(`Upload failed (${status}): ${body}`);
   }
   // Backend `TranscriptJobResponse` (`{ job_id, status, brief_url }`);
   // adapt to the normalized `TranscriptUploadResponse` (drop `brief_url`,
   // rename `job_id`→`task_id`). Runtime unchanged.
-  const data = (await res.json()) as BackendTranscriptJobResponse;
+  const data = JSON.parse(body) as BackendTranscriptJobResponse;
   return { task_id: data.job_id, status: data.status };
 }
 
