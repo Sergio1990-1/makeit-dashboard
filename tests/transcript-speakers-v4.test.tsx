@@ -62,6 +62,60 @@ describe("TranscriptSpeakersV4", () => {
     expect(screen.getByText("не опознан")).toBeTruthy();
   });
 
+  it("reports the uncertain speaker count on load, and again after a merge resolves it", async () => {
+    const RESOLVED_PAYLOAD = {
+      job_id: "job-1",
+      brief_stale: false,
+      speakers: [
+        {
+          id: "SPEAKER_00",
+          labels: ["SPEAKER_00", "SPEAKER_01"],
+          display_name: "Иван",
+          segment_count: 6,
+          quotes: [{ timestamp: "00:00:05", text: "Давайте начнём" }],
+          uncertain: false,
+        },
+      ],
+    };
+
+    let mergeCalled = false;
+    mockFetch.mockImplementation((_url: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        mergeCalled = true;
+        return Promise.resolve(
+          jsonResp({
+            job_id: "job-1",
+            canonical_name: "Иван",
+            speaker_ids: ["SPEAKER_00", "SPEAKER_01"],
+            updated_segment_count: 6,
+            normalized_transcript: "# Транскрипт\n\n[00:00:00] Иван: ...",
+            brief_stale: false,
+          }),
+        );
+      }
+      return Promise.resolve(jsonResp(mergeCalled ? RESOLVED_PAYLOAD : SPEAKERS_PAYLOAD));
+    });
+
+    const onUncertainCountChange = vi.fn();
+    render(
+      <TranscriptSpeakersV4 taskId="job-1" onUncertainCountChange={onUncertainCountChange} />,
+    );
+    await waitFor(() => expect(screen.getByText("Иван")).toBeTruthy());
+
+    // One uncertain speaker (SPEAKER_01) in the initial payload.
+    await waitFor(() => expect(onUncertainCountChange).toHaveBeenLastCalledWith(1));
+
+    fireEvent.click(screen.getByLabelText("Выбрать спикера Иван"));
+    fireEvent.click(screen.getByLabelText("Выбрать спикера SPEAKER_01"));
+    fireEvent.change(screen.getByLabelText("Итоговое имя для выбранных спикеров"), {
+      target: { value: "Иван" },
+    });
+    fireEvent.click(screen.getByText("Объединить"));
+
+    // After merge, the refetched list has no uncertain speakers left.
+    await waitFor(() => expect(onUncertainCountChange).toHaveBeenLastCalledWith(0));
+  });
+
   it("shows a recoverable inline error instead of crashing when speakers can't be loaded (422)", async () => {
     mockFetch.mockImplementation(() =>
       Promise.resolve(
