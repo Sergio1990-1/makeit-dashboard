@@ -16,6 +16,7 @@ function makeResult(overrides: Partial<TranscriptResult> = {}): TranscriptResult
     primary_artifact: "brief",
     normalized_transcript: "",
     brief_stale: false,
+    processing_profile: "standard_brief",
     ...overrides,
   };
 }
@@ -135,5 +136,31 @@ describe("TranscriptBriefV4 — primary_artifact rendering", () => {
       />,
     );
     expect(screen.queryByText("Нормализованный транскрипт")).toBeNull();
+  });
+});
+
+describe("TranscriptBriefV4 — processing_profile badge", () => {
+  it("shows the 'Обычный BRIEF' badge for a standard_brief job", () => {
+    render(
+      <TranscriptBriefV4
+        result={makeResult({ processing_profile: "standard_brief" })}
+        onNewUpload={vi.fn()}
+        onEdit={vi.fn()}
+        onContinueToBrief={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Обычный BRIEF")).toBeTruthy();
+  });
+
+  it("shows the 'Dev handoff' badge for a dev_handoff job", () => {
+    render(
+      <TranscriptBriefV4
+        result={makeResult({ processing_profile: "dev_handoff" })}
+        onNewUpload={vi.fn()}
+        onEdit={vi.fn()}
+        onContinueToBrief={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Dev handoff")).toBeTruthy();
   });
 });

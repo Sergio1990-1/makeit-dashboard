@@ -326,6 +326,15 @@
             "title": "Output Mode",
             "type": "string"
           },
+          "processing_profile": {
+            "default": "standard_brief",
+            "enum": [
+              "standard_brief",
+              "dev_handoff"
+            ],
+            "title": "Processing Profile",
+            "type": "string"
+          },
           "project_context": {
             "default": "",
             "title": "Project Context",
@@ -2606,6 +2615,11 @@
             "title": "Job Id",
             "type": "string"
           },
+          "processing_profile": {
+            "default": "standard_brief",
+            "title": "Processing Profile",
+            "type": "string"
+          },
           "project": {
             "title": "Project",
             "type": "string"
@@ -2681,6 +2695,11 @@
           "primary_artifact": {
             "default": "brief",
             "title": "Primary Artifact",
+            "type": "string"
+          },
+          "processing_profile": {
+            "default": "standard_brief",
+            "title": "Processing Profile",
             "type": "string"
           },
           "project": {

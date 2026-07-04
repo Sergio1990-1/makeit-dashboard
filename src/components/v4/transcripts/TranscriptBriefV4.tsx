@@ -32,6 +32,11 @@ const CHECK_ICON: Record<QualityCheck["status"], string> = {
   fail: "✗",
 };
 
+const PROFILE_LABEL: Record<TranscriptResult["processing_profile"], string> = {
+  standard_brief: "Обычный BRIEF",
+  dev_handoff: "Dev handoff",
+};
+
 function plural(n: number, one: string, few: string, many: string): string {
   const m10 = n % 10;
   const m100 = n % 100;
@@ -120,6 +125,9 @@ export function TranscriptBriefV4({ result, onNewUpload, onEdit, onContinueToBri
     <div className="v4-panel v4-tpc-brief-panel">
       <div className="v4-panel-h v4-tpc-brief-h">
         <div className="v4-tpc-brief-counters">
+          <span className="v4-tag" title="Формат BRIEF, выбранный при загрузке">
+            {PROFILE_LABEL[result.processing_profile]}
+          </span>
           {result.quality && (
             result.quality_report ? (
               <button

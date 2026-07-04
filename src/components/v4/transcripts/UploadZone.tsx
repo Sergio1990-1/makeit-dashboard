@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import type { ProjectConfig } from "../../../types";
-import type { OutputMode, TranscriptionModel } from "../../../utils/transcript";
+import type { OutputMode, ProcessingProfile, TranscriptionModel } from "../../../utils/transcript";
 
 const VALID_EXTENSIONS = ["mp3", "wav", "m4a", "txt", "md"];
 const AUDIO_EXTENSIONS = ["mp3", "wav", "m4a"];
@@ -15,6 +15,8 @@ interface Props {
   setSelectedModel: (v: TranscriptionModel) => void;
   selectedOutputMode: OutputMode;
   setSelectedOutputMode: (v: OutputMode) => void;
+  selectedProcessingProfile: ProcessingProfile;
+  setSelectedProcessingProfile: (v: ProcessingProfile) => void;
   onSubmit: (files: File[]) => void | Promise<void>;
   errorMessage?: string | null;
   /**
@@ -49,6 +51,8 @@ export function UploadZone({
   setSelectedModel,
   selectedOutputMode,
   setSelectedOutputMode,
+  selectedProcessingProfile,
+  setSelectedProcessingProfile,
   onSubmit,
   errorMessage,
   uploadProgress,
@@ -263,6 +267,28 @@ export function UploadZone({
               title="Быстрый очищенный транскрипт без полной обработки"
             >
               📄 Транскрипт
+            </button>
+          </div>
+        </fieldset>
+
+        <fieldset className="v4-tpc-control-field">
+          <span className="v4-tpc-control-key">Формат BRIEF</span>
+          <div className="v4-pillgrp">
+            <button
+              type="button"
+              className={selectedProcessingProfile === "standard_brief" ? "is-active" : ""}
+              onClick={() => setSelectedProcessingProfile("standard_brief")}
+              title="Стандартная структура BRIEF"
+            >
+              Обычный
+            </button>
+            <button
+              type="button"
+              className={selectedProcessingProfile === "dev_handoff" ? "is-active" : ""}
+              onClick={() => setSelectedProcessingProfile("dev_handoff")}
+              title="Требования, решения, action items, риски — для передачи в разработку"
+            >
+              Для разработки
             </button>
           </div>
         </fieldset>

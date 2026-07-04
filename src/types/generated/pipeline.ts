@@ -1732,6 +1732,12 @@ export interface components {
              */
             output_mode: string;
             /**
+             * Processing Profile
+             * @default standard_brief
+             * @enum {string}
+             */
+            processing_profile: "standard_brief" | "dev_handoff";
+            /**
              * Project Context
              * @default
              */
@@ -2839,6 +2845,11 @@ export interface components {
             file_type: string;
             /** Job Id */
             job_id: string;
+            /**
+             * Processing Profile
+             * @default standard_brief
+             */
+            processing_profile: string;
             /** Project */
             project: string;
             /** Status */
@@ -2901,6 +2912,11 @@ export interface components {
              * @default brief
              */
             primary_artifact: string;
+            /**
+             * Processing Profile
+             * @default standard_brief
+             */
+            processing_profile: string;
             /**
              * Project
              * @default

@@ -6,11 +6,13 @@ import {
   fetchTranscriptList,
   normalizeTranscriptionModel,
   normalizeOutputMode,
+  normalizeProcessingProfile,
   continueToBrief,
   regenerateBrief,
   type TranscriptResult,
   type TranscriptionModel,
   type OutputMode,
+  type ProcessingProfile,
 } from "../../../utils/transcript";
 import type { ProjectConfig } from "../../../types";
 import { UploadZone } from "./UploadZone";
@@ -33,6 +35,7 @@ const STORAGE = {
   project: "tpc:lastProject",
   model: "tpc:lastModel",
   outputMode: "tpc:lastOutputMode",
+  processingProfile: "tpc:lastProcessingProfile",
 };
 
 export function TranscriptsView({ projects }: Props) {
@@ -45,10 +48,16 @@ export function TranscriptsView({ projects }: Props) {
   const [selectedOutputMode, setSelectedOutputMode] = useState<OutputMode>(() => {
     return normalizeOutputMode(localStorage.getItem(STORAGE.outputMode));
   });
+  const [selectedProcessingProfile, setSelectedProcessingProfile] = useState<ProcessingProfile>(() => {
+    return normalizeProcessingProfile(localStorage.getItem(STORAGE.processingProfile));
+  });
 
   useEffect(() => { localStorage.setItem(STORAGE.project, selectedProject); }, [selectedProject]);
   useEffect(() => { localStorage.setItem(STORAGE.model, selectedModel); }, [selectedModel]);
   useEffect(() => { localStorage.setItem(STORAGE.outputMode, selectedOutputMode); }, [selectedOutputMode]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE.processingProfile, selectedProcessingProfile);
+  }, [selectedProcessingProfile]);
 
   // Active task / batch / brief / editor states (mutually exclusive at the
   // top of the page).
@@ -115,6 +124,7 @@ export function TranscriptsView({ projects }: Props) {
           setUploadPct(total > 0 ? Math.round((loaded / total) * 100) : null);
         },
         selectedOutputMode,
+        selectedProcessingProfile,
       );
       setActiveTaskId(res.task_id);
       setHistoryRefreshKey((k) => k + 1);
@@ -126,7 +136,7 @@ export function TranscriptsView({ projects }: Props) {
     } finally {
       setUploadPct(null);
     }
-  }, [selectedProject, selectedModel, selectedOutputMode]);
+  }, [selectedProject, selectedModel, selectedOutputMode, selectedProcessingProfile]);
 
   const onSubmitBatch = useCallback(async (files: File[]) => {
     abortRef.current = false;
@@ -169,6 +179,7 @@ export function TranscriptsView({ projects }: Props) {
             });
           },
           selectedOutputMode,
+          selectedProcessingProfile,
         );
         updateFile(bf.id, { status: "done", taskId: res.task_id, uploadPct: 100 });
       } catch (err) {
@@ -205,7 +216,7 @@ export function TranscriptsView({ projects }: Props) {
       setHistoryRefreshKey((k) => k + 1);
       setBatchActive(false);
     }
-  }, [selectedProject, selectedModel, selectedOutputMode]);
+  }, [selectedProject, selectedModel, selectedOutputMode, selectedProcessingProfile]);
 
   const onSubmitFromZone = useCallback((files: File[]) => {
     if (files.length === 1) return onSubmitSingle(files[0]);
@@ -454,6 +465,8 @@ export function TranscriptsView({ projects }: Props) {
           setSelectedModel={setSelectedModel}
           selectedOutputMode={selectedOutputMode}
           setSelectedOutputMode={setSelectedOutputMode}
+          selectedProcessingProfile={selectedProcessingProfile}
+          setSelectedProcessingProfile={setSelectedProcessingProfile}
           onSubmit={onSubmitFromZone}
           errorMessage={uploadError}
           uploadProgress={uploadPct}
