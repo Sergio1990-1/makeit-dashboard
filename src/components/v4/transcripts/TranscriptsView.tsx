@@ -5,8 +5,12 @@ import {
   fetchTranscriptResult,
   fetchTranscriptList,
   normalizeTranscriptionModel,
+  normalizeOutputMode,
+  continueToBrief,
+  regenerateBrief,
   type TranscriptResult,
   type TranscriptionModel,
+  type OutputMode,
 } from "../../../utils/transcript";
 import type { ProjectConfig } from "../../../types";
 import { UploadZone } from "./UploadZone";
@@ -15,6 +19,8 @@ import { BatchProgressV4, type BatchFile, type BatchFileStatus } from "./BatchPr
 import { TranscriptBriefV4 } from "./TranscriptBriefV4";
 import { TranscriptEditorV4 } from "./TranscriptEditorV4";
 import { TranscriptHistoryV4 } from "./TranscriptHistoryV4";
+import { TranscriptSpeakersV4 } from "./TranscriptSpeakersV4";
+import { TranscriptStaleBriefBanner } from "./TranscriptStaleBriefBanner";
 
 interface Props {
   projects: ProjectConfig[];
@@ -26,6 +32,7 @@ const MAX_CONCURRENT = 2;
 const STORAGE = {
   project: "tpc:lastProject",
   model: "tpc:lastModel",
+  outputMode: "tpc:lastOutputMode",
 };
 
 export function TranscriptsView({ projects }: Props) {
@@ -35,9 +42,13 @@ export function TranscriptsView({ projects }: Props) {
   const [selectedModel, setSelectedModel] = useState<TranscriptionModel>(() => {
     return normalizeTranscriptionModel(localStorage.getItem(STORAGE.model)) ?? "quality";
   });
+  const [selectedOutputMode, setSelectedOutputMode] = useState<OutputMode>(() => {
+    return normalizeOutputMode(localStorage.getItem(STORAGE.outputMode));
+  });
 
   useEffect(() => { localStorage.setItem(STORAGE.project, selectedProject); }, [selectedProject]);
   useEffect(() => { localStorage.setItem(STORAGE.model, selectedModel); }, [selectedModel]);
+  useEffect(() => { localStorage.setItem(STORAGE.outputMode, selectedOutputMode); }, [selectedOutputMode]);
 
   // Active task / batch / brief / editor states (mutually exclusive at the
   // top of the page).
@@ -51,6 +62,9 @@ export function TranscriptsView({ projects }: Props) {
   // server; null when no upload is in flight. Large audio uploads take a
   // while, so the UploadZone shows a progress bar instead of a frozen button.
   const [uploadPct, setUploadPct] = useState<number | null>(null);
+  // brief_stale reported by the speakers panel's own fetch (independent of
+  // briefResult.brief_stale — see TranscriptStaleBriefBanner usage below).
+  const [speakersBriefStale, setSpeakersBriefStale] = useState(false);
 
   // Aggregate counters from history (updates with refreshKey + initial load)
   const [agg, setAgg] = useState({ total: 0, active: 0, done: 0, error: 0 });
@@ -100,6 +114,7 @@ export function TranscriptsView({ projects }: Props) {
         (loaded, total) => {
           setUploadPct(total > 0 ? Math.round((loaded / total) * 100) : null);
         },
+        selectedOutputMode,
       );
       setActiveTaskId(res.task_id);
       setHistoryRefreshKey((k) => k + 1);
@@ -111,7 +126,7 @@ export function TranscriptsView({ projects }: Props) {
     } finally {
       setUploadPct(null);
     }
-  }, [selectedProject, selectedModel]);
+  }, [selectedProject, selectedModel, selectedOutputMode]);
 
   const onSubmitBatch = useCallback(async (files: File[]) => {
     abortRef.current = false;
@@ -153,6 +168,7 @@ export function TranscriptsView({ projects }: Props) {
               uploadPct: total > 0 ? Math.round((loaded / total) * 100) : undefined,
             });
           },
+          selectedOutputMode,
         );
         updateFile(bf.id, { status: "done", taskId: res.task_id, uploadPct: 100 });
       } catch (err) {
@@ -189,7 +205,7 @@ export function TranscriptsView({ projects }: Props) {
       setHistoryRefreshKey((k) => k + 1);
       setBatchActive(false);
     }
-  }, [selectedProject, selectedModel]);
+  }, [selectedProject, selectedModel, selectedOutputMode]);
 
   const onSubmitFromZone = useCallback((files: File[]) => {
     if (files.length === 1) return onSubmitSingle(files[0]);
@@ -207,6 +223,7 @@ export function TranscriptsView({ projects }: Props) {
   const onProgressDone = useCallback(async (_resultUrl: string | null, taskId: string) => {
     setActiveTaskId(null);
     setHistoryRefreshKey((k) => k + 1);
+    setSpeakersBriefStale(false);
     try {
       const data = await fetchTranscriptResult(taskId);
       setBriefResult(data);
@@ -231,6 +248,7 @@ export function TranscriptsView({ projects }: Props) {
     setEditing(false);
     setUploadError(null);
     setLoadingBrief(true);
+    setSpeakersBriefStale(false);
     try {
       const data = await fetchTranscriptResult(taskId);
       setBriefResult(data);
@@ -279,6 +297,51 @@ export function TranscriptsView({ projects }: Props) {
     setBriefResult((prev) => (prev ? { ...prev, brief: updatedBrief } : prev));
     setEditing(false);
   }, []);
+
+  // Shared by "Сгенерировать BRIEF" (continue) and "Пересобрать BRIEF"
+  // (regenerate): both switch the view from the finished result back into
+  // the same polling UI used right after upload, driven by the SAME job_id.
+  // TranscriptProgressV4 doesn't care how a job got to "queued" — it just
+  // polls until "done" and calls onProgressDone, which re-fetches the
+  // (now brief-mode / fresh) result. Errors are NOT caught here — they
+  // propagate to the caller (TranscriptBriefV4 / the stale banner) so the
+  // result view stays visible with an inline error instead of silently
+  // switching to a polling view for a request that never actually started.
+  const switchToPolling = useCallback((taskId: string) => {
+    setBriefResult(null);
+    setEditing(false);
+    setActiveTaskId(taskId);
+    setHistoryRefreshKey((k) => k + 1);
+  }, []);
+
+  const onContinueToBrief = useCallback(async () => {
+    if (!briefResult) return;
+    const res = await continueToBrief(briefResult.task_id);
+    switchToPolling(res.task_id);
+  }, [briefResult, switchToPolling]);
+
+  const onRegenerateBriefClick = useCallback(async () => {
+    if (!briefResult) return;
+    const res = await regenerateBrief(briefResult.task_id);
+    switchToPolling(res.task_id);
+  }, [briefResult, switchToPolling]);
+
+  // Speaker merge changes normalized_transcript/brief_stale on the backend
+  // — refetch the full result so the brief panel reflects it. A failure
+  // here is non-critical (the merge itself already succeeded and the
+  // speakers panel already shows the new grouping); log and move on
+  // rather than surfacing a banner that would outlive its relevance.
+  const onSpeakersMerged = useCallback(async () => {
+    if (!briefResult) return;
+    try {
+      const data = await fetchTranscriptResult(briefResult.task_id);
+      setBriefResult(data);
+    } catch (err) {
+      console.error("[transcripts] failed to refresh result after speaker merge:", err);
+    }
+  }, [briefResult]);
+
+  const briefStale = (briefResult?.brief_stale ?? false) || speakersBriefStale;
 
   const showUploadForm =
     !activeTaskId && !briefResult && !loadingBrief && !batchActive && batchFiles.length === 0;
@@ -347,11 +410,22 @@ export function TranscriptsView({ projects }: Props) {
       )}
 
       {briefResult && !editing && (
-        <TranscriptBriefV4
-          result={briefResult}
-          onNewUpload={onNewUpload}
-          onEdit={() => setEditing(true)}
-        />
+        <>
+          {briefStale && (
+            <TranscriptStaleBriefBanner onRegenerate={onRegenerateBriefClick} />
+          )}
+          <TranscriptBriefV4
+            result={briefResult}
+            onNewUpload={onNewUpload}
+            onEdit={() => setEditing(true)}
+            onContinueToBrief={onContinueToBrief}
+          />
+          <TranscriptSpeakersV4
+            taskId={briefResult.task_id}
+            onMerged={onSpeakersMerged}
+            onBriefStaleChange={setSpeakersBriefStale}
+          />
+        </>
       )}
 
       {activeTaskId && (
@@ -378,6 +452,8 @@ export function TranscriptsView({ projects }: Props) {
           setSelectedProject={setSelectedProject}
           selectedModel={selectedModel}
           setSelectedModel={setSelectedModel}
+          selectedOutputMode={selectedOutputMode}
+          setSelectedOutputMode={setSelectedOutputMode}
           onSubmit={onSubmitFromZone}
           errorMessage={uploadError}
           uploadProgress={uploadPct}

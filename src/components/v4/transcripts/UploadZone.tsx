@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import type { ProjectConfig } from "../../../types";
-import type { TranscriptionModel } from "../../../utils/transcript";
+import type { OutputMode, TranscriptionModel } from "../../../utils/transcript";
 
 const VALID_EXTENSIONS = ["mp3", "wav", "m4a", "txt", "md"];
 const AUDIO_EXTENSIONS = ["mp3", "wav", "m4a"];
@@ -13,6 +13,8 @@ interface Props {
   setSelectedProject: (v: string) => void;
   selectedModel: TranscriptionModel;
   setSelectedModel: (v: TranscriptionModel) => void;
+  selectedOutputMode: OutputMode;
+  setSelectedOutputMode: (v: OutputMode) => void;
   onSubmit: (files: File[]) => void | Promise<void>;
   errorMessage?: string | null;
   /**
@@ -45,6 +47,8 @@ export function UploadZone({
   setSelectedProject,
   selectedModel,
   setSelectedModel,
+  selectedOutputMode,
+  setSelectedOutputMode,
   onSubmit,
   errorMessage,
   uploadProgress,
@@ -240,6 +244,28 @@ export function UploadZone({
             ))}
           </select>
         </label>
+
+        <fieldset className="v4-tpc-control-field">
+          <span className="v4-tpc-control-key">Результат</span>
+          <div className="v4-pillgrp">
+            <button
+              type="button"
+              className={selectedOutputMode === "brief" ? "is-active" : ""}
+              onClick={() => setSelectedOutputMode("brief")}
+              title="Полный BRIEF с решениями, требованиями и структурой"
+            >
+              📋 BRIEF
+            </button>
+            <button
+              type="button"
+              className={selectedOutputMode === "normalized_transcript" ? "is-active" : ""}
+              onClick={() => setSelectedOutputMode("normalized_transcript")}
+              title="Быстрый очищенный транскрипт без полной обработки"
+            >
+              📄 Транскрипт
+            </button>
+          </div>
+        </fieldset>
 
         {hasAudio && (
           <fieldset className="v4-tpc-control-field">
