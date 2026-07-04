@@ -50,6 +50,25 @@ export function normalizeOutputMode(raw: unknown): OutputMode {
 }
 
 /**
+ * BRIEF synthesis profile (makeit-pipeline #1300) — orthogonal to
+ * `OutputMode`: `output_mode` picks WHICH artifact is generated (brief vs.
+ * normalized_transcript), `processing_profile` picks the STRUCTURE/tone of
+ * the BRIEF itself once one is generated. Unlike `OutputMode`, the backend
+ * `Body_upload_...` field is a real `Literal[...]` enum in the generated
+ * schema (see `components["schemas"]["Body_upload_transcript_transcript_upload_post"]["processing_profile"]`),
+ * but the two response models (`TranscriptResultResponse`/`TranscriptListItem`)
+ * still type it as free-text `string` — normalized the same defensive way
+ * as `normalizeOutputMode` so an unrecognized backend value (or an absent
+ * field from a pre-#1300 row) falls back to "standard_brief" instead of
+ * silently typing as something invalid.
+ */
+export type ProcessingProfile = "standard_brief" | "dev_handoff";
+
+export function normalizeProcessingProfile(raw: unknown): ProcessingProfile {
+  return raw === "dev_handoff" ? "dev_handoff" : "standard_brief";
+}
+
+/**
  * Normalized result of `uploadTranscript`/`retryTranscript`. Deliberate
  * frontend-derived shape, NOT the wire contract: the backend returns
  * `TranscriptJobResponse` (`{ job_id, status, brief_url }`); the client
@@ -265,6 +284,11 @@ function adaptQualityReport(raw: unknown): QualityReport | null {
  * deliverable for this job and whether a speaker merge has invalidated
  * an existing BRIEF — see `primary_artifact` docs on the backend
  * `TranscriptResultResponse` model.
+ *
+ * `processing_profile` (#1300) is the profile the job was UPLOADED (or
+ * resumed) with — persisted backend-side, not re-derived from the current
+ * request. For a `normalized_transcript` job it is the profile `continueToBrief`
+ * will use once the user asks for a BRIEF.
  */
 export interface TranscriptResult {
   task_id: string;
@@ -276,6 +300,7 @@ export interface TranscriptResult {
   primary_artifact: OutputMode; // which of `brief` / `normalized_transcript` is the deliverable
   normalized_transcript: string; // STT-corrected transcript; populated whenever the stt stage has run
   brief_stale: boolean; // true once a speaker merge invalidated an existing BRIEF (see regenerateBrief)
+  processing_profile: ProcessingProfile; // BRIEF format the job was created/resumed with (see normalizeProcessingProfile)
 }
 
 export async function fetchTranscriptResult(taskId: string): Promise<TranscriptResult> {
@@ -302,6 +327,7 @@ export async function fetchTranscriptResult(taskId: string): Promise<TranscriptR
     primary_artifact: normalizeOutputMode(data.primary_artifact),
     normalized_transcript: data.normalized_transcript || "",
     brief_stale: data.brief_stale ?? false,
+    processing_profile: normalizeProcessingProfile(data.processing_profile),
   };
 }
 
@@ -331,6 +357,10 @@ export function normalizeTranscriptionModel(raw: unknown): TranscriptionModel | 
  * narrowing is best-effort: `fetchTranscriptList` passes the backend
  * string through, and consumers compare it against known literals /
  * fall back to the raw string for unknown values. Runtime preserved.
+ *
+ * `processing_profile` (#1300) is normalized the same way as on
+ * `TranscriptResult` — a pre-#1300 row has no such field server-side and
+ * defaults to "standard_brief" (`normalizeProcessingProfile`).
  */
 export interface TranscriptListItem {
   task_id: string;
@@ -339,6 +369,7 @@ export interface TranscriptListItem {
   status: "done" | "queued" | "transcribing" | "processing" | "error";
   created_at: string; // ISO timestamp
   transcription_model?: TranscriptionModel;
+  processing_profile: ProcessingProfile;
 }
 
 export async function fetchTranscriptList(): Promise<TranscriptListItem[]> {
@@ -363,6 +394,7 @@ export async function fetchTranscriptList(): Promise<TranscriptListItem[]> {
     status: item.status as TranscriptListItem["status"],
     created_at: item.created_at || "",
     transcription_model: normalizeTranscriptionModel(item.transcription_model),
+    processing_profile: normalizeProcessingProfile(item.processing_profile),
   }));
 }
 
@@ -415,7 +447,8 @@ export async function saveTranscriptBrief(
 // earlier work and are listed here only to satisfy the exhaustive
 // `Record<keyof Body, ...>` constraint — this client doesn't expose UI
 // for them yet and doesn't append them to the form (backend defaults
-// apply). Only `output_mode` is actually used, by `uploadTranscript`.
+// apply). Only `output_mode` and `processing_profile` are actually used,
+// by `uploadTranscript`.
 const UPLOAD_FIELDS: Record<
   keyof components["schemas"]["Body_upload_transcript_transcript_upload_post"],
   string
@@ -424,6 +457,7 @@ const UPLOAD_FIELDS: Record<
   language: "language",
   meeting_type: "meeting_type",
   output_mode: "output_mode",
+  processing_profile: "processing_profile",
   project_context: "project_context",
   resume: "resume",
   stt_backend: "stt_backend",
@@ -468,12 +502,14 @@ export async function uploadTranscript(
   resumeJobId?: string,
   onProgress?: UploadProgressFn,
   outputMode: OutputMode = "brief",
+  processingProfile: ProcessingProfile = "standard_brief",
 ): Promise<TranscriptUploadResponse> {
   const form = new FormData();
   form.append("file", file);
   form.append(UPLOAD_FIELDS.project_context, project);
   form.append(UPLOAD_FIELDS.transcription_model, transcriptionModel);
   form.append(UPLOAD_FIELDS.output_mode, outputMode);
+  form.append(UPLOAD_FIELDS.processing_profile, processingProfile);
   if (resumeJobId) {
     form.append(UPLOAD_FIELDS.resume, resumeJobId);
   }

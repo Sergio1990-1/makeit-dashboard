@@ -27,6 +27,17 @@ const STATUS_LABELS: Record<string, string> = {
   error: "Ошибка",
 };
 
+// Short forms — this column is only 90px wide (see .v4-tpc-history-row grid
+// in v4.css); the full name is still available via the `title` tooltip.
+const PROFILE_LABEL: Record<TranscriptListItem["processing_profile"], string> = {
+  standard_brief: "Обычный",
+  dev_handoff: "Dev handoff",
+};
+const PROFILE_LABEL_FULL: Record<TranscriptListItem["processing_profile"], string> = {
+  standard_brief: "Обычный BRIEF",
+  dev_handoff: "Dev handoff",
+};
+
 const STATUS_CLASS: Record<string, string> = {
   done: "v4-tpc-status--done",
   queued: "v4-tpc-status--active",
@@ -467,8 +478,10 @@ export function TranscriptHistoryV4({ onOpen, onResume, onRetry, refreshKey, onI
                     {STATUS_LABELS[item.status] ?? item.status}
                   </span>
                 </div>
-                <div className="v4-tpc-history-cell v4-tpc-history-quality">
-                  <span className="v4-tpc-text-muted">—</span>
+                <div className="v4-tpc-history-cell v4-tpc-history-profile">
+                  <span className="v4-tag" title={PROFILE_LABEL_FULL[item.processing_profile]}>
+                    {PROFILE_LABEL[item.processing_profile]}
+                  </span>
                 </div>
                 <div className="v4-tpc-history-cell v4-tpc-history-actions">
                   {item.status === "done" && (
