@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchTranscriptList,
   fetchTranscriptResult,
@@ -6,6 +6,7 @@ import {
   mergeTranscriptSpeakers,
   continueToBrief,
   regenerateBrief,
+  downloadTranscriptDocx,
   normalizeTranscriptionModel,
   normalizeOutputMode,
   normalizeProcessingProfile,
@@ -442,6 +443,86 @@ describe("transcript client", () => {
     await expect(regenerateBrief("job-9")).resolves.toMatchObject({
       task_id: "job-9",
       status: "queued",
+    });
+  });
+
+  describe("downloadTranscriptDocx", () => {
+    beforeEach(() => {
+      URL.createObjectURL = vi.fn(() => "blob:mock-url");
+      URL.revokeObjectURL = vi.fn();
+      vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    });
+
+    it("fetches the export endpoint and triggers a browser download using the Content-Disposition filename", async () => {
+      const blob = new Blob(["docx-bytes"], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      const fetchMock = vi.fn(
+        async () =>
+          new Response(blob, {
+            status: 200,
+            headers: { "content-disposition": 'attachment; filename="BRIEF-job-12.docx"' },
+          }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+
+      await downloadTranscriptDocx("job-12");
+
+      expect(String(fetchMock.mock.calls[0][0])).toContain(
+        "/transcript/result/job-12/export/docx",
+      );
+      expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:mock-url");
+      expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
+    });
+
+    it("falls back to a transcript-{id}.docx filename when Content-Disposition is missing", async () => {
+      const blob = new Blob(["docx-bytes"]);
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => new Response(blob, { status: 200 })),
+      );
+
+      let capturedFilename = "";
+      const originalCreateElement = document.createElement.bind(document);
+      vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+        const el = originalCreateElement(tag);
+        if (tag === "a") {
+          Object.defineProperty(el, "download", {
+            set: (v: string) => {
+              capturedFilename = v;
+            },
+            get: () => capturedFilename,
+          });
+        }
+        return el;
+      });
+
+      await downloadTranscriptDocx("job-13");
+
+      expect(capturedFilename).toBe("transcript-job-13.docx");
+    });
+
+    it("throws a friendly message for 404", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => new Response(JSON.stringify({ detail: "Job job-14 not found" }), { status: 404 })),
+      );
+      await expect(downloadTranscriptDocx("job-14")).rejects.toThrow(/не найдена/);
+    });
+
+    it("surfaces the backend detail for 422 (missing artifact)", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(
+          async () =>
+            new Response(
+              JSON.stringify({ detail: "Job job-15 has no brief content to export yet" }),
+              { status: 422 },
+            ),
+        ),
+      );
+      await expect(downloadTranscriptDocx("job-15")).rejects.toThrow(/no brief content to export yet/);
     });
   });
 
