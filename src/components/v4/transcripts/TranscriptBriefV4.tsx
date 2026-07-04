@@ -6,6 +6,12 @@ interface Props {
   result: TranscriptResult;
   onNewUpload: () => void;
   onEdit: () => void;
+  /** Continue a normalized_transcript-mode job to full BRIEF generation
+   *  (POST /transcript/continue/{job_id}) — only offered while
+   *  `result.output_mode === "normalized_transcript"`. Errors propagate to
+   *  this component's own handler, which shows them inline; on success
+   *  the caller switches the view to polling (see TranscriptsView). */
+  onContinueToBrief: () => Promise<void>;
 }
 
 const QUALITY_LABEL: Record<TranscriptQuality, string> = {
@@ -39,38 +45,56 @@ function countMarkers(text: string, tag: string): number {
   return (text.match(re) || []).length;
 }
 
-export function TranscriptBriefV4({ result, onNewUpload, onEdit }: Props) {
+export function TranscriptBriefV4({ result, onNewUpload, onEdit, onContinueToBrief }: Props) {
   const [accordionOpen, setAccordionOpen] = useState(false);
+  const [normalizedAccordionOpen, setNormalizedAccordionOpen] = useState(false);
   const [qualityOpen, setQualityOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [continuing, setContinuing] = useState(false);
+  const [continueError, setContinueError] = useState<string | null>(null);
 
-  const unclearCount = useMemo(() => countMarkers(result.brief, "неразборчиво"), [result.brief]);
-  const conflictCount = useMemo(() => countMarkers(result.brief, "противоречие"), [result.brief]);
+  // primary_artifact decides what the MAIN content area shows — a
+  // normalized_transcript-only job never generated brief_content, so
+  // showing it here would just be an empty box, not an error (#1299 UX
+  // requirement).
+  const isNormalizedPrimary = result.primary_artifact === "normalized_transcript";
+  const primaryText = isNormalizedPrimary ? result.normalized_transcript : result.brief;
+  const primaryLabel = isNormalizedPrimary ? "транскрипт" : "BRIEF";
 
-  const briefHtml = useMemo(() => renderBriefHtml(result.brief), [result.brief]);
+  const unclearCount = useMemo(() => countMarkers(primaryText, "неразборчиво"), [primaryText]);
+  const conflictCount = useMemo(() => countMarkers(primaryText, "противоречие"), [primaryText]);
+
+  const primaryHtml = useMemo(() => renderBriefHtml(primaryText), [primaryText]);
   const transcriptHtml = useMemo(
     () => (result.transcript ? renderMarkdownHtml(result.transcript) : ""),
     [result.transcript]
   );
+  // Secondary tab only makes sense when BRIEF is the main content — when
+  // normalized_transcript IS the main content, showing it again here
+  // would be redundant.
+  const normalizedHtml = useMemo(
+    () => (!isNormalizedPrimary && result.normalized_transcript ? renderBriefHtml(result.normalized_transcript) : ""),
+    [isNormalizedPrimary, result.normalized_transcript]
+  );
 
   const onDownload = useCallback(() => {
-    const blob = new Blob([result.brief], { type: "text/markdown;charset=utf-8" });
+    const blob = new Blob([primaryText], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `BRIEF-${result.task_id}.md`;
+    a.download = `${isNormalizedPrimary ? "transcript" : "BRIEF"}-${result.task_id}.md`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [result.brief, result.task_id]);
+  }, [primaryText, isNormalizedPrimary, result.task_id]);
 
   const onCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(result.brief);
+      await navigator.clipboard.writeText(primaryText);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       const ta = document.createElement("textarea");
-      ta.value = result.brief;
+      ta.value = primaryText;
       document.body.appendChild(ta);
       ta.select();
       document.execCommand("copy");
@@ -78,7 +102,19 @@ export function TranscriptBriefV4({ result, onNewUpload, onEdit }: Props) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  }, [result.brief]);
+  }, [primaryText]);
+
+  const handleContinue = useCallback(async () => {
+    setContinuing(true);
+    setContinueError(null);
+    try {
+      await onContinueToBrief();
+    } catch (err) {
+      setContinueError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setContinuing(false);
+    }
+  }, [onContinueToBrief]);
 
   return (
     <div className="v4-panel v4-tpc-brief-panel">
@@ -116,20 +152,34 @@ export function TranscriptBriefV4({ result, onNewUpload, onEdit }: Props) {
           )}
         </div>
         <div className="v4-tpc-brief-actions">
-          <button type="button" className="v4-btn" onClick={onEdit}>
-            Редактировать
-          </button>
+          {!isNormalizedPrimary && (
+            <button type="button" className="v4-btn" onClick={onEdit}>
+              Редактировать
+            </button>
+          )}
           <button type="button" className="v4-btn" onClick={onCopy}>
-            {copied ? "Скопировано!" : "Копировать"}
+            {copied ? "Скопировано!" : `Копировать ${primaryLabel}`}
           </button>
           <button type="button" className="v4-btn" onClick={onDownload}>
             Скачать .md
           </button>
+          {result.output_mode === "normalized_transcript" && (
+            <button
+              type="button"
+              className="v4-btn v4-btn--pri"
+              disabled={continuing}
+              onClick={handleContinue}
+            >
+              {continuing ? "Генерация…" : "Сгенерировать BRIEF"}
+            </button>
+          )}
           <button type="button" className="v4-btn v4-btn--pri" onClick={onNewUpload}>
             Новый файл
           </button>
         </div>
       </div>
+
+      {continueError && <div className="v4-error">{continueError}</div>}
 
       {result.quality && result.quality_report && (
         <div
@@ -162,8 +212,28 @@ export function TranscriptBriefV4({ result, onNewUpload, onEdit }: Props) {
 
       <div
         className="v4-tpc-brief-content tpc-brief-content"
-        dangerouslySetInnerHTML={{ __html: briefHtml }}
+        dangerouslySetInnerHTML={{ __html: primaryHtml }}
       />
+
+      {normalizedHtml && (
+        <div className="v4-tpc-accordion">
+          <button
+            type="button"
+            className="v4-tpc-accordion-toggle"
+            aria-expanded={normalizedAccordionOpen}
+            onClick={() => setNormalizedAccordionOpen((v) => !v)}
+          >
+            <span className={`v4-tpc-accordion-arrow ${normalizedAccordionOpen ? "is-open" : ""}`}>▸</span>
+            Нормализованный транскрипт
+          </button>
+          {normalizedAccordionOpen && (
+            <div
+              className="v4-tpc-accordion-body tpc-brief-content"
+              dangerouslySetInnerHTML={{ __html: normalizedHtml }}
+            />
+          )}
+        </div>
+      )}
 
       {result.transcript && (
         <div className="v4-tpc-accordion">

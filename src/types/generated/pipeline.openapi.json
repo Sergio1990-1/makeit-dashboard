@@ -300,9 +300,30 @@
       },
       "Body_upload_transcript_transcript_upload_post": {
         "properties": {
+          "audio_preprocessing_profile": {
+            "default": "auto",
+            "title": "Audio Preprocessing Profile",
+            "type": "string"
+          },
           "language": {
             "default": "auto",
             "title": "Language",
+            "type": "string"
+          },
+          "meeting_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meeting Type"
+          },
+          "output_mode": {
+            "default": "brief",
+            "title": "Output Mode",
             "type": "string"
           },
           "project_context": {
@@ -321,10 +342,20 @@
             ],
             "title": "Resume"
           },
+          "stt_backend": {
+            "default": "auto",
+            "title": "Stt Backend",
+            "type": "string"
+          },
           "transcription_model": {
-            "default": "fast",
+            "default": "quality",
             "title": "Transcription Model",
             "type": "string"
+          },
+          "use_client_context": {
+            "default": true,
+            "title": "Use Client Context",
+            "type": "boolean"
           }
         },
         "title": "Body_upload_transcript_transcript_upload_post",
@@ -2196,6 +2227,159 @@
         "title": "RetroSummaryItem",
         "type": "object"
       },
+      "SpeakerInfo": {
+        "description": "One speaker entry in GET /transcript/{job_id}/speakers.\n\n``id``/``labels`` are the original diarization labels (e.g.\n\"SPEAKER_00\") from ``speaker_map`` — these are permanent for the life\nof the job, even after a merge/rename changes ``display_name``.\nSegment text itself never retains the raw label once enrichment\nsubstitutes a resolved name (see\n``transcript_processor._enrich_transcript_single``), so ``labels`` is\nwhat a merge request addresses, not ``display_name``.",
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "labels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Labels",
+            "type": "array"
+          },
+          "quotes": {
+            "items": {
+              "$ref": "#/components/schemas/SpeakerQuote"
+            },
+            "title": "Quotes",
+            "type": "array"
+          },
+          "segment_count": {
+            "default": 0,
+            "title": "Segment Count",
+            "type": "integer"
+          },
+          "uncertain": {
+            "default": false,
+            "title": "Uncertain",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "display_name"
+        ],
+        "title": "SpeakerInfo",
+        "type": "object"
+      },
+      "SpeakerMergeRequest": {
+        "description": "Body of POST /transcript/{job_id}/speakers/merge.\n\n``speaker_ids`` are original diarization labels (``SpeakerInfo.id`` /\n``.labels``, e.g. \"SPEAKER_00\"). A single id is a plain rename; two or\nmore ids merge previously-separate speakers into one.",
+        "properties": {
+          "canonical_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Canonical Name",
+            "type": "string"
+          },
+          "speaker_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Speaker Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "canonical_name",
+          "speaker_ids"
+        ],
+        "title": "SpeakerMergeRequest",
+        "type": "object"
+      },
+      "SpeakerMergeResponse": {
+        "description": "Response for POST /transcript/{job_id}/speakers/merge.",
+        "properties": {
+          "brief_stale": {
+            "title": "Brief Stale",
+            "type": "boolean"
+          },
+          "canonical_name": {
+            "title": "Canonical Name",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "normalized_transcript": {
+            "title": "Normalized Transcript",
+            "type": "string"
+          },
+          "speaker_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Speaker Ids",
+            "type": "array"
+          },
+          "updated_segment_count": {
+            "title": "Updated Segment Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job_id",
+          "canonical_name",
+          "speaker_ids",
+          "updated_segment_count",
+          "normalized_transcript",
+          "brief_stale"
+        ],
+        "title": "SpeakerMergeResponse",
+        "type": "object"
+      },
+      "SpeakerQuote": {
+        "description": "One representative quote for a speaker in GET /transcript/{job_id}/speakers.",
+        "properties": {
+          "text": {
+            "default": "",
+            "title": "Text",
+            "type": "string"
+          },
+          "timestamp": {
+            "default": "",
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "title": "SpeakerQuote",
+        "type": "object"
+      },
+      "SpeakersResponse": {
+        "description": "Response for GET /transcript/{job_id}/speakers.",
+        "properties": {
+          "brief_stale": {
+            "default": false,
+            "title": "Brief Stale",
+            "type": "boolean"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "speakers": {
+            "items": {
+              "$ref": "#/components/schemas/SpeakerInfo"
+            },
+            "title": "Speakers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "job_id"
+        ],
+        "title": "SpeakersResponse",
+        "type": "object"
+      },
       "StartRequest": {
         "description": "Request body for POST /pipeline/start.",
         "properties": {
@@ -2382,6 +2566,18 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "transcription_model": {
+            "default": "draft",
+            "title": "Transcription Model",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
           }
         },
         "required": [
@@ -2443,6 +2639,11 @@
             "title": "Brief Content",
             "type": "string"
           },
+          "brief_stale": {
+            "default": false,
+            "title": "Brief Stale",
+            "type": "boolean"
+          },
           "contradiction_count": {
             "default": 0,
             "title": "Contradiction Count",
@@ -2465,6 +2666,21 @@
           },
           "job_id": {
             "title": "Job Id",
+            "type": "string"
+          },
+          "normalized_transcript": {
+            "default": "",
+            "title": "Normalized Transcript",
+            "type": "string"
+          },
+          "output_mode": {
+            "default": "brief",
+            "title": "Output Mode",
+            "type": "string"
+          },
+          "primary_artifact": {
+            "default": "brief",
+            "title": "Primary Artifact",
             "type": "string"
           },
           "project": {
@@ -2512,6 +2728,13 @@
             "default": 0,
             "title": "Uncertain Count",
             "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
           }
         },
         "required": [
@@ -5347,6 +5570,46 @@
         "summary": "Settings Put"
       }
     },
+    "/transcript/continue/{job_id}": {
+      "post": {
+        "description": "Continue a completed normalized_transcript job to full BRIEF generation.\n\nReuses the job's existing manifest/artifacts (intake + stt already\nfinished) — does not re-run audio transcription/STT (see\n``stt_already_done`` in ``_process_transcript_job``). Only valid for\na job whose status is \"done\" and output_mode is\n\"normalized_transcript\"; any other state is a 409 (already running,\nerrored, not done, or already a brief job).",
+        "operationId": "continue_to_brief_transcript_continue__job_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptJobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Continue To Brief"
+      }
+    },
     "/transcript/debug/{job_id}": {
       "get": {
         "description": "Get debug info for a transcript job.\n\nTraceback is only returned when ``?include_traceback=true`` is\npassed explicitly — avoids leaking internal paths via the\nnginx-proxied VPS endpoint by default.",
@@ -5658,6 +5921,136 @@
           }
         },
         "summary": "Delete Transcript"
+      }
+    },
+    "/transcript/{job_id}/regenerate-brief": {
+      "post": {
+        "description": "Regenerate a BRIEF that a speaker merge marked stale.\n\nOnly valid for a job whose output_mode is \"brief\", status is\n\"done\", and whose BRIEF is actually flagged stale (see\n``is_brief_stale`` / ``apply_speaker_merge``) — any other state is a\n409 (running, wrong output_mode, not done, or not stale — a\nredundant call is rejected rather than treated as a silent no-op,\nmatching /transcript/continue's existing \"wrong state\" convention).\nMissing manifest/stt artifacts is a 422, matching /continue's\nmissing-upload-file guard.\n\nDispatches the same ``_process_transcript_job(..., is_resume=True)``\nworker used by fresh uploads and /continue. No audio is\nre-transcribed: apply_speaker_merge already rolled this job's\nmanifest checkpoint back to ``[intake, stt]`` when it set the stale\nflag, so the resume path's ``stt_already_done`` guard skips\nstraight to numeric_facts/enrichment/structuring/synthesis, which\nreprocess from the corrected transcript. The stale flag itself is\nonly cleared once synthesis actually succeeds (see\n``process_transcript``'s stage loop) — the old BRIEF.md is left on\ndisk untouched in the meantime, but job status flips to \"queued\"\nimmediately so status/result endpoints don't present it as current\nmid-regeneration.",
+        "operationId": "regenerate_stale_brief_transcript__job_id__regenerate_brief_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptJobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regenerate Stale Brief"
+      }
+    },
+    "/transcript/{job_id}/speakers": {
+      "get": {
+        "description": "List speakers detected in a job's STT output for human review.\n\nReads directly from enriched_stt.json on disk (not job-dict memory)\nso it works identically for a freshly-processed job and one\nrestored after a restart. Takes the same per-job resume lock as\nmerge/continue so it never reads artifacts mid-write (_save_artifact\nisn't an atomic write).",
+        "operationId": "get_transcript_speakers_transcript__job_id__speakers_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpeakersResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Transcript Speakers"
+      }
+    },
+    "/transcript/{job_id}/speakers/merge": {
+      "post": {
+        "description": "Merge/rename one or more speakers and rebuild normalized_transcript.md.\n\nIdempotent — repeating an identical request is a no-op the second\ntime. If this job's BRIEF was already generated, its manifest\ncheckpoint is rolled back to stt and ``brief_stale=True`` is\nreturned so callers don't mistake the existing BRIEF for current\n(see ``apply_speaker_merge`` for the full rationale).\n\nThe done/running check is re-verified *after* acquiring the resume\nlock, not before — a concurrent ``/transcript/continue/{job_id}``\ncall can flip status to \"queued\" and dispatch its own background\ntask in the window between an earlier check and this lock being\nacquired. Re-checking inside the lock (mirroring /continue's own\npattern) closes that window instead of racing the newly-dispatched\nbackground task's writes to the same artifact files.",
+        "operationId": "merge_transcript_speakers_transcript__job_id__speakers_merge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpeakerMergeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpeakerMergeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Merge Transcript Speakers"
       }
     }
   }

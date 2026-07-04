@@ -27,6 +27,27 @@ type BackendTranscriptStatusResponse = components["schemas"]["TranscriptStatusRe
 type BackendTranscriptResultResponse = components["schemas"]["TranscriptResultResponse"];
 type BackendTranscriptListItem = components["schemas"]["TranscriptListItem"];
 type TranscriptBriefUpdateRequest = components["schemas"]["TranscriptBriefUpdateRequest"];
+type BackendSpeakersResponse = components["schemas"]["SpeakersResponse"];
+type BackendSpeakerInfo = components["schemas"]["SpeakerInfo"];
+type SpeakerMergeRequestBody = components["schemas"]["SpeakerMergeRequest"];
+type BackendSpeakerMergeResponse = components["schemas"]["SpeakerMergeResponse"];
+
+/**
+ * Output mode choice — unlike `TranscriptionModel`, both sides already
+ * agree on these exact two string literals (`TranscriptResultResponse.
+ * output_mode`/`.primary_artifact`, `Body_upload_..._post.output_mode`
+ * are all free-text `string` in the generated snapshot, but the backend
+ * Pydantic field only ever produces these two values — see
+ * makeit-pipeline's transcript_processor.py). Narrowed via
+ * `normalizeOutputMode` rather than cast, so an unrecognized backend
+ * value falls back to "brief" instead of silently typing as something
+ * invalid.
+ */
+export type OutputMode = "brief" | "normalized_transcript";
+
+export function normalizeOutputMode(raw: unknown): OutputMode {
+  return raw === "normalized_transcript" ? "normalized_transcript" : "brief";
+}
 
 /**
  * Normalized result of `uploadTranscript`/`retryTranscript`. Deliberate
@@ -238,13 +259,23 @@ function adaptQualityReport(raw: unknown): QualityReport | null {
  * also carries `*_count` stats / `project` / `status` which the BRIEF
  * viewer does not surface — intentionally dropped, not drift. Runtime
  * preserved.
+ *
+ * `output_mode`/`primary_artifact`/`normalized_transcript`/`brief_stale`
+ * (#1296-#1299 in makeit-pipeline) tell the UI which artifact is the
+ * deliverable for this job and whether a speaker merge has invalidated
+ * an existing BRIEF — see `primary_artifact` docs on the backend
+ * `TranscriptResultResponse` model.
  */
 export interface TranscriptResult {
   task_id: string;
-  brief: string;       // BRIEF.md content (markdown)
+  brief: string;       // BRIEF.md content (markdown) — empty for a normalized_transcript-only job, not an error
   transcript: string;  // cleaned transcript text
   quality: TranscriptQuality | null;
   quality_report: QualityReport | null;
+  output_mode: OutputMode;
+  primary_artifact: OutputMode; // which of `brief` / `normalized_transcript` is the deliverable
+  normalized_transcript: string; // STT-corrected transcript; populated whenever the stt stage has run
+  brief_stale: boolean; // true once a speaker merge invalidated an existing BRIEF (see regenerateBrief)
 }
 
 export async function fetchTranscriptResult(taskId: string): Promise<TranscriptResult> {
@@ -267,6 +298,10 @@ export async function fetchTranscriptResult(taskId: string): Promise<TranscriptR
     transcript: data.transcript_text || "",
     quality: extractQuality(data.quality_report),
     quality_report: adaptQualityReport(data.quality_report),
+    output_mode: normalizeOutputMode(data.output_mode),
+    primary_artifact: normalizeOutputMode(data.primary_artifact),
+    normalized_transcript: data.normalized_transcript || "",
+    brief_stale: data.brief_stale ?? false,
   };
 }
 
@@ -374,14 +409,26 @@ export async function saveTranscriptBrief(
 // `UploadFile` part; openapi-typescript intentionally omits binary parts
 // from the urlencoded body schema, so it has no key to bind — sent with
 // its literal name, runtime unchanged.)
+//
+// `audio_preprocessing_profile`/`meeting_type`/`stt_backend`/
+// `use_client_context` were added to the backend schema by unrelated
+// earlier work and are listed here only to satisfy the exhaustive
+// `Record<keyof Body, ...>` constraint — this client doesn't expose UI
+// for them yet and doesn't append them to the form (backend defaults
+// apply). Only `output_mode` is actually used, by `uploadTranscript`.
 const UPLOAD_FIELDS: Record<
   keyof components["schemas"]["Body_upload_transcript_transcript_upload_post"],
   string
 > = {
+  audio_preprocessing_profile: "audio_preprocessing_profile",
   language: "language",
+  meeting_type: "meeting_type",
+  output_mode: "output_mode",
   project_context: "project_context",
   resume: "resume",
+  stt_backend: "stt_backend",
   transcription_model: "transcription_model",
+  use_client_context: "use_client_context",
 };
 
 /** Upload-progress callback: bytes sent so far and total bytes. */
@@ -420,11 +467,13 @@ export async function uploadTranscript(
   transcriptionModel: TranscriptionModel = "quality",
   resumeJobId?: string,
   onProgress?: UploadProgressFn,
+  outputMode: OutputMode = "brief",
 ): Promise<TranscriptUploadResponse> {
   const form = new FormData();
   form.append("file", file);
   form.append(UPLOAD_FIELDS.project_context, project);
   form.append(UPLOAD_FIELDS.transcription_model, transcriptionModel);
+  form.append(UPLOAD_FIELDS.output_mode, outputMode);
   if (resumeJobId) {
     form.append(UPLOAD_FIELDS.resume, resumeJobId);
   }
@@ -486,4 +535,190 @@ export async function deleteTranscript(taskId: string): Promise<void> {
     const text = await res.text().catch(() => "");
     throw new Error(`Delete failed (${res.status}): ${text}`);
   }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Continue / regenerate / speaker review (#1297-#1299 in makeit-pipeline).
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * FastAPI error bodies are `{"detail": "..."}` JSON, not plain text — the
+ * pre-existing endpoints above dump the raw body into their thrown message
+ * (established convention), but continue/regenerate/merge each have
+ * several DISTINCT, actionable 404/409/422 reasons the UI needs to
+ * surface cleanly rather than a raw JSON blob. Falls back to the raw text
+ * if it isn't JSON or has no string `detail`.
+ */
+function extractErrorDetail(rawText: string): string {
+  try {
+    const parsed = JSON.parse(rawText) as { detail?: unknown };
+    if (typeof parsed.detail === "string" && parsed.detail) return parsed.detail;
+  } catch {
+    /* not JSON — fall through to raw text */
+  }
+  return rawText;
+}
+
+/**
+ * `POST /transcript/continue/{job_id}` — continue a completed
+ * normalized_transcript job to full BRIEF generation, reusing the
+ * already-completed intake/stt stages (no re-transcription). Returns the
+ * same normalized shape as `uploadTranscript` (`TranscriptUploadResponse`)
+ * since the backend response is the same `TranscriptJobResponse` wire
+ * shape — callers should switch to polling `fetchTranscriptStatus` on
+ * success, same as after upload.
+ *
+ * Throws a friendly Russian message for 404 (job gone) / 409 (wrong
+ * output_mode, already running, or not done) / 422 (original upload file
+ * no longer locatable) — callers display `err.message` directly rather
+ * than crashing (#1299 UX requirement: these are recoverable states).
+ */
+export async function continueToBrief(taskId: string): Promise<TranscriptUploadResponse> {
+  const res = await fetch(
+    `${PIPELINE_BASE_URL}/transcript/continue/${encodeURIComponent(taskId)}`,
+    { method: "POST" },
+  );
+  if (!res.ok) {
+    const detail = extractErrorDetail(await res.text().catch(() => ""));
+    if (res.status === 404) throw new Error("Задача не найдена — возможно, она была удалена.");
+    if (res.status === 409) throw new Error(`Нельзя продолжить обработку: ${detail}`);
+    if (res.status === 422) throw new Error(`Нельзя продолжить: ${detail}`);
+    throw new Error(`Continue failed (${res.status}): ${detail}`);
+  }
+  const data = (await res.json()) as BackendTranscriptJobResponse;
+  return { task_id: data.job_id, status: data.status };
+}
+
+/**
+ * `POST /transcript/{job_id}/regenerate-brief` — rebuild a BRIEF that a
+ * speaker merge marked stale (`TranscriptResult.brief_stale` /
+ * `SpeakersResult.brief_stale`). Same response shape / polling handoff as
+ * `continueToBrief`.
+ *
+ * Throws a friendly Russian message for 404 / 409 (wrong output_mode,
+ * already running, not done, or not stale — a redundant call is a 409,
+ * not a silent no-op, matching the backend's own convention) / 422
+ * (manifest or stt artifacts missing).
+ */
+export async function regenerateBrief(taskId: string): Promise<TranscriptUploadResponse> {
+  const res = await fetch(
+    `${PIPELINE_BASE_URL}/transcript/${encodeURIComponent(taskId)}/regenerate-brief`,
+    { method: "POST" },
+  );
+  if (!res.ok) {
+    const detail = extractErrorDetail(await res.text().catch(() => ""));
+    if (res.status === 404) throw new Error("Задача не найдена — возможно, она была удалена.");
+    if (res.status === 409) throw new Error(`Нельзя пересобрать BRIEF: ${detail}`);
+    if (res.status === 422) throw new Error(`Нельзя пересобрать BRIEF: ${detail}`);
+    throw new Error(`Regenerate failed (${res.status}): ${detail}`);
+  }
+  const data = (await res.json()) as BackendTranscriptJobResponse;
+  return { task_id: data.job_id, status: data.status };
+}
+
+/**
+ * `GET /transcript/{job_id}/speakers` — the dashboard's normalized
+ * refinement of the backend `SpeakersResponse`. `id`/`labels` are the
+ * ORIGINAL diarization labels (e.g. "SPEAKER_00") — permanent for the
+ * life of the job, and what `mergeTranscriptSpeakers` must be called
+ * with. `display_name` is the current resolved name and is NOT a stable
+ * identifier (a merge/rename changes it) — see `SpeakerInfo` docs on the
+ * backend model.
+ */
+export interface SpeakerQuote {
+  timestamp: string;
+  text: string;
+}
+
+export interface SpeakerInfo {
+  id: string;
+  labels: string[];
+  display_name: string;
+  segment_count: number;
+  quotes: SpeakerQuote[];
+  uncertain: boolean;
+}
+
+export interface SpeakersResult {
+  task_id: string;
+  speakers: SpeakerInfo[];
+  brief_stale: boolean;
+}
+
+function adaptSpeakerInfo(s: BackendSpeakerInfo): SpeakerInfo {
+  return {
+    id: s.id,
+    labels: s.labels ?? [],
+    display_name: s.display_name,
+    segment_count: s.segment_count,
+    quotes: (s.quotes ?? []).map((q) => ({ timestamp: q.timestamp, text: q.text })),
+    uncertain: s.uncertain,
+  };
+}
+
+export async function fetchTranscriptSpeakers(taskId: string): Promise<SpeakersResult> {
+  const res = await fetch(
+    `${PIPELINE_BASE_URL}/transcript/${encodeURIComponent(taskId)}/speakers`,
+    { cache: "no-store" },
+  );
+  if (!res.ok) {
+    const detail = extractErrorDetail(await res.text().catch(() => ""));
+    if (res.status === 404) throw new Error("Задача не найдена — возможно, она была удалена.");
+    if (res.status === 409) throw new Error(`Список спикеров сейчас недоступен: ${detail}`);
+    if (res.status === 422) throw new Error(`Список спикеров недоступен: ${detail}`);
+    throw new Error(`Failed to load speakers (${res.status}): ${detail}`);
+  }
+  const data = (await res.json()) as BackendSpeakersResponse;
+  return {
+    task_id: data.job_id,
+    speakers: (data.speakers ?? []).map(adaptSpeakerInfo),
+    brief_stale: data.brief_stale,
+  };
+}
+
+/**
+ * `POST /transcript/{job_id}/speakers/merge` — merge/rename one or more
+ * speakers. `speakerIds` MUST be the stable diarization labels
+ * (`SpeakerInfo.id`/`.labels`), never `display_name` — a single id is a
+ * plain rename, two or more merge previously-separate speakers into one.
+ */
+export interface SpeakerMergeResult {
+  task_id: string;
+  canonical_name: string;
+  speaker_ids: string[];
+  updated_segment_count: number;
+  normalized_transcript: string;
+  brief_stale: boolean;
+}
+
+export async function mergeTranscriptSpeakers(
+  taskId: string,
+  canonicalName: string,
+  speakerIds: string[],
+): Promise<SpeakerMergeResult> {
+  const body: SpeakerMergeRequestBody = { canonical_name: canonicalName, speaker_ids: speakerIds };
+  const res = await fetch(
+    `${PIPELINE_BASE_URL}/transcript/${encodeURIComponent(taskId)}/speakers/merge`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+  if (!res.ok) {
+    const detail = extractErrorDetail(await res.text().catch(() => ""));
+    if (res.status === 404) throw new Error("Задача не найдена — возможно, она была удалена.");
+    if (res.status === 409) throw new Error(`Нельзя объединить спикеров: ${detail}`);
+    if (res.status === 422) throw new Error(`Нельзя объединить спикеров: ${detail}`);
+    throw new Error(`Merge failed (${res.status}): ${detail}`);
+  }
+  const data = (await res.json()) as BackendSpeakerMergeResponse;
+  return {
+    task_id: data.job_id,
+    canonical_name: data.canonical_name,
+    speaker_ids: data.speaker_ids,
+    updated_segment_count: data.updated_segment_count,
+    normalized_transcript: data.normalized_transcript,
+    brief_stale: data.brief_stale,
+  };
 }
