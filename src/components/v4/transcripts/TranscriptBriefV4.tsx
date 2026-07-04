@@ -1,6 +1,11 @@
 import { useCallback, useMemo, useState } from "react";
 import { renderBriefHtml, renderMarkdownHtml } from "../../../utils/transcript-markdown";
-import type { QualityCheck, TranscriptQuality, TranscriptResult } from "../../../utils/transcript";
+import {
+  downloadTranscriptDocx,
+  type QualityCheck,
+  type TranscriptQuality,
+  type TranscriptResult,
+} from "../../../utils/transcript";
 
 interface Props {
   result: TranscriptResult;
@@ -57,6 +62,8 @@ export function TranscriptBriefV4({ result, onNewUpload, onEdit, onContinueToBri
   const [copied, setCopied] = useState(false);
   const [continuing, setContinuing] = useState(false);
   const [continueError, setContinueError] = useState<string | null>(null);
+  const [downloadingDocx, setDownloadingDocx] = useState(false);
+  const [docxError, setDocxError] = useState<string | null>(null);
 
   // primary_artifact decides what the MAIN content area shows — a
   // normalized_transcript-only job never generated brief_content, so
@@ -108,6 +115,18 @@ export function TranscriptBriefV4({ result, onNewUpload, onEdit, onContinueToBri
       setTimeout(() => setCopied(false), 2000);
     }
   }, [primaryText]);
+
+  const handleDownloadDocx = useCallback(async () => {
+    setDownloadingDocx(true);
+    setDocxError(null);
+    try {
+      await downloadTranscriptDocx(result.task_id);
+    } catch (err) {
+      setDocxError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDownloadingDocx(false);
+    }
+  }, [result.task_id]);
 
   const handleContinue = useCallback(async () => {
     setContinuing(true);
@@ -171,6 +190,14 @@ export function TranscriptBriefV4({ result, onNewUpload, onEdit, onContinueToBri
           <button type="button" className="v4-btn" onClick={onDownload}>
             Скачать .md
           </button>
+          <button
+            type="button"
+            className="v4-btn"
+            disabled={downloadingDocx}
+            onClick={handleDownloadDocx}
+          >
+            {downloadingDocx ? "Скачивание…" : "Скачать DOCX"}
+          </button>
           {result.output_mode === "normalized_transcript" && (
             <button
               type="button"
@@ -188,6 +215,7 @@ export function TranscriptBriefV4({ result, onNewUpload, onEdit, onContinueToBri
       </div>
 
       {continueError && <div className="v4-error">{continueError}</div>}
+      {docxError && <div className="v4-error">{docxError}</div>}
 
       {result.quality && result.quality_report && (
         <div

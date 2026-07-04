@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { TranscriptBriefV4 } from "../src/components/v4/transcripts/TranscriptBriefV4";
 import type { TranscriptResult } from "../src/utils/transcript";
@@ -162,5 +162,105 @@ describe("TranscriptBriefV4 — processing_profile badge", () => {
       />,
     );
     expect(screen.getByText("Dev handoff")).toBeTruthy();
+  });
+});
+
+describe("TranscriptBriefV4 — DOCX download", () => {
+  beforeEach(() => {
+    URL.createObjectURL = vi.fn(() => "blob:mock-url");
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  });
+
+  it("shows the DOCX download button for a brief-primary result", () => {
+    render(
+      <TranscriptBriefV4
+        result={makeResult()}
+        onNewUpload={vi.fn()}
+        onEdit={vi.fn()}
+        onContinueToBrief={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Скачать DOCX")).toBeTruthy();
+  });
+
+  it("shows the DOCX download button for a normalized_transcript-primary result", () => {
+    render(
+      <TranscriptBriefV4
+        result={makeResult({
+          brief: "",
+          output_mode: "normalized_transcript",
+          primary_artifact: "normalized_transcript",
+          normalized_transcript: "# Транскрипт\n\nПривет",
+        })}
+        onNewUpload={vi.fn()}
+        onEdit={vi.fn()}
+        onContinueToBrief={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Скачать DOCX")).toBeTruthy();
+  });
+
+  it("clicking the button calls the export endpoint and triggers a browser download", async () => {
+    const blob = new Blob(["docx-bytes"], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(blob, {
+          status: 200,
+          headers: { "content-disposition": 'attachment; filename="BRIEF-job-1.docx"' },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <TranscriptBriefV4
+        result={makeResult()}
+        onNewUpload={vi.fn()}
+        onEdit={vi.fn()}
+        onContinueToBrief={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Скачать DOCX"));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(String(fetchMock.mock.calls[0][0])).toContain(
+      "/transcript/result/job-1/export/docx",
+    );
+    await waitFor(() => expect(URL.createObjectURL).toHaveBeenCalled());
+  });
+
+  it("shows a recoverable inline error, without crashing, when the download fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({ detail: "Job job-1 has no brief content to export yet" }),
+            { status: 422 },
+          ),
+      ),
+    );
+
+    render(
+      <TranscriptBriefV4
+        result={makeResult()}
+        onNewUpload={vi.fn()}
+        onEdit={vi.fn()}
+        onContinueToBrief={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Скачать DOCX"));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Нельзя скачать DOCX/)).toBeTruthy(),
+    );
+    // Button is back to its idle label, not stuck — and the rest of the
+    // panel (e.g. the BRIEF content) is still rendered, not crashed.
+    expect(screen.getByText("Скачать DOCX")).toBeTruthy();
+    expect(screen.getByText("Решение принято.")).toBeTruthy();
   });
 });

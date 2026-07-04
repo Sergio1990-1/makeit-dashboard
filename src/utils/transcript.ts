@@ -653,6 +653,44 @@ export async function regenerateBrief(taskId: string): Promise<TranscriptUploadR
 }
 
 /**
+ * `GET /transcript/result/{job_id}/export/docx` (makeit-pipeline #1301) —
+ * download the job's primary artifact (BRIEF or normalized_transcript,
+ * whichever `TranscriptResult.primary_artifact` currently is — the backend
+ * selects the same way `fetchTranscriptResult` does) as a DOCX file and
+ * trigger a browser download. Pure read-and-convert on the backend: it
+ * costs no LLM/STT work and is safe to call repeatedly.
+ *
+ * Throws a friendly Russian message for 404 (job gone) / 422 (artifact not
+ * generated yet) — callers display `err.message` inline, same convention
+ * as `continueToBrief`/`regenerateBrief`.
+ */
+export async function downloadTranscriptDocx(taskId: string): Promise<void> {
+  const res = await fetch(
+    `${PIPELINE_BASE_URL}/transcript/result/${encodeURIComponent(taskId)}/export/docx`,
+  );
+  if (!res.ok) {
+    const detail = extractErrorDetail(await res.text().catch(() => ""));
+    if (res.status === 404) throw new Error("Задача не найдена — возможно, она была удалена.");
+    if (res.status === 422) throw new Error(`Нельзя скачать DOCX: ${detail}`);
+    throw new Error(`Export failed (${res.status}): ${detail}`);
+  }
+  const blob = await res.blob();
+  // Filename comes from the backend's Content-Disposition header
+  // ("BRIEF-{id}.docx" / "transcript-{id}.docx") — the client doesn't need
+  // to re-derive the primary_artifact naming convention itself.
+  const disposition = res.headers.get("content-disposition") || "";
+  const match = disposition.match(/filename="?([^";]+)"?/);
+  const filename = match ? match[1] : `transcript-${taskId}.docx`;
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
  * `GET /transcript/{job_id}/speakers` — the dashboard's normalized
  * refinement of the backend `SpeakersResponse`. `id`/`labels` are the
  * ORIGINAL diarization labels (e.g. "SPEAKER_00") — permanent for the
