@@ -23,6 +23,7 @@ import { TranscriptEditorV4 } from "./TranscriptEditorV4";
 import { TranscriptHistoryV4 } from "./TranscriptHistoryV4";
 import { TranscriptSpeakersV4 } from "./TranscriptSpeakersV4";
 import { TranscriptStaleBriefBanner } from "./TranscriptStaleBriefBanner";
+import { TranscriptUncertainSpeakersBanner } from "./TranscriptUncertainSpeakersBanner";
 
 interface Props {
   projects: ProjectConfig[];
@@ -74,6 +75,9 @@ export function TranscriptsView({ projects }: Props) {
   // brief_stale reported by the speakers panel's own fetch (independent of
   // briefResult.brief_stale — see TranscriptStaleBriefBanner usage below).
   const [speakersBriefStale, setSpeakersBriefStale] = useState(false);
+  // Count of speakers currently flagged `uncertain` (see SpeakerInfo.uncertain),
+  // reported by the speakers panel — drives TranscriptUncertainSpeakersBanner (#545).
+  const [uncertainSpeakerCount, setUncertainSpeakerCount] = useState(0);
 
   // Aggregate counters from history (updates with refreshKey + initial load)
   const [agg, setAgg] = useState({ total: 0, active: 0, done: 0, error: 0 });
@@ -235,6 +239,7 @@ export function TranscriptsView({ projects }: Props) {
     setActiveTaskId(null);
     setHistoryRefreshKey((k) => k + 1);
     setSpeakersBriefStale(false);
+    setUncertainSpeakerCount(0);
     try {
       const data = await fetchTranscriptResult(taskId);
       setBriefResult(data);
@@ -260,6 +265,7 @@ export function TranscriptsView({ projects }: Props) {
     setUploadError(null);
     setLoadingBrief(true);
     setSpeakersBriefStale(false);
+    setUncertainSpeakerCount(0);
     try {
       const data = await fetchTranscriptResult(taskId);
       setBriefResult(data);
@@ -353,6 +359,7 @@ export function TranscriptsView({ projects }: Props) {
   }, [briefResult]);
 
   const briefStale = (briefResult?.brief_stale ?? false) || speakersBriefStale;
+  const hasUncertain = uncertainSpeakerCount > 0;
 
   const showUploadForm =
     !activeTaskId && !briefResult && !loadingBrief && !batchActive && batchFiles.length === 0;
@@ -425,6 +432,9 @@ export function TranscriptsView({ projects }: Props) {
           {briefStale && (
             <TranscriptStaleBriefBanner onRegenerate={onRegenerateBriefClick} />
           )}
+          {hasUncertain && (
+            <TranscriptUncertainSpeakersBanner count={uncertainSpeakerCount} />
+          )}
           <TranscriptBriefV4
             result={briefResult}
             onNewUpload={onNewUpload}
@@ -435,6 +445,7 @@ export function TranscriptsView({ projects }: Props) {
             taskId={briefResult.task_id}
             onMerged={onSpeakersMerged}
             onBriefStaleChange={setSpeakersBriefStale}
+            onUncertainCountChange={setUncertainSpeakerCount}
           />
         </>
       )}

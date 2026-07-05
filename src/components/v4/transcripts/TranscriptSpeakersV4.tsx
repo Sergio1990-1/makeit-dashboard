@@ -15,9 +15,19 @@ interface Props {
    *  the parent can combine `speakers.brief_stale` with `result.brief_stale`
    *  (see TranscriptsView — either source can lag right after a merge). */
   onBriefStaleChange?: (stale: boolean) => void;
+  /** Called whenever this panel loads/reloads its own SpeakersResult, with
+   *  the count of speakers currently flagged `uncertain` — lets the parent
+   *  show a reminder banner before the BRIEF is finalized (#545). Mirrors
+   *  `onBriefStaleChange` above. */
+  onUncertainCountChange?: (count: number) => void;
 }
 
-export function TranscriptSpeakersV4({ taskId, onMerged, onBriefStaleChange }: Props) {
+export function TranscriptSpeakersV4({
+  taskId,
+  onMerged,
+  onBriefStaleChange,
+  onUncertainCountChange,
+}: Props) {
   const [speakers, setSpeakers] = useState<SpeakerInfo[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -34,14 +44,16 @@ export function TranscriptSpeakersV4({ taskId, onMerged, onBriefStaleChange }: P
       const data = await fetchTranscriptSpeakers(taskId);
       setSpeakers(data.speakers);
       onBriefStaleChange?.(data.brief_stale);
+      onUncertainCountChange?.(data.speakers.filter((s) => s.uncertain).length);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
-    // onBriefStaleChange intentionally excluded — TranscriptsView passes a
-    // stable setState function, and including it would only matter if the
-    // caller passed a new closure each render (it doesn't here).
+    // onBriefStaleChange/onUncertainCountChange intentionally excluded —
+    // TranscriptsView passes stable setState functions, and including them
+    // would only matter if the caller passed a new closure each render (it
+    // doesn't here).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId]);
 
