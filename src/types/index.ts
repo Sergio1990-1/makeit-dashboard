@@ -116,7 +116,7 @@ export interface Filters {
   status: IssueStatus | null;
 }
 
-export type TabId = "dashboard" | "projects" | "milestones" | "uptime" | "audit" | "pipeline" | "transcripts" | "research" | "specs" | "quality" | "codex-quality" | "debate";
+export type TabId = "dashboard" | "projects" | "milestones" | "uptime" | "audit" | "pipeline" | "transcripts" | "research" | "specs" | "quality" | "codex-quality" | "debate" | "project-memory";
 
 // ── Research / Discovery ──
 

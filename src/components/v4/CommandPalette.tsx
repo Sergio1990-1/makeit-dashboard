@@ -34,6 +34,7 @@ const TAB_LABEL: Record<TabId, string> = {
   uptime: "Мониторинг",
   pipeline: "Pipeline",
   transcripts: "Транскрипты",
+  "project-memory": "Память проекта",
   audit: "Аудит",
   research: "Research",
   specs: "Specs",

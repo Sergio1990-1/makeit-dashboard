@@ -8,6 +8,7 @@ import { MonitoringView } from "./components/v4/monitoring/MonitoringView";
 import { AuditView } from "./components/v4/audit/AuditView";
 import { PipelineView } from "./components/v4/pipeline/PipelineView";
 import { TranscriptsView } from "./components/v4/transcripts/TranscriptsView";
+import { ProjectMemoryView } from "./components/v4/projectmemory/ProjectMemoryView";
 import { ResearchView } from "./components/v4/research/ResearchView";
 import { SpecsView } from "./components/v4/specs/SpecsView";
 import { QualityView } from "./components/v4/quality/QualityView";
@@ -54,6 +55,7 @@ const TAB_CRUMBS: Record<TabId, string> = {
   uptime: "Мониторинг",
   pipeline: "Pipeline",
   transcripts: "Транскрипты",
+  "project-memory": "Память проекта",
   audit: "Аудит",
   research: "Research",
   specs: "Specs",
@@ -142,7 +144,7 @@ function AppInner({ onFirstFetchDone }: AppInnerProps = {}) {
 
   const VALID_TABS: TabId[] = [
     "dashboard", "projects", "milestones", "uptime", "audit",
-    "pipeline", "transcripts", "research", "specs", "quality", "codex-quality", "debate",
+    "pipeline", "transcripts", "project-memory", "research", "specs", "quality", "codex-quality", "debate",
   ];
   const ACTIVE_TAB_KEY = "makeit.activeTab";
   const [tab, setTabRaw] = useState<TabId>(() => {
@@ -659,6 +661,13 @@ function AppInner({ onFirstFetchDone }: AppInnerProps = {}) {
           {visitedTabs.has("transcripts") && (
             <ErrorBoundary fallback="Ошибка вкладки Транскрипты">
               <TranscriptsView projects={PROJECTS} />
+            </ErrorBoundary>
+          )}
+        </div>
+        <div style={{ display: tab === "project-memory" ? undefined : "none" }}>
+          {visitedTabs.has("project-memory") && (
+            <ErrorBoundary fallback="Ошибка вкладки Память проекта">
+              <ProjectMemoryView projects={PROJECTS} />
             </ErrorBoundary>
           )}
         </div>
