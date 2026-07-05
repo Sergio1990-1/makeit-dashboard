@@ -9933,3 +9933,111 @@ ul.v4-rsh-list {
 .v4-pdigest-modal .v4-modal-body .v4-pdigest-md {
   font-size: 13px;
 }
+
+/* ProjectMemoryView (#547) — dictionary / client_context / ontology editor */
+.v4-pmv-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.v4-pmv-body {
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.v4-pmv-note {
+  font-size: 12px;
+  color: var(--mk-ink-700);
+  background: var(--mk-surface-2);
+  border-radius: var(--mk-r-sm);
+  padding: 8px 12px;
+}
+.v4-pmv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.v4-pmv-table th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mk-ink-500);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--mk-line-soft);
+}
+.v4-pmv-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--mk-line-soft);
+  color: var(--mk-ink-900);
+  vertical-align: middle;
+}
+.v4-pmv-table td .v4-pl-input {
+  min-width: 0;
+  width: 100%;
+}
+.v4-pmv-actions {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+.v4-pmv-add-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding-top: 4px;
+}
+.v4-pmv-add-row .v4-pl-input {
+  flex: 1 1 200px;
+}
+.v4-pmv-context-textarea {
+  width: 100%;
+  min-height: 260px;
+  border: 1px solid var(--mk-line);
+  border-radius: var(--mk-r-sm);
+  padding: 12px 14px;
+  font-family: var(--mk-font-mono);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--mk-ink-900);
+  background: var(--mk-paper);
+  resize: vertical;
+  outline: none;
+}
+.v4-pmv-context-textarea:focus {
+  border-color: var(--mk-brand-500);
+}
+.v4-pmv-ontology {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--mk-ink-800);
+}
+.v4-pmv-ontology-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.v4-pmv-ontology h3 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mk-ink-700);
+  margin: 0 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.v4-pmv-ontology ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.v4-pmv-ontology li {
+  margin: 2px 0;
+}
+.v4-pmv-ontology-category {
+  margin-bottom: 8px;
+}

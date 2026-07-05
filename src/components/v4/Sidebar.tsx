@@ -82,6 +82,12 @@ const ICON_SEARCH = (
     <path d="M21 21l-4.35-4.35" />
   </svg>
 );
+const ICON_PROJECT_MEMORY = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+  </svg>
+);
 const ICON_SPECS = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -150,6 +156,7 @@ export function Sidebar({
       items: [
         { id: "pipeline", label: "Pipeline", icon: ICON_PIPELINE, pulse: p.pipeline },
         { id: "transcripts", label: "Транскрипты", icon: ICON_TRANSCRIPT, pulse: p.transcripts },
+        { id: "project-memory", label: "Память проекта", icon: ICON_PROJECT_MEMORY, pulse: p["project-memory"] },
         { id: "research", label: "Research", icon: ICON_SEARCH, pulse: p.research },
         { id: "specs", label: "Specs", icon: ICON_SPECS, pulse: p.specs },
       ],
