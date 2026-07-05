@@ -3,28 +3,25 @@
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 
-// Classes our own rendering pipeline ever generates — anything else on a
-// MARK or BLOCKQUOTE is stripped. An allowlist (not just "MARK gets
-// everything") because the markdown source is LLM-generated transcript
-// content: attacker-controlled markdown injecting an arbitrary CSS class is
-// a known visual-spoofing vector (e.g. faking a quality badge), and that
-// risk applies just as much to blockquote's new tpc-quote--* classes as it
-// already did to mark's tpc-marker--* ones.
-const ALLOWED_CLASSES = new Set([
-  "tpc-marker",
-  "tpc-marker--unclear",
-  "tpc-marker--conflict",
-  "tpc-quote--warn",
-  "tpc-quote--info",
-]);
+// Classes our own rendering pipeline ever generates, scoped to the one
+// element each is actually emitted on. Both the element AND the class value
+// must match — a class-value-only allowlist would let LLM-generated
+// markdown (which can carry raw inline HTML that `marked` passes through
+// untouched) spoof our marker/callout styling on an arbitrary <span> or
+// <div>, e.g. faking a "resolved" info callout or a conflict marker on
+// unrelated text.
+const ALLOWED_CLASSES_BY_TAG: Record<string, Set<string>> = {
+  MARK: new Set(["tpc-marker", "tpc-marker--unclear", "tpc-marker--conflict"]),
+  BLOCKQUOTE: new Set(["tpc-quote--warn", "tpc-quote--info"]),
+};
 
 DOMPurify.addHook("afterSanitizeAttributes", (node) => {
   const el = node as Element;
   if (!el.hasAttribute?.("class")) return;
-  const kept = el
-    .getAttribute("class")!
-    .split(/\s+/)
-    .filter((c) => ALLOWED_CLASSES.has(c));
+  const allowed = ALLOWED_CLASSES_BY_TAG[el.nodeName];
+  const kept = allowed
+    ? el.getAttribute("class")!.split(/\s+/).filter((c) => allowed.has(c))
+    : [];
   if (kept.length) {
     el.setAttribute("class", kept.join(" "));
   } else {

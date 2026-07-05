@@ -72,4 +72,18 @@ describe("renderBriefHtml — integration", () => {
     expect(html).toContain("tpc-marker");
     expect(html).not.toContain("fake-phishing-badge");
   });
+
+  it("does not let a spoofed <span> or <div> wear our marker/quote classes", () => {
+    // The allowlist is class-value-based, not element-based — a value in
+    // ALLOWED_CLASSES currently survives on ANY element, not just the
+    // MARK/BLOCKQUOTE we actually emit it on. LLM-generated markdown can
+    // contain raw inline HTML (marked passes it through untouched), so this
+    // is a real visual-spoofing path: faking a "resolved" info callout or a
+    // conflict marker on arbitrary text.
+    const spanHtml = renderBriefHtml('<span class="tpc-marker tpc-marker--conflict">spoof</span>');
+    expect(spanHtml).not.toContain("tpc-marker");
+
+    const divHtml = renderBriefHtml('<div class="tpc-quote--info">spoof</div>');
+    expect(divHtml).not.toContain("tpc-quote--info");
+  });
 });
