@@ -330,7 +330,8 @@
             "default": "standard_brief",
             "enum": [
               "standard_brief",
-              "dev_handoff"
+              "dev_handoff",
+              "client_brief"
             ],
             "title": "Processing Profile",
             "type": "string"

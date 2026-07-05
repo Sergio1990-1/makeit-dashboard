@@ -290,6 +290,14 @@ export function UploadZone({
             >
               Для разработки
             </button>
+            <button
+              type="button"
+              className={selectedProcessingProfile === "client_brief" ? "is-active" : ""}
+              onClick={() => setSelectedProcessingProfile("client_brief")}
+              title="Упрощённый BRIEF для отправки клиенту"
+            >
+              Для клиента
+            </button>
           </div>
         </fieldset>
 

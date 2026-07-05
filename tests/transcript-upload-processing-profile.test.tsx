@@ -47,6 +47,19 @@ describe("UploadZone processing_profile selector", () => {
     expect(screen.getByText("Обычный").className).not.toContain("is-active");
   });
 
+  it("switches to client_brief when the Для клиента pill is clicked", () => {
+    const { setSelectedProcessingProfile } = renderUploadZone();
+    fireEvent.click(screen.getByText("Для клиента"));
+    expect(setSelectedProcessingProfile).toHaveBeenCalledWith("client_brief");
+  });
+
+  it("reflects client_brief as the active pill when selected", () => {
+    renderUploadZone({ selectedProcessingProfile: "client_brief" });
+    expect(screen.getByText("Для клиента").className).toContain("is-active");
+    expect(screen.getByText("Обычный").className).not.toContain("is-active");
+    expect(screen.getByText("Для разработки").className).not.toContain("is-active");
+  });
+
   it("shows the profile selector regardless of file type (not gated on audio)", () => {
     renderUploadZone();
     expect(screen.getByText("Формат BRIEF")).toBeTruthy();

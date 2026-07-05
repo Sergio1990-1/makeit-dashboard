@@ -32,10 +32,12 @@ const STATUS_LABELS: Record<string, string> = {
 const PROFILE_LABEL: Record<TranscriptListItem["processing_profile"], string> = {
   standard_brief: "Обычный",
   dev_handoff: "Dev handoff",
+  client_brief: "Для клиента",
 };
 const PROFILE_LABEL_FULL: Record<TranscriptListItem["processing_profile"], string> = {
   standard_brief: "Обычный BRIEF",
   dev_handoff: "Dev handoff",
+  client_brief: "Для клиента",
 };
 
 const STATUS_CLASS: Record<string, string> = {

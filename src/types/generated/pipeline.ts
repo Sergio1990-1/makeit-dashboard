@@ -1736,7 +1736,7 @@ export interface components {
              * @default standard_brief
              * @enum {string}
              */
-            processing_profile: "standard_brief" | "dev_handoff";
+            processing_profile: "standard_brief" | "dev_handoff" | "client_brief";
             /**
              * Project Context
              * @default
