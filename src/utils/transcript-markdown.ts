@@ -3,13 +3,32 @@
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 
-// Restrict the `class` attribute to <mark> only. Without this hook, every
-// element passed by DOMPurify would keep `class` (we used to allow it
-// globally), which lets attacker-controlled markdown inject arbitrary
-// CSS classes — useful for visual spoofing (e.g. fake quality badge).
+// Classes our own rendering pipeline ever generates — anything else on a
+// MARK or BLOCKQUOTE is stripped. An allowlist (not just "MARK gets
+// everything") because the markdown source is LLM-generated transcript
+// content: attacker-controlled markdown injecting an arbitrary CSS class is
+// a known visual-spoofing vector (e.g. faking a quality badge), and that
+// risk applies just as much to blockquote's new tpc-quote--* classes as it
+// already did to mark's tpc-marker--* ones.
+const ALLOWED_CLASSES = new Set([
+  "tpc-marker",
+  "tpc-marker--unclear",
+  "tpc-marker--conflict",
+  "tpc-quote--warn",
+  "tpc-quote--info",
+]);
+
 DOMPurify.addHook("afterSanitizeAttributes", (node) => {
-  if (node.nodeName !== "MARK" && (node as Element).hasAttribute?.("class")) {
-    (node as Element).removeAttribute("class");
+  const el = node as Element;
+  if (!el.hasAttribute?.("class")) return;
+  const kept = el
+    .getAttribute("class")!
+    .split(/\s+/)
+    .filter((c) => ALLOWED_CLASSES.has(c));
+  if (kept.length) {
+    el.setAttribute("class", kept.join(" "));
+  } else {
+    el.removeAttribute("class");
   }
 });
 
@@ -37,10 +56,30 @@ export function highlightMarkers(html: string): string {
     );
 }
 
+/** Tag a <blockquote>'s leading emoji as a semantic callout type — an open
+ *  contradiction ("⚠️ Противоречие (открытое): ...") and a call-resolved
+ *  note ("ℹ️ Разрешённое противоречие: ...") are opposite in meaning
+ *  (problem vs. already solved) and should not look identical. Blockquotes
+ *  without either marker are left unclassed (ordinary de-emphasized quote). */
+export function classifyBlockquotes(html: string): string {
+  return html.replace(
+    /<blockquote>(\s*<p>\s*)(⚠️?|ℹ️?)/g,
+    (match: string, prefix: string, emoji: string) => {
+      if (emoji.startsWith("⚠")) {
+        return `<blockquote class="tpc-quote--warn">${prefix}${emoji}`;
+      }
+      if (emoji.startsWith("ℹ")) {
+        return `<blockquote class="tpc-quote--info">${prefix}${emoji}`;
+      }
+      return match;
+    },
+  );
+}
+
 /** Render markdown to sanitized HTML with highlighted markers. */
 export function renderBriefHtml(markdown: string): string {
   const raw = marked.parse(markdown, { async: false }) as string;
-  return DOMPurify.sanitize(highlightMarkers(raw), SANITIZE_OPTS);
+  return DOMPurify.sanitize(classifyBlockquotes(highlightMarkers(raw)), SANITIZE_OPTS);
 }
 
 /** Render markdown to sanitized HTML (no marker highlighting). */

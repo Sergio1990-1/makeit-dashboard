@@ -1616,14 +1616,26 @@ body::after {
   overflow-x: auto;
 }
 .tpc-brief-content h1,
-.tpc-brief-content h2,
-.tpc-brief-content h3 {
+.tpc-brief-content h2 {
   margin-top: var(--mk-sp-4);
   margin-bottom: var(--mk-sp-2);
   color: var(--mk-ink-900);
 }
 .tpc-brief-content h1 { font-size: var(--mk-text-lg); }
 .tpc-brief-content h2 { font-size: var(--mk-text-base); }
+.tpc-brief-content h3 {
+  /* Previously had no explicit size — fell back to the browser's UA
+     default (~1.17em bold), inconsistent with h1/h2's token-driven scale.
+     Sized between body text and h2 with its own tone + underline so a
+     "### Тема N: ..." subsection reads as a step down from h2, not a
+     browser-default afterthought. */
+  margin-top: var(--mk-sp-4);
+  margin-bottom: var(--mk-sp-2);
+  padding-bottom: var(--mk-sp-1);
+  font-size: var(--mk-text-base);
+  color: var(--mk-ink-800);
+  border-bottom: 1px solid var(--mk-line-soft);
+}
 .tpc-brief-content p { margin: var(--mk-sp-2) 0; }
 .tpc-brief-content ul,
 .tpc-brief-content ol {
@@ -1637,11 +1649,59 @@ body::after {
   border-radius: 3px;
   font-size: 0.9em;
 }
+.tpc-brief-content hr {
+  /* Previously unstyled — fell back to the browser's UA default (a thick
+     3D-inset rule in some browsers). BRIEFs use "---" purely as a section
+     separator; a hairline matching the rest of the app's dividers reads
+     as intentional instead of an unstyled leftover. */
+  border: none;
+  border-top: 1px solid var(--mk-line);
+  margin: var(--mk-sp-5) 0;
+}
+.tpc-brief-content table {
+  /* Previously unstyled entirely — pipe tables ("Пользователь",
+     "Ограничения", "Решения" in real BRIEFs) rendered with zero explicit
+     CSS, just the bare browser default. */
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--mk-sp-3) 0 var(--mk-sp-4);
+  font-size: var(--mk-text-sm);
+}
+.tpc-brief-content th,
+.tpc-brief-content td {
+  border: 1px solid var(--mk-line);
+  padding: var(--mk-sp-2) var(--mk-sp-3);
+  text-align: left;
+  vertical-align: top;
+}
+.tpc-brief-content th {
+  background: var(--mk-brand-50);
+  color: var(--mk-primary-active);
+  font-weight: 600;
+}
+.tpc-brief-content tr:nth-child(even) td {
+  background: var(--mk-surface-2);
+}
 .tpc-brief-content blockquote {
   border-left: 3px solid var(--mk-primary);
   margin: var(--mk-sp-2) 0;
   padding: var(--mk-sp-2) var(--mk-sp-4);
   color: var(--mk-ink-500);
+}
+/* Leading-emoji callout variants (assigned by highlightMarkers in
+   transcript-markdown.ts) — an open contradiction ("⚠️ Противоречие
+   (открытое)") and a call-resolved note ("ℹ️ Разрешённое противоречие")
+   are semantically opposite (problem vs. already solved) but previously
+   looked identical. */
+.tpc-brief-content blockquote.tpc-quote--warn {
+  border-left-color: var(--mk-warn);
+  background: var(--mk-warn-soft);
+  color: var(--mk-warn-strong);
+}
+.tpc-brief-content blockquote.tpc-quote--info {
+  border-left-color: var(--mk-primary);
+  background: var(--mk-brand-50);
+  color: var(--mk-ink-700);
 }
 
 /* Marker highlights */
@@ -2666,4 +2726,3 @@ body::after {
     min-width: 0;
   }
 }
-
