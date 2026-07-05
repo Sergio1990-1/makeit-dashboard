@@ -150,6 +150,7 @@ describe("transcript client", () => {
 
   it("normalizes processing_profile, defaulting unknown/absent values to standard_brief", () => {
     expect(normalizeProcessingProfile("dev_handoff")).toBe("dev_handoff");
+    expect(normalizeProcessingProfile("client_brief")).toBe("client_brief");
     expect(normalizeProcessingProfile("standard_brief")).toBe("standard_brief");
     expect(normalizeProcessingProfile(undefined)).toBe("standard_brief");
     expect(normalizeProcessingProfile("unknown")).toBe("standard_brief");
@@ -191,6 +192,26 @@ describe("transcript client", () => {
     });
   });
 
+  it("fetchTranscriptResult passes through a client_brief processing_profile", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(
+          JSON.stringify({
+            job_id: "job-3c2",
+            brief_content: "# Client Brief",
+            processing_profile: "client_brief",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+
+    await expect(fetchTranscriptResult("job-3c2")).resolves.toMatchObject({
+      processing_profile: "client_brief",
+    });
+  });
+
   it("fetchTranscriptList maps processing_profile, defaulting to standard_brief when absent (legacy rows predating processing_profile)", async () => {
     vi.stubGlobal(
       "fetch",
@@ -212,6 +233,14 @@ describe("transcript client", () => {
               created_at: "2026-05-02T10:00:00Z",
               processing_profile: "dev_handoff",
             },
+            {
+              job_id: "job-3f",
+              project: "mankassa-app",
+              file_name: "client.mp3",
+              status: "done",
+              created_at: "2026-05-03T10:00:00Z",
+              processing_profile: "client_brief",
+            },
           ]),
           { status: 200, headers: { "Content-Type": "application/json" } },
         ),
@@ -221,6 +250,7 @@ describe("transcript client", () => {
     await expect(fetchTranscriptList()).resolves.toMatchObject([
       { task_id: "job-3d", processing_profile: "standard_brief" },
       { task_id: "job-3e", processing_profile: "dev_handoff" },
+      { task_id: "job-3f", processing_profile: "client_brief" },
     ]);
   });
 
@@ -330,6 +360,45 @@ describe("transcript client", () => {
     expect(xhr.sentBody?.get("processing_profile")).toBe("dev_handoff");
 
     xhr.responseText = JSON.stringify({ job_id: "job-6b", status: "queued", brief_url: "" });
+    xhr.onload?.();
+    await promise;
+  });
+
+  it("uploadTranscript includes a client_brief processing_profile in the multipart form", async () => {
+    class FakeXHR {
+      static instances: FakeXHR[] = [];
+      upload: { onprogress: ((e: ProgressEvent) => void) | null } = { onprogress: null };
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      onabort: (() => void) | null = null;
+      status = 200;
+      responseText = "";
+      sentBody: FormData | null = null;
+      open() {
+        /* no-op */
+      }
+      send(body: FormData) {
+        this.sentBody = body;
+        FakeXHR.instances.push(this);
+      }
+    }
+    vi.stubGlobal("XMLHttpRequest", FakeXHR as unknown as typeof XMLHttpRequest);
+
+    const file = new File(["hello"], "meeting.txt", { type: "text/plain" });
+    const promise = uploadTranscript(
+      file,
+      "proj",
+      "quality",
+      undefined,
+      undefined,
+      "brief",
+      "client_brief",
+    );
+
+    const xhr = FakeXHR.instances[0];
+    expect(xhr.sentBody?.get("processing_profile")).toBe("client_brief");
+
+    xhr.responseText = JSON.stringify({ job_id: "job-6b2", status: "queued", brief_url: "" });
     xhr.onload?.();
     await promise;
   });

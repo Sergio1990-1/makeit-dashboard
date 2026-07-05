@@ -50,7 +50,7 @@ export function normalizeOutputMode(raw: unknown): OutputMode {
 }
 
 /**
- * BRIEF synthesis profile (makeit-pipeline #1300) — orthogonal to
+ * BRIEF synthesis profile (makeit-pipeline #1300, #1304) — orthogonal to
  * `OutputMode`: `output_mode` picks WHICH artifact is generated (brief vs.
  * normalized_transcript), `processing_profile` picks the STRUCTURE/tone of
  * the BRIEF itself once one is generated. Unlike `OutputMode`, the backend
@@ -62,10 +62,12 @@ export function normalizeOutputMode(raw: unknown): OutputMode {
  * field from a pre-#1300 row) falls back to "standard_brief" instead of
  * silently typing as something invalid.
  */
-export type ProcessingProfile = "standard_brief" | "dev_handoff";
+export type ProcessingProfile = "standard_brief" | "dev_handoff" | "client_brief";
 
 export function normalizeProcessingProfile(raw: unknown): ProcessingProfile {
-  return raw === "dev_handoff" ? "dev_handoff" : "standard_brief";
+  if (raw === "dev_handoff") return "dev_handoff";
+  if (raw === "client_brief") return "client_brief";
+  return "standard_brief";
 }
 
 /**

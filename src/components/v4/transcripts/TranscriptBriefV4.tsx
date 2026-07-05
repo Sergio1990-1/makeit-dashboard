@@ -40,6 +40,7 @@ const CHECK_ICON: Record<QualityCheck["status"], string> = {
 const PROFILE_LABEL: Record<TranscriptResult["processing_profile"], string> = {
   standard_brief: "Обычный BRIEF",
   dev_handoff: "Dev handoff",
+  client_brief: "Для клиента",
 };
 
 function plural(n: number, one: string, few: string, many: string): string {

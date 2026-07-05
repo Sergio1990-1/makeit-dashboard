@@ -40,6 +40,16 @@ const ITEMS = [
     processing_profile: "dev_handoff",
   },
   {
+    job_id: "job-client",
+    project: "mankassa-app",
+    file_name: "client.mp3",
+    status: "done",
+    created_at: "2026-05-03T10:00:00Z",
+    file_type: "audio",
+    transcription_model: "quality",
+    processing_profile: "client_brief",
+  },
+  {
     job_id: "job-legacy",
     project: "mankassa-app",
     file_name: "legacy.mp3",
@@ -68,5 +78,6 @@ describe("TranscriptHistoryV4 — processing_profile badge", () => {
     const badges = screen.getAllByTitle("Обычный BRIEF");
     expect(badges.length).toBe(2); // job-standard + job-legacy (defaulted)
     expect(screen.getByTitle("Dev handoff").textContent).toBe("Dev handoff");
+    expect(screen.getByTitle("Для клиента").textContent).toBe("Для клиента");
   });
 });

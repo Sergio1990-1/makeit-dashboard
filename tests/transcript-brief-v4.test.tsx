@@ -163,6 +163,18 @@ describe("TranscriptBriefV4 — processing_profile badge", () => {
     );
     expect(screen.getByText("Dev handoff")).toBeTruthy();
   });
+
+  it("shows the 'Для клиента' badge for a client_brief job", () => {
+    render(
+      <TranscriptBriefV4
+        result={makeResult({ processing_profile: "client_brief" })}
+        onNewUpload={vi.fn()}
+        onEdit={vi.fn()}
+        onContinueToBrief={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Для клиента")).toBeTruthy();
+  });
 });
 
 describe("TranscriptBriefV4 — DOCX download", () => {
