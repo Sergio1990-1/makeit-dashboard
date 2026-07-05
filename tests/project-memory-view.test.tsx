@@ -321,4 +321,108 @@ describe("ProjectMemoryView — project selector", () => {
 
     await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(initialCalls));
   });
+
+  it("clears the previous project's terms immediately on switch, instead of leaving them visible/editable", async () => {
+    // Sewing-ERP resolves fast; mankassa-app never resolves in this test —
+    // if the previous project's data (and its add-term controls) were still
+    // showing during the load, that would itself be the bug this guards.
+    let resolveMankassa!: (r: Response) => void;
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("Sewing-ERP") && url.includes("/dictionary")) {
+        return new Response(
+          JSON.stringify(dictResponse({ project_slug: "Sewing-ERP", terms: { A: "a" } })),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("mankassa-app") && url.includes("/dictionary")) {
+        return new Promise<Response>((resolve) => {
+          resolveMankassa = resolve;
+        });
+      }
+      // client-context / ontology: resolve immediately with something harmless.
+      if (url.includes("/client-context")) {
+        return new Response(JSON.stringify(contextResponse()), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify(ontologyResponse()), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ProjectMemoryView projects={PROJECTS} />);
+    await waitFor(() => expect(screen.getByText("A")).toBeTruthy());
+
+    fireEvent.change(screen.getByLabelText("Проект"), { target: { value: "mankassa-app" } });
+
+    // Sewing-ERP's term must no longer be on screen, and the add-term
+    // control (gated on `dictionary` being loaded) must not be usable —
+    // both would let a user save Sewing-ERP's content under mankassa-app.
+    await waitFor(() => expect(screen.queryByText("A")).toBeNull());
+    expect(screen.queryByLabelText("Новый термин")).toBeNull();
+    expect(screen.getByText("Загрузка словаря…")).toBeTruthy();
+
+    resolveMankassa(
+      new Response(JSON.stringify(dictResponse({ project_slug: "mankassa-app", terms: {} })), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    await waitFor(() => expect(screen.getByText("Термины ещё не добавлены")).toBeTruthy());
+  });
+
+  it("discards a late-arriving response for a project the user has since switched away from", async () => {
+    let resolveSewingErp!: (r: Response) => void;
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("Sewing-ERP") && url.includes("/dictionary")) {
+        return new Promise<Response>((resolve) => {
+          resolveSewingErp = resolve;
+        });
+      }
+      if (url.includes("mankassa-app") && url.includes("/dictionary")) {
+        return new Response(
+          JSON.stringify(dictResponse({ project_slug: "mankassa-app", terms: { B: "b" } })),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/client-context")) {
+        return new Response(JSON.stringify(contextResponse()), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify(ontologyResponse()), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    // Mount already on Sewing-ERP (its fetch is now pending, held open by
+    // resolveSewingErp), then switch to mankassa-app, whose response
+    // resolves immediately — simulating out-of-order network delivery
+    // where the *earlier* request's response arrives *later*.
+    render(<ProjectMemoryView projects={PROJECTS} />);
+    fireEvent.change(screen.getByLabelText("Проект"), { target: { value: "mankassa-app" } });
+    await waitFor(() => expect(screen.getByText("B")).toBeTruthy());
+
+    // The stale Sewing-ERP response now resolves, after the user has
+    // already loaded mankassa-app's real data. It must be discarded rather
+    // than overwrite what's currently on screen.
+    resolveSewingErp(
+      new Response(
+        JSON.stringify(dictResponse({ project_slug: "Sewing-ERP", terms: { A: "a" } })),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    // Give the resolved (but stale) promise a tick to have run its .then —
+    // if the guard were missing, this is exactly where "A" would appear.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.queryByText("A")).toBeNull();
+    expect(screen.getByText("B")).toBeTruthy();
+  });
 });

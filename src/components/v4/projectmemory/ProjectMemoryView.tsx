@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ProjectConfig } from "../../../types";
 import {
   fetchDictionary,
@@ -63,17 +63,29 @@ export function ProjectMemoryView({ projects }: Props) {
   const [ontologyLoading, setOntologyLoading] = useState(false);
   const [ontologyError, setOntologyError] = useState<string | null>(null);
 
+  // Tracks the slug the user currently has selected, independent of React's
+  // render/effect batching. A fetch started for the previous project can
+  // resolve *after* the user has already switched to (and loaded data for)
+  // a different project — out-of-order network responses are not
+  // guaranteed to arrive in request order. Every loader below checks this
+  // ref before writing to state, so a late response for a stale slug is
+  // discarded instead of silently overwriting the current project's memory
+  // (or, worse, being edited and saved back under the new project's slug).
+  const latestSlugRef = useRef(slug);
+
   const loadDictionary = useCallback(async (projectSlug: string) => {
     setDictLoading(true);
     setDictError(null);
     try {
       const data = await fetchDictionary(projectSlug);
+      if (latestSlugRef.current !== projectSlug) return; // stale response
       setDictionary(data);
     } catch (err) {
+      if (latestSlugRef.current !== projectSlug) return; // stale response
       setDictionary(null);
       setDictError(String(err instanceof Error ? err.message : err));
     } finally {
-      setDictLoading(false);
+      if (latestSlugRef.current === projectSlug) setDictLoading(false);
     }
   }, []);
 
@@ -82,14 +94,16 @@ export function ProjectMemoryView({ projects }: Props) {
     setContextError(null);
     try {
       const data = await fetchClientContext(projectSlug);
+      if (latestSlugRef.current !== projectSlug) return; // stale response
       setClientContext(data);
       setContextDraft(data.content);
     } catch (err) {
+      if (latestSlugRef.current !== projectSlug) return; // stale response
       setClientContext(null);
       setContextDraft("");
       setContextError(String(err instanceof Error ? err.message : err));
     } finally {
-      setContextLoading(false);
+      if (latestSlugRef.current === projectSlug) setContextLoading(false);
     }
   }, []);
 
@@ -98,21 +112,33 @@ export function ProjectMemoryView({ projects }: Props) {
     setOntologyError(null);
     try {
       const data = await fetchOntology(projectSlug);
+      if (latestSlugRef.current !== projectSlug) return; // stale response
       setOntology(data.ontology);
     } catch (err) {
+      if (latestSlugRef.current !== projectSlug) return; // stale response
       setOntology(null);
       setOntologyError(String(err instanceof Error ? err.message : err));
     } finally {
-      setOntologyLoading(false);
+      if (latestSlugRef.current === projectSlug) setOntologyLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (!slug) return;
+    latestSlugRef.current = slug;
     setEditingKey(null);
     setNewTermKey("");
     setNewTermValue("");
     setContextSavedAt(null);
+    // Clear the previous project's data immediately rather than leaving it
+    // on screen (and editable/saveable) until the new project's fetch
+    // resolves — the loading gates below (dictLoading/contextLoading) key
+    // off `dictionary`/`clientContext` being non-null, so this also hides
+    // the add/edit/delete/save controls for the duration of the load.
+    setDictionary(null);
+    setClientContext(null);
+    setContextDraft("");
+    setOntology(null);
     void loadDictionary(slug);
     void loadClientContext(slug);
     void loadOntology(slug);
@@ -121,7 +147,7 @@ export function ProjectMemoryView({ projects }: Props) {
   const isV2 = dictionary?.is_v2_ontology ?? false;
 
   const handleAddTerm = useCallback(async () => {
-    if (!dictionary || isV2) return;
+    if (!dictionary || isV2 || dictionary.project_slug !== slug) return;
     const key = newTermKey.trim();
     const value = newTermValue.trim();
     if (!key || !value) return;
@@ -151,7 +177,7 @@ export function ProjectMemoryView({ projects }: Props) {
   }, []);
 
   const handleSaveEdit = useCallback(async () => {
-    if (!dictionary || isV2 || editingKey === null) return;
+    if (!dictionary || isV2 || editingKey === null || dictionary.project_slug !== slug) return;
     const value = editingValue.trim();
     if (!value) return;
     setDictSaving(true);
@@ -171,7 +197,7 @@ export function ProjectMemoryView({ projects }: Props) {
 
   const handleDeleteTerm = useCallback(
     async (key: string) => {
-      if (!dictionary || isV2) return;
+      if (!dictionary || isV2 || dictionary.project_slug !== slug) return;
       setDictSaving(true);
       setDictError(null);
       try {
@@ -193,6 +219,7 @@ export function ProjectMemoryView({ projects }: Props) {
   );
 
   const handleSaveContext = useCallback(async () => {
+    if (!clientContext || clientContext.project_slug !== slug) return;
     setContextSaving(true);
     setContextError(null);
     try {
@@ -205,7 +232,7 @@ export function ProjectMemoryView({ projects }: Props) {
     } finally {
       setContextSaving(false);
     }
-  }, [slug, contextDraft]);
+  }, [slug, contextDraft, clientContext]);
 
   const contextDirty = clientContext !== null && contextDraft !== clientContext.content;
   const termEntries = dictionary ? Object.entries(dictionary.terms) : [];
